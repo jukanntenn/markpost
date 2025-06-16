@@ -1,0 +1,10 @@
+# markpost 配置文件
+
+# title 的最大字节数，可以不设置
+TITLE_MAX_SIZE = 200
+
+# body 的最大字节数，可以不设置  
+BODY_MAX_SIZE = 1048576
+
+# 接口限流频率，每分钟允许请求次数，可以不设置
+API_RATE_LIMIT = 60

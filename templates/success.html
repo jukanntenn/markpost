@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布成功 - Markpost</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+        }
+        .success-icon {
+            color: #4CAF50;
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .post-id {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 18px;
+            color: #333;
+            word-break: break-all;
+        }
+        .content-preview {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .content-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .content-body {
+            color: #555;
+            line-height: 1.6;
+        }
+        .content-body h1, .content-body h2, .content-body h3, 
+        .content-body h4, .content-body h5, .content-body h6 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .content-body h1 { font-size: 24px; }
+        .content-body h2 { font-size: 20px; }
+        .content-body h3 { font-size: 18px; }
+        .content-body p {
+            margin-bottom: 15px;
+        }
+        .content-body code {
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+        .content-body pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .content-body blockquote {
+            border-left: 4px solid #667eea;
+            margin: 0;
+            padding-left: 20px;
+            color: #666;
+            font-style: italic;
+        }
+        .content-body ul, .content-body ol {
+            padding-left: 20px;
+        }
+        .content-body li {
+            margin-bottom: 5px;
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.3s ease;
+            display: inline-block;
+        }
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        .btn.secondary {
+            background: #6c757d;
+        }
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 20px;
+                padding: 30px 20px;
+            }
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>发布成功！</h1>
+        <p>你的内容已经成功发布，可以通过以下链接访问：</p>
+        
+        <div class="post-id">{{.ID}}</div>
+        
+        <div class="content-preview">
+            <div class="content-title">{{.Title}}</div>
+            <div class="content-body">{{.Body}}</div>
+        </div>
+        
+        <div class="buttons">
+            <a href="/{{.ID}}" class="btn">查看内容</a>
+            <a href="/" class="btn secondary">继续发布</a>
+        </div>
+    </div>
+</body>
+</html> 

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,11 +19,6 @@ type PostRequest struct {
 	Body  string `json:"body" binding:"required"`
 }
 
-// PostResponse 上传响应结构
-type PostResponse struct {
-	ID string `json:"id"`
-}
-
 func main() {
 	// 加载配置
 	LoadConfig()
@@ -33,6 +29,9 @@ func main() {
 
 	// 创建 Gin 路由器
 	r := gin.Default()
+
+	// 加载 HTML 模板
+	r.LoadHTMLGlob("templates/*")
 
 	// 添加限流中间件（如果配置了限流）
 	if config.APIRateLimit > 0 {
@@ -87,20 +86,31 @@ func main() {
 			return
 		}
 
-		c.JSON(http.StatusOK, PostResponse{ID: post.ID})
+		// 返回 JSON 响应
+		c.JSON(http.StatusOK, gin.H{
+			"id":      post.ID,
+			"title":   post.Title,
+			"message": "内容创建成功",
+		})
 	})
 
-	// GET /:id - 获取内容
+	// GET /:id - 获取内容并渲染 HTML 页面
 	r.GET("/:id", func(c *gin.Context) {
 		id := c.Param("id")
 
 		post, err := GetPostByID(id)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				c.JSON(http.StatusNotFound, gin.H{"error": "内容不存在"})
+				c.HTML(http.StatusNotFound, "error.html", gin.H{
+					"Error": "内容不存在",
+					"Code":  "404",
+				})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "数据库查询失败"})
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+				"Error": "数据库查询失败",
+				"Code":  "500",
+			})
 			log.Printf("查询内容失败: %v", err)
 			return
 		}
@@ -108,26 +118,27 @@ func main() {
 		// 将 markdown 转换为 HTML
 		var buf bytes.Buffer
 		if err := goldmark.Convert([]byte(post.Body), &buf); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Markdown 转换失败"})
+			c.HTML(http.StatusInternalServerError, "error.html", gin.H{
+				"Error": "Markdown 转换失败",
+				"Code":  "500",
+			})
 			log.Printf("Markdown 转换失败: %v", err)
 			return
 		}
 
-		// 创建响应结构，包含转换后的 HTML
-		response := map[string]interface{}{
-			"id":         post.ID,
-			"title":      post.Title,
-			"body":       buf.String(), // 转换后的 HTML 内容
-			"created_at": post.CreatedAt,
-		}
-
-		c.JSON(http.StatusOK, response)
+		// 渲染文章页面模板
+		c.HTML(http.StatusOK, "article.html", gin.H{
+			"ID":        post.ID,
+			"Title":     post.Title,
+			"Body":      template.HTML(buf.String()),
+			"CreatedAt": post.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
 	})
 
 	// 健康检查端点
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"message": "markpost is running",
 		})
 	})
@@ -138,4 +149,4 @@ func main() {
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
-} 
+}

@@ -22,6 +22,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o markpost .
 # 第二阶段：创建最终运行镜像
 FROM alpine:latest
 
+# 设置环境变量
+ENV GIN_MODE=release
+
 # 安装运行时依赖
 RUN apk --no-cache add ca-certificates wget
 
@@ -34,8 +37,8 @@ WORKDIR /app
 # 从构建阶段复制二进制文件
 COPY --from=builder /app/markpost .
 
-# 复制配置文件
-COPY markpost.toml .
+# 复制模板文件
+COPY --from=builder /app/templates ./templates
 
 # 创建数据目录并设置权限
 RUN mkdir -p /app/data

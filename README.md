@@ -2,13 +2,19 @@
 
 一个简单的 Go Web 项目，提供 API 来上传 markdown 文本内容并查询转换后的 HTML 内容。
 
+**申明**
+目前所有文件和代码均为 AI 生成，基本实现了想要的功能，但个人对 go 开发并不熟悉，代码没有 review。目前来看 AI 生成的代码还有很多问题，后续的主要任务就是使用 AI 开发+人工 review 的方式来重构和优化。快速体验请直接跳到 [方法二：Docker 部署（推荐）](#方法二docker-部署推荐)
+
 ## 功能特性
 
 - 支持通过 API 上传 markdown 文本内容
-- 支持查询已上传的内容
-- 支持配置文件管理
+- 支持查询已上传的内容并渲染为美观的 HTML 页面
+- 支持配置文件管理（标题长度、内容长度、限流等）
 - 内置限流中间件
 - 使用 SQLite3 数据库，开启 WAL 模式提高并发性能
+- 自动生成 post_key 用于内容上传
+- 内置健康检查端点
+- 响应式 HTML 模板，支持移动端访问
 
 ## 技术栈
 
@@ -36,34 +42,17 @@ go run .
 
 ### 方法二：Docker 部署（推荐）
 
-#### 1. 使用部署脚本（推荐）
-
-```bash
-./deploy.sh
+```yml
+services:
+  markpost:
+    image: jukanntenn/markpost:latest
+    container_name: markpost
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
 ```
-
-#### 2. 手动 Docker 部署
-
-```bash
-# 创建数据目录
-mkdir -p ./data
-
-# 构建并启动
-docker-compose up --build -d
-
-# 查看日志
-docker-compose logs -f markpost
-
-# 停止服务
-docker-compose down
-```
-
-程序启动后会：
-
-- 自动创建 `data/db.sqlite3` 数据库文件
-- 自动创建必要的数据表
-- 如果不存在 admin 用户，会自动创建并生成 post_key
-- 启动 HTTP 服务器，监听 8080 端口
 
 ### 3. 配置文件
 
@@ -86,7 +75,7 @@ API_RATE_LIMIT = 60
 
 **POST** `/:post_key`
 
-使用有效的 post_key 上传 markdown 内容。
+使用有效的 post_key 上传 markdown 内容。系统启动时会自动生成一个 admin 用户的 post_key，请查看启动日志获取。
 
 请求体：
 
@@ -101,7 +90,17 @@ API_RATE_LIMIT = 60
 
 ```json
 {
-  "id": "生成的nanoid"
+  "id": "生成的nanoid",
+  "title": "文章标题",
+  "message": "内容创建成功"
+}
+```
+
+错误响应：
+
+```json
+{
+  "error": "错误信息"
 }
 ```
 
@@ -109,16 +108,23 @@ API_RATE_LIMIT = 60
 
 **GET** `/:id`
 
-根据 ID 获取已上传的内容，返回转换后的 HTML 格式。
+根据 ID 获取已上传的内容，返回渲染后的 HTML 页面（不是 JSON 格式）。
+
+- 成功：返回完整的 HTML 页面，包含转换后的 markdown 内容
+- 失败：返回错误页面
+
+### 健康检查
+
+**GET** `/health`
+
+检查服务状态。
 
 响应：
 
 ```json
 {
-  "id": "nanoid",
-  "title": "文章标题",
-  "body": "<h1>转换后的 HTML 内容</h1><p>这是一些 <strong>HTML</strong> 内容。</p>",
-  "created_at": "2023-01-01T00:00:00Z"
+  "status": "ok",
+  "message": "markpost is running"
 }
 ```
 
@@ -128,6 +134,12 @@ API_RATE_LIMIT = 60
 
 ```bash
 go run .
+```
+
+启动日志会显示类似以下内容：
+
+```
+已创建 admin 用户，post_key: abc12345
 ```
 
 然后使用 curl 测试 API：
@@ -142,8 +154,14 @@ curl -X POST http://localhost:8080/YOUR_POST_KEY \
   }'
 
 # 获取内容（替换 RETURNED_ID 为上一步返回的 ID）
-# 返回的 body 字段将是转换后的 HTML 内容
+# 返回完整的 HTML 页面，可在浏览器中打开
 curl http://localhost:8080/RETURNED_ID
+
+# 或者直接在浏览器中访问
+# http://localhost:8080/RETURNED_ID
+
+# 健康检查
+curl http://localhost:8080/health
 ```
 
 ## 项目结构
@@ -164,6 +182,10 @@ markpost/
 ├── Makefile          # Make 工具配置
 ├── DOCKER.md         # Docker 部署指南
 ├── MIGRATION.md      # SQLite 驱动迁移说明
+├── templates/         # HTML 模板目录
+│   ├── article.html   # 文章页面模板
+│   ├── error.html     # 错误页面模板
+│   └── success.html   # 成功页面模板
 ├── data/             # 数据目录（挂载点）
 └── README.md         # 项目说明
 ```

@@ -1,7 +1,7 @@
 # markpost 配置文件
 
 # title 的最大字节数，可以不设置
-TITLE_MAX_SIZE = 200
+TITLE_MAX_SIZE = 5
 
 # body 的最大字节数，可以不设置  
 BODY_MAX_SIZE = 1048576

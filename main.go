@@ -14,6 +14,9 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// 初始化 GitHub OAuth2 配置
+	initGitHubOAuth()
+
 	InitDB()
 	defer CloseDB()
 

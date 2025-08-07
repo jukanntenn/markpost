@@ -63,6 +63,58 @@ func GetUserByPostKey(postKey string) (*User, error) {
 	return &user, nil
 }
 
+// FindUserByGitHubID 根据 GitHub ID 查找用户
+func FindUserByGitHubID(githubID int64) (*User, error) {
+	var user User
+	err := db.Where("github_id = ?", githubID).First(&user).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, sql.ErrNoRows
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// CreateUserFromGitHub 从 GitHub 用户信息创建新用户
+func CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
+	postKey, err := GenerateShortKey(8)
+	if err != nil {
+		return nil, err
+	}
+
+	user := User{
+		Username: githubUser.Login,
+		PostKey:  postKey,
+		GitHubID: &githubUser.ID,
+	}
+
+	err = db.Create(&user).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// FindOrCreateUser 查找或创建用户
+func FindOrCreateUser(githubUser *GitHubUser) (*User, error) {
+	// 首先尝试根据 GitHub ID 查找用户
+	user, err := FindUserByGitHubID(githubUser.ID)
+	if err == nil {
+		// 用户存在，直接返回
+		return user, nil
+	}
+
+	if err != sql.ErrNoRows {
+		// 发生其他错误
+		return nil, err
+	}
+
+	// 用户不存在，创建新用户
+	return CreateUserFromGitHub(githubUser)
+}
+
 // CreatePost 创建新的内容记录
 func CreatePost(title, body string) (*Post, error) {
 	// 生成 nano id

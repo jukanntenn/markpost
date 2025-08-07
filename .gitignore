@@ -32,3 +32,4 @@ go.work.sum
 # .vscode/
 
 *.sqlite3*
+config.toml

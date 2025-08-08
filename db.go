@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -116,7 +118,7 @@ func FindOrCreateUser(githubUser *GitHubUser) (*User, error) {
 }
 
 // CreatePost 创建新的内容记录
-func CreatePost(title, body string) (*Post, error) {
+func CreatePost(title, body string, userID ...int) (*Post, error) {
 	// 生成 nano id
 	id, err := gonanoid.New()
 	if err != nil {
@@ -130,8 +132,45 @@ func CreatePost(title, body string) (*Post, error) {
 		CreatedAt: time.Now(),
 	}
 
+	// 如果提供了userID参数，则设置UserID字段
+	if len(userID) > 0 {
+		post.UserID = &userID[0]
+	}
+
 	err = db.Create(&post).Error
 	if err != nil {
+		// 检查是否为外键约束违反错误
+		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
+			return nil, fmt.Errorf("invalid user ID: %w", err)
+		}
+		return nil, err
+	}
+
+	return &post, nil
+}
+
+// CreatePostWithUser 创建关联用户的post
+func CreatePostWithUser(title, body string, userID int) (*Post, error) {
+	// 生成 nano id
+	id, err := gonanoid.New()
+	if err != nil {
+		return nil, err
+	}
+
+	post := Post{
+		ID:        id,
+		Title:     title,
+		Body:      body,
+		CreatedAt: time.Now(),
+		UserID:    &userID,
+	}
+
+	err = db.Create(&post).Error
+	if err != nil {
+		// 检查是否为外键约束违反错误
+		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
+			return nil, fmt.Errorf("invalid user ID: %w", err)
+		}
 		return nil, err
 	}
 
@@ -149,6 +188,16 @@ func GetPostByID(id string) (*Post, error) {
 		return nil, err
 	}
 	return &post, nil
+}
+
+// GetPostsByUserID 获取指定用户创建的所有post
+func GetPostsByUserID(userID int) ([]Post, error) {
+	var posts []Post
+	err := db.Where("user_id = ?", userID).Find(&posts).Error
+	if err != nil {
+		return nil, err
+	}
+	return posts, nil
 }
 
 // CloseDB 关闭数据库连接

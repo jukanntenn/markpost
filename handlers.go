@@ -271,7 +271,7 @@ func CreatePostHandler(c *gin.Context) {
 		return
 	}
 
-	_ = user.(*User)
+	userObj := user.(*User)
 
 	var req PostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -279,7 +279,7 @@ func CreatePostHandler(c *gin.Context) {
 		return
 	}
 
-	post, err := CreatePost(req.Title, req.Body)
+	post, err := CreatePost(req.Title, req.Body, userObj.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建内容失败"})
 		log.Printf("创建内容失败: %v", err)

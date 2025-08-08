@@ -16,4 +16,5 @@ type Post struct {
 	Title     string    `json:"title" gorm:"not null"`
 	Body      string    `json:"body" gorm:"not null"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UserID    *int      `json:"user_id" gorm:"index;foreignKey:ID;references:users"`
 }

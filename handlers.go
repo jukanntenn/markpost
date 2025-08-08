@@ -146,6 +146,21 @@ func GenerateGitHubAuthURL(c *gin.Context) {
 		return
 	}
 
+	// 获取自定义的 redirect_uri 参数
+	redirectURI := c.Query("redirect_uri")
+	if redirectURI == "" {
+		redirectURI = config.GitHub.RedirectURL
+	}
+
+	// 创建临时的 OAuth2 配置
+	tempOAuthConfig := &oauth2.Config{
+		ClientID:     config.GitHub.ClientID,
+		ClientSecret: config.GitHub.ClientSecret,
+		RedirectURL:  redirectURI,
+		Scopes:       []string{"read:user"},
+		Endpoint:     github.Endpoint,
+	}
+
 	// 生成随机 state 参数
 	state, err := generateState()
 	if err != nil {
@@ -156,7 +171,7 @@ func GenerateGitHubAuthURL(c *gin.Context) {
 	}
 
 	// 生成授权 URL
-	authURL := githubOAuthConfig.AuthCodeURL(state)
+	authURL := tempOAuthConfig.AuthCodeURL(state)
 
 	c.JSON(http.StatusOK, gin.H{
 		"auth_url": authURL,

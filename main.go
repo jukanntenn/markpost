@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -10,6 +11,14 @@ import (
 )
 
 func main() {
+	// 检查是否是清理命令
+	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
+		// 移除 "cleanup" 参数，让 flag 包正确解析剩余参数
+		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+		CleanupCommand()
+		return
+	}
+
 	if err := LoadConfig(); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}

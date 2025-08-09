@@ -47,6 +47,11 @@ type Config struct {
 			PerDay    int `mapstructure:"per_day"`
 		} `mapstructure:"post_key"`
 	} `mapstructure:"rate_limit"`
+
+	// 数据清理配置
+	DataCleanup struct {
+		PostRetentionDays int `mapstructure:"post_retention_days"`
+	} `mapstructure:"data_cleanup"`
 }
 
 var config Config
@@ -71,6 +76,9 @@ func LoadConfig() error {
 	config.RateLimit.IP.PerDay = 1000
 	config.RateLimit.PostKey.PerMinute = 10
 	config.RateLimit.PostKey.PerDay = 100
+
+	// 设置数据清理默认值
+	config.DataCleanup.PostRetentionDays = 7
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")

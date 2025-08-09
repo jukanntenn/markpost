@@ -8,6 +8,7 @@ import (
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -16,18 +17,33 @@ var db *gorm.DB
 
 func InitDB() {
 	var err error
-	db, err = gorm.Open(sqlite.Open("./data/db.sqlite3"), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
-	}
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		log.Fatalf("failed to get sql.DB: %v", err)
-	}
+	// 根据配置选择数据库驱动
+	switch config.Database.Type {
+	case "sqlite":
+		db, err = gorm.Open(sqlite.Open(config.Database.URL), &gorm.Config{})
+		if err != nil {
+			log.Fatalf("failed to open SQLite database: %v", err)
+		}
 
-	if _, err = sqlDB.Exec("PRAGMA journal_mode=WAL;"); err != nil {
-		log.Fatalf("failed to set WAL mode: %v", err)
+		// 为 SQLite 设置 WAL 模式
+		sqlDB, err := db.DB()
+		if err != nil {
+			log.Fatalf("failed to get sql.DB: %v", err)
+		}
+
+		if _, err = sqlDB.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+			log.Fatalf("failed to set WAL mode: %v", err)
+		}
+
+	case "postgresql":
+		db, err = gorm.Open(postgres.Open(config.Database.URL), &gorm.Config{})
+		if err != nil {
+			log.Fatalf("failed to open PostgreSQL database: %v", err)
+		}
+
+	default:
+		log.Fatalf("unsupported database type: %s (supported types: sqlite, postgresql)", config.Database.Type)
 	}
 
 	if err = db.AutoMigrate(&User{}, &Post{}); err != nil {

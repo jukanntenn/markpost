@@ -35,6 +35,18 @@ type Config struct {
 		AccessTokenExpire  time.Duration `mapstructure:"access_token_expire"`
 		RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire"`
 	} `mapstructure:"jwt"`
+
+	// 限流配置
+	RateLimit struct {
+		IP struct {
+			PerMinute int `mapstructure:"per_minute"`
+			PerDay    int `mapstructure:"per_day"`
+		} `mapstructure:"ip"`
+		PostKey struct {
+			PerMinute int `mapstructure:"per_minute"`
+			PerDay    int `mapstructure:"per_day"`
+		} `mapstructure:"post_key"`
+	} `mapstructure:"rate_limit"`
 }
 
 var config Config
@@ -53,6 +65,12 @@ func LoadConfig() error {
 	// 设置 JWT 默认值
 	config.JWT.AccessTokenExpire = 24 * time.Hour
 	config.JWT.RefreshTokenExpire = 30 * 24 * time.Hour // 30 days
+
+	// 设置限流默认值
+	config.RateLimit.IP.PerMinute = 100
+	config.RateLimit.IP.PerDay = 1000
+	config.RateLimit.PostKey.PerMinute = 10
+	config.RateLimit.PostKey.PerDay = 100
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")

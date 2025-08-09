@@ -31,10 +31,16 @@ func main() {
 	if config.APIRateLimit > 0 {
 		limitPerSecond := float64(config.APIRateLimit) / 60.0
 		r.Use(LimiterMiddleware(rate.Limit(limitPerSecond), config.APIRateLimit))
-		log.Printf("已启用限流: 每分钟 %d 次请求", config.APIRateLimit)
+		log.Printf("已启用全局限流: 每分钟 %d 次请求", config.APIRateLimit)
 	}
 
+	log.Printf("正在初始化 create post 专用限流功能...")
 	SetupRoutes(r)
+
+	// 启动限流监控
+	startRateLimitMonitoring()
+
+	log.Printf("限流功能初始化完成")
 
 	log.Println("服务器启动中...")
 	log.Println("访问 http://localhost:8080")

@@ -1,0 +1,46 @@
+# markpost 配置文件
+
+# title 的最大字节数，可以不设置
+TITLE_MAX_SIZE = 5
+
+# body 的最大字节数，可以不设置  
+BODY_MAX_SIZE = 1048576
+
+# 接口限流频率，每分钟允许请求次数，可以不设置
+API_RATE_LIMIT = 60
+
+# 数据库配置
+[database]
+# 数据库类型：sqlite 或 postgresql
+type = "sqlite"
+url = "./data/db.sqlite3"
+
+# PostgreSQL 配置示例（取消注释以使用）
+# type = "postgresql"
+# url = "postgres://postgres:postgres@localhost:5234/markpost?sslmode=disable"
+
+# GitHub OAuth2 配置
+[github]
+client_id = "your_github_client_id"
+client_secret = "your_github_client_secret"
+redirect_url = "http://localhost:7330/ui/login/callback"
+
+# JWT 配置
+[jwt]
+secret_key = "your_jwt_secret_key"
+access_token_expire = "24h"
+refresh_token_expire = "720h"      # 30 days
+
+# 限流配置
+[rate_limit]
+[rate_limit.ip]
+per_minute = 100
+per_day = 10000
+
+[rate_limit.post_key]
+per_minute = 100
+per_day = 10000
+
+# 数据清理配置
+[data_cleanup]
+post_retention_days = 30

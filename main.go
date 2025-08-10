@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -24,7 +25,7 @@ func main() {
 	}
 
 	// 初始化 GitHub OAuth2 配置
-	initGitHubOAuth()
+	initOAuthConfig()
 
 	InitDB()
 	defer CloseDB()
@@ -36,6 +37,11 @@ func main() {
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true
+	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "x-oauth-state", "Authorization")
+	r.Use(cors.New(corsConfig))
 
 	if config.APIRateLimit > 0 {
 		limitPerSecond := float64(config.APIRateLimit) / 60.0
@@ -52,8 +58,8 @@ func main() {
 	log.Printf("限流功能初始化完成")
 
 	log.Println("服务器启动中...")
-	log.Println("访问 http://localhost:8080")
-	if err := r.Run(":8080"); err != nil {
+	log.Println("访问 http://localhost:7330")
+	if err := r.Run(":7330"); err != nil {
 		log.Fatalf("启动服务器失败: %v", err)
 	}
 }

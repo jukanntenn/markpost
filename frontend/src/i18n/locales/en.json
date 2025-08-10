@@ -1,0 +1,120 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "tryAgain": "Try Again",
+    "close": "Close",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "show": "Show",
+    "hide": "Hide",
+    "active": "Active",
+    "settings": "Settings",
+    "logout": "Logout",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "password": "Password",
+    "username": "Username",
+    "email": "Email",
+    "profile": "Profile"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode",
+    "system": "Follow System",
+    "toggleTheme": "Toggle Theme"
+  },
+  "navigation": {
+    "brand": "Markpost",
+    "userMenu": {
+      "settings": "Settings",
+      "logout": "Logout"
+    }
+  },
+  "login": {
+    "title": "Login",
+    "welcome": "Welcome to Markpost",
+    "subtitle": "Login to continue",
+    "username": "Username",
+    "password": "Password",
+    "loginButton": "Login",
+    "or": "or",
+    "githubLogin": "Login with GitHub",
+    "passwordLogin": "Login with Password",
+    "usernamePlaceholder": "Enter your username",
+    "passwordPlaceholder": "Enter your password",
+    "loginSuccess": "Login successful! Redirecting...",
+    "loginFailed": "Login failed, please check your username and password",
+    "oauthFailed": "Authorization failed, please try again",
+    "cannotOpenAuthWindow": "Unable to open authorization window, please check browser settings",
+    "invalidLoginData": "Invalid login data, please try again",
+    "githubLoginFailed": "GitHub login failed, please try again",
+    "processingGitHubLogin": "Processing GitHub login, please wait..."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Manage your post key and documentation",
+    "postKey": {
+      "title": "Post Key",
+      "subtitle": "Your post key",
+      "description": "Your post key",
+      "productionKey": "Production Key",
+      "loadingKey": "Loading your post key...",
+      "errorLoadingKey": "Failed to load post key. Please try again later.",
+      "showKey": "Show key",
+      "hideKey": "Hide key",
+      "copyKey": "Copy key",
+      "createdAt": "Created at",
+      "copied": "copied to clipboard!",
+      "active": "Active"
+    },
+    "documentation": {
+      "title": "Documentation",
+      "subtitle": "Complete API reference",
+      "description": "Complete API reference for Markpost",
+      "content": "Please refer to",
+      "apiLink": "Markpost APIs",
+      "content2": "for complete documentation on how to integrate Markpost into your applications.",
+      "viewDocs": "View Documentation"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account settings and security options",
+    "backToDashboard": "Back to Dashboard",
+    "changePassword": "Change Password",
+    "changePasswordDesc": "Update your login password to keep your account secure",
+    "currentPassword": "Current Password",
+    "currentPasswordPlaceholder": "Enter your current password",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "At least 6 characters",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Enter new password again",
+    "enterCurrentPassword": "Please enter current password",
+    "enterNewPassword": "Please enter new password",
+    "confirmPasswordRequired": "Please confirm new password",
+    "passwordStrengthValid": "Password strength is valid",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "passwordsMatch": "Passwords match",
+    "passwordsNotMatch": "Passwords do not match",
+    "changingPassword": "Changing password...",
+    "passwordChangeSuccess": "Password changed successfully!",
+    "passwordChangeFailed": "Password change failed, please try again"
+  },
+  "errors": {
+    "generic": "An error occurred",
+    "networkError": "Network error, please check your connection",
+    "unauthorized": "Unauthorized access",
+    "notFound": "Page not found",
+    "serverError": "Server error, please try again later"
+  }
+}

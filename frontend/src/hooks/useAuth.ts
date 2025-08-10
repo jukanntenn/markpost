@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthService from "../services/authService";
 import type { User } from "../types/auth";
-import { clearAuthData } from "../utils/storage";
 
 interface UseAuthReturn {
   login: () => Promise<void>;
@@ -28,7 +27,7 @@ export const useAuth = (): UseAuthReturn => {
       const currentUser = AuthService.getCurrentUser();
 
       setIsAuthenticated(authenticated);
-      setUser(currentUser);
+      setUser(currentUser as User | null);
     };
 
     initAuth();
@@ -53,7 +52,7 @@ export const useAuth = (): UseAuthReturn => {
   }, []);
 
   const logout = useCallback((): void => {
-    clearAuthData();
+    AuthService.logout();
     setIsAuthenticated(false);
     setUser(null);
     setError(null);

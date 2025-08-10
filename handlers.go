@@ -3,259 +3,92 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
-	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/yuin/goldmark"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 )
 
-// GitHub OAuth2 配置
-var githubOAuthConfig *oauth2.Config
-
-// GitHub 用户信息结构
-type GitHubUser struct {
-	ID    int64  `json:"id"`
-	Login string `json:"login"`
-}
-
-// JWT 令牌对
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-}
-
-// JWT Claims
-type Claims struct {
-	UserID   int    `json:"user_id"`
-	Username string `json:"username"`
-	jwt.RegisteredClaims
-}
-
-// 初始化 GitHub OAuth2 配置
-func initGitHubOAuth() {
-	githubOAuthConfig = &oauth2.Config{
-		ClientID:     config.GitHub.ClientID,
-		ClientSecret: config.GitHub.ClientSecret,
-		RedirectURL:  config.GitHub.RedirectURL,
-		Scopes:       []string{"read:user"},
-		Endpoint:     github.Endpoint,
-	}
-}
-
-// 生成随机 state 参数
-func generateState() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
-
-// 使用授权码交换访问令牌
-func exchangeCodeForToken(code string) (*oauth2.Token, error) {
-	ctx := context.Background()
-	token, err := githubOAuthConfig.Exchange(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-	return token, nil
-}
-
-// 获取 GitHub 用户信息
-func getUserInfo(token *oauth2.Token) (*GitHubUser, error) {
-	ctx := context.Background()
-	client := githubOAuthConfig.Client(ctx, token)
-
-	resp, err := client.Get("https://api.github.com/user")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var githubUser GitHubUser
-	if err := json.NewDecoder(resp.Body).Decode(&githubUser); err != nil {
-		return nil, err
-	}
-
-	return &githubUser, nil
-}
-
-// 生成 JWT 令牌对
-func generateTokenPair(user *User) (*TokenPair, error) {
-	now := time.Now()
-
-	// 生成访问令牌
-	accessClaims := Claims{
-		UserID:   user.ID,
-		Username: user.Username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(config.JWT.AccessTokenExpire)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-		},
-	}
-
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	accessTokenString, err := accessToken.SignedString([]byte(config.JWT.SecretKey))
-	if err != nil {
-		return nil, err
-	}
-
-	// 生成刷新令牌
-	refreshClaims := Claims{
-		UserID:   user.ID,
-		Username: user.Username,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(config.JWT.RefreshTokenExpire)),
-			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
-		},
-	}
-
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(config.JWT.SecretKey))
-	if err != nil {
-		return nil, err
-	}
-
-	return &TokenPair{
-		AccessToken:  accessTokenString,
-		RefreshToken: refreshTokenString,
-		ExpiresIn:    int64(config.JWT.AccessTokenExpire.Seconds()),
-	}, nil
-}
-
-// 生成 GitHub 授权 URL
-func GenerateGitHubAuthURL(c *gin.Context) {
-	// 检查配置是否完整
-	if config.GitHub.ClientID == "" || config.GitHub.ClientSecret == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "GitHub OAuth2 配置不完整",
-		})
-		return
-	}
-
-	// 获取自定义的 redirect_uri 参数
-	redirectURI := c.Query("redirect_uri")
-	if redirectURI == "" {
-		redirectURI = config.GitHub.RedirectURL
-	}
-
-	// 创建临时的 OAuth2 配置
-	tempOAuthConfig := &oauth2.Config{
-		ClientID:     config.GitHub.ClientID,
-		ClientSecret: config.GitHub.ClientSecret,
-		RedirectURL:  redirectURI,
-		Scopes:       []string{"read:user"},
-		Endpoint:     github.Endpoint,
-	}
-
-	// 生成随机 state 参数
+// TODO: rate limit
+func GenerateGitHubOAuthURLHandler(c *gin.Context) {
 	state, err := generateState()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "生成 state 参数失败",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
 		return
 	}
 
-	// 生成授权 URL
-	authURL := tempOAuthConfig.AuthCodeURL(state)
+	url := oauthConfig.AuthCodeURL(state)
 
 	c.JSON(http.StatusOK, gin.H{
-		"auth_url": authURL,
-		"state":    state,
+		"url": url,
 	})
 }
 
-// 处理 GitHub 回调
-func HandleGitHubCallback(c *gin.Context) {
-	// 获取授权码和错误参数
-	code := c.Query("code")
-	error := c.Query("error")
-
-	// 检查是否有错误
-	if error != "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "GitHub 授权失败: " + error,
-		})
+func LoginGitHubHandler(c *gin.Context) {
+	var header struct {
+		XOAuthState string `header:"X-Oauth-State" binding:"required"`
+	}
+	if err := c.ShouldBindHeader(&header); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing X-OAuth-State header"})
 		return
 	}
 
-	// 验证必要参数
-	if code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "缺少授权码",
-		})
+	var query struct {
+		State string `form:"state" binding:"required"`
+	}
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing state query parameter"})
 		return
 	}
 
-	// 使用授权码交换访问令牌
-	token, err := exchangeCodeForToken(code)
+	var body struct {
+		Code string `json:"code" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing code field"})
+		return
+	}
+
+	if header.XOAuthState != query.State {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "mismatch", "message": "State mismatch"})
+		return
+	}
+
+	ctx := context.Background()
+	token, err := oauthConfig.Exchange(ctx, body.Code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "交换访问令牌失败",
-		})
-		log.Printf("交换访问令牌失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
 		return
 	}
 
-	// 获取 GitHub 用户信息
-	githubUser, err := getUserInfo(token)
+	githubUser, err := getGitHubUser(token)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "获取用户信息失败",
-		})
-		log.Printf("获取用户信息失败: %v", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"code": "unauthorized", "message": "Unauthorized"})
 		return
 	}
 
-	// 查找或创建用户
 	user, err := FindOrCreateUser(githubUser)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "用户处理失败",
-		})
-		log.Printf("用户处理失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
 		return
 	}
 
-	// 生成 JWT 令牌
-	tokenPair, err := generateTokenPair(user)
+	tokenPair, err := generateJWTTokenPair(user)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "生成令牌失败",
-		})
-		log.Printf("生成令牌失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
 		return
 	}
 
-	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
 		"user": gin.H{
-			"id":        user.ID,
-			"username":  user.Username,
-			"post_key":  user.PostKey,
-			"github_id": user.GitHubID,
+			"id":       user.ID,
+			"username": user.Username,
 		},
-		"tokens": gin.H{
-			"access_token":  tokenPair.AccessToken,
-			"refresh_token": tokenPair.RefreshToken,
-			"expires_in":    tokenPair.ExpiresIn,
-		},
-		"message": "登录成功",
+		"access_token":  tokenPair.AccessToken,
+		"refresh_token": tokenPair.RefreshToken,
 	})
 }
 
@@ -315,6 +148,131 @@ func RenderPostHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "post.html", gin.H{
 		"Title": post.Title,
 		"Body":  template.HTML(buf.String()),
+	})
+}
+
+func QueryPostKeyHandler(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户信息获取失败"})
+		return
+	}
+
+	userObj := user.(*User)
+
+	c.JSON(http.StatusOK, gin.H{
+		"post_key":   userObj.PostKey,
+		"created_at": userObj.CreatedAt,
+	})
+}
+
+type PasswordLoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+func LoginWithPasswordHandler(c *gin.Context) {
+	var req PasswordLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "invalid_request",
+			"message": "Invalid request format",
+		})
+		return
+	}
+
+	// 验证用户密码
+	user, err := ValidateUserPassword(req.Username, req.Password)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    "invalid_credentials",
+			"message": "Invalid username or password",
+		})
+		return
+	}
+
+	// 生成JWT token
+	tokenPair, err := generateJWTTokenPair(user)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal",
+			"message": "Internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+		},
+		"access_token":  tokenPair.AccessToken,
+		"refresh_token": tokenPair.RefreshToken,
+	})
+}
+
+type PasswordChangeRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=6"`
+}
+
+func ChangePasswordHandler(c *gin.Context) {
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户信息获取失败"})
+		return
+	}
+
+	userObj := user.(*User)
+
+	var req PasswordChangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "invalid_request",
+			"message": "Invalid request format",
+		})
+		return
+	}
+
+	// 验证当前密码
+	if err := CheckPassword(req.CurrentPassword, userObj.Password); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    "invalid_current_password",
+			"message": "当前密码错误",
+		})
+		return
+	}
+
+	// 检查新密码是否与当前密码相同
+	if req.CurrentPassword == req.NewPassword {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "same_password",
+			"message": "新密码不能与当前密码相同",
+		})
+		return
+	}
+
+	// 哈希新密码
+	hashedNewPassword, err := HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal",
+			"message": "Internal server error",
+		})
+		return
+	}
+
+	// 更新用户密码
+	if err := db.Model(&User{}).Where("id = ?", userObj.ID).Update("password", hashedNewPassword).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "internal",
+			"message": "Failed to update password",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "密码修改成功",
 	})
 }
 

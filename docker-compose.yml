@@ -4,12 +4,12 @@ services:
     image: markpost:latest
     container_name: markpost
     ports:
-      - "8080:8080"
+      - "7330:7330"
     volumes:
       # 挂载数据目录，持久化数据库文件
       - ./data:/app/data
       # 挂载配置文件（可选，如果需要动态修改配置）
-      - ./markpost.toml:/app/markpost.toml:ro
+      - ./config.toml:/app/config.toml:ro
     environment:
       - GIN_MODE=release
     restart: unless-stopped

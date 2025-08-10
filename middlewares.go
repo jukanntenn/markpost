@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,35 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		c.Set("user", user)
+		c.Next()
+	}
+}
+
+func JWTMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"detail": "missing authorization header"})
+			c.Abort()
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		claims, err := validateJWTToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"detail": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		user, err := GetUserByID(claims.UserID)
+		if err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"detail": "user not found"})
+			c.Abort()
+			return
+		}
+
 		c.Set("user", user)
 		c.Next()
 	}

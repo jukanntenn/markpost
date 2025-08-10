@@ -44,7 +44,7 @@ export class AuthService {
   static async getGitHubAuthUrl(): Promise<GitHubAuthUrlResponse> {
     try {
       const response = await apiClient.get<GitHubAuthUrlResponse>(
-        "/auth/github/url"
+        "/api/oauth/url"
       );
       return response.data;
     } catch (error) {
@@ -63,12 +63,9 @@ export class AuthService {
    */
   static async handleGitHubCallback(code: string): Promise<AuthResponse> {
     try {
-      const response = await apiClient.get<AuthResponse>(
-        "/auth/github/callback",
-        {
-          params: { code },
-        }
-      );
+      const response = await apiClient.get<AuthResponse>("/api/oauth/login", {
+        params: { code },
+      });
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {

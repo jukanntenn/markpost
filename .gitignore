@@ -36,3 +36,4 @@ config.toml
 
 # frontend
 node_modules/
+dist/

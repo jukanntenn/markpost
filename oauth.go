@@ -42,10 +42,8 @@ func getGitHubUser(token *oauth2.Token) (*GitHubUser, error) {
 		return nil, err
 	}
 
-	// Debug: Print the decoded GitHub user information
 	log.Printf("GitHub OAuth Debug - User data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)
 
-	// Validate the GitHub user data
 	if githubUser.ID == 0 || githubUser.Login == "" {
 		log.Printf("GitHub OAuth Error - Invalid user data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)
 		return nil, fmt.Errorf("invalid GitHub user data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)

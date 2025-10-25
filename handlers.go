@@ -1,30 +1,19 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"database/sql"
 	"html/template"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yuin/goldmark"
 )
 
-// TODO: rate limit
 func GenerateGitHubOAuthURLHandler(c *gin.Context) {
-	state, err := generateState()
+	url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": "Internal server error"})
 		return
 	}
-
-	url := oauthConfig.AuthCodeURL(state)
-
-	c.JSON(http.StatusOK, gin.H{
-		"url": url,
-	})
+	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 
 func LoginGitHubHandler(c *gin.Context) {
@@ -32,63 +21,42 @@ func LoginGitHubHandler(c *gin.Context) {
 		XOAuthState string `header:"X-Oauth-State" binding:"required"`
 	}
 	if err := c.ShouldBindHeader(&header); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing X-OAuth-State header"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": "Missing X-OAuth-State header"})
 		return
 	}
-
 	var query struct {
 		State string `form:"state" binding:"required"`
 	}
 	if err := c.ShouldBindQuery(&query); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing state query parameter"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": "Missing state query parameter"})
 		return
 	}
-
 	var body struct {
 		Code string `json:"code" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": "required", "message": "Missing code field"})
+		c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": "Missing code field"})
 		return
 	}
-
 	if header.XOAuthState != query.State {
 		c.JSON(http.StatusBadRequest, gin.H{"code": "mismatch", "message": "State mismatch"})
 		return
 	}
 
-	ctx := context.Background()
-	token, err := oauthConfig.Exchange(ctx, body.Code)
+	user, tokens, err := authSvc.LoginWithGitHub(c.Request.Context(), body.Code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
-		return
-	}
-
-	githubUser, err := getGitHubUser(token)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"code": "unauthorized", "message": "Unauthorized"})
-		return
-	}
-
-	user, err := FindOrCreateUser(githubUser)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
-		return
-	}
-
-	tokenPair, err := generateJWTTokenPair(user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"code": "internal", "message": "Internal server error"})
+		if se, ok := err.(*ServiceError); ok && se.Code == ErrUnauthorized {
+			c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": "Unauthorized"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": "Internal server error"})
+		}
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-		},
-		"access_token":  tokenPair.AccessToken,
-		"refresh_token": tokenPair.RefreshToken,
+		"user":          gin.H{"id": user.ID, "username": user.Username},
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
 	})
 }
 
@@ -98,72 +66,66 @@ type PostRequest struct {
 }
 
 func CreatePostHandler(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户信息获取失败"})
+	u, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user information"})
 		return
 	}
-
-	userObj := user.(*User)
+	user := u.(*User)
 
 	var req PostRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求格式错误"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
 		return
 	}
 
-	post, err := CreatePost(req.Title, req.Body, userObj.ID)
+	id, err := postSvc.CreatePost(c.Request.Context(), req.Title, req.Body, user.ID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建内容失败"})
-		log.Printf("创建内容失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"id": post.ID,
-	})
+	c.JSON(http.StatusOK, gin.H{"id": id})
 }
 
 func RenderPostHandler(c *gin.Context) {
 	id := c.Param("id")
-	post, err := GetPostByID(id)
+	title, html, err := postSvc.RenderPostHTML(c.Request.Context(), id)
 	if err != nil {
-		switch err {
-		case sql.ErrNoRows:
-			c.String(http.StatusNotFound, "Not Found")
-		default:
-			log.Printf("查询内容失败: %v", err)
+		if se, ok := err.(*ServiceError); ok {
+			switch se.Code {
+			case ErrNotFound:
+				c.String(http.StatusNotFound, "Not Found")
+			default:
+				c.String(http.StatusInternalServerError, "Internal Server Error")
+			}
+		} else {
 			c.String(http.StatusInternalServerError, "Internal Server Error")
 		}
 		return
 	}
-
-	var buf bytes.Buffer
-	if err := goldmark.Convert([]byte(post.Body), &buf); err != nil {
-		log.Printf("Markdown 转换失败: %v", err)
-		c.String(http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-
-	c.HTML(http.StatusOK, "post.html", gin.H{
-		"Title": post.Title,
-		"Body":  template.HTML(buf.String()),
-	})
+	c.HTML(http.StatusOK, "post.html", gin.H{"Title": title, "Body": template.HTML(html)})
 }
 
 func QueryPostKeyHandler(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户信息获取失败"})
+	u, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user information"})
+		return
+	}
+	user := u.(*User)
+
+	postKey, createdAt, err := authSvc.QueryPostKey(c.Request.Context(), user.ID)
+	if err != nil {
+		if se, ok := err.(*ServiceError); ok && se.Code == ErrNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not Found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		}
 		return
 	}
 
-	userObj := user.(*User)
-
-	c.JSON(http.StatusOK, gin.H{
-		"post_key":   userObj.PostKey,
-		"created_at": userObj.CreatedAt,
-	})
+	c.JSON(http.StatusOK, gin.H{"post_key": postKey, "created_at": createdAt})
 }
 
 type PasswordLoginRequest struct {
@@ -174,40 +136,22 @@ type PasswordLoginRequest struct {
 func LoginWithPasswordHandler(c *gin.Context) {
 	var req PasswordLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    "invalid_request",
-			"message": "Invalid request format",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_request", "message": "Invalid request format"})
 		return
 	}
-
-	// 验证用户密码
-	user, err := ValidateUserPassword(req.Username, req.Password)
+	user, tokens, err := authSvc.LoginWithPassword(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code":    "invalid_credentials",
-			"message": "Invalid username or password",
-		})
+		if se, ok := err.(*ServiceError); ok && se.Code == ErrInvalidCredentials {
+			c.JSON(http.StatusUnauthorized, gin.H{"code": ErrInvalidCredentials, "message": "Invalid username or password"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": "Internal server error"})
+		}
 		return
 	}
-
-	// 生成JWT token
-	tokenPair, err := generateJWTTokenPair(user)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    "internal",
-			"message": "Internal server error",
-		})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-		},
-		"access_token":  tokenPair.AccessToken,
-		"refresh_token": tokenPair.RefreshToken,
+		"user":          gin.H{"id": user.ID, "username": user.Username},
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
 	})
 }
 
@@ -217,68 +161,40 @@ type PasswordChangeRequest struct {
 }
 
 func ChangePasswordHandler(c *gin.Context) {
-	user, exists := c.Get("user")
-	if !exists {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "用户信息获取失败"})
+	u, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user information"})
 		return
 	}
-
-	userObj := user.(*User)
+	user := u.(*User)
 
 	var req PasswordChangeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    "invalid_request",
-			"message": "Invalid request format",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_request", "message": "Invalid request format"})
 		return
 	}
 
-	// 验证当前密码
-	if err := CheckPassword(req.CurrentPassword, userObj.Password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code":    "invalid_current_password",
-			"message": "当前密码错误",
-		})
+	if err := authSvc.ChangePassword(c.Request.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		if se, ok := err.(*ServiceError); ok {
+			switch se.Code {
+			case ErrInvalidCurrentPassword:
+				c.JSON(http.StatusUnauthorized, gin.H{"code": ErrInvalidCurrentPassword, "message": "Current password is incorrect"})
+			case ErrSamePassword, ErrValidation:
+				c.JSON(http.StatusBadRequest, gin.H{"code": se.Code, "message": "New password cannot be the same as current password"})
+			case ErrNotFound:
+				c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": "Not Found"})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": "Internal server error"})
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": "Internal server error"})
+		}
 		return
 	}
 
-	// 检查新密码是否与当前密码相同
-	if req.CurrentPassword == req.NewPassword {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    "same_password",
-			"message": "新密码不能与当前密码相同",
-		})
-		return
-	}
-
-	// 哈希新密码
-	hashedNewPassword, err := HashPassword(req.NewPassword)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    "internal",
-			"message": "Internal server error",
-		})
-		return
-	}
-
-	// 更新用户密码
-	if err := db.Model(&User{}).Where("id = ?", userObj.ID).Update("password", hashedNewPassword).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    "internal",
-			"message": "Failed to update password",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "密码修改成功",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Password changed successfully"})
 }
 
 func HealthHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
-		"status":  "ok",
-		"message": "markpost is running",
-	})
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": "markpost is running"})
 }

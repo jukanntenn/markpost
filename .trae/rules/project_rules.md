@@ -4,6 +4,7 @@
 
 - 尽可能使用汉语回复
 - Notify me for acceptance after implementation; no self-verification needed
+- NEVER write comments in the code
 
 ## Technology Stack
 

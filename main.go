@@ -8,13 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/time/rate"
 )
 
+var authSvc *AuthService
+var postSvc *PostService
+
 func main() {
-	// 检查是否是清理命令
 	if len(os.Args) > 1 && os.Args[1] == "cleanup" {
-		// 移除 "cleanup" 参数，让 flag 包正确解析剩余参数
 		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
 		CleanupCommand()
 		return
@@ -24,43 +24,45 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 初始化 GitHub OAuth2 配置
 	initOAuthConfig()
 
-	InitDB()
-	defer CloseDB()
+	dbInstance, err := NewDatabase(config.Database.URL)
+	if err != nil {
+		log.Fatalf("Failed to init database: %v", err)
+	}
+	defer func() {
+		sqlDB, err := dbInstance.GetDB().DB()
+		if err == nil && sqlDB != nil {
+			sqlDB.Close()
+		}
+	}()
+	database = dbInstance
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("titlesize", validateTitleSize)
 		v.RegisterValidation("bodysize", validateBodySize)
 	}
 
+	authSvc = NewAuthService(database.GetUserRepository(), oauthConfig)
+	postSvc = NewPostService(database.GetPostRepository())
+
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
+
+	r.Use(FallbackMiddleware())
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true
 	corsConfig.AllowHeaders = append(corsConfig.AllowHeaders, "x-oauth-state", "Authorization")
 	r.Use(cors.New(corsConfig))
 
-	if config.APIRateLimit > 0 {
-		limitPerSecond := float64(config.APIRateLimit) / 60.0
-		r.Use(LimiterMiddleware(rate.Limit(limitPerSecond), config.APIRateLimit))
-		log.Printf("已启用全局限流: 每分钟 %d 次请求", config.APIRateLimit)
-	}
-
-	log.Printf("正在初始化 create post 专用限流功能...")
+	log.Printf("Initializing rate limiting for create post...")
 	SetupRoutes(r)
 
-	// 启动限流监控
-	startRateLimitMonitoring()
-
-	log.Printf("限流功能初始化完成")
-
-	log.Println("服务器启动中...")
-	log.Println("访问 http://localhost:7330")
+	log.Println("Server starting...")
+	log.Println("Visit http://localhost:7330")
 	if err := r.Run(":7330"); err != nil {
-		log.Fatalf("启动服务器失败: %v", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 

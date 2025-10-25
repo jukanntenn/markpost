@@ -7,9 +7,9 @@ import (
 type User struct {
 	ID        int       `json:"id" gorm:"primaryKey;autoIncrement"`
 	Username  string    `json:"username" gorm:"unique;not null"`
-	Password  string    `json:"-" gorm:"column:password"` // 密码字段，不返回给前端
+	Password  string    `json:"-" gorm:"column:password"`
 	PostKey   string    `json:"post_key" gorm:"not null"`
-	GitHubID  *int64    `json:"github_id" gorm:"column:github_id;uniqueIndex"` // 使用指针类型，允许 NULL
+	GitHubID  *int64    `json:"github_id" gorm:"column:github_id;uniqueIndex"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 

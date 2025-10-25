@@ -12,6 +12,8 @@ MUST FOLLOW THESE RULES, NO EXCEPTIONS
 - Dev server is already running on `http://localhost:5173` with HMR enabled. NEVER launch it yourself
 - ALWAYS use named functions when declaring methods, use arrow functions only for callbacks
 - ALWAYS prefer named exports over default exports
+- ALWAYS implement responsive design for consistent, high-quality display on mobile, tablet, and desktop
+- ONLY use Bootstrap 5 utility CSS classes; no custom CSS or styles
 
 ## Project Structure
 

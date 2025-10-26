@@ -9,10 +9,11 @@ import {
   Row,
   Col,
 } from "react-bootstrap";
-import { Gear, Shield, ArrowLeft, CheckCircle } from "react-bootstrap-icons";
+import { Gear, Lock, CheckCircle } from "react-bootstrap-icons";
 import { auth } from "../utils/api";
-import { useNavigate } from "react-router-dom";
+ 
 import { useTranslation } from "react-i18next";
+import LanguageToggle from "../components/LanguageToggle";
 
 interface PasswordChangeRequest {
   current_password: string;
@@ -31,7 +32,7 @@ function Settings() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showValidation, setShowValidation] = useState(false);
-  const navigate = useNavigate();
+ 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -118,49 +119,51 @@ function Settings() {
 
   return (
     <Container className="py-4">
-      {/* Page Header */}
-      <div className="mb-5 text-center">
-        <div className="d-inline-flex align-items-center justify-content-center bg-primary bg-gradient rounded-circle p-3 mb-3">
-          <Gear size={32} className="text-white" />
-        </div>
-        <h1 className="display-5 fw-bold text-body mb-3">
-          {t("settings.title")}
-        </h1>
-        <p className="lead text-muted">{t("settings.subtitle")}</p>
-
-        {/* Back to Dashboard */}
-        <Button
-          variant="outline-secondary"
-          onClick={() => navigate("/dashboard")}
-          className="mt-3 mb-4"
-        >
-          <ArrowLeft size={16} className="me-2" />
-          {t("settings.backToDashboard")}
-        </Button>
-      </div>
+      
 
       <Row className="justify-content-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-          {/* Password Change Card */}
           <Card className="border-0 shadow-lg">
-            <Card.Header className="bg-body border-0 pt-4 px-4 pb-3">
+            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
-                <div className="bg-warning bg-gradient rounded-circle p-3 me-3">
-                  <Shield size={24} className="text-white" />
-                </div>
+                <Gear size={18} className="me-2 text-body" />
                 <div className="flex-grow-1">
-                  <h4 className="mb-1 fw-bold text-body">
-                    {t("settings.title")}
-                  </h4>
-                  <p className="text-muted mb-0 small">
-                    {t("settings.subtitle")}
-                  </p>
+                  <h6 className="mb-0 text-body">
+                    {t("settings.applicationSettings")}
+                  </h6>
                 </div>
               </div>
             </Card.Header>
-
             <Card.Body className="p-4 p-md-5">
-              {/* Error and Success Alerts */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold text-muted small">
+                  {t("settings.language")}
+                </label>
+                <div className="py-2">
+                  <LanguageToggle />
+                </div>
+                <div className="text-muted small mt-2">
+                  {t("settings.languageDescription")}
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+      <Row className="justify-content-center mt-5">
+        <Col xs={12} sm={10} md={8} lg={6} xl={5}>
+           <Card className="border-0 shadow-lg">
+            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
+              <div className="d-flex align-items-center">
+                <Lock size={18} className="me-2 text-body" />
+                <div className="flex-grow-1">
+                  <h6 className="mb-0 text-body">
+                    {t("settings.changePassword")}
+                  </h6>
+                </div>
+              </div>
+            </Card.Header>
+            <Card.Body className="p-4 p-md-5">
               {error && (
                 <Alert variant="danger" className="mb-4 border-0">
                   {error}
@@ -280,7 +283,7 @@ function Settings() {
                     )}
                   {showValidation && !formData.confirm_password && !success && (
                     <Form.Control.Feedback type="invalid" className="d-block">
-                      {t("settings.confirmNewPasswordRequired")}
+                      {t("settings.confirmPasswordRequired")}
                     </Form.Control.Feedback>
                   )}
                 </Form.Group>
@@ -312,7 +315,6 @@ function Settings() {
                       </>
                     ) : (
                       <>
-                        <Shield size={16} className="me-2" />
                         {t("settings.changePassword")}
                       </>
                     )}

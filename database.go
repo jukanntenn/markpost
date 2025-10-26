@@ -79,6 +79,22 @@ func (d *Database) GetPostRepository() PostRepository {
 	return &postRepository{db: d.db}
 }
 
+func NewTestDatabase(url string) (*Database, error) {
+	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+	if sqlDB, err2 := gdb.DB(); err2 == nil {
+		_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL;")
+	}
+
+	if err = gdb.AutoMigrate(&User{}, &Post{}); err != nil {
+		return nil, err
+	}
+
+	return &Database{db: gdb}, nil
+}
+
 func migrateUserCreatedAtWithDB(gdb *gorm.DB) {
 	if !gdb.Migrator().HasColumn(&User{}, "created_at") {
 		if err := gdb.Migrator().AddColumn(&User{}, "created_at"); err != nil {

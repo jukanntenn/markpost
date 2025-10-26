@@ -1,31 +1,11 @@
 {
   "common": {
-    "loading": "Loading...",
-    "error": "Error",
-    "success": "Success",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "save": "Save",
-    "delete": "Delete",
-    "edit": "Edit",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "tryAgain": "Try Again",
-    "close": "Close",
-    "copy": "Copy",
-    "copied": "Copied!",
-    "show": "Show",
-    "hide": "Hide",
-    "active": "Active",
-    "settings": "Settings",
-    "logout": "Logout",
-    "dashboard": "Dashboard",
-    "login": "Login",
-    "password": "Password",
-    "username": "Username",
-    "email": "Email",
-    "profile": "Profile"
+    "user": "User"
+  },
+  "language": {
+    "english": "English",
+    "chinese": "中文",
+    "changeLanguage": "Change Language"
   },
   "theme": {
     "light": "Light Mode",
@@ -34,53 +14,46 @@
     "toggleTheme": "Toggle Theme"
   },
   "navigation": {
-    "brand": "Markpost",
     "userMenu": {
       "settings": "Settings",
       "logout": "Logout"
     }
   },
   "login": {
-    "title": "Login",
-    "welcome": "Welcome to Markpost",
-    "subtitle": "Login to continue",
     "username": "Username",
     "password": "Password",
     "loginButton": "Login",
+    "signingIn": "Signing in...",
     "or": "or",
     "githubLogin": "Login with GitHub",
-    "passwordLogin": "Login with Password",
+    "processingGitHubLogin": "Processing GitHub login, please wait...",
     "usernamePlaceholder": "Enter your username",
     "passwordPlaceholder": "Enter your password",
-    "loginSuccess": "Login successful! Redirecting...",
-    "loginFailed": "Login failed, please check your username and password",
-    "oauthFailed": "Authorization failed, please try again",
     "cannotOpenAuthWindow": "Unable to open authorization window, please check browser settings",
-    "invalidLoginData": "Invalid login data, please try again",
-    "githubLoginFailed": "GitHub login failed, please try again",
-    "processingGitHubLogin": "Processing GitHub login, please wait..."
+    "loginFailed": "Login failed",
+    "loginError": "Login error, please try again later",
+    "unknownError": "Unknown error"
+  },
+  "loginCallback": {
+    "loading": "Login...",
+    "authError": "Login error",
+    "authFailed": "Authorization failed",
+    "unknownError": "Unknown error"
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Manage your post key and documentation",
     "postKey": {
       "title": "Post Key",
-      "subtitle": "Your post key",
-      "description": "Your post key",
-      "productionKey": "Production Key",
       "loadingKey": "Loading your post key...",
+      "errorTitle": "Error loading post key",
       "errorLoadingKey": "Failed to load post key. Please try again later.",
       "showKey": "Show key",
       "hideKey": "Hide key",
       "copyKey": "Copy key",
       "createdAt": "Created at",
-      "copied": "copied to clipboard!",
-      "active": "Active"
+      "copied": "copied to clipboard!"
     },
     "documentation": {
       "title": "Documentation",
-      "subtitle": "Complete API reference",
-      "description": "Complete API reference for Markpost",
       "content": "Please refer to",
       "apiLink": "Markpost APIs",
       "content2": "for complete documentation on how to integrate Markpost into your applications.",
@@ -88,11 +61,10 @@
     }
   },
   "settings": {
-    "title": "Settings",
-    "subtitle": "Manage your account settings and security options",
-    "backToDashboard": "Back to Dashboard",
+    "applicationSettings": "Application Settings",
+    "language": "Language",
+    "languageDescription": "Select your preferred language",
     "changePassword": "Change Password",
-    "changePasswordDesc": "Update your login password to keep your account secure",
     "currentPassword": "Current Password",
     "currentPasswordPlaceholder": "Enter your current password",
     "newPassword": "New Password",
@@ -106,15 +78,16 @@
     "passwordMinLength": "Password must be at least 6 characters",
     "passwordsMatch": "Passwords match",
     "passwordsNotMatch": "Passwords do not match",
+    "passwordSameAsCurrent": "New password cannot be the same as current password",
     "changingPassword": "Changing password...",
     "passwordChangeSuccess": "Password changed successfully!",
     "passwordChangeFailed": "Password change failed, please try again"
   },
-  "errors": {
-    "generic": "An error occurred",
-    "networkError": "Network error, please check your connection",
-    "unauthorized": "Unauthorized access",
-    "notFound": "Page not found",
-    "serverError": "Server error, please try again later"
+  "notFound": {
+    "title": "404",
+    "pageNotFound": "Page not found",
+    "pageNotFoundLoginRequired": "Page not found, please login first",
+    "backToDashboard": "Back to Dashboard",
+    "goToLogin": "Go to Login"
   }
 }

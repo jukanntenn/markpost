@@ -7,7 +7,7 @@ import {
   Alert,
 } from "react-bootstrap";
 import { useState, useEffect } from "react";
-import { Eye, EyeSlash, Copy, Shield, Book } from "react-bootstrap-icons";
+import { Eye, EyeSlash, Copy, Key, Book } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 import { auth } from "../utils/api";
 
@@ -53,7 +53,7 @@ function Dashboard() {
         setCreatedAt(response.data.created_at);
       } catch (err) {
         console.error("Failed to fetch post key:", err);
-        setError(t("errors.loadPostKeyFailed"));
+        setError(t("dashboard.postKey.errorLoadingKey"));
       } finally {
         setLoading(false);
       }
@@ -77,30 +77,19 @@ function Dashboard() {
 
   return (
     <Container className="py-4">
-      {/* Page Header */}
-      <div className="mb-5 text-center">
-        <h1 className="display-5 fw-bold text-body mb-3">
-          {t("dashboard.title")}
-        </h1>
-        <p className="lead text-muted">{t("dashboard.subtitle")}</p>
-      </div>
+      
 
       <div className="row g-4 justify-content-center">
         {/* Post Key Section */}
         <div className="col-lg-8 col-xl-6">
           <Card className="border-0 shadow-sm h-100">
-            <Card.Header className="bg-body border-0 pt-4 px-4 pb-3">
+            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
-                <div className="bg-primary bg-gradient rounded-circle p-3 me-3">
-                  <Shield size={24} className="text-white" />
-                </div>
+                <Key size={18} className="me-2 text-body" />
                 <div className="flex-grow-1">
-                  <h4 className="mb-1 fw-bold text-body">
+                  <h6 className="mb-0 text-body">
                     {t("dashboard.postKey.title")}
-                  </h4>
-                  <p className="text-muted mb-0 small">
-                    {t("dashboard.postKey.description")}
-                  </p>
+                  </h6>
                 </div>
               </div>
             </Card.Header>
@@ -111,21 +100,12 @@ function Dashboard() {
                     <span className="visually-hidden">Loading...</span>
                   </Spinner>
                   <p className="mt-3 text-muted mb-0">
-                    {t("dashboard.postKey.loading")}
+                    {t("dashboard.postKey.loadingKey")}
                   </p>
                 </div>
               ) : error ? (
                 <Alert variant="danger" className="mb-0">
-                  <Alert.Heading>
-                    {t("dashboard.postKey.errorTitle")}
-                  </Alert.Heading>
                   <p>{error}</p>
-                  <Button
-                    variant="outline-danger"
-                    onClick={() => window.location.reload()}
-                  >
-                    {t("dashboard.postKey.tryAgain")}
-                  </Button>
                 </Alert>
               ) : (
                 <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle">
@@ -134,9 +114,6 @@ function Dashboard() {
                       <div className="font-monospace fs-5 text-body">
                         {showKey ? postKey : "•".repeat(postKey.length)}
                       </div>
-                      <Badge bg="info" className="mt-2">
-                        {t("dashboard.postKey.productionKey")}
-                      </Badge>
                       {copySuccess && (
                         <div className="mt-2">
                           <Badge bg="success" className="animate-fade-in">
@@ -176,16 +153,6 @@ function Dashboard() {
               )}
               <div className="mt-3 d-flex gap-2">
                 <small className="text-muted">
-                  <span className="d-inline-flex align-items-center">
-                    <span
-                      className="bg-success rounded-circle me-1"
-                      style={{ width: "8px", height: "8px" }}
-                    ></span>
-                    {t("dashboard.postKey.active")}
-                  </span>
-                </small>
-                <small className="text-muted">•</small>
-                <small className="text-muted">
                   {t("dashboard.postKey.createdAt")}{" "}
                   {formatToLocalTime(createdAt)}
                 </small>
@@ -197,18 +164,13 @@ function Dashboard() {
         {/* API Docs Section */}
         <div className="col-lg-8 col-xl-6">
           <Card className="border-0 shadow-sm h-100">
-            <Card.Header className="bg-body border-0 pt-4 px-4 pb-3">
+            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
-                <div className="bg-success bg-gradient rounded-circle p-3 me-3">
-                  <Book size={24} className="text-white" />
-                </div>
+                <Book size={18} className="me-2 text-body" />
                 <div className="flex-grow-1">
-                  <h4 className="mb-1 fw-bold text-body">
+                  <h6 className="mb-0 text-body">
                     {t("dashboard.documentation.title")}
-                  </h4>
-                  <p className="text-muted mb-0 small">
-                    {t("dashboard.documentation.description")}
-                  </p>
+                  </h6>
                 </div>
               </div>
             </Card.Header>

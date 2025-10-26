@@ -1,0 +1,23 @@
+{
+  "error": {
+    "internal": "服务器内部错误",
+    "unauthorized": "未授权",
+    "invalid_credentials": "用户名或密码错误",
+    "invalid_current_password": "当前密码不正确",
+    "invalid_request": "请求格式无效",
+    "missing_oauth_state": "缺少 X-OAuth-State 请求头",
+    "missing_state_param": "缺少 state 查询参数",
+    "missing_code": "缺少 code 字段",
+    "state_mismatch": "状态不匹配",
+    "not_found": "未找到",
+    "failed_get_user": "获取用户信息失败",
+    "failed_create_post": "创建文章失败",
+    "failed_render_post": "渲染文章失败",
+    "new_password_same": "新密码不能与当前密码相同",
+    "password_changed_success": "密码修改成功",
+    "invalid_token": "令牌无效"
+  },
+  "health": {
+    "running": "markpost 正在运行"
+  }
+}

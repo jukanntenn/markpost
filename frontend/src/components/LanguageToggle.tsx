@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Globe } from 'react-bootstrap-icons';
 
 const LanguageToggle: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
 
   const handleLanguageChange = (lng: string) => {
     i18n.changeLanguage(lng);
@@ -13,11 +13,11 @@ const LanguageToggle: React.FC = () => {
   const getCurrentLanguageLabel = () => {
     switch (i18n.language) {
       case 'en':
-        return 'English';
+        return t('language.english');
       case 'zh':
-        return '中文';
+        return t('language.chinese');
       default:
-        return 'English';
+        return t('language.english');
     }
   };
 
@@ -25,10 +25,10 @@ const LanguageToggle: React.FC = () => {
     <Dropdown align="end">
       <Dropdown.Toggle
         variant="link"
-        className="text-decoration-none p-2 d-flex align-items-center gap-2"
+        className="text-decoration-none p-2 d-flex align-items-center gap-2 text-body"
         id="language-dropdown"
-        title="Change Language"
-        aria-label="Change Language"
+        title={t('language.changeLanguage')}
+        aria-label={t('language.changeLanguage')}
       >
         <Globe size={18} />
         <span className="d-none d-md-inline">{getCurrentLanguageLabel()}</span>
@@ -41,7 +41,7 @@ const LanguageToggle: React.FC = () => {
           className="d-flex align-items-center gap-2"
         >
           <span className="fi fi-gb"></span>
-          English
+          {t('language.english')}
         </Dropdown.Item>
         <Dropdown.Item
           active={i18n.language === 'zh'}
@@ -49,7 +49,7 @@ const LanguageToggle: React.FC = () => {
           className="d-flex align-items-center gap-2"
         >
           <span className="fi fi-cn"></span>
-          中文
+          {t('language.chinese')}
         </Dropdown.Item>
       </Dropdown.Menu>
     </Dropdown>

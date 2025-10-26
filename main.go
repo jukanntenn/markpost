@@ -24,6 +24,8 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	InitI18n()
+
 	initOAuthConfig()
 
 	dbInstance, err := NewDatabase(config.Database.URL)
@@ -50,6 +52,7 @@ func main() {
 	r.LoadHTMLGlob("templates/*")
 
 	r.Use(FallbackMiddleware())
+	r.Use(I18nMiddleware())
 
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true

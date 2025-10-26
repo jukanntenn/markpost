@@ -1,31 +1,11 @@
 {
   "common": {
-    "loading": "加载中...",
-    "error": "错误",
-    "success": "成功",
-    "cancel": "取消",
-    "confirm": "确认",
-    "save": "保存",
-    "delete": "删除",
-    "edit": "编辑",
-    "back": "返回",
-    "next": "下一步",
-    "previous": "上一步",
-    "tryAgain": "重试",
-    "close": "关闭",
-    "copy": "复制",
-    "copied": "已复制！",
-    "show": "显示",
-    "hide": "隐藏",
-    "active": "活跃",
-    "settings": "设置",
-    "logout": "登出",
-    "dashboard": "仪表板",
-    "login": "登录",
-    "password": "密码",
-    "username": "用户名",
-    "email": "邮箱",
-    "profile": "个人资料"
+    "user": "用户"
+  },
+  "language": {
+    "english": "English",
+    "chinese": "中文",
+    "changeLanguage": "切换语言"
   },
   "theme": {
     "light": "浅色模式",
@@ -34,53 +14,46 @@
     "toggleTheme": "切换主题"
   },
   "navigation": {
-    "brand": "Markpost",
     "userMenu": {
       "settings": "设置",
       "logout": "登出"
     }
   },
   "login": {
-    "title": "登录",
-    "welcome": "欢迎来到 Markpost",
-    "subtitle": "登录以继续",
     "username": "用户名",
     "password": "密码",
     "loginButton": "登录",
+    "signingIn": "登录中...",
     "or": "或",
     "githubLogin": "使用 GitHub 登录",
-    "passwordLogin": "使用密码登录",
+    "processingGitHubLogin": "正在处理 GitHub 登录，请稍后...",
     "usernamePlaceholder": "输入您的用户名",
     "passwordPlaceholder": "输入您的密码",
-    "loginSuccess": "登录成功！正在跳转...",
-    "loginFailed": "登录失败，请检查用户名和密码",
-    "oauthFailed": "授权失败，请重试",
     "cannotOpenAuthWindow": "无法打开授权窗口，请检查浏览器设置",
-    "invalidLoginData": "登录数据无效，请重试",
-    "githubLoginFailed": "GitHub登录失败，请重试",
-    "processingGitHubLogin": "正在处理GitHub登录，请稍后..."
+    "loginFailed": "登录失败",
+    "loginError": "登录异常，请稍后重试",
+    "unknownError": "未知错误"
+  },
+  "loginCallback": {
+    "loading": "登录中...",
+    "authError": "登录异常",
+    "authFailed": "授权失败",
+    "unknownError": "未知错误"
   },
   "dashboard": {
-    "title": "仪表板",
-    "subtitle": "管理您的 Post Key 和文档",
     "postKey": {
       "title": "Post Key",
-      "subtitle": "您的 Post Key",
-      "description": "您的 Post Key",
-      "productionKey": "生产密钥",
       "loadingKey": "正在加载您的 Post Key...",
+      "errorTitle": "加载 Post Key 失败",
       "errorLoadingKey": "加载您的 Post Key 失败，请稍后重试。",
       "showKey": "显示 Post Key",
       "hideKey": "隐藏 Post Key",
       "copyKey": "复制 Post Key",
       "createdAt": "创建于",
-      "copied": "已复制到粘贴板！",
-      "active": "活跃"
+      "copied": "已复制到粘贴板！"
     },
     "documentation": {
       "title": "文档",
-      "subtitle": "完整的 API 参考",
-      "description": "完整的 Markpost API 参考",
       "content": "请参考",
       "apiLink": "Markpost APIs",
       "content2": "以获取完整的文档，了解如何将 Markpost 集成到您的应用程序中。",
@@ -88,11 +61,10 @@
     }
   },
   "settings": {
-    "title": "设置",
-    "subtitle": "管理您的账户设置和安全选项",
-    "backToDashboard": "返回仪表板",
+    "applicationSettings": "应用设置",
+    "language": "语言",
+    "languageDescription": "选择您偏好的语言",
     "changePassword": "修改密码",
-    "changePasswordDesc": "更新您的登录密码以保护账户安全",
     "currentPassword": "当前密码",
     "currentPasswordPlaceholder": "输入您的当前密码",
     "newPassword": "新密码",
@@ -106,15 +78,16 @@
     "passwordMinLength": "密码至少需要6个字符",
     "passwordsMatch": "密码匹配",
     "passwordsNotMatch": "两次输入的密码不一致",
+    "passwordSameAsCurrent": "新密码不能与当前密码相同",
     "changingPassword": "修改密码中...",
     "passwordChangeSuccess": "密码修改成功！",
     "passwordChangeFailed": "密码修改失败，请重试"
   },
-  "errors": {
-    "generic": "发生错误",
-    "networkError": "网络错误，请检查您的连接",
-    "unauthorized": "未授权访问",
-    "notFound": "页面未找到",
-    "serverError": "服务器错误，请稍后重试"
+  "notFound": {
+    "title": "404",
+    "pageNotFound": "页面不存在",
+    "pageNotFoundLoginRequired": "页面不存在，请先登录",
+    "backToDashboard": "返回仪表板",
+    "goToLogin": "去登录"
   }
 }

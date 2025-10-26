@@ -1,0 +1,23 @@
+{
+  "error": {
+    "internal": "Internal server error",
+    "unauthorized": "Unauthorized",
+    "invalid_credentials": "Invalid username or password",
+    "invalid_current_password": "Current password is incorrect",
+    "invalid_request": "Invalid request format",
+    "missing_oauth_state": "Missing X-OAuth-State header",
+    "missing_state_param": "Missing state query parameter",
+    "missing_code": "Missing code field",
+    "state_mismatch": "State mismatch",
+    "not_found": "Not Found",
+    "failed_get_user": "Failed to get user information",
+    "failed_create_post": "Failed to create post",
+    "failed_render_post": "Failed to render post",
+    "new_password_same": "New password cannot be the same as current password",
+    "password_changed_success": "Password changed successfully",
+    "invalid_token": "Invalid token"
+  },
+  "health": {
+    "running": "markpost is running"
+  }
+}

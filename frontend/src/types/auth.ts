@@ -25,3 +25,13 @@ export interface ErrorResponse {
 
 // API response union type
 export type ApiResponse<T> = T | ErrorResponse;
+
+export type LoginResponse = {
+  access_token: string;
+  refresh_token: string;
+  user: User;
+};
+
+export type OAuthUrlResponse = {
+  url: string;
+};

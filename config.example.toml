@@ -12,11 +12,9 @@ API_RATE_LIMIT = 60
 # 数据库配置
 [database]
 # 数据库类型：sqlite 或 postgresql
-type = "sqlite"
 url = "./data/db.sqlite3"
 
 # PostgreSQL 配置示例（取消注释以使用）
-# type = "postgresql"
 # url = "postgres://postgres:postgres@localhost:5234/markpost?sslmode=disable"
 
 # GitHub OAuth2 配置

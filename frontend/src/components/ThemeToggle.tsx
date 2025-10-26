@@ -24,29 +24,16 @@ const ThemeToggle: React.FC = () => {
     }
   };
 
-  const getThemeLabel = () => {
-    switch (themeMode) {
-      case "light":
-        return t('theme.light');
-      case "dark":
-        return t('theme.dark');
-      case "system":
-      default:
-        return t('theme.system');
-    }
-  };
-
   return (
     <Dropdown align="end">
       <Dropdown.Toggle
         variant="link"
-        className="text-decoration-none p-2 d-flex align-items-center gap-2"
+        className="text-decoration-none p-2 d-flex align-items-center text-body"
         id="theme-dropdown"
-        title={t('theme.toggleTheme')}
-        aria-label={t('theme.toggleTheme')}
+        title={t("theme.toggleTheme")}
+        aria-label={t("theme.toggleTheme")}
       >
         {getThemeIcon()}
-        <span className="d-none d-md-inline">{getThemeLabel()}</span>
       </Dropdown.Toggle>
 
       <Dropdown.Menu className="border-0 shadow-lg">
@@ -56,7 +43,7 @@ const ThemeToggle: React.FC = () => {
           className="d-flex align-items-center gap-2"
         >
           <Sun size={16} />
-          {t('theme.light')}
+          {t("theme.light")}
         </Dropdown.Item>
         <Dropdown.Item
           active={themeMode === "dark"}
@@ -64,7 +51,7 @@ const ThemeToggle: React.FC = () => {
           className="d-flex align-items-center gap-2"
         >
           <Moon size={16} />
-          {t('theme.dark')}
+          {t("theme.dark")}
         </Dropdown.Item>
         <Dropdown.Item
           active={themeMode === "system"}
@@ -72,7 +59,7 @@ const ThemeToggle: React.FC = () => {
           className="d-flex align-items-center gap-2"
         >
           <CircleHalf size={16} />
-          {t('theme.system')}
+          {t("theme.system")}
         </Dropdown.Item>
       </Dropdown.Menu>
     </Dropdown>

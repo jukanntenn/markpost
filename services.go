@@ -98,6 +98,31 @@ func (s *AuthService) LoginWithPassword(ctx context.Context, username, password 
 	return user, &JWTTokenPair{AccessToken: access, RefreshToken: refresh}, nil
 }
 
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*User, *JWTTokenPair, error) {
+	claims, err := validateJWTToken(refreshToken)
+	if err != nil {
+		return nil, nil, NewServiceError(ErrUnauthorized, "invalid refresh token", err)
+	}
+
+	user, err := s.users.GetUserByID(claims.UserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil, NewServiceError(ErrNotFound, "user not found", err)
+		}
+		return nil, nil, NewServiceError(ErrInternal, "query user failed", err)
+	}
+
+	access, err := generateJWTToken(user.ID, config.JWT.AccessTokenExpire, config.JWT.SecretKey)
+	if err != nil {
+		return nil, nil, NewServiceError(ErrInternal, "generate access token failed", err)
+	}
+	refresh, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
+	if err != nil {
+		return nil, nil, NewServiceError(ErrInternal, "generate refresh token failed", err)
+	}
+	return user, &JWTTokenPair{AccessToken: access, RefreshToken: refresh}, nil
+}
+
 func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, new string) error {
 	user, err := s.users.GetUserByID(userID)
 	if err != nil {

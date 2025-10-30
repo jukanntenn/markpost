@@ -231,5 +231,73 @@ func ChangePasswordHandler(c *gin.Context) {
 }
 
 func HealthHandler(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": GetMessage(c, "health.running")})
+    c.JSON(http.StatusOK, gin.H{"status": "ok", "message": GetMessage(c, "health.running")})
+}
+
+func PostsListHandler(c *gin.Context) {
+    u, ok := c.Get("user")
+    if !ok {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": GetMessage(c, "error.failed_get_user")})
+        return
+    }
+    user := u.(*User)
+
+    var query struct {
+        Page  int `form:"page" binding:"omitempty,min=1"`
+        Limit int `form:"limit" binding:"omitempty,min=1"`
+    }
+    if err := c.ShouldBindQuery(&query); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
+        return
+    }
+    if query.Page == 0 {
+        query.Page = 1
+    }
+    if query.Limit == 0 {
+        query.Limit = 20
+    }
+    if query.Limit > 100 {
+        c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
+        return
+    }
+
+    posts, total, err := postSvc.GetUserPostsPaginated(c.Request.Context(), user.ID, query.Page, query.Limit)
+    if err != nil {
+        if se, ok := err.(*ServiceError); ok {
+            switch se.Code {
+            case ErrUnauthorized:
+                c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": GetMessage(c, "error.unauthorized")})
+            case ErrNotFound:
+                c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": GetMessage(c, "error.not_found")})
+            default:
+                c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+            }
+        } else {
+            c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+        }
+        return
+    }
+
+    items := make([]gin.H, 0, len(posts))
+    for _, p := range posts {
+        items = append(items, gin.H{
+            "id":         p.ID,
+            "title":      p.Title,
+            "created_at": p.CreatedAt,
+        })
+    }
+    totalPages := int64(0)
+    if query.Limit > 0 {
+        totalPages = (total + int64(query.Limit) - 1) / int64(query.Limit)
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "posts": items,
+        "pagination": gin.H{
+            "page":        query.Page,
+            "limit":       query.Limit,
+            "total":       total,
+            "total_pages": totalPages,
+        },
+    })
 }

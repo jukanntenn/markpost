@@ -37,6 +37,7 @@ func SetupRoutes(r *gin.Engine) {
 	{
 		jwtAuth.GET("/post_key", QueryPostKeyHandler)
 		jwtAuth.POST("/auth/change-password", ChangePasswordHandler)
+		jwtAuth.GET("/posts", PostsListHandler)
 	}
 
 	middlewares := append(rateLimitMiddlewares, PostKeyMiddleware())

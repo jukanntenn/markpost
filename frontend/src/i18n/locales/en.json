@@ -14,6 +14,7 @@
     "toggleTheme": "Toggle Theme"
   },
   "navigation": {
+    "posts": "Posts",
     "userMenu": {
       "settings": "Settings",
       "logout": "Logout"
@@ -50,7 +51,16 @@
       "hideKey": "Hide key",
       "copyKey": "Copy key",
       "createdAt": "Created at",
-      "copied": "copied to clipboard!"
+      "copied": "copied to clipboard!",
+      "createTestPost": "Create Test Post",
+      "createTestPostTip": "Quickly create a sample Markdown post"
+    },
+    "recentPosts": {
+      "title": "Recent Posts",
+      "viewAll": "View All",
+      "loading": "Loading recent posts...",
+      "empty": "No posts yet",
+      "error": "Failed to load, please try again later"
     },
     "documentation": {
       "title": "Documentation",
@@ -58,6 +68,34 @@
       "apiLink": "Markpost APIs",
       "content2": "for complete documentation on how to integrate Markpost into your applications.",
       "viewDocs": "View Documentation"
+    }
+  },
+  "createTestPost": {
+    "title": "Create Test Post",
+    "titleLabel": "Title (optional)",
+    "titlePlaceholder": "Enter a title, or leave empty",
+    "bodyLabel": "Body",
+    "bodyPlaceholder": "Write some Markdown content...",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating...",
+    "successHeader": "Post Created",
+    "successBody": "Your test post has been created successfully.",
+    "errorServer": "Failed to create post, please try again later",
+    "errorEmptyBody": "Body cannot be empty"
+  },
+  "posts": {
+    "title": "Posts",
+    "loading": "Loading...",
+    "error": "Failed to load, please try again later",
+    "empty": "No posts yet",
+    "table": {
+      "title": "Title",
+      "createdAt": "Created At"
+    },
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next"
     }
   },
   "settings": {

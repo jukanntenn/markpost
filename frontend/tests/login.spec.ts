@@ -4,6 +4,13 @@ test.beforeEach(async ({ page }) => {
   await page.context().clearCookies();
   await page.goto("login");
   await page.evaluate(() => localStorage.clear());
+  await page.route("**/api/posts**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ posts: [], pagination: { page: 1, limit: 10, total: 0, total_pages: 0 } }),
+    });
+  });
 });
 
 test("renders login page and enables submit when inputs filled", async ({ page }) => {

@@ -23,13 +23,14 @@ type UserRepository interface {
 }
 
 type PostRepository interface {
-	CreatePost(title, body string, userID ...int) (*Post, error)
-	CreatePostWithUser(title, body string, userID int) (*Post, error)
-	GetPostByID(id string) (*Post, error)
-	GetPostsByUserID(userID int) ([]Post, error)
-	CleanupExpiredPosts(retentionDays int, batchSize int) error
-	GetExpiredPostsCount(retentionDays int) (int64, error)
-	PreviewExpiredPosts(retentionDays int, limit int) ([]Post, error)
+    CreatePost(title, body string, userID ...int) (*Post, error)
+    CreatePostWithUser(title, body string, userID int) (*Post, error)
+    GetPostByID(id string) (*Post, error)
+    GetPostsByUserID(userID int) ([]Post, error)
+    GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error)
+    CleanupExpiredPosts(retentionDays int, batchSize int) error
+    GetExpiredPostsCount(retentionDays int) (int64, error)
+    PreviewExpiredPosts(retentionDays int, limit int) ([]Post, error)
 }
 
 type userRepository struct {
@@ -232,12 +233,32 @@ func (r *postRepository) GetPostByID(id string) (*Post, error) {
 }
 
 func (r *postRepository) GetPostsByUserID(userID int) ([]Post, error) {
-	var posts []Post
-	err := r.db.Where("user_id = ?", userID).Find(&posts).Error
-	if err != nil {
-		return nil, err
-	}
-	return posts, nil
+    var posts []Post
+    err := r.db.Where("user_id = ?", userID).Find(&posts).Error
+    if err != nil {
+        return nil, err
+    }
+    return posts, nil
+}
+
+func (r *postRepository) GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error) {
+    if page < 1 {
+        page = 1
+    }
+    if limit <= 0 {
+        limit = 20
+    }
+    var total int64
+    if err := r.db.Model(&Post{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+        return nil, 0, err
+    }
+    var posts []Post
+    offset := (page - 1) * limit
+    err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Offset(offset).Find(&posts).Error
+    if err != nil {
+        return nil, 0, err
+    }
+    return posts, total, nil
 }
 
 func (r *postRepository) CleanupExpiredPosts(retentionDays int, batchSize int) error {

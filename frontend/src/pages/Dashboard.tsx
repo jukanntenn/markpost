@@ -1,15 +1,20 @@
 import {
-  Card,
-  Button,
-  Container,
-  Badge,
-  Spinner,
   Alert,
+  Badge,
+  Button,
+  Card,
+  Container,
+  Spinner,
 } from "react-bootstrap";
-import { useState, useEffect } from "react";
-import { Eye, EyeSlash, Copy, Key, Book } from "react-bootstrap-icons";
-import { useTranslation } from "react-i18next";
+import { Book, Copy, Eye, EyeSlash, Key } from "react-bootstrap-icons";
+import { useEffect, useState } from "react";
+
+import CreateTestPostModal from "../components/CreateTestPostModal";
+import type { PostListItem } from "../types/posts";
 import { auth } from "../utils/api";
+import { fetchPosts } from "../utils/posts";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 interface PostKeyResponse {
   post_key: string;
@@ -34,12 +39,17 @@ const formatToLocalTime = (utcString: string): string => {
 
 function Dashboard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [showKey, setShowKey] = useState(false);
   const [postKey, setPostKey] = useState<string>("");
   const [createdAt, setCreatedAt] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [recentPosts, setRecentPosts] = useState<PostListItem[]>([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [recentError, setRecentError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch post key from API
   useEffect(() => {
@@ -62,6 +72,22 @@ function Dashboard() {
     fetchPostKey();
   }, []);
 
+  const loadRecentPosts = async () => {
+    try {
+      setRecentLoading(true);
+      setRecentError(null);
+      const data = await fetchPosts(1, 10);
+      setRecentPosts(data.posts);
+    } catch {
+      setRecentError(t("dashboard.recentPosts.error"));
+    } finally {
+      setRecentLoading(false);
+    }
+  };
+  useEffect(() => {
+    loadRecentPosts();
+  }, []);
+
   // Copy to clipboard function
   const handleCopyKey = async () => {
     if (postKey) {
@@ -76,12 +102,12 @@ function Dashboard() {
   };
 
   return (
+    <>
     <Container className="py-4">
-      
-
-      <div className="row g-4 justify-content-center">
-        {/* Post Key Section */}
-        <div className="col-lg-8 col-xl-6">
+      <div className="row g-4">
+        {/* Left Column: Post Key + Docs stacked */}
+        <div className="col-12 col-xl-6">
+          <div className="d-flex flex-column gap-4">
           <Card className="border-0 shadow-sm h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
@@ -151,18 +177,23 @@ function Dashboard() {
                   </div>
                 </div>
               )}
-              <div className="mt-3 d-flex gap-2">
+              <div className="mt-3 d-flex gap-2 align-items-center">
                 <small className="text-muted">
                   {t("dashboard.postKey.createdAt")}{" "}
                   {formatToLocalTime(createdAt)}
                 </small>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="ms-auto"
+                  onClick={() => setShowCreateModal(true)}
+                  title={t("dashboard.postKey.createTestPostTip")}
+                >
+                  {t("dashboard.postKey.createTestPost")}
+                </Button>
               </div>
             </Card.Body>
           </Card>
-        </div>
-
-        {/* API Docs Section */}
-        <div className="col-lg-8 col-xl-6">
           <Card className="border-0 shadow-sm h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
@@ -213,9 +244,66 @@ function Dashboard() {
               </a>
             </Card.Body>
           </Card>
+          </div>
+        </div>
+
+        {/* Right Column: Recent Posts */}
+        <div className="col-12 col-xl-6">
+          <Card className="border-0 shadow-sm h-100">
+            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
+              <div className="d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center">
+                  <Book size={18} className="me-2 text-body" />
+                  <div className="flex-grow-1">
+                    <h6 className="mb-0 text-body">{t("dashboard.recentPosts.title")}</h6>
+                  </div>
+                </div>
+                <Button variant="primary" size="sm" onClick={() => navigate("/posts")}>{t("dashboard.recentPosts.viewAll")}</Button>
+              </div>
+            </Card.Header>
+            <Card.Body className="px-4 pb-4">
+              {recentLoading ? (
+                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
+                  <Spinner animation="border" role="status" variant="primary">
+                    <span className="visually-hidden">Loading...</span>
+                  </Spinner>
+                  <p className="mt-3 text-muted mb-0">{t("dashboard.recentPosts.loading")}</p>
+                </div>
+              ) : recentError ? (
+                <Alert variant="danger" className="mb-0">
+                  <p>{recentError}</p>
+                </Alert>
+              ) : recentPosts.length === 0 ? (
+                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
+                  <p className="text-muted mb-0">{t("dashboard.recentPosts.empty")}</p>
+                </div>
+              ) : (
+                <div className="bg-body-tertiary rounded-3 p-3 border border-secondary-subtle">
+                  <ul className="list-unstyled mb-0">
+                    {recentPosts.map((p) => (
+                      <li key={p.id} className="py-2 d-flex justify-content-between align-items-center">
+                        <a href={`/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
+                        <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
         </div>
       </div>
     </Container>
+    <CreateTestPostModal
+      show={showCreateModal}
+      postKey={postKey}
+      onHide={() => setShowCreateModal(false)}
+      onSuccess={() => {
+        setShowCreateModal(false);
+        loadRecentPosts();
+      }}
+    />
+    </>
   );
 }
 

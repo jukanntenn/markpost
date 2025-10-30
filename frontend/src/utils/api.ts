@@ -1,5 +1,6 @@
 import { get, remove, set } from "./storage";
 
+import type { CreateTestPostResponse } from "../types/posts";
 import type { LoginResponse } from "../types/auth";
 import axios from "axios";
 import { getAcceptLanguageHeader } from "../utils/i18n";
@@ -12,6 +13,7 @@ const addLanguageHeader = (config: any) => {
 };
 
 export const anno = axios.create({
+  baseURL: import.meta.env.VITE_BASE_URL || "/",
   timeout: 10000,
 });
 
@@ -25,6 +27,7 @@ anno.interceptors.request.use(
 );
 
 export const auth = axios.create({
+  baseURL: import.meta.env.VITE_BASE_URL || "/",
   timeout: 10000,
 });
 
@@ -142,3 +145,8 @@ auth.interceptors.response.use(
     }
   }
 );
+
+export async function createTestPost(postKey: string, title: string, body: string): Promise<string> {
+  const res = await anno.post<CreateTestPostResponse>(`/${postKey}`, { title, body });
+  return res.data.id;
+}

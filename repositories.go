@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -192,50 +191,28 @@ func (r *userRepository) UpdatePassword(userID int, hashed string) error {
 	return r.db.Model(&User{}).Where("id = ?", userID).Update("password", hashed).Error
 }
 
-func (r *postRepository) CreatePost(title, body string, userID ...int) (*Post, error) {
-	id, err := gonanoid.New()
+func (r *postRepository) CreatePost(title, body string, userID int) (*Post, error) {
+	qid, err := gonanoid.New()
 	if err != nil {
 		return nil, err
 	}
+
 	post := Post{
-		ID:        id,
-		Title:     title,
-		Body:      body,
-		CreatedAt: time.Now().UTC(),
-	}
-	if len(userID) > 0 {
-		post.UserID = &userID[0]
+		QID:    qid,
+		Title:  title,
+		Body:   body,
+		UserID: userID,
 	}
 	err = r.db.Create(&post).Error
 	if err != nil {
-		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-			return nil, fmt.Errorf("invalid user ID: %w", err)
-		}
 		return nil, err
 	}
+
 	return &post, nil
 }
 
 func (r *postRepository) CreatePostWithUser(title, body string, userID int) (*Post, error) {
-	id, err := gonanoid.New()
-	if err != nil {
-		return nil, err
-	}
-	post := Post{
-		ID:        id,
-		Title:     title,
-		Body:      body,
-		CreatedAt: time.Now().UTC(),
-		UserID:    &userID,
-	}
-	err = r.db.Create(&post).Error
-	if err != nil {
-		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-			return nil, fmt.Errorf("invalid user ID: %w", err)
-		}
-		return nil, err
-	}
-	return &post, nil
+	return r.CreatePost(title, body, userID)
 }
 
 func (r *postRepository) GetPostByID(id string) (*Post, error) {

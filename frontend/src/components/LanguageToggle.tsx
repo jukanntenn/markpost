@@ -1,24 +1,23 @@
-import React from 'react';
-import { Dropdown } from 'react-bootstrap';
-import { useTranslation } from 'react-i18next';
-import { Globe } from 'react-bootstrap-icons';
+import React from "react";
+import { Dropdown } from "react-bootstrap";
+import { useTranslation } from "react-i18next";
+import { Globe } from "react-bootstrap-icons";
 
 const LanguageToggle: React.FC = () => {
   const { i18n, t } = useTranslation();
+
+  const resolved = i18n.resolvedLanguage || i18n.language || "en";
+  const isEnglish = resolved.startsWith("en");
+  const isChinese = resolved.startsWith("zh");
 
   const handleLanguageChange = (lng: string) => {
     i18n.changeLanguage(lng);
   };
 
   const getCurrentLanguageLabel = () => {
-    switch (i18n.language) {
-      case 'en':
-        return t('language.english');
-      case 'zh':
-        return t('language.chinese');
-      default:
-        return t('language.english');
-    }
+    if (isEnglish) return t("language.english");
+    if (isChinese) return t("language.chinese");
+    return t("language.english");
   };
 
   return (
@@ -27,29 +26,29 @@ const LanguageToggle: React.FC = () => {
         variant="link"
         className="text-decoration-none p-2 d-flex align-items-center gap-2 text-body"
         id="language-dropdown"
-        title={t('language.changeLanguage')}
-        aria-label={t('language.changeLanguage')}
+        title={t("language.changeLanguage")}
+        aria-label={t("language.changeLanguage")}
       >
         <Globe size={18} />
-        <span className="d-none d-md-inline">{getCurrentLanguageLabel()}</span>
+        <span>{getCurrentLanguageLabel()}</span>
       </Dropdown.Toggle>
 
       <Dropdown.Menu className="border-0 shadow-lg">
         <Dropdown.Item
-          active={i18n.language === 'en'}
-          onClick={() => handleLanguageChange('en')}
+          active={isEnglish}
+          onClick={() => handleLanguageChange("en")}
           className="d-flex align-items-center gap-2"
         >
           <span className="fi fi-gb"></span>
-          {t('language.english')}
+          {t("language.english")}
         </Dropdown.Item>
         <Dropdown.Item
-          active={i18n.language === 'zh'}
-          onClick={() => handleLanguageChange('zh')}
+          active={isChinese}
+          onClick={() => handleLanguageChange("zh")}
           className="d-flex align-items-center gap-2"
         >
           <span className="fi fi-cn"></span>
-          {t('language.chinese')}
+          {t("language.chinese")}
         </Dropdown.Item>
       </Dropdown.Menu>
     </Dropdown>

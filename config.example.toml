@@ -42,3 +42,11 @@ per_day = 10000
 # 数据清理配置
 [data_cleanup]
 post_retention_days = 30
+
+# 初始用户配置（可选）。如果数据库中不存在该用户，将在启动时创建。
+[initial_user]
+# 初始用户名（默认值：markpost）。也可通过环境变量 INIT_USERNAME 指定。
+username = "markpost"
+# 初始密码（默认值：markpost）。也可通过环境变量 INIT_PASSWORD 指定。
+# 注意：如果通过配置或环境变量指定了密码，系统不会在日志中打印密码值。
+password = "markpost"

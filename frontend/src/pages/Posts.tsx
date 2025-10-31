@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Container, Spinner, Table } from "react-bootstrap";
 import { useEffect, useState } from "react";
 
-import { Book } from "react-bootstrap-icons";
+import { JournalText } from "react-bootstrap-icons";
 import type { PostListItem } from "../types/posts";
 import { fetchPosts } from "../utils/posts";
 import { useSearchParams } from "react-router-dom";
@@ -30,6 +30,10 @@ function Posts() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = t("common.pageTitle.allPosts");
+  }, [t]);
+
+  useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
@@ -56,11 +60,11 @@ function Posts() {
     <Container className="py-4">
       <div className="row g-4">
         <div className="col-12">
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-lg">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
                 <div className="d-flex align-items-center justify-content-between">
                   <div className="d-flex align-items-center">
-                    <Book size={18} className="me-2 text-body" />
+                    <JournalText size={18} className="me-2 text-body" />
                     <div className="flex-grow-1">
                       <h6 className="mb-0 text-body">{t("posts.title")}</h6>
                     </div>
@@ -84,27 +88,48 @@ function Posts() {
                   <p className="text-muted mb-0">{t("posts.empty")}</p>
                 </div>
               ) : (
-                <div className="bg-body-tertiary rounded-3 p-3 border border-secondary-subtle">
-                  <Table hover responsive className="mb-3">
-                    <thead>
-                      <tr>
-                        <th scope="col" style={{ width: "60%" }}>{t("posts.table.title")}</th>
-                        <th scope="col">{t("posts.table.createdAt")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((p) => (
-                        <tr key={p.id}>
-                          <td>
-                            <a href={`/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
-                          </td>
-                          <td>
-                            <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
-                          </td>
+                <div>
+                  <div className="d-none d-md-block">
+                    <Table hover responsive className="mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col" style={{ width: "60%" }}>{t("posts.table.title")}</th>
+                          <th scope="col">{t("posts.table.createdAt")}</th>
                         </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((p) => (
+                          <tr key={p.id}>
+                            <td>
+                              <a href={`/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
+                            </td>
+                            <td>
+                              <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                  <div className="d-block d-md-none">
+                    <ul className="list-unstyled mb-0">
+                      {items.map((p) => (
+                        <li key={p.id} className="py-2">
+                          <div className="d-flex flex-column">
+                            <a
+                              href={`/${p.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-decoration-none fw-medium"
+                            >
+                              {p.title}
+                            </a>
+                            <small className="text-muted mt-1">{formatToLocalTime(p.created_at)}</small>
+                          </div>
+                        </li>
                       ))}
-                    </tbody>
-                  </Table>
+                    </ul>
+                  </div>
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center gap-2">
                       <Button

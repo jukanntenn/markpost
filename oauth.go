@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -42,10 +41,7 @@ func getGitHubUser(token *oauth2.Token) (*GitHubUser, error) {
 		return nil, err
 	}
 
-	log.Printf("GitHub OAuth Debug - User data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)
-
 	if githubUser.ID == 0 || githubUser.Login == "" {
-		log.Printf("GitHub OAuth Error - Invalid user data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)
 		return nil, fmt.Errorf("invalid GitHub user data: ID=%d, Login='%s'", githubUser.ID, githubUser.Login)
 	}
 

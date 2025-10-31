@@ -78,21 +78,26 @@ func (s *stubUserRepo) GetUserByID(id int) (*User, error) {
 }
 func (s *stubUserRepo) GetUserByGitHubID(githubID int64) (*User, error)  { return nil, sql.ErrNoRows }
 func (s *stubUserRepo) GetUserByUsername(username string) (*User, error) { return nil, sql.ErrNoRows }
-func (s *stubUserRepo) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (s *stubUserRepo) CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (s *stubUserRepo) GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) CreateUserWithPassword(username, password string) (*User, error) {
+func (s *stubUserRepo) CreateUser(username, password string) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (s *stubUserRepo) ValidateUserPassword(username, password string) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) UpdatePassword(userID int, hashed string) error {
+
+func (s *stubUserRepo) SetUserPassword(userID int, password string) error {
 	if s.updateErr != nil {
 		return s.updateErr
+	}
+	hashed, err := HashPassword(password)
+	if err != nil {
+		return err
 	}
 	if s.user != nil {
 		s.user.Password = hashed
@@ -108,12 +113,15 @@ func TestAuthService_GenerateGitHubAuthURL(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	svc := NewAuthService(db.GetUserRepository(), oauthConfig)
-	u, err := svc.GenerateGitHubAuthURL(context.Background())
+	u, state, err := svc.GenerateGitHubAuthURL(context.Background())
 	if err != nil {
 		t.Fatalf("GenerateGitHubAuthURL error: %v", err)
 	}
 	if u == "" {
 		t.Fatalf("empty auth url")
+	}
+	if state == "" {
+		t.Fatalf("empty state")
 	}
 	parsed, err := url.Parse(u)
 	if err != nil {
@@ -163,7 +171,7 @@ func TestAuthService_LoginWithGitHub(t *testing.T) {
 		}
 	})
 
-	t.Run("exchange failed -> ErrInternal", func(t *testing.T) {
+	t.Run("exchange failed -> ErrUnauthorized", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
@@ -182,8 +190,8 @@ func TestAuthService_LoginWithGitHub(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrInternal {
-			t.Fatalf("expected ErrInternal, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
 		}
 	})
 
@@ -223,7 +231,7 @@ func TestAuthService_LoginWithPassword(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	user, err := repo.CreateUserWithPassword("carol", "pass123")
+	user, err := repo.CreateUser("carol", "pass123")
 	if err != nil || user == nil {
 		t.Fatalf("seed user error: %v", err)
 	}
@@ -247,71 +255,71 @@ func TestAuthService_LoginWithPassword(t *testing.T) {
 }
 
 func TestAuthService_RefreshToken(t *testing.T) {
-    setTestConfig()
+	setTestConfig()
 
-    t.Run("success", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("success", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        repo := db.GetUserRepository()
-        user, err := repo.CreateUserWithPassword("rita", "pass123")
-        if err != nil || user == nil {
-            t.Fatalf("seed user error: %v", err)
-        }
+		repo := db.GetUserRepository()
+		user, err := repo.CreateUser("rita", "pass123")
+		if err != nil || user == nil {
+			t.Fatalf("seed user error: %v", err)
+		}
 
-        token, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-        if err != nil || token == "" {
-            t.Fatalf("generate token error: %v", err)
-        }
+		token, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
+		if err != nil || token == "" {
+			t.Fatalf("generate token error: %v", err)
+		}
 
-        svc := NewAuthService(repo, oauthConfig)
-        u, tokens, err := svc.RefreshToken(context.Background(), token)
-        if err != nil {
-            t.Fatalf("RefreshToken error: %v", err)
-        }
-        if u == nil || tokens == nil || tokens.AccessToken == "" || tokens.RefreshToken == "" || u.ID != user.ID {
-            t.Fatalf("unexpected refresh result: %v %v", u, tokens)
-        }
-    })
+		svc := NewAuthService(repo, oauthConfig)
+		u, tokens, err := svc.RefreshToken(context.Background(), token)
+		if err != nil {
+			t.Fatalf("RefreshToken error: %v", err)
+		}
+		if u == nil || tokens == nil || tokens.AccessToken == "" || tokens.RefreshToken == "" || u.ID != user.ID {
+			t.Fatalf("unexpected refresh result: %v %v", u, tokens)
+		}
+	})
 
-    t.Run("invalid token -> ErrUnauthorized", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("invalid token -> ErrUnauthorized", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        svc := NewAuthService(db.GetUserRepository(), oauthConfig)
-        _, _, err := svc.RefreshToken(context.Background(), "invalid.token")
-        if err == nil {
-            t.Fatalf("expected error")
-        }
-        if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
-            t.Fatalf("expected ErrUnauthorized, got: %#v", err)
-        }
-    })
+		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
+		_, _, err := svc.RefreshToken(context.Background(), "invalid.token")
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
+		}
+	})
 
-    t.Run("user not found -> ErrNotFound", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("user not found -> ErrUnauthorized", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        token, err := generateJWTToken(99999, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-        if err != nil || token == "" {
-            t.Fatalf("generate token error: %v", err)
-        }
+		token, err := generateJWTToken(99999, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
+		if err != nil || token == "" {
+			t.Fatalf("generate token error: %v", err)
+		}
 
-        svc := NewAuthService(db.GetUserRepository(), oauthConfig)
-        _, _, err = svc.RefreshToken(context.Background(), token)
-        if err == nil {
-            t.Fatalf("expected error")
-        }
-        if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-            t.Fatalf("expected ErrNotFound, got: %#v", err)
-        }
-    })
+		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
+		_, _, err = svc.RefreshToken(context.Background(), token)
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
+		}
+	})
 }
 
 func TestAuthService_ChangePassword(t *testing.T) {
 	setTestConfig()
 
-	t.Run("user not found -> ErrNotFound", func(t *testing.T) {
+	t.Run("user not found -> ErrConflict", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
@@ -319,8 +327,8 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrConflict {
+			t.Fatalf("expected ErrConflict, got: %#v", err)
 		}
 	})
 
@@ -328,7 +336,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("dora", "old")
+		u, _ := repo.CreateUser("dora", "old")
 		svc := NewAuthService(repo, oauthConfig)
 		err := svc.ChangePassword(context.Background(), u.ID, "wrong", "new")
 		if err == nil {
@@ -343,7 +351,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("ed", "old")
+		u, _ := repo.CreateUser("ed", "old")
 		svc := NewAuthService(repo, oauthConfig)
 		err := svc.ChangePassword(context.Background(), u.ID, "old", "old")
 		if err == nil {
@@ -372,7 +380,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("ellen", "oldpw")
+		u, _ := repo.CreateUser("ellen", "oldpw")
 		svc := NewAuthService(repo, oauthConfig)
 		if err := svc.ChangePassword(context.Background(), u.ID, "oldpw", "newpw"); err != nil {
 			t.Fatalf("ChangePassword error: %v", err)
@@ -395,7 +403,7 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("quinn", "pw")
+		u, _ := repo.CreateUser("quinn", "pw")
 		svc := NewAuthService(repo, oauthConfig)
 		postKey, createdAt, err := svc.QueryPostKey(context.Background(), u.ID)
 		if err != nil {
@@ -406,7 +414,7 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		}
 	})
 
-	t.Run("not found -> ErrNotFound", func(t *testing.T) {
+	t.Run("not found -> ErrConflict", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
@@ -414,8 +422,8 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrConflict {
+			t.Fatalf("expected ErrConflict, got: %#v", err)
 		}
 	})
 
@@ -441,18 +449,18 @@ func TestPostService_CreatePost(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repoU := db.GetUserRepository()
-		u, _ := repoU.CreateUserWithPassword("poster", "pw")
+		u, _ := repoU.CreateUser("poster", "pw")
 
 		ps := NewPostService(db.GetPostRepository())
-		id, err := ps.CreatePost(context.Background(), "Hello", "World", u.ID)
+		qid, err := ps.CreatePost(context.Background(), "Hello", "World", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		if id == "" {
-			t.Fatalf("empty id")
+		if qid == "" {
+			t.Fatalf("empty qid")
 		}
-		p, err := db.GetPostRepository().GetPostByID(id)
-		if err != nil || p == nil || p.UserID == nil || *p.UserID != u.ID {
+		p, err := db.GetPostRepository().GetPostByQID(qid)
+		if err != nil || p == nil || p.UserID != u.ID {
 			t.Fatalf("post not persisted or wrong user: %v %+v", err, p)
 		}
 	})
@@ -480,12 +488,12 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repoU := db.GetUserRepository()
-		u, _ := repoU.CreateUserWithPassword("md", "pw")
+		u, _ := repoU.CreateUser("md", "pw")
 		pr := db.GetPostRepository()
 		p, _ := pr.CreatePostWithUser("Title", "Hello\n\nWorld", u.ID)
 
 		ps := NewPostService(pr)
-		title, html, err := ps.RenderPostHTML(context.Background(), p.ID)
+		title, html, err := ps.RenderPostHTML(context.Background(), p.QID)
 		if err != nil {
 			t.Fatalf("RenderPostHTML error: %v", err)
 		}

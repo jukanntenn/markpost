@@ -22,7 +22,7 @@ test("renders posts page with empty state (English)", async ({ page }) => {
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "t", refresh_token: "r", user: { id: 1, username: "tester" } })));
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
   await page.goto("posts");
-  await expect(page.getByRole("heading", { name: "Posts", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All Posts", exact: true })).toBeVisible();
   await expect(page.getByText("No posts yet", { exact: true })).toBeVisible();
 });
 
@@ -79,4 +79,3 @@ test("uses Accept-Language header on fetch (English)", async ({ page }, testInfo
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "t_en", refresh_token: "r_en", user: { id: 1, username: "tester" } })));
   await page.goto("posts");
 });
-

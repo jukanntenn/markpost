@@ -5,4 +5,3 @@ export async function fetchPosts(page: number = 1, limit: number = 20): Promise<
   const res = await auth.get<PostsPaginatedResponse>("/api/posts", { params: { page, limit } });
   return res.data;
 }
-

@@ -120,9 +120,9 @@ docker-compose logs markpost
 您也可以通过登录 Web 管理控制台获取 post_key：
 
 1. 访问 Web 界面：`http://127.0.0.1:7330`
-2. 使用默认凭据：
-   - **用户名**：`markpost`
-   - **密码**：`markpost`
+2. 使用初始凭据：
+   - **用户名**：可通过 `initial_user.username` 或环境变量 `INIT_USERNAME` 指定（默认 `markpost`）
+   - **密码**：可通过 `initial_user.password` 或环境变量 `INIT_PASSWORD` 指定（默认 `markpost`）。如果通过配置或环境变量指定了密码，系统不会在日志中打印密码值。
 3. 成功登录后，您的 post_key 将显示在仪表板上
 
 ## API 接口

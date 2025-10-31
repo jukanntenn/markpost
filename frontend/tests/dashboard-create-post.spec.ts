@@ -52,7 +52,7 @@ test("creates a test post via modal and refreshes recent posts", async ({ page }
 
   await expect(page.getByText("Post Key", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Create Test Post" }).click();
+  await page.getByTitle("Quickly create a sample Markdown post").click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
   await page.getByPlaceholder("Write some Markdown content...").fill("Hello world body");
@@ -74,7 +74,7 @@ test("creates a test post via modal and refreshes recent posts", async ({ page }
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await expect(page.getByText("Recent Posts", { exact: true })).toBeVisible();
+  await expect(page.getByText("Latest Posts", { exact: true })).toBeVisible();
   await expect(page.getByText("Hello world", { exact: true })).toBeVisible();
 });
 
@@ -103,7 +103,7 @@ test("disables Create when body is empty", async ({ page }) => {
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
   await page.goto("dashboard");
 
-  await page.getByRole("button", { name: "Create Test Post" }).click();
+  await page.getByTitle("Quickly create a sample Markdown post").click();
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Create", exact: true })
   ).toBeDisabled();

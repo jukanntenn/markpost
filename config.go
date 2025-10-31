@@ -47,6 +47,11 @@ type Config struct {
 	DataCleanup struct {
 		PostRetentionDays int `mapstructure:"post_retention_days"`
 	} `mapstructure:"data_cleanup"`
+
+	InitialUser struct {
+		Username string `mapstructure:"username"`
+		Password string `mapstructure:"password"`
+	} `mapstructure:"initial_user"`
 }
 
 var config Config
@@ -90,6 +95,13 @@ func LoadConfig() error {
 
 	if err := validateDatabaseConfig(); err != nil {
 		return err
+	}
+
+	if u := os.Getenv("INIT_USERNAME"); u != "" {
+		config.InitialUser.Username = u
+	}
+	if p := os.Getenv("INIT_PASSWORD"); p != "" {
+		config.InitialUser.Password = p
 	}
 
 	return nil

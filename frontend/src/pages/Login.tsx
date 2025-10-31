@@ -9,13 +9,15 @@ import {
   Form,
   Alert,
 } from "react-bootstrap";
-import { Github, Person, Lock } from "react-bootstrap-icons";
+import { Github } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 import { anno } from "../utils/api";
 import { storage, auth } from "../utils";
 import type { LoginResponse, OAuthUrlResponse } from "../types/auth";
 import axios from "axios";
 import { useToasts } from "react-bootstrap-toasts";
+import LoginTitle from "../components/login/LoginTitle";
+import LoginDivider from "../components/login/LoginDivider";
 
 function LoginPage() {
   const { t } = useTranslation();
@@ -37,6 +39,10 @@ function LoginPage() {
       bodyContent: body,
     });
   };
+
+  useEffect(() => {
+    document.title = t("common.pageTitle.login");
+  }, [t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,10 +89,9 @@ function LoginPage() {
     setLoadingGitHub(true);
 
     try {
-      // TODO: add state field in response
       const res = await anno.get<OAuthUrlResponse>("/api/oauth/url");
       const url = res.data.url;
-      const state = new URL(url).searchParams.get("state");
+      const state = res.data.state;
       storage.set("oauth_state", state);
 
       authWindowRef.current = openAuthWindow(url);
@@ -183,18 +188,7 @@ function LoginPage() {
       <Container>
         <Row className="justify-content-center">
           <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-            {/* Title */}
-            <div className="text-center mb-5">
-              <div className="d-inline-flex align-items-center justify-content-center">
-                <img
-                  src="markpost.svg"
-                  alt="Markpost"
-                  height="48"
-                  className="me-2"
-                />
-                <span className="fs-2 fw-bold text-body">Markpost</span>
-              </div>
-            </div>
+            <LoginTitle />
 
             {/* Login Card */}
             <Card className="border-0 shadow-lg">
@@ -214,8 +208,7 @@ function LoginPage() {
                 {/* Password Login Form */}
                 <Form onSubmit={handleLogin} className="mb-4">
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-muted small fw-semibold">
-                      <Person size={14} className="me-1" />
+                    <Form.Label className="text-muted fw-semibold">
                       {t("login.username")}
                     </Form.Label>
                     <Form.Control
@@ -227,12 +220,12 @@ function LoginPage() {
                       required
                       disabled={loading}
                       className="py-3 px-3 border-1"
+                      style={{ fontSize: "0.875rem" }}
                     />
                   </Form.Group>
 
                   <Form.Group className="mb-4">
-                    <Form.Label className="text-muted small fw-semibold">
-                      <Lock size={14} className="me-1" />
+                    <Form.Label className="text-muted fw-semibold">
                       {t("login.password")}
                     </Form.Label>
                     <Form.Control
@@ -244,6 +237,7 @@ function LoginPage() {
                       required
                       disabled={loading}
                       className="py-3 px-3 border-1"
+                      style={{ fontSize: "0.875rem" }}
                     />
                   </Form.Group>
 
@@ -269,22 +263,13 @@ function LoginPage() {
                           {t("login.signingIn")}
                         </>
                       ) : (
-                        <>
-                          <Person size={20} className="me-2" />
-                          {t("login.loginButton")}
-                        </>
+                        t("login.loginButton")
                       )}
                     </Button>
                   </div>
                 </Form>
 
-                {/* Divider */}
-                <div className="position-relative mb-4">
-                  <hr className="text-muted" />
-                  <span className="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small">
-                    {t("login.or")}
-                  </span>
-                </div>
+                <LoginDivider />
 
                 {/* GitHub Login Button */}
                 <div className="d-grid gap-2">

@@ -19,21 +19,19 @@ func GenerateState() (string, error) {
 
 func GeneratePostKey(byteLength int) (string, error) {
 	if byteLength <= 0 {
-		byteLength = 8
+		byteLength = 20
 	}
-
-	randomBytes := make([]byte, byteLength)
-	_, err := rand.Read(randomBytes)
-	if err != nil {
+	alphabet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	n := len(alphabet)
+	out := make([]byte, byteLength)
+	buf := make([]byte, byteLength)
+	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
-
-	encoded := base64.URLEncoding.EncodeToString(randomBytes)
-	for len(encoded) > 0 && encoded[len(encoded)-1] == '=' {
-		encoded = encoded[:len(encoded)-1]
+	for i := 0; i < byteLength; i++ {
+		out[i] = alphabet[int(buf[i])%n]
 	}
-
-	return encoded, nil
+	return "mpk-" + string(out), nil
 }
 
 func HashPassword(password string) (string, error) {

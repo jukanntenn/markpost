@@ -1,6 +1,12 @@
 {
   "common": {
-    "user": "用户"
+    "user": "用户",
+    "pageTitle": {
+      "login": "登录 | Markpost",
+      "dashboard": "仪表盘 | Markpost",
+      "settings": "设置 | Markpost",
+      "allPosts": "全部 Posts | Markpost"
+    }
   },
   "language": {
     "english": "English",
@@ -56,9 +62,9 @@
       "createTestPostTip": "快速创建一条 Markdown 示例"
     },
     "recentPosts": {
-      "title": "最近 Posts",
+      "title": "最新 Posts",
       "viewAll": "查看全部",
-      "loading": "加载最近 Posts...",
+      "loading": "加载最新 Posts...",
       "empty": "暂无内容",
       "error": "加载失败，请稍后重试"
     },
@@ -85,7 +91,7 @@
     "errorEmptyBody": "正文不能为空"
   },
   "posts": {
-    "title": "Posts",
+    "title": "全部 Posts",
     "loading": "加载中...",
     "error": "加载失败，请稍后重试",
     "empty": "暂无内容",
@@ -105,6 +111,7 @@
     "changePassword": "修改密码",
     "currentPassword": "当前密码",
     "currentPasswordPlaceholder": "输入您的当前密码",
+    "currentPasswordHelp": "如果您通过 GitHub 登录且从未设置过密码，可留空当前密码",
     "newPassword": "新密码",
     "newPasswordPlaceholder": "至少6个字符",
     "confirmPassword": "确认新密码",

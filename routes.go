@@ -26,11 +26,11 @@ func SetupRoutes(r *gin.Engine) {
 		oauth.POST("/login", LoginGitHubHandler)
 	}
 
-  auth := api.Group("/auth")
-  {
-    auth.POST("/login", LoginWithPasswordHandler)
-    auth.POST("/refresh", RefreshTokenHandler)
-  }
+	auth := api.Group("/auth")
+	{
+		auth.POST("/login", LoginWithPasswordHandler)
+		auth.POST("/refresh", RefreshTokenHandler)
+	}
 
 	jwtAuth := api.Group("")
 	jwtAuth.Use(AuthMiddleware())

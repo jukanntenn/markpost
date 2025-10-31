@@ -1,6 +1,12 @@
 {
   "common": {
-    "user": "User"
+    "user": "User",
+    "pageTitle": {
+      "login": "Login | Markpost",
+      "dashboard": "Dashboard | Markpost",
+      "settings": "Settings | Markpost",
+      "allPosts": "All Posts | Markpost"
+    }
   },
   "language": {
     "english": "English",
@@ -23,10 +29,10 @@
   "login": {
     "username": "Username",
     "password": "Password",
-    "loginButton": "Login",
+    "loginButton": "Log in",
     "signingIn": "Signing in...",
     "or": "or",
-    "githubLogin": "Login with GitHub",
+    "githubLogin": "Log in with GitHub",
     "processingGitHubLogin": "Processing GitHub login, please wait...",
     "usernamePlaceholder": "Enter your username",
     "passwordPlaceholder": "Enter your password",
@@ -56,7 +62,7 @@
       "createTestPostTip": "Quickly create a sample Markdown post"
     },
     "recentPosts": {
-      "title": "Recent Posts",
+      "title": "Latest Posts",
       "viewAll": "View All",
       "loading": "Loading recent posts...",
       "empty": "No posts yet",
@@ -85,7 +91,7 @@
     "errorEmptyBody": "Body cannot be empty"
   },
   "posts": {
-    "title": "Posts",
+    "title": "All Posts",
     "loading": "Loading...",
     "error": "Failed to load, please try again later",
     "empty": "No posts yet",
@@ -105,6 +111,7 @@
     "changePassword": "Change Password",
     "currentPassword": "Current Password",
     "currentPasswordPlaceholder": "Enter your current password",
+    "currentPasswordHelp": "If you logged in via GitHub and never set a password, you can leave current password empty",
     "newPassword": "New Password",
     "newPasswordPlaceholder": "At least 6 characters",
     "confirmPassword": "Confirm Password",

@@ -134,7 +134,7 @@ test("client validation requires current password", async ({ page }) => {
   await page.getByPlaceholder("At least 6 characters").fill("newpass");
   await page.getByPlaceholder("Enter new password again").fill("newpass");
   await page.getByRole("button", { name: "Change Password", exact: true }).click();
-  await expect(page.locator(".alert.alert-danger")).toContainText("Please enter current password");
+  await expect(page.locator(".alert.alert-danger")).toContainText("Password change failed, please try again");
 });
 
 test("client validation new password min length and valid strength", async ({ page }) => {

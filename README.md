@@ -120,9 +120,9 @@ For direct execution, the log will be displayed in the console.
 You can also obtain the post_key from the web UI:
 
 1. Access the web UI at: `http://127.0.0.1:7330`
-2. Use the default credentials:
-   - **Username**: `markpost`
-   - **Password**: `markpost`
+2. Use the initial credentials:
+   - **Username**: configurable via `initial_user.username` or env `INIT_USERNAME` (defaults to `markpost`)
+   - **Password**: configurable via `initial_user.password` or env `INIT_PASSWORD` (defaults to `markpost`). If configured, the password will not be printed in logs.
 3. After successful login, your post_key will be displayed on the dashboard
 
 ## APIs

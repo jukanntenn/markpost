@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   Button,
@@ -8,8 +8,10 @@ import {
   Spinner,
   Row,
   Col,
+  OverlayTrigger,
+  Tooltip,
 } from "react-bootstrap";
-import { Gear, Lock, CheckCircle } from "react-bootstrap-icons";
+import { Gear, Lock, CheckCircle, InfoCircle } from "react-bootstrap-icons";
 import { auth } from "../utils/api";
  
 import { useTranslation } from "react-i18next";
@@ -32,7 +34,10 @@ function Settings() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showValidation, setShowValidation] = useState(false);
- 
+
+  useEffect(() => {
+    document.title = t("common.pageTitle.settings");
+  }, [t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -55,11 +60,6 @@ function Settings() {
 
     // Client-side validation
     setShowValidation(true);
-
-    if (!formData.current_password.trim()) {
-      setError(t("settings.enterCurrentPassword"));
-      return;
-    }
 
     if (!validatePassword(formData.new_password)) {
       setError(t("settings.passwordMinLength"));
@@ -136,14 +136,26 @@ function Settings() {
             </Card.Header>
             <Card.Body className="p-4 p-md-5">
               <div className="mb-3">
-                <label className="form-label fw-semibold text-muted small">
-                  {t("settings.language")}
-                </label>
-                <div className="py-2">
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="form-label fw-semibold text-muted small mb-0">
+                      {t("settings.language")}
+                    </span>
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={<Tooltip id="language-help">{t("settings.languageDescription")}</Tooltip>}
+                    >
+                      <Button
+                        variant="link"
+                        className="p-0 text-muted d-inline-flex align-items-center"
+                        aria-label={t("settings.languageDescription")}
+                        style={{ lineHeight: 0 }}
+                      >
+                        <InfoCircle size={16} />
+                      </Button>
+                    </OverlayTrigger>
+                  </div>
                   <LanguageToggle />
-                </div>
-                <div className="text-muted small mt-2">
-                  {t("settings.languageDescription")}
                 </div>
               </div>
             </Card.Body>
@@ -187,23 +199,13 @@ function Settings() {
                     value={formData.current_password}
                     onChange={handleInputChange}
                     placeholder={t("settings.currentPasswordPlaceholder")}
-                    required
                     disabled={loading}
                     className="py-3 px-3 border-1"
                     style={{ borderRadius: "8px" }}
-                    isInvalid={
-                      showValidation &&
-                      !formData.current_password.trim() &&
-                      !success
-                    }
                   />
-                  {showValidation &&
-                    !formData.current_password.trim() &&
-                    !success && (
-                      <Form.Control.Feedback type="invalid" className="d-block">
-                        {t("settings.enterCurrentPassword")}
-                      </Form.Control.Feedback>
-                    )}
+                  <div className="form-text mt-1">
+                    {t("settings.currentPasswordHelp")}
+                  </div>
                 </Form.Group>
 
                 <Form.Group className="mb-4">
@@ -294,7 +296,6 @@ function Settings() {
                     type="submit"
                     disabled={
                       loading ||
-                      !formData.current_password ||
                       !formData.new_password ||
                       !formData.confirm_password
                     }

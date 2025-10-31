@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,22 +16,22 @@ type UserRepository interface {
 	GetUserByID(id int) (*User, error)
 	GetUserByGitHubID(githubID int64) (*User, error)
 	GetUserByUsername(username string) (*User, error)
-	CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error)
-	GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error)
-	CreateUserWithPassword(username, password string) (*User, error)
+	CreateUserFromGitHub(githubUser *GitHubUser) (*User, error)
+	GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error)
+	CreateUser(username, password string) (*User, error)
 	ValidateUserPassword(username, password string) (*User, error)
-	UpdatePassword(userID int, hashed string) error
+	SetUserPassword(userID int, password string) error
 }
 
 type PostRepository interface {
-    CreatePost(title, body string, userID ...int) (*Post, error)
-    CreatePostWithUser(title, body string, userID int) (*Post, error)
-    GetPostByID(id string) (*Post, error)
-    GetPostsByUserID(userID int) ([]Post, error)
-    GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error)
-    CleanupExpiredPosts(retentionDays int, batchSize int) error
-    GetExpiredPostsCount(retentionDays int) (int64, error)
-    PreviewExpiredPosts(retentionDays int, limit int) ([]Post, error)
+	CreatePost(title, body string, userID int) (*Post, error)
+	CreatePostWithUser(title, body string, userID int) (*Post, error)
+	GetPostByQID(qid string) (*Post, error)
+	GetPostsByUserID(userID int) ([]Post, error)
+	GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error)
+	CleanupExpiredPosts(retentionDays int, batchSize int) error
+	GetExpiredPostsCount(retentionDays int) (int64, error)
+	PreviewExpiredPosts(retentionDays int, limit int) ([]Post, error)
 }
 
 type userRepository struct {
@@ -41,119 +42,111 @@ type postRepository struct {
 	db *gorm.DB
 }
 
-func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
-	var user User
-	err := r.db.Where("post_key = ?", postKey).First(&user).Error
+func makeUser(username, password string, githubID *int64) (*User, error) {
+	postKey, err := GeneratePostKey(16)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
 		return nil, err
 	}
-	return &user, nil
-}
 
-func (r *userRepository) GetUserByID(id int) (*User, error) {
-	var user User
-	err := r.db.Where("id = ?", id).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
+	var hashed string
+	if password != "" {
+		hashed, err = HashPassword(password)
+		if err != nil {
+			return nil, err
 		}
-		return nil, err
-	}
-	return &user, nil
-}
-
-func (r *userRepository) GetUserByGitHubID(githubID int64) (*User, error) {
-	var user User
-	err := r.db.Where("github_id = ?", githubID).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
-func (r *userRepository) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
-	postKey, err := GeneratePostKey(8)
-	if err != nil {
-		return nil, err
 	}
 
 	user := User{
-		Username:  githubUser.Login,
-		PostKey:   postKey,
-		GitHubID:  &githubUser.ID,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	err = r.db.Create(&user).Error
-	if err != nil {
-		return nil, err
+		Username: username,
+		Password: hashed,
+		PostKey:  postKey,
+		GitHubID: githubID,
 	}
 
 	return &user, nil
 }
 
-func (r *userRepository) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func getUserBy[T any](r *userRepository, field string, value T) (*User, error) {
+	var user User
+	err := r.db.Take(&user, fmt.Sprintf("%s = ?", field), value).Error
+	if err == nil {
+		return &user, nil
+	}
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, sql.ErrNoRows
+	}
+
+	return nil, err
+}
+
+func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
+	return getUserBy(r, "post_key", postKey)
+}
+
+func (r *userRepository) GetUserByID(id int) (*User, error) {
+	return getUserBy(r, "id", id)
+}
+
+func (r *userRepository) GetUserByGitHubID(githubID int64) (*User, error) {
+	return getUserBy(r, "github_id", githubID)
+}
+
+func (r *userRepository) GetUserByUsername(username string) (*User, error) {
+	return getUserBy(r, "username", username)
+}
+
+func isPostKeyDuplicated(err error) bool {
+	if !errors.Is(err, gorm.ErrDuplicatedKey) {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "post_key")
+}
+
+func (r *userRepository) createUserWithUniquePostKey(username, password string, githubID *int64) (*User, error) {
+	for {
+		user, err := makeUser(username, password, githubID)
+		if err != nil {
+			return nil, err
+		}
+		if err = r.db.Create(user).Error; err == nil {
+			return user, nil
+		}
+		if isPostKeyDuplicated(err) {
+			continue
+		}
+		return nil, err
+	}
+}
+
+func (r *userRepository) CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
+	return r.createUserWithUniquePostKey(githubUser.Login, "", &githubUser.ID)
+}
+
+func (r *userRepository) GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	user, err := r.GetUserByGitHubID(githubUser.ID)
 	if err == nil {
 		return user, nil
 	}
+
 	if err != sql.ErrNoRows {
 		return nil, err
 	}
-	return r.CreateUserFromGitHubUser(githubUser)
+
+	return r.CreateUserFromGitHub(githubUser)
 }
 
-func (r *userRepository) GetUserByUsername(username string) (*User, error) {
-	var user User
-	err := r.db.Where("username = ?", username).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
-func (r *userRepository) CreateUserWithPassword(username, password string) (*User, error) {
-	var existingUser User
-	err := r.db.Where("username = ?", username).First(&existingUser).Error
-	if err == nil {
-		return nil, fmt.Errorf("username already exists")
-	}
-	if err != gorm.ErrRecordNotFound {
+func (r *userRepository) CreateUser(username, password string) (*User, error) {
+	var count int64
+	if err := r.db.Model(&User{}).Where("username = ?", username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 
-	hashedPassword, err := HashPassword(password)
-	if err != nil {
-		return nil, err
+	if count > 0 {
+		return nil, fmt.Errorf("username is already taken")
 	}
-
-	postKey, err := GeneratePostKey(8)
-	if err != nil {
-		return nil, err
-	}
-
-	user := User{
-		Username:  username,
-		Password:  hashedPassword,
-		PostKey:   postKey,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	err = r.db.Create(&user).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
+	return r.createUserWithUniquePostKey(username, password, nil)
 }
 
 func (r *userRepository) ValidateUserPassword(username, password string) (*User, error) {
@@ -161,104 +154,94 @@ func (r *userRepository) ValidateUserPassword(username, password string) (*User,
 	if err != nil {
 		return nil, err
 	}
+
 	if user.Password == "" {
-		return nil, fmt.Errorf("user does not have password set")
+		return nil, fmt.Errorf("user has no password set")
 	}
+
 	if err := CheckPassword(password, user.Password); err != nil {
 		return nil, fmt.Errorf("invalid password")
 	}
+
 	return user, nil
 }
 
-func (r *userRepository) UpdatePassword(userID int, hashed string) error {
+func (r *userRepository) SetUserPassword(userID int, password string) error {
+	hashed, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
 	return r.db.Model(&User{}).Where("id = ?", userID).Update("password", hashed).Error
 }
 
-func (r *postRepository) CreatePost(title, body string, userID ...int) (*Post, error) {
-	id, err := gonanoid.New()
+func (r *postRepository) CreatePost(title, body string, userID int) (*Post, error) {
+	qid, err := gonanoid.New()
 	if err != nil {
 		return nil, err
 	}
+
 	post := Post{
-		ID:        id,
-		Title:     title,
-		Body:      body,
-		CreatedAt: time.Now().UTC(),
-	}
-	if len(userID) > 0 {
-		post.UserID = &userID[0]
+		QID:    qid,
+		Title:  title,
+		Body:   body,
+		UserID: userID,
 	}
 	err = r.db.Create(&post).Error
 	if err != nil {
-		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-			return nil, fmt.Errorf("invalid user ID: %w", err)
-		}
 		return nil, err
 	}
+
 	return &post, nil
 }
 
 func (r *postRepository) CreatePostWithUser(title, body string, userID int) (*Post, error) {
-	id, err := gonanoid.New()
-	if err != nil {
-		return nil, err
-	}
-	post := Post{
-		ID:        id,
-		Title:     title,
-		Body:      body,
-		CreatedAt: time.Now().UTC(),
-		UserID:    &userID,
-	}
-	err = r.db.Create(&post).Error
-	if err != nil {
-		if strings.Contains(err.Error(), "FOREIGN KEY constraint failed") {
-			return nil, fmt.Errorf("invalid user ID: %w", err)
-		}
-		return nil, err
-	}
-	return &post, nil
+	return r.CreatePost(title, body, userID)
 }
 
-func (r *postRepository) GetPostByID(id string) (*Post, error) {
+func (r *postRepository) GetPostByQID(qid string) (*Post, error) {
 	var post Post
-	err := r.db.Where("id = ?", id).First(&post).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
+	err := r.db.Take(&post, "QID = ?", qid).Error
+	if err == nil {
+		return &post, nil
 	}
-	return &post, nil
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, sql.ErrNoRows
+	}
+
+	return nil, err
 }
 
 func (r *postRepository) GetPostsByUserID(userID int) ([]Post, error) {
-    var posts []Post
-    err := r.db.Where("user_id = ?", userID).Find(&posts).Error
-    if err != nil {
-        return nil, err
-    }
-    return posts, nil
+	var posts []Post
+	err := r.db.Find(&posts, "user_id = ?", userID).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func (r *postRepository) GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error) {
-    if page < 1 {
-        page = 1
-    }
-    if limit <= 0 {
-        limit = 20
-    }
-    var total int64
-    if err := r.db.Model(&Post{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
-        return nil, 0, err
-    }
-    var posts []Post
-    offset := (page - 1) * limit
-    err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Offset(offset).Find(&posts).Error
-    if err != nil {
-        return nil, 0, err
-    }
-    return posts, total, nil
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	var total int64
+	if err := r.db.Model(&Post{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var posts []Post
+	offset := (page - 1) * limit
+	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Offset(offset).Find(&posts).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return posts, total, nil
 }
 
 func (r *postRepository) CleanupExpiredPosts(retentionDays int, batchSize int) error {

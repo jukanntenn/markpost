@@ -22,9 +22,9 @@ type UserRepository interface {
 }
 
 type PostRepository interface {
-	CreatePost(title, body string, userID ...int) (*Post, error)
+	CreatePost(title, body string, userID int) (*Post, error)
 	CreatePostWithUser(title, body string, userID int) (*Post, error)
-	GetPostByID(id string) (*Post, error)
+	GetPostByQID(qid string) (*Post, error)
 	GetPostsByUserID(userID int) ([]Post, error)
 	GetPostsByUserIDPaginated(userID int, page int, limit int) ([]Post, int64, error)
 	CleanupExpiredPosts(retentionDays int, batchSize int) error
@@ -215,24 +215,27 @@ func (r *postRepository) CreatePostWithUser(title, body string, userID int) (*Po
 	return r.CreatePost(title, body, userID)
 }
 
-func (r *postRepository) GetPostByID(id string) (*Post, error) {
+func (r *postRepository) GetPostByQID(qid string) (*Post, error) {
 	var post Post
-	err := r.db.Where("id = ?", id).First(&post).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
+	err := r.db.Take(&post, "qid = ?", qid).Error
+	if err == nil {
+		return &post, nil
 	}
-	return &post, nil
+
+	if err == gorm.ErrRecordNotFound {
+		return nil, sql.ErrNoRows
+	}
+
+	return nil, err
 }
 
 func (r *postRepository) GetPostsByUserID(userID int) ([]Post, error) {
 	var posts []Post
-	err := r.db.Where("user_id = ?", userID).Find(&posts).Error
+	err := r.db.Find(&posts, "user_id = ?", userID).Error
 	if err != nil {
 		return nil, err
 	}
+
 	return posts, nil
 }
 
@@ -247,12 +250,14 @@ func (r *postRepository) GetPostsByUserIDPaginated(userID int, page int, limit i
 	if err := r.db.Model(&Post{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+
 	var posts []Post
 	offset := (page - 1) * limit
 	err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Limit(limit).Offset(offset).Find(&posts).Error
 	if err != nil {
 		return nil, 0, err
 	}
+
 	return posts, total, nil
 }
 

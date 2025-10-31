@@ -79,7 +79,7 @@ func (d *Database) GetPostRepository() PostRepository {
 	return &postRepository{db: d.db}
 }
 
-func NewTestDatabase(url string) (*Database, error) {
+func NewTestDatabase() (*Database, error) {
 	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		return nil, err

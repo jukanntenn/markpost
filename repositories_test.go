@@ -8,7 +8,7 @@ import (
 
 func setupTestDB(t *testing.T) *Database {
 	t.Helper()
-	db, err := NewTestDatabase("")
+	db, err := NewTestDatabase()
 	if err != nil {
 		t.Fatalf("NewTestDatabase error: %v", err)
 	}

@@ -29,10 +29,10 @@ func TestUserRepository_GetUserByGitHubID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
+
 		githubID := int64(12345)
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "alice", PostKey: postKey, GitHubID: &githubID}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", &githubID)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
@@ -40,6 +40,7 @@ func TestUserRepository_GetUserByGitHubID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetUserByGitHubID error: %v", err)
 		}
+
 		if got == nil || got.ID == 0 || got.Username != "alice" || got.GitHubID == nil || *got.GitHubID != githubID {
 			t.Fatalf("unexpected user: %+v", got)
 		}
@@ -51,13 +52,12 @@ func TestUserRepository_GetUserByGitHubID(t *testing.T) {
 
 		repo := db.GetUserRepository()
 		githubID := int64(99999)
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "bob", PostKey: postKey, GitHubID: &githubID}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", &githubID)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		_, err := repo.GetUserByGitHubID(int64(123))
+		_, err = repo.GetUserByGitHubID(int64(123))
 		if err == nil || err != sql.ErrNoRows {
 			t.Fatalf("expected sql.ErrNoRows, got %v", err)
 		}
@@ -70,17 +70,17 @@ func TestUserRepository_GetUserByPostKey(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		githubID := int64(321)
-		u := User{Username: "charlie", PostKey: "pk-123", GitHubID: &githubID}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		u, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		got, err := repo.GetUserByPostKey("pk-123")
+		got, err := repo.GetUserByPostKey(u.PostKey)
 		if err != nil {
 			t.Fatalf("GetUserByPostKey error: %v", err)
 		}
-		if got == nil || got.Username != "charlie" || got.PostKey != "pk-123" {
+
+		if got == nil || got.Username != "alice" || got.PostKey != u.PostKey {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 	})
@@ -90,13 +90,12 @@ func TestUserRepository_GetUserByPostKey(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		githubID := int64(888)
-		u := User{Username: "dave", PostKey: "pk-888", GitHubID: &githubID}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		_, err := repo.GetUserByPostKey("not-exist")
+		_, err = repo.GetUserByPostKey("not-exist")
 		if err == nil || err != sql.ErrNoRows {
 			t.Fatalf("expected sql.ErrNoRows, got %v", err)
 		}
@@ -109,9 +108,8 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "eve", PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		u, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
@@ -119,7 +117,8 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetUserByID error: %v", err)
 		}
-		if got == nil || got.ID != u.ID || got.Username != "eve" {
+
+		if got == nil || got.ID != u.ID || got.Username != "alice" {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 	})
@@ -129,13 +128,12 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "frank", PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		_, err := repo.GetUserByID(123456)
+		_, err = repo.GetUserByID(123456)
 		if err == nil || err != sql.ErrNoRows {
 			t.Fatalf("expected sql.ErrNoRows, got %v", err)
 		}
@@ -148,17 +146,17 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "grace", PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		got, err := repo.GetUserByUsername("grace")
+		got, err := repo.GetUserByUsername("alice")
 		if err != nil {
 			t.Fatalf("GetUserByUsername error: %v", err)
 		}
-		if got == nil || got.ID == 0 || got.Username != "grace" {
+
+		if got == nil || got.ID == 0 || got.Username != "alice" {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 	})
@@ -168,13 +166,12 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "harry", PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		_, err := repo.GetUserByUsername("unknown")
+		_, err = repo.GetUserByUsername("unknown")
 		if err == nil || err != sql.ErrNoRows {
 			t.Fatalf("expected sql.ErrNoRows, got %v", err)
 		}
@@ -186,17 +183,17 @@ func TestUserRepository_CreateUserFromGitHub(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	gh := &GitHubUser{ID: 7777, Login: "ivy"}
-	got, err := repo.CreateUserFromGitHub(gh)
+	gu := &GitHubUser{ID: 7777, Login: "alice"}
+	got, err := repo.CreateUserFromGitHub(gu)
 	if err != nil {
 		t.Fatalf("CreateUserFromGitHub error: %v", err)
 	}
-	if got == nil || got.ID == 0 || got.Username != "ivy" || got.GitHubID == nil || *got.GitHubID != 7777 || got.PostKey == "" {
+	if got == nil || got.ID == 0 || got.Username != "alice" || got.Password != "" || got.GitHubID == nil || *got.GitHubID != 7777 || got.PostKey == "" {
 		t.Fatalf("unexpected user: %+v", got)
 	}
 
 	got2, err := repo.GetUserByGitHubID(7777)
-	if err != nil || got2 == nil || got2.Username != "ivy" {
+	if err != nil || got2 == nil || got2.Username != "alice" {
 		t.Fatalf("user not persisted: %v %+v", err, got2)
 	}
 }
@@ -208,18 +205,17 @@ func TestUserRepository_GetOrCreateUserFromGitHub(t *testing.T) {
 
 		repo := db.GetUserRepository()
 		githubID := int64(1000)
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "jack", PostKey: postKey, GitHubID: &githubID}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		u, err := makeUser("alice", "password", &githubID)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		gh := &GitHubUser{ID: githubID, Login: "other"}
-		got, err := repo.GetOrCreateUserFromGitHub(gh)
+		gu := &GitHubUser{ID: githubID, Login: "other"}
+		got, err := repo.GetOrCreateUserFromGitHub(gu)
 		if err != nil {
 			t.Fatalf("GetOrCreateUserFromGitHub error: %v", err)
 		}
-		if got == nil || got.ID != u.ID || got.Username != "jack" || got.GitHubID == nil || *got.GitHubID != githubID {
+		if got == nil || got.ID != u.ID || got.Username != "alice" || got.GitHubID == nil || *got.GitHubID != githubID {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 	})
@@ -229,17 +225,17 @@ func TestUserRepository_GetOrCreateUserFromGitHub(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		gh := &GitHubUser{ID: 2000, Login: "kate"}
-		got, err := repo.GetOrCreateUserFromGitHub(gh)
+		gu := &GitHubUser{ID: 2000, Login: "alice"}
+		got, err := repo.GetOrCreateUserFromGitHub(gu)
 		if err != nil {
 			t.Fatalf("GetOrCreateUserFromGitHub error: %v", err)
 		}
-		if got == nil || got.Username != "kate" || got.GitHubID == nil || *got.GitHubID != 2000 || got.PostKey == "" {
+		if got == nil || got.Username != "alice" || got.GitHubID == nil || *got.GitHubID != 2000 || got.PostKey == "" {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 
 		got2, err := repo.GetUserByGitHubID(2000)
-		if err != nil || got2 == nil || got2.Username != "kate" {
+		if err != nil || got2 == nil || got2.Username != "alice" {
 			t.Fatalf("user not persisted: %v %+v", err, got2)
 		}
 	})
@@ -250,19 +246,19 @@ func TestUserRepository_CreateUser(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	got, err := repo.CreateUser("lucy", "p@ssw0rd")
+	got, err := repo.CreateUser("alice", "p@ssw0rd")
 	if err != nil {
 		t.Fatalf("CreateUser error: %v", err)
 	}
-	if got == nil || got.ID == 0 || got.Username != "lucy" || got.Password == "" || got.PostKey == "" {
+	if got == nil || got.ID == 0 || got.Username != "alice" || got.Password == "" || got.PostKey == "" {
 		t.Fatalf("unexpected user: %+v", got)
 	}
-	if err := CheckPassword("p@ssw0rd", got.Password); err != nil {
+	if CheckPassword("p@ssw0rd", got.Password) != nil {
 		t.Fatalf("password not matched: %v", err)
 	}
 
-	got2, err := repo.GetUserByUsername("lucy")
-	if err != nil || got2 == nil || got2.Username != "lucy" {
+	got2, err := repo.GetUserByUsername("alice")
+	if err != nil || got2 == nil || got2.Username != "alice" {
 		t.Fatalf("user not persisted: %v %+v", err, got2)
 	}
 }
@@ -290,7 +286,7 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 			t.Fatalf("seed user error: %v", err)
 		}
 		_, err := repo.ValidateUserPassword("np", "any")
-		if err == nil || err.Error() != "user does not have password set" {
+		if err == nil || err.Error() != "user has no password set" {
 			t.Fatalf("expected 'user does not have password set', got %v", err)
 		}
 	})

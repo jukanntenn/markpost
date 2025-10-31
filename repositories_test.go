@@ -338,17 +338,23 @@ func TestPostRepository_CreatePost(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		userRepo := db.GetUserRepository()
+		u, err := userRepo.CreateUserWithPassword("poster", "pwd")
+		if err != nil {
+			t.Fatalf("seed user error: %v", err)
+		}
+
 		repo := db.GetPostRepository()
-		p, err := repo.CreatePost("title", "body")
+		p, err := repo.CreatePost("title", "body", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		if p == nil || p.ID == "" || p.Title != "title" || p.Body != "body" || p.UserID != nil {
+		if p == nil || p.QID == "" || p.Title != "title" || p.Body != "body" || p.UserID != u.ID {
 			t.Fatalf("unexpected post: %+v", p)
 		}
 
 		var count int64
-		if err := db.GetDB().Model(&Post{}).Where("id = ?", p.ID).Count(&count).Error; err != nil || count != 1 {
+		if err := db.GetDB().Model(&Post{}).Where("qid = ?", p.QID).Count(&count).Error; err != nil || count != 1 {
 			t.Fatalf("post not persisted: %v count=%d", err, count)
 		}
 	})
@@ -368,7 +374,7 @@ func TestPostRepository_CreatePost(t *testing.T) {
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		if p == nil || p.ID == "" || p.UserID == nil || *p.UserID != u.ID {
+		if p == nil || p.QID == "" || p.UserID != u.ID {
 			t.Fatalf("unexpected post: %+v", p)
 		}
 	})
@@ -389,36 +395,42 @@ func TestPostRepository_CreatePostWithUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreatePostWithUser error: %v", err)
 	}
-	if p == nil || p.ID == "" || p.UserID == nil || *p.UserID != u.ID {
+	if p == nil || p.QID == "" || p.UserID != u.ID {
 		t.Fatalf("unexpected post: %+v", p)
 	}
 }
 
-func TestPostRepository_GetPostByID(t *testing.T) {
-	t.Run("returns expected record for valid id", func(t *testing.T) {
+func TestPostRepository_GetPostByQID(t *testing.T) {
+	t.Run("returns expected record for valid qid", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		userRepo := db.GetUserRepository()
+		u, err := userRepo.CreateUserWithPassword("poster", "pwd")
+		if err != nil {
+			t.Fatalf("seed user error: %v", err)
+		}
+
 		postRepo := db.GetPostRepository()
-		p, err := postRepo.CreatePost("t1", "b1")
+		p, err := postRepo.CreatePost("t1", "b1", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		got, err := postRepo.GetPostByID(p.ID)
+		got, err := postRepo.GetPostByQID(p.QID)
 		if err != nil {
-			t.Fatalf("GetPostByID error: %v", err)
+			t.Fatalf("GetPostByQID error: %v", err)
 		}
-		if got == nil || got.ID != p.ID || got.Title != "t1" || got.Body != "b1" {
+		if got == nil || got.QID != p.QID || got.Title != "t1" || got.Body != "b1" {
 			t.Fatalf("unexpected post: %+v", got)
 		}
 	})
 
-	t.Run("returns sql.ErrNoRows for wrong id", func(t *testing.T) {
+	t.Run("returns sql.ErrNoRows for wrong qid", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
 		postRepo := db.GetPostRepository()
-		_, err := postRepo.GetPostByID("non-existent-id")
+		_, err := postRepo.GetPostByQID("non-existent-qid")
 		if err == nil || err != sql.ErrNoRows {
 			t.Fatalf("expected sql.ErrNoRows, got %v", err)
 		}
@@ -452,7 +464,7 @@ func TestPostRepository_GetPostsByUserID(t *testing.T) {
 		t.Fatalf("unexpected posts length: %d", len(posts))
 	}
 	for _, p := range posts {
-		if p.UserID == nil || *p.UserID != u1.ID {
+		if p.UserID != u1.ID {
 			t.Fatalf("unexpected post userID: %+v", p)
 		}
 	}
@@ -474,18 +486,21 @@ func TestPostRepository_GetExpiredPostsCount(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		userRepo := db.GetUserRepository()
+		u, _ := userRepo.CreateUserWithPassword("u", "p")
+
 		now := time.Now().UTC()
 		expired1 := now.AddDate(0, 0, -10)
 		expired2 := now.AddDate(0, 0, -8)
 		notExpired := now.AddDate(0, 0, -3)
 
-		if err := db.GetDB().Create(&Post{ID: "p1", Title: "t1", Body: "b1", CreatedAt: expired1}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "p1", Title: "t1", Body: "b1", CreatedAt: expired1, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "p2", Title: "t2", Body: "b2", CreatedAt: expired2}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "p2", Title: "t2", Body: "b2", CreatedAt: expired2, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "p3", Title: "t3", Body: "b3", CreatedAt: notExpired}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "p3", Title: "t3", Body: "b3", CreatedAt: notExpired, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
 
@@ -516,22 +531,25 @@ func TestPostRepository_PreviewExpiredPosts(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		userRepo := db.GetUserRepository()
+		u, _ := userRepo.CreateUserWithPassword("u", "p")
+
 		now := time.Now().UTC()
 		e1 := now.AddDate(0, 0, -12)
 		e2 := now.AddDate(0, 0, -10)
 		e3 := now.AddDate(0, 0, -9)
 		ne := now.AddDate(0, 0, -2)
 
-		if err := db.GetDB().Create(&Post{ID: "q1", Title: "t1", Body: "b1", CreatedAt: e1}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "q1", Title: "t1", Body: "b1", CreatedAt: e1, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "q2", Title: "t2", Body: "b2", CreatedAt: e2}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "q2", Title: "t2", Body: "b2", CreatedAt: e2, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "q3", Title: "t3", Body: "b3", CreatedAt: e3}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "q3", Title: "t3", Body: "b3", CreatedAt: e3, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "q4", Title: "t4", Body: "b4", CreatedAt: ne}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "q4", Title: "t4", Body: "b4", CreatedAt: ne, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
 
@@ -564,18 +582,21 @@ func TestPostRepository_CleanupExpiredPosts(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		userRepo := db.GetUserRepository()
+		u, _ := userRepo.CreateUserWithPassword("u", "p")
+
 		now := time.Now().UTC()
 		e1 := now.AddDate(0, 0, -20)
 		e2 := now.AddDate(0, 0, -15)
 		ne := now.AddDate(0, 0, -3)
 
-		if err := db.GetDB().Create(&Post{ID: "r1", Title: "t1", Body: "b1", CreatedAt: e1}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "r1", Title: "t1", Body: "b1", CreatedAt: e1, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "r2", Title: "t2", Body: "b2", CreatedAt: e2}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "r2", Title: "t2", Body: "b2", CreatedAt: e2, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
-		if err := db.GetDB().Create(&Post{ID: "r3", Title: "t3", Body: "b3", CreatedAt: ne}).Error; err != nil {
+		if err := db.GetDB().Create(&Post{QID: "r3", Title: "t3", Body: "b3", CreatedAt: ne, UserID: u.ID}).Error; err != nil {
 			t.Fatalf("seed post error: %v", err)
 		}
 
@@ -593,10 +614,10 @@ func TestPostRepository_CleanupExpiredPosts(t *testing.T) {
 		}
 
 		var remaining Post
-		if err := db.GetDB().Where("id = ?", "r3").First(&remaining).Error; err != nil {
+		if err := db.GetDB().Where("qid = ?", "r3").First(&remaining).Error; err != nil {
 			t.Fatalf("remaining post fetch error: %v", err)
 		}
-		if remaining.ID != "r3" {
+		if remaining.QID != "r3" {
 			t.Fatalf("unexpected remaining post: %+v", remaining)
 		}
 	})

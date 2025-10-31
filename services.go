@@ -171,11 +171,11 @@ func (s *PostService) CreatePost(ctx context.Context, title, body string, userID
 	if err != nil {
 		return "", NewServiceError(ErrInternal, "create post failed", err)
 	}
-	return post.ID, nil
+	return post.QID, nil
 }
 
-func (s *PostService) RenderPostHTML(ctx context.Context, id string) (string, string, error) {
-    post, err := s.posts.GetPostByID(id)
+func (s *PostService) RenderPostHTML(ctx context.Context, qid string) (string, string, error) {
+    post, err := s.posts.GetPostByQID(qid)
     if err != nil {
         if err == sql.ErrNoRows {
             return "", "", NewServiceError(ErrNotFound, "post not found", err)

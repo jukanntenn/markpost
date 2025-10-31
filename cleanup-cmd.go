@@ -71,14 +71,10 @@ func CleanupCommand() {
 		fmt.Printf("First %d expired posts to be deleted:\n", len(posts))
 		fmt.Println("=====================================")
 		for i, post := range posts {
-			fmt.Printf("%d. ID: %s\n", i+1, post.ID)
+			fmt.Printf("%d. QID: %s\n", i+1, post.QID)
 			fmt.Printf("   Title: %s\n", truncateString(post.Title, 50))
 			fmt.Printf("   Created at: %s\n", post.CreatedAt.Format("2006-01-02 15:04:05"))
-			if post.UserID != nil {
-				fmt.Printf("   User ID: %d\n", *post.UserID)
-			} else {
-				fmt.Printf("   User ID: (anonymous)\n")
-			}
+			fmt.Printf("   User ID: %d\n", post.UserID)
 			fmt.Println("   ---")
 		}
 		return

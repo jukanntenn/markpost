@@ -444,15 +444,15 @@ func TestPostService_CreatePost(t *testing.T) {
 		u, _ := repoU.CreateUserWithPassword("poster", "pw")
 
 		ps := NewPostService(db.GetPostRepository())
-		id, err := ps.CreatePost(context.Background(), "Hello", "World", u.ID)
+		qid, err := ps.CreatePost(context.Background(), "Hello", "World", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		if id == "" {
-			t.Fatalf("empty id")
+		if qid == "" {
+			t.Fatalf("empty qid")
 		}
-		p, err := db.GetPostRepository().GetPostByID(id)
-		if err != nil || p == nil || p.UserID == nil || *p.UserID != u.ID {
+		p, err := db.GetPostRepository().GetPostByQID(qid)
+		if err != nil || p == nil || p.UserID != u.ID {
 			t.Fatalf("post not persisted or wrong user: %v %+v", err, p)
 		}
 	})
@@ -485,7 +485,7 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 		p, _ := pr.CreatePostWithUser("Title", "Hello\n\nWorld", u.ID)
 
 		ps := NewPostService(pr)
-		title, html, err := ps.RenderPostHTML(context.Background(), p.ID)
+		title, html, err := ps.RenderPostHTML(context.Background(), p.QID)
 		if err != nil {
 			t.Fatalf("RenderPostHTML error: %v", err)
 		}

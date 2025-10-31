@@ -64,9 +64,9 @@ func makeUser(username, password string, githubID *int64) (*User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
+func getUserBy[T any](r *userRepository, field string, value T) (*User, error) {
 	var user User
-	err := r.db.Take(&user, "post_key = ?", postKey).Error
+	err := r.db.Take(&user, fmt.Sprintf("%s = ?", field), value).Error
 	if err == nil {
 		return &user, nil
 	}
@@ -76,48 +76,22 @@ func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
 	}
 
 	return nil, err
+}
+
+func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
+	return getUserBy(r, "post_key", postKey)
 }
 
 func (r *userRepository) GetUserByID(id int) (*User, error) {
-	var user User
-	err := r.db.Take(&user, "id = ?", id).Error
-	if err == nil {
-		return &user, nil
-	}
-
-	if err == gorm.ErrRecordNotFound {
-		return nil, sql.ErrNoRows
-	}
-
-	return nil, err
+	return getUserBy(r, "id", id)
 }
 
 func (r *userRepository) GetUserByGitHubID(githubID int64) (*User, error) {
-	var user User
-	err := r.db.Take(&user, "github_id = ?", githubID).Error
-	if err == nil {
-		return &user, nil
-	}
-
-	if err == gorm.ErrRecordNotFound {
-		return nil, sql.ErrNoRows
-	}
-
-	return nil, err
+	return getUserBy(r, "github_id", githubID)
 }
 
 func (r *userRepository) GetUserByUsername(username string) (*User, error) {
-	var user User
-	err := r.db.Take(&user, "username = ?", username).Error
-	if err == nil {
-		return &user, nil
-	}
-
-	if err == gorm.ErrRecordNotFound {
-		return nil, sql.ErrNoRows
-	}
-
-	return nil, err
+	return getUserBy(r, "username", username)
 }
 
 func (r *userRepository) CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {

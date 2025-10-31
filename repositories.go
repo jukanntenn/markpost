@@ -41,6 +41,30 @@ type postRepository struct {
 	db *gorm.DB
 }
 
+func makeUser(username, password string, githubID *int64) (*User, error) {
+	postKey, err := GeneratePostKey(8)
+	if err != nil {
+		return nil, err
+	}
+
+	var hashed string
+	if password != "" {
+		hashed, err = HashPassword(password)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	user := User{
+		Username: username,
+		Password: hashed,
+		PostKey:  postKey,
+		GitHubID: githubID,
+	}
+
+	return &user, nil
+}
+
 func (r *userRepository) GetUserByPostKey(postKey string) (*User, error) {
 	var user User
 	err := r.db.Take(&user, "post_key = ?", postKey).Error
@@ -98,24 +122,17 @@ func (r *userRepository) GetUserByUsername(username string) (*User, error) {
 }
 
 func (r *userRepository) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
-	postKey, err := GeneratePostKey(8)
+	user, err := makeUser(githubUser.Login, "", &githubUser.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	user := User{
-		Username:  githubUser.Login,
-		PostKey:   postKey,
-		GitHubID:  &githubUser.ID,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	err = r.db.Create(&user).Error
+	err = r.db.Create(user).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 func (r *userRepository) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
@@ -123,57 +140,35 @@ func (r *userRepository) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (
 	if err == nil {
 		return user, nil
 	}
+
 	if err != sql.ErrNoRows {
 		return nil, err
 	}
+
 	return r.CreateUserFromGitHubUser(githubUser)
 }
 
-func (r *userRepository) GetUserByUsername(username string) (*User, error) {
-	var user User
-	err := r.db.Where("username = ?", username).First(&user).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, err
-	}
-	return &user, nil
-}
-
 func (r *userRepository) CreateUserWithPassword(username, password string) (*User, error) {
-	var existingUser User
-	err := r.db.Where("username = ?", username).First(&existingUser).Error
-	if err == nil {
-		return nil, fmt.Errorf("username already exists")
-	}
-	if err != gorm.ErrRecordNotFound {
+	var count int64
+	if err := r.db.Model(&User{}).Where("username = ?", username).Count(&count).Error; err != nil {
 		return nil, err
 	}
 
-	hashedPassword, err := HashPassword(password)
+	if count > 0 {
+		return nil, fmt.Errorf("username is already taken")
+	}
+
+	user, err := makeUser(username, password, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	postKey, err := GeneratePostKey(8)
+	err = r.db.Create(user).Error
 	if err != nil {
 		return nil, err
 	}
 
-	user := User{
-		Username:  username,
-		Password:  hashedPassword,
-		PostKey:   postKey,
-		CreatedAt: time.Now().UTC(),
-	}
-
-	err = r.db.Create(&user).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
+	return user, nil
 }
 
 func (r *userRepository) ValidateUserPassword(username, password string) (*User, error) {
@@ -181,12 +176,15 @@ func (r *userRepository) ValidateUserPassword(username, password string) (*User,
 	if err != nil {
 		return nil, err
 	}
+
 	if user.Password == "" {
-		return nil, fmt.Errorf("user does not have password set")
+		return nil, fmt.Errorf("user has no password set")
 	}
+
 	if err := CheckPassword(password, user.Password); err != nil {
 		return nil, fmt.Errorf("invalid password")
 	}
+
 	return user, nil
 }
 

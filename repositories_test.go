@@ -181,15 +181,15 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 	})
 }
 
-func TestUserRepository_CreateUserFromGitHubUser(t *testing.T) {
+func TestUserRepository_CreateUserFromGitHub(t *testing.T) {
 	db := setupTestDB(t)
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
 	gh := &GitHubUser{ID: 7777, Login: "ivy"}
-	got, err := repo.CreateUserFromGitHubUser(gh)
+	got, err := repo.CreateUserFromGitHub(gh)
 	if err != nil {
-		t.Fatalf("CreateUserFromGitHubUser error: %v", err)
+		t.Fatalf("CreateUserFromGitHub error: %v", err)
 	}
 	if got == nil || got.ID == 0 || got.Username != "ivy" || got.GitHubID == nil || *got.GitHubID != 7777 || got.PostKey == "" {
 		t.Fatalf("unexpected user: %+v", got)
@@ -201,7 +201,7 @@ func TestUserRepository_CreateUserFromGitHubUser(t *testing.T) {
 	}
 }
 
-func TestUserRepository_GetOrCreateUserFromGitHubUser(t *testing.T) {
+func TestUserRepository_GetOrCreateUserFromGitHub(t *testing.T) {
 	t.Run("returns existing user for valid GitHubUser", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
@@ -215,9 +215,9 @@ func TestUserRepository_GetOrCreateUserFromGitHubUser(t *testing.T) {
 		}
 
 		gh := &GitHubUser{ID: githubID, Login: "other"}
-		got, err := repo.GetOrCreateUserFromGitHubUser(gh)
+		got, err := repo.GetOrCreateUserFromGitHub(gh)
 		if err != nil {
-			t.Fatalf("GetOrCreateUserFromGitHubUser error: %v", err)
+			t.Fatalf("GetOrCreateUserFromGitHub error: %v", err)
 		}
 		if got == nil || got.ID != u.ID || got.Username != "jack" || got.GitHubID == nil || *got.GitHubID != githubID {
 			t.Fatalf("unexpected user: %+v", got)
@@ -230,9 +230,9 @@ func TestUserRepository_GetOrCreateUserFromGitHubUser(t *testing.T) {
 
 		repo := db.GetUserRepository()
 		gh := &GitHubUser{ID: 2000, Login: "kate"}
-		got, err := repo.GetOrCreateUserFromGitHubUser(gh)
+		got, err := repo.GetOrCreateUserFromGitHub(gh)
 		if err != nil {
-			t.Fatalf("GetOrCreateUserFromGitHubUser error: %v", err)
+			t.Fatalf("GetOrCreateUserFromGitHub error: %v", err)
 		}
 		if got == nil || got.Username != "kate" || got.GitHubID == nil || *got.GitHubID != 2000 || got.PostKey == "" {
 			t.Fatalf("unexpected user: %+v", got)
@@ -245,14 +245,14 @@ func TestUserRepository_GetOrCreateUserFromGitHubUser(t *testing.T) {
 	})
 }
 
-func TestUserRepository_CreateUserWithPassword(t *testing.T) {
+func TestUserRepository_CreateUser(t *testing.T) {
 	db := setupTestDB(t)
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	got, err := repo.CreateUserWithPassword("lucy", "p@ssw0rd")
+	got, err := repo.CreateUser("lucy", "p@ssw0rd")
 	if err != nil {
-		t.Fatalf("CreateUserWithPassword error: %v", err)
+		t.Fatalf("CreateUser error: %v", err)
 	}
 	if got == nil || got.ID == 0 || got.Username != "lucy" || got.Password == "" || got.PostKey == "" {
 		t.Fatalf("unexpected user: %+v", got)
@@ -339,7 +339,7 @@ func TestPostRepository_CreatePost(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUserWithPassword("poster", "pwd")
+		u, err := userRepo.CreateUser("poster", "pwd")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -364,7 +364,7 @@ func TestPostRepository_CreatePost(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUserWithPassword("poster", "pwd")
+		u, err := userRepo.CreateUser("poster", "pwd")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -385,7 +385,7 @@ func TestPostRepository_CreatePostWithUser(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	userRepo := db.GetUserRepository()
-	u, err := userRepo.CreateUserWithPassword("author", "pwd")
+	u, err := userRepo.CreateUser("author", "pwd")
 	if err != nil {
 		t.Fatalf("seed user error: %v", err)
 	}
@@ -406,7 +406,7 @@ func TestPostRepository_GetPostByQID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUserWithPassword("poster", "pwd")
+		u, err := userRepo.CreateUser("poster", "pwd")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -442,8 +442,8 @@ func TestPostRepository_GetPostsByUserID(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	userRepo := db.GetUserRepository()
-	u1, _ := userRepo.CreateUserWithPassword("u1", "p1")
-	u2, _ := userRepo.CreateUserWithPassword("u2", "p2")
+	u1, _ := userRepo.CreateUser("u1", "p1")
+	u2, _ := userRepo.CreateUser("u2", "p2")
 
 	postRepo := db.GetPostRepository()
 	if _, err := postRepo.CreatePost("a", "A", u1.ID); err != nil {
@@ -487,7 +487,7 @@ func TestPostRepository_GetExpiredPostsCount(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, _ := userRepo.CreateUserWithPassword("u", "p")
+		u, _ := userRepo.CreateUser("u", "p")
 
 		now := time.Now().UTC()
 		expired1 := now.AddDate(0, 0, -10)
@@ -532,7 +532,7 @@ func TestPostRepository_PreviewExpiredPosts(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, _ := userRepo.CreateUserWithPassword("u", "p")
+		u, _ := userRepo.CreateUser("u", "p")
 
 		now := time.Now().UTC()
 		e1 := now.AddDate(0, 0, -12)
@@ -583,7 +583,7 @@ func TestPostRepository_CleanupExpiredPosts(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, _ := userRepo.CreateUserWithPassword("u", "p")
+		u, _ := userRepo.CreateUser("u", "p")
 
 		now := time.Now().UTC()
 		e1 := now.AddDate(0, 0, -20)
@@ -623,12 +623,12 @@ func TestPostRepository_CleanupExpiredPosts(t *testing.T) {
 	})
 }
 
-func TestUserRepository_UpdatePassword(t *testing.T) {
+func TestUserRepository_UpdateUserPassword(t *testing.T) {
 	db := setupTestDB(t)
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	user, err := repo.CreateUserWithPassword("update_me", "oldpass")
+	user, err := repo.CreateUser("update_me", "oldpass")
 	if err != nil {
 		t.Fatalf("seed user error: %v", err)
 	}
@@ -637,7 +637,7 @@ func TestUserRepository_UpdatePassword(t *testing.T) {
 	if err != nil {
 		t.Fatalf("HashPassword error: %v", err)
 	}
-	if err := repo.UpdatePassword(user.ID, hashed); err != nil {
+	if err := repo.UpdateUserPassword(user.ID, hashed); err != nil {
 		t.Fatalf("UpdatePassword error: %v", err)
 	}
 

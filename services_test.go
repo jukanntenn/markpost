@@ -78,19 +78,19 @@ func (s *stubUserRepo) GetUserByID(id int) (*User, error) {
 }
 func (s *stubUserRepo) GetUserByGitHubID(githubID int64) (*User, error)  { return nil, sql.ErrNoRows }
 func (s *stubUserRepo) GetUserByUsername(username string) (*User, error) { return nil, sql.ErrNoRows }
-func (s *stubUserRepo) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (s *stubUserRepo) CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (s *stubUserRepo) GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) CreateUserWithPassword(username, password string) (*User, error) {
+func (s *stubUserRepo) CreateUser(username, password string) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 func (s *stubUserRepo) ValidateUserPassword(username, password string) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) UpdatePassword(userID int, hashed string) error {
+func (s *stubUserRepo) UpdateUserPassword(userID int, hashed string) error {
 	if s.updateErr != nil {
 		return s.updateErr
 	}
@@ -223,7 +223,7 @@ func TestAuthService_LoginWithPassword(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	repo := db.GetUserRepository()
-	user, err := repo.CreateUserWithPassword("carol", "pass123")
+	user, err := repo.CreateUser("carol", "pass123")
 	if err != nil || user == nil {
 		t.Fatalf("seed user error: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
         defer teardownTestDB(t, db)
 
         repo := db.GetUserRepository()
-        user, err := repo.CreateUserWithPassword("rita", "pass123")
+        user, err := repo.CreateUser("rita", "pass123")
         if err != nil || user == nil {
             t.Fatalf("seed user error: %v", err)
         }
@@ -328,7 +328,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("dora", "old")
+		u, _ := repo.CreateUser("dora", "old")
 		svc := NewAuthService(repo, oauthConfig)
 		err := svc.ChangePassword(context.Background(), u.ID, "wrong", "new")
 		if err == nil {
@@ -343,7 +343,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("ed", "old")
+		u, _ := repo.CreateUser("ed", "old")
 		svc := NewAuthService(repo, oauthConfig)
 		err := svc.ChangePassword(context.Background(), u.ID, "old", "old")
 		if err == nil {
@@ -372,7 +372,7 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("ellen", "oldpw")
+		u, _ := repo.CreateUser("ellen", "oldpw")
 		svc := NewAuthService(repo, oauthConfig)
 		if err := svc.ChangePassword(context.Background(), u.ID, "oldpw", "newpw"); err != nil {
 			t.Fatalf("ChangePassword error: %v", err)
@@ -395,7 +395,7 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repo := db.GetUserRepository()
-		u, _ := repo.CreateUserWithPassword("quinn", "pw")
+		u, _ := repo.CreateUser("quinn", "pw")
 		svc := NewAuthService(repo, oauthConfig)
 		postKey, createdAt, err := svc.QueryPostKey(context.Background(), u.ID)
 		if err != nil {
@@ -441,7 +441,7 @@ func TestPostService_CreatePost(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repoU := db.GetUserRepository()
-		u, _ := repoU.CreateUserWithPassword("poster", "pw")
+		u, _ := repoU.CreateUser("poster", "pw")
 
 		ps := NewPostService(db.GetPostRepository())
 		qid, err := ps.CreatePost(context.Background(), "Hello", "World", u.ID)
@@ -480,7 +480,7 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		repoU := db.GetUserRepository()
-		u, _ := repoU.CreateUserWithPassword("md", "pw")
+		u, _ := repoU.CreateUser("md", "pw")
 		pr := db.GetPostRepository()
 		p, _ := pr.CreatePostWithUser("Title", "Hello\n\nWorld", u.ID)
 

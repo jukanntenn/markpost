@@ -67,7 +67,7 @@ func (s *AuthService) LoginWithGitHub(ctx context.Context, code string) (*User, 
 	if err != nil {
 		return nil, nil, NewServiceError(ErrUnauthorized, "oauth unauthorized", err)
 	}
-	user, err := s.users.GetOrCreateUserFromGitHubUser(&GitHubUser{ID: githubUser.ID, Login: githubUser.Login})
+	user, err := s.users.GetOrCreateUserFromGitHub(&GitHubUser{ID: githubUser.ID, Login: githubUser.Login})
 	if err != nil {
 		return nil, nil, NewServiceError(ErrInternal, "persist user failed", err)
 	}
@@ -141,7 +141,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, n
 	if err != nil {
 		return NewServiceError(ErrInternal, "hash new password failed", err)
 	}
-	if err := s.users.UpdatePassword(userID, hashed); err != nil {
+	if err := s.users.UpdateUserPassword(userID, hashed); err != nil {
 		return NewServiceError(ErrInternal, "update password failed", err)
 	}
 	return nil

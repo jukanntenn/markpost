@@ -14,11 +14,11 @@ type UserRepository interface {
 	GetUserByID(id int) (*User, error)
 	GetUserByGitHubID(githubID int64) (*User, error)
 	GetUserByUsername(username string) (*User, error)
-	CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error)
-	GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error)
-	CreateUserWithPassword(username, password string) (*User, error)
+	CreateUserFromGitHub(githubUser *GitHubUser) (*User, error)
+	GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error)
+	CreateUser(username, password string) (*User, error)
 	ValidateUserPassword(username, password string) (*User, error)
-	UpdatePassword(userID int, hashed string) error
+	UpdateUserPassword(userID int, hashed string) error
 }
 
 type PostRepository interface {
@@ -120,7 +120,7 @@ func (r *userRepository) GetUserByUsername(username string) (*User, error) {
 	return nil, err
 }
 
-func (r *userRepository) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (r *userRepository) CreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	user, err := makeUser(githubUser.Login, "", &githubUser.ID)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (r *userRepository) CreateUserFromGitHubUser(githubUser *GitHubUser) (*User
 	return user, nil
 }
 
-func (r *userRepository) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (*User, error) {
+func (r *userRepository) GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error) {
 	user, err := r.GetUserByGitHubID(githubUser.ID)
 	if err == nil {
 		return user, nil
@@ -144,10 +144,10 @@ func (r *userRepository) GetOrCreateUserFromGitHubUser(githubUser *GitHubUser) (
 		return nil, err
 	}
 
-	return r.CreateUserFromGitHubUser(githubUser)
+	return r.CreateUserFromGitHub(githubUser)
 }
 
-func (r *userRepository) CreateUserWithPassword(username, password string) (*User, error) {
+func (r *userRepository) CreateUser(username, password string) (*User, error) {
 	var count int64
 	if err := r.db.Model(&User{}).Where("username = ?", username).Count(&count).Error; err != nil {
 		return nil, err
@@ -187,7 +187,7 @@ func (r *userRepository) ValidateUserPassword(username, password string) (*User,
 	return user, nil
 }
 
-func (r *userRepository) UpdatePassword(userID int, hashed string) error {
+func (r *userRepository) UpdateUserPassword(userID int, hashed string) error {
 	return r.db.Model(&User{}).Where("id = ?", userID).Update("password", hashed).Error
 }
 

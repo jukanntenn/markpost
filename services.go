@@ -69,17 +69,13 @@ func (s *AuthService) LoginWithGitHub(ctx context.Context, code string) (*User, 
 	}
 	user, err := s.users.GetOrCreateUserFromGitHub(&GitHubUser{ID: githubUser.ID, Login: githubUser.Login})
 	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "persist user failed", err)
+		return nil, nil, NewServiceError(ErrInternal, "create user failed", err)
 	}
-	access, err := generateJWTToken(user.ID, config.JWT.AccessTokenExpire, config.JWT.SecretKey)
+	pair, err := generateJWTTokenPair(user)
 	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate access token failed", err)
+		return nil, nil, NewServiceError(ErrInternal, "generate access/refresh token pair failed", err)
 	}
-	refresh, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate refresh token failed", err)
-	}
-	return user, &JWTTokenPair{AccessToken: access, RefreshToken: refresh}, nil
+	return user, pair, nil
 }
 
 func (s *AuthService) LoginWithPassword(ctx context.Context, username, password string) (*User, *JWTTokenPair, error) {
@@ -87,15 +83,11 @@ func (s *AuthService) LoginWithPassword(ctx context.Context, username, password 
 	if err != nil {
 		return nil, nil, NewServiceError(ErrInvalidCredentials, "invalid username or password", err)
 	}
-	access, err := generateJWTToken(user.ID, config.JWT.AccessTokenExpire, config.JWT.SecretKey)
+	pair, err := generateJWTTokenPair(user)
 	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate access token failed", err)
+		return nil, nil, NewServiceError(ErrInternal, "generate access/refresh token pair failed", err)
 	}
-	refresh, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate refresh token failed", err)
-	}
-	return user, &JWTTokenPair{AccessToken: access, RefreshToken: refresh}, nil
+	return user, pair, nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*User, *JWTTokenPair, error) {

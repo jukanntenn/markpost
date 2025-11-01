@@ -411,7 +411,7 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		}
 	})
 
-	t.Run("not found -> ErrNotFound", func(t *testing.T) {
+	t.Run("not found -> ErrConflict", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
@@ -419,8 +419,8 @@ func TestAuthService_QueryPostKey(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrConflict {
+			t.Fatalf("expected ErrConflict, got: %#v", err)
 		}
 	})
 

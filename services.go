@@ -136,7 +136,7 @@ func (s *AuthService) QueryPostKey(ctx context.Context, userID int) (string, tim
 	user, err := s.users.GetUserByID(userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", time.Time{}, NewServiceError(ErrNotFound, "user not found", err)
+			return "", time.Time{}, NewServiceError(ErrConflict, "user not found", err)
 		}
 		return "", time.Time{}, NewServiceError(ErrInternal, "query user failed", err)
 	}

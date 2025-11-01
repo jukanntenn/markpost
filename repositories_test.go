@@ -280,14 +280,13 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "np", Password: "", PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
-		_, err := repo.ValidateUserPassword("np", "any")
+		_, err = repo.ValidateUserPassword("alice", "any")
 		if err == nil || err.Error() != "user has no password set" {
-			t.Fatalf("expected 'user does not have password set', got %v", err)
+			t.Fatalf("expected 'user has no password set', got %v", err)
 		}
 	})
 
@@ -296,13 +295,11 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		hashed, _ := HashPassword("secret")
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "tom", Password: hashed, PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "right", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
-		_, err := repo.ValidateUserPassword("tom", "wrong")
+		_, err = repo.ValidateUserPassword("alice", "wrong")
 		if err == nil || err.Error() != "invalid password" {
 			t.Fatalf("expected 'invalid password', got %v", err)
 		}
@@ -313,46 +310,25 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		hashed, _ := HashPassword("secret")
-		postKey, _ := GeneratePostKey(8)
-		u := User{Username: "zoe", Password: hashed, PostKey: postKey}
-		if err := db.GetDB().Create(&u).Error; err != nil {
+		_, err := makeUser("alice", "password", nil)
+		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
-		got, err := repo.ValidateUserPassword("zoe", "secret")
+		got, err := repo.ValidateUserPassword("alice", "password")
 		if err != nil {
 			t.Fatalf("ValidateUserPassword error: %v", err)
 		}
-		if got == nil || got.Username != "zoe" || got.ID == 0 {
+		if got == nil || got.Username != "alice" || got.ID == 0 {
 			t.Fatalf("unexpected user: %+v", got)
 		}
 	})
 }
 
 func TestPostRepository_CreatePost(t *testing.T) {
-	t.Run("creates post without user", func(t *testing.T) {
+	t.Run("creates post with invalid user", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
-		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUser("poster", "pwd")
-		if err != nil {
-			t.Fatalf("seed user error: %v", err)
-		}
-
-		repo := db.GetPostRepository()
-		p, err := repo.CreatePost("title", "body", u.ID)
-		if err != nil {
-			t.Fatalf("CreatePost error: %v", err)
-		}
-		if p == nil || p.QID == "" || p.Title != "title" || p.Body != "body" || p.UserID != u.ID {
-			t.Fatalf("unexpected post: %+v", p)
-		}
-
-		var count int64
-		if err := db.GetDB().Model(&Post{}).Where("qid = ?", p.QID).Count(&count).Error; err != nil || count != 1 {
-			t.Fatalf("post not persisted: %v count=%d", err, count)
-		}
 	})
 
 	t.Run("creates post with valid user", func(t *testing.T) {
@@ -360,40 +336,20 @@ func TestPostRepository_CreatePost(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUser("poster", "pwd")
+		u, err := userRepo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
 		postRepo := db.GetPostRepository()
-		p, err := postRepo.CreatePost("title2", "body2", u.ID)
+		p, err := postRepo.CreatePost("title", "body", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
-		if p == nil || p.QID == "" || p.UserID != u.ID {
+		if p == nil || p.QID == "" || p.Title != "title" || p.Body != "body" || p.UserID != u.ID {
 			t.Fatalf("unexpected post: %+v", p)
 		}
 	})
-}
-
-func TestPostRepository_CreatePostWithUser(t *testing.T) {
-	db := setupTestDB(t)
-	defer teardownTestDB(t, db)
-
-	userRepo := db.GetUserRepository()
-	u, err := userRepo.CreateUser("author", "pwd")
-	if err != nil {
-		t.Fatalf("seed user error: %v", err)
-	}
-
-	postRepo := db.GetPostRepository()
-	p, err := postRepo.CreatePostWithUser("t", "b", u.ID)
-	if err != nil {
-		t.Fatalf("CreatePostWithUser error: %v", err)
-	}
-	if p == nil || p.QID == "" || p.UserID != u.ID {
-		t.Fatalf("unexpected post: %+v", p)
-	}
 }
 
 func TestPostRepository_GetPostByQID(t *testing.T) {

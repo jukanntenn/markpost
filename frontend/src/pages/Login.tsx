@@ -218,8 +218,7 @@ function LoginPage() {
                 {/* Password Login Form */}
                 <Form onSubmit={handleLogin} className="mb-4">
                   <Form.Group className="mb-3">
-                    <Form.Label className="text-muted small fw-semibold">
-                      <Person size={14} className="me-1" />
+                    <Form.Label className="text-muted fw-semibold">
                       {t("login.username")}
                     </Form.Label>
                     <Form.Control
@@ -231,12 +230,12 @@ function LoginPage() {
                       required
                       disabled={loading}
                       className="py-3 px-3 border-1"
+                      style={{ fontSize: "0.875rem" }}
                     />
                   </Form.Group>
 
                   <Form.Group className="mb-4">
-                    <Form.Label className="text-muted small fw-semibold">
-                      <Lock size={14} className="me-1" />
+                    <Form.Label className="text-muted fw-semibold">
                       {t("login.password")}
                     </Form.Label>
                     <Form.Control
@@ -248,6 +247,7 @@ function LoginPage() {
                       required
                       disabled={loading}
                       className="py-3 px-3 border-1"
+                      style={{ fontSize: "0.875rem" }}
                     />
                   </Form.Group>
 
@@ -273,10 +273,7 @@ function LoginPage() {
                           {t("login.signingIn")}
                         </>
                       ) : (
-                        <>
-                          <Person size={20} className="me-2" />
-                          {t("login.loginButton")}
-                        </>
+                        t("login.loginButton")
                       )}
                     </Button>
                   </div>

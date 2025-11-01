@@ -29,10 +29,10 @@
   "login": {
     "username": "Username",
     "password": "Password",
-    "loginButton": "Login",
+    "loginButton": "Log in",
     "signingIn": "Signing in...",
     "or": "or",
-    "githubLogin": "Login with GitHub",
+    "githubLogin": "Log in with GitHub",
     "processingGitHubLogin": "Processing GitHub login, please wait...",
     "usernamePlaceholder": "Enter your username",
     "passwordPlaceholder": "Enter your password",

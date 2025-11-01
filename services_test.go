@@ -90,9 +90,14 @@ func (s *stubUserRepo) CreateUser(username, password string) (*User, error) {
 func (s *stubUserRepo) ValidateUserPassword(username, password string) (*User, error) {
 	return nil, fmt.Errorf("not implemented")
 }
-func (s *stubUserRepo) UpdateUserPassword(userID int, hashed string) error {
+
+func (s *stubUserRepo) SetUserPassword(userID int, password string) error {
 	if s.updateErr != nil {
 		return s.updateErr
+	}
+	hashed, err := HashPassword(password)
+	if err != nil {
+		return err
 	}
 	if s.user != nil {
 		s.user.Password = hashed
@@ -163,7 +168,7 @@ func TestAuthService_LoginWithGitHub(t *testing.T) {
 		}
 	})
 
-	t.Run("exchange failed -> ErrInternal", func(t *testing.T) {
+	t.Run("exchange failed -> ErrUnauthorized", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
@@ -182,8 +187,8 @@ func TestAuthService_LoginWithGitHub(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrInternal {
-			t.Fatalf("expected ErrInternal, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
 		}
 	})
 
@@ -288,7 +293,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		}
 	})
 
-	t.Run("user not found -> ErrNotFound", func(t *testing.T) {
+	t.Run("user not found -> ErrUnauthorized", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
@@ -302,8 +307,8 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
 		}
 	})
 }
@@ -311,7 +316,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 func TestAuthService_ChangePassword(t *testing.T) {
 	setTestConfig()
 
-	t.Run("user not found -> ErrNotFound", func(t *testing.T) {
+	t.Run("user not found -> ErrConflict", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
@@ -319,8 +324,8 @@ func TestAuthService_ChangePassword(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error")
 		}
-		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrConflict {
+			t.Fatalf("expected ErrConflict, got: %#v", err)
 		}
 	})
 

@@ -324,7 +324,7 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 	})
 }
 
-func TestUserRepository_UpdateUserPassword(t *testing.T) {
+func TestUserRepository_SetUserPassword(t *testing.T) {
 	db := setupTestDB(t)
 	defer teardownTestDB(t, db)
 
@@ -334,12 +334,8 @@ func TestUserRepository_UpdateUserPassword(t *testing.T) {
 		t.Fatalf("seed user error: %v", err)
 	}
 
-	hashed, err := HashPassword("newpassword")
-	if err != nil {
-		t.Fatalf("HashPassword error: %v", err)
-	}
-	if err = repo.UpdateUserPassword(user.ID, hashed); err != nil {
-		t.Fatalf("UpdatePassword error: %v", err)
+	if err := repo.SetUserPassword(user.ID, "newpassword"); err != nil {
+		t.Fatalf("SetUserPassword error: %v", err)
 	}
 
 	u2, err := repo.GetUserByID(user.ID)
@@ -348,6 +344,9 @@ func TestUserRepository_UpdateUserPassword(t *testing.T) {
 	}
 	if CheckPassword("newpassword", u2.Password) != nil {
 		t.Fatalf("password not updated")
+	}
+	if CheckPassword("password", u2.Password) == nil {
+		t.Fatalf("old password should not work")
 	}
 }
 

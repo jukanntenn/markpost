@@ -35,6 +35,7 @@ const (
 	ErrInvalidCurrentPassword = "invalid_current_password"
 	ErrSamePassword           = "same_password"
 	ErrNotFound               = "not_found"
+	ErrConflict               = "conflict"
 	ErrUnauthorized           = "unauthorized"
 	ErrInternal               = "internal"
 	ErrConversionFailed       = "conversion_failed"
@@ -61,7 +62,7 @@ func (s *AuthService) GenerateGitHubAuthURL(ctx context.Context) (string, error)
 func (s *AuthService) LoginWithGitHub(ctx context.Context, code string) (*User, *JWTTokenPair, error) {
 	token, err := s.oauth.Exchange(ctx, code)
 	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "oauth exchange failed", err)
+		return nil, nil, NewServiceError(ErrUnauthorized, "oauth exchange failed", err)
 	}
 	githubUser, err := getGitHubUser(token)
 	if err != nil {
@@ -99,27 +100,23 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*U
 	user, err := s.users.GetUserByID(claims.UserID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil, NewServiceError(ErrNotFound, "user not found", err)
+			return nil, nil, NewServiceError(ErrUnauthorized, "user not found", err)
 		}
 		return nil, nil, NewServiceError(ErrInternal, "query user failed", err)
 	}
 
-	access, err := generateJWTToken(user.ID, config.JWT.AccessTokenExpire, config.JWT.SecretKey)
+	pair, err := generateJWTTokenPair(user)
 	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate access token failed", err)
+		return nil, nil, NewServiceError(ErrInternal, "generate access/refresh token pair failed", err)
 	}
-	refresh, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-	if err != nil {
-		return nil, nil, NewServiceError(ErrInternal, "generate refresh token failed", err)
-	}
-	return user, &JWTTokenPair{AccessToken: access, RefreshToken: refresh}, nil
+	return user, pair, nil
 }
 
 func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, new string) error {
 	user, err := s.users.GetUserByID(userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return NewServiceError(ErrNotFound, "user not found", err)
+			return NewServiceError(ErrConflict, "user not found", err)
 		}
 		return NewServiceError(ErrInternal, "query user failed", err)
 	}
@@ -129,12 +126,8 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, n
 	if current == new {
 		return NewServiceError(ErrSamePassword, "new password same as current", nil)
 	}
-	hashed, err := HashPassword(new)
-	if err != nil {
-		return NewServiceError(ErrInternal, "hash new password failed", err)
-	}
-	if err := s.users.UpdateUserPassword(userID, hashed); err != nil {
-		return NewServiceError(ErrInternal, "update password failed", err)
+	if err := s.users.SetUserPassword(userID, new); err != nil {
+		return NewServiceError(ErrInternal, "set password failed", err)
 	}
 	return nil
 }

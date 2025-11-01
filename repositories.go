@@ -18,7 +18,7 @@ type UserRepository interface {
 	GetOrCreateUserFromGitHub(githubUser *GitHubUser) (*User, error)
 	CreateUser(username, password string) (*User, error)
 	ValidateUserPassword(username, password string) (*User, error)
-	UpdateUserPassword(userID int, hashed string) error
+	SetUserPassword(userID int, password string) error
 }
 
 type PostRepository interface {
@@ -161,7 +161,11 @@ func (r *userRepository) ValidateUserPassword(username, password string) (*User,
 	return user, nil
 }
 
-func (r *userRepository) UpdateUserPassword(userID int, hashed string) error {
+func (r *userRepository) SetUserPassword(userID int, password string) error {
+	hashed, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
 	return r.db.Model(&User{}).Where("id = ?", userID).Update("password", hashed).Error
 }
 

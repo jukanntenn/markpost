@@ -31,7 +31,7 @@ func TestUserRepository_GetUserByGitHubID(t *testing.T) {
 		repo := db.GetUserRepository()
 
 		githubID := int64(12345)
-		_, err := makeUser("alice", "password", &githubID)
+		_, err := repo.CreateUserFromGitHub(&GitHubUser{ID: githubID, Login: "alice"})
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -52,7 +52,7 @@ func TestUserRepository_GetUserByGitHubID(t *testing.T) {
 
 		repo := db.GetUserRepository()
 		githubID := int64(99999)
-		_, err := makeUser("alice", "password", &githubID)
+		_, err := repo.CreateUserFromGitHub(&GitHubUser{ID: githubID, Login: "alice"})
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -70,7 +70,7 @@ func TestUserRepository_GetUserByPostKey(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		u, err := makeUser("alice", "password", nil)
+		u, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -90,7 +90,7 @@ func TestUserRepository_GetUserByPostKey(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "password", nil)
+		_, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -108,7 +108,7 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		u, err := makeUser("alice", "password", nil)
+		u, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -128,7 +128,7 @@ func TestUserRepository_GetUserByID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "password", nil)
+		_, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -146,7 +146,7 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "password", nil)
+		_, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -166,7 +166,7 @@ func TestUserRepository_GetUserByUsername(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "password", nil)
+		_, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -205,7 +205,7 @@ func TestUserRepository_GetOrCreateUserFromGitHub(t *testing.T) {
 
 		repo := db.GetUserRepository()
 		githubID := int64(1000)
-		u, err := makeUser("alice", "password", &githubID)
+		u, err := repo.CreateUserFromGitHub(&GitHubUser{ID: githubID, Login: "alice"})
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -280,7 +280,7 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "", nil)
+		_, err := repo.CreateUser("alice", "")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -295,7 +295,7 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "right", nil)
+		_, err := repo.CreateUser("alice", "right")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -310,7 +310,7 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		repo := db.GetUserRepository()
-		_, err := makeUser("alice", "password", nil)
+		_, err := repo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}

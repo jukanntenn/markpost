@@ -131,7 +131,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, n
 		}
 		return NewServiceError(ErrInternal, "query user failed", err)
 	}
-	if err := CheckPassword(current, user.Password); err != nil {
+	if err = CheckPassword(current, user.Password); err != nil {
 		return NewServiceError(ErrInvalidCurrentPassword, "invalid current password", err)
 	}
 	if current == new {
@@ -159,7 +159,7 @@ func (s *AuthService) QueryPostKey(ctx context.Context, userID int) (string, tim
 }
 
 type PostService struct {
-    posts PostRepository
+	posts PostRepository
 }
 
 func NewPostService(posts PostRepository) *PostService {
@@ -175,24 +175,24 @@ func (s *PostService) CreatePost(ctx context.Context, title, body string, userID
 }
 
 func (s *PostService) RenderPostHTML(ctx context.Context, qid string) (string, string, error) {
-    post, err := s.posts.GetPostByQID(qid)
-    if err != nil {
-        if err == sql.ErrNoRows {
-            return "", "", NewServiceError(ErrNotFound, "post not found", err)
-        }
-        return "", "", NewServiceError(ErrInternal, "query post failed", err)
-    }
-    var buf bytes.Buffer
-    if err := goldmark.Convert([]byte(post.Body), &buf); err != nil {
-        return "", "", NewServiceError(ErrConversionFailed, "markdown conversion failed", err)
-    }
-    return post.Title, buf.String(), nil
+	post, err := s.posts.GetPostByQID(qid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", "", NewServiceError(ErrNotFound, "post not found", err)
+		}
+		return "", "", NewServiceError(ErrInternal, "query post failed", err)
+	}
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(post.Body), &buf); err != nil {
+		return "", "", NewServiceError(ErrConversionFailed, "markdown conversion failed", err)
+	}
+	return post.Title, buf.String(), nil
 }
 
 func (s *PostService) GetUserPostsPaginated(ctx context.Context, userID int, page int, limit int) ([]Post, int64, error) {
-    posts, total, err := s.posts.GetPostsByUserIDPaginated(userID, page, limit)
-    if err != nil {
-        return nil, 0, NewServiceError(ErrInternal, "query posts failed", err)
-    }
-    return posts, total, nil
+	posts, total, err := s.posts.GetPostsByUserIDPaginated(userID, page, limit)
+	if err != nil {
+		return nil, 0, NewServiceError(ErrInternal, "query posts failed", err)
+	}
+	return posts, total, nil
 }

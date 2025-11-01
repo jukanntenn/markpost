@@ -247,65 +247,65 @@ func TestAuthService_LoginWithPassword(t *testing.T) {
 }
 
 func TestAuthService_RefreshToken(t *testing.T) {
-    setTestConfig()
+	setTestConfig()
 
-    t.Run("success", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("success", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        repo := db.GetUserRepository()
-        user, err := repo.CreateUser("rita", "pass123")
-        if err != nil || user == nil {
-            t.Fatalf("seed user error: %v", err)
-        }
+		repo := db.GetUserRepository()
+		user, err := repo.CreateUser("rita", "pass123")
+		if err != nil || user == nil {
+			t.Fatalf("seed user error: %v", err)
+		}
 
-        token, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-        if err != nil || token == "" {
-            t.Fatalf("generate token error: %v", err)
-        }
+		token, err := generateJWTToken(user.ID, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
+		if err != nil || token == "" {
+			t.Fatalf("generate token error: %v", err)
+		}
 
-        svc := NewAuthService(repo, oauthConfig)
-        u, tokens, err := svc.RefreshToken(context.Background(), token)
-        if err != nil {
-            t.Fatalf("RefreshToken error: %v", err)
-        }
-        if u == nil || tokens == nil || tokens.AccessToken == "" || tokens.RefreshToken == "" || u.ID != user.ID {
-            t.Fatalf("unexpected refresh result: %v %v", u, tokens)
-        }
-    })
+		svc := NewAuthService(repo, oauthConfig)
+		u, tokens, err := svc.RefreshToken(context.Background(), token)
+		if err != nil {
+			t.Fatalf("RefreshToken error: %v", err)
+		}
+		if u == nil || tokens == nil || tokens.AccessToken == "" || tokens.RefreshToken == "" || u.ID != user.ID {
+			t.Fatalf("unexpected refresh result: %v %v", u, tokens)
+		}
+	})
 
-    t.Run("invalid token -> ErrUnauthorized", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("invalid token -> ErrUnauthorized", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        svc := NewAuthService(db.GetUserRepository(), oauthConfig)
-        _, _, err := svc.RefreshToken(context.Background(), "invalid.token")
-        if err == nil {
-            t.Fatalf("expected error")
-        }
-        if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
-            t.Fatalf("expected ErrUnauthorized, got: %#v", err)
-        }
-    })
+		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
+		_, _, err := svc.RefreshToken(context.Background(), "invalid.token")
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrUnauthorized {
+			t.Fatalf("expected ErrUnauthorized, got: %#v", err)
+		}
+	})
 
-    t.Run("user not found -> ErrNotFound", func(t *testing.T) {
-        db := setupTestDB(t)
-        defer teardownTestDB(t, db)
+	t.Run("user not found -> ErrNotFound", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer teardownTestDB(t, db)
 
-        token, err := generateJWTToken(99999, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
-        if err != nil || token == "" {
-            t.Fatalf("generate token error: %v", err)
-        }
+		token, err := generateJWTToken(99999, config.JWT.RefreshTokenExpire, config.JWT.SecretKey)
+		if err != nil || token == "" {
+			t.Fatalf("generate token error: %v", err)
+		}
 
-        svc := NewAuthService(db.GetUserRepository(), oauthConfig)
-        _, _, err = svc.RefreshToken(context.Background(), token)
-        if err == nil {
-            t.Fatalf("expected error")
-        }
-        if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
-            t.Fatalf("expected ErrNotFound, got: %#v", err)
-        }
-    })
+		svc := NewAuthService(db.GetUserRepository(), oauthConfig)
+		_, _, err = svc.RefreshToken(context.Background(), token)
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+		if se, ok := err.(*ServiceError); !ok || se.Code != ErrNotFound {
+			t.Fatalf("expected ErrNotFound, got: %#v", err)
+		}
+	})
 }
 
 func TestAuthService_ChangePassword(t *testing.T) {

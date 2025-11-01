@@ -1,6 +1,12 @@
 {
   "common": {
-    "user": "User"
+    "user": "User",
+    "pageTitle": {
+      "login": "Login | Markpost",
+      "dashboard": "Dashboard | Markpost",
+      "settings": "Settings | Markpost",
+      "allPosts": "All Posts | Markpost"
+    }
   },
   "language": {
     "english": "English",

@@ -30,6 +30,10 @@ function Posts() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = t("common.pageTitle.allPosts");
+  }, [t]);
+
+  useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);

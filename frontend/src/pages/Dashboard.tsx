@@ -6,7 +6,7 @@ import {
   Container,
   Spinner,
 } from "react-bootstrap";
-import { Book, Copy, Eye, EyeSlash, Key } from "react-bootstrap-icons";
+import { Book, Copy, Eye, EyeSlash, Key, FilePlus } from "react-bootstrap-icons";
 import { useEffect, useState } from "react";
 
 import CreateTestPostModal from "../components/CreateTestPostModal";
@@ -50,6 +50,10 @@ function Dashboard() {
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    document.title = t("common.pageTitle.dashboard");
+  }, [t]);
 
   // Fetch post key from API
   useEffect(() => {
@@ -108,7 +112,7 @@ function Dashboard() {
         {/* Left Column: Post Key + Docs stacked */}
         <div className="col-12 col-xl-6">
           <div className="d-flex flex-column gap-4">
-          <Card className="border-0 shadow-sm h-100">
+          <Card className="border-0 shadow-lg h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
                 <Key size={18} className="me-2 text-body" />
@@ -134,7 +138,7 @@ function Dashboard() {
                   <p>{error}</p>
                 </Alert>
               ) : (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle">
+                <div>
                   <div className="d-flex align-items-center justify-content-between">
                     <div className="flex-grow-1">
                       <div className="font-monospace fs-5 text-body">
@@ -148,12 +152,12 @@ function Dashboard() {
                         </div>
                       )}
                     </div>
-                    <div className="d-flex gap-2 ms-3">
+                    <div className="d-flex gap-0 ms-3">
                       <Button
-                        variant="outline-primary"
+                        variant="link"
                         size="sm"
                         onClick={() => setShowKey(!showKey)}
-                        className="d-flex align-items-center justify-content-center"
+                        className="d-flex align-items-center justify-content-center p-0 text-body"
                         style={{ width: "40px", height: "40px" }}
                         title={
                           showKey
@@ -164,37 +168,38 @@ function Dashboard() {
                         {showKey ? <EyeSlash size={18} /> : <Eye size={18} />}
                       </Button>
                       <Button
-                        variant="outline-secondary"
+                        variant="link"
                         size="sm"
                         onClick={handleCopyKey}
-                        className="d-flex align-items-center justify-content-center"
+                        className="d-flex align-items-center justify-content-center p-0 text-body"
                         style={{ width: "40px", height: "40px" }}
                         title={t("dashboard.postKey.copyKey")}
                       >
                         <Copy size={18} />
                       </Button>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => setShowCreateModal(true)}
+                        className="d-flex align-items-center justify-content-center p-0 text-body"
+                        style={{ width: "40px", height: "40px" }}
+                        title={t("dashboard.postKey.createTestPostTip")}
+                      >
+                        <FilePlus size={18} />
+                      </Button>
                     </div>
                   </div>
                 </div>
               )}
-              <div className="mt-3 d-flex gap-2 align-items-center">
+              <div className="mt-3">
                 <small className="text-muted">
                   {t("dashboard.postKey.createdAt")}{" "}
                   {formatToLocalTime(createdAt)}
                 </small>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="ms-auto"
-                  onClick={() => setShowCreateModal(true)}
-                  title={t("dashboard.postKey.createTestPostTip")}
-                >
-                  {t("dashboard.postKey.createTestPost")}
-                </Button>
               </div>
             </Card.Body>
           </Card>
-          <Card className="border-0 shadow-sm h-100">
+          <Card className="border-0 shadow-lg h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center">
                 <Book size={18} className="me-2 text-body" />
@@ -206,7 +211,7 @@ function Dashboard() {
               </div>
             </Card.Header>
             <Card.Body className="px-4 pb-4 text-center">
-              <p className="text-muted mb-4">
+              <p className="text-muted mb-0">
                 {t("dashboard.documentation.content")}{" "}
                 <a
                   href="https://github.com/jukanntenn/markpost?tab=readme-ov-file#apis"
@@ -218,30 +223,6 @@ function Dashboard() {
                 </a>{" "}
                 {t("dashboard.documentation.content2")}
               </p>
-              <a
-                href="https://github.com/jukanntenn/markpost?tab=readme-ov-file#apis"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-primary btn-lg text-decoration-none d-inline-flex align-items-center mx-auto"
-              >
-                {t("dashboard.documentation.viewDocs")}
-                <svg
-                  width="16"
-                  height="16"
-                  fill="currentColor"
-                  className="ms-2"
-                  viewBox="0 0 16 16"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"
-                  />
-                  <path
-                    fillRule="evenodd"
-                    d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 6.854a.5.5 0 1 0 .708.708L14.793 1.707V5.5a.5.5 0 0 0 1 0v-5z"
-                  />
-                </svg>
-              </a>
             </Card.Body>
           </Card>
           </div>
@@ -249,7 +230,7 @@ function Dashboard() {
 
         {/* Right Column: Recent Posts */}
         <div className="col-12 col-xl-6">
-          <Card className="border-0 shadow-sm h-100">
+          <Card className="border-0 shadow-lg h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
               <div className="d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center">
@@ -258,12 +239,21 @@ function Dashboard() {
                     <h6 className="mb-0 text-body">{t("dashboard.recentPosts.title")}</h6>
                   </div>
                 </div>
-                <Button variant="primary" size="sm" onClick={() => navigate("/posts")}>{t("dashboard.recentPosts.viewAll")}</Button>
+                <a
+                  href="/posts"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/posts");
+                  }}
+                  className="text-decoration-none small"
+                >
+                  {t("dashboard.recentPosts.viewAll")}
+                </a>
               </div>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
               {recentLoading ? (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
+                <div className="text-center">
                   <Spinner animation="border" role="status" variant="primary">
                     <span className="visually-hidden">Loading...</span>
                   </Spinner>
@@ -274,11 +264,11 @@ function Dashboard() {
                   <p>{recentError}</p>
                 </Alert>
               ) : recentPosts.length === 0 ? (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
+                <div className="text-center">
                   <p className="text-muted mb-0">{t("dashboard.recentPosts.empty")}</p>
                 </div>
               ) : (
-                <div className="bg-body-tertiary rounded-3 p-3 border border-secondary-subtle">
+                <div>
                   <ul className="list-unstyled mb-0">
                     {recentPosts.map((p) => (
                       <li key={p.id} className="py-2 d-flex justify-content-between align-items-center">

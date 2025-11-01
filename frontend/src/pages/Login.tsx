@@ -38,6 +38,10 @@ function LoginPage() {
     });
   };
 
+  useEffect(() => {
+    document.title = t("common.pageTitle.login");
+  }, [t]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({

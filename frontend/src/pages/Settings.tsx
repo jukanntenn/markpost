@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   Button,
@@ -32,7 +32,10 @@ function Settings() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showValidation, setShowValidation] = useState(false);
- 
+
+  useEffect(() => {
+    document.title = t("common.pageTitle.settings");
+  }, [t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

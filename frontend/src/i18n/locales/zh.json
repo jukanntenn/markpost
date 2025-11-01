@@ -1,6 +1,12 @@
 {
   "common": {
-    "user": "用户"
+    "user": "用户",
+    "pageTitle": {
+      "login": "登录 | Markpost",
+      "dashboard": "仪表盘 | Markpost",
+      "settings": "设置 | Markpost",
+      "allPosts": "所有 Posts | Markpost"
+    }
   },
   "language": {
     "english": "English",

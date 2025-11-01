@@ -39,7 +39,7 @@ const Layout = () => {
               <Dropdown.Toggle
                 variant="link"
                 id="dropdown-basic"
-                className="text-decoration-none d-flex align-items-center gap-2 ms-2"
+                className="text-decoration-none d-flex align-items-center gap-2 ms-2 text-body"
               >
                 <span className="d-none d-md-inline">
                   {userInfo?.user?.username || t("common.user")}

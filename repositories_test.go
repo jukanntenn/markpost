@@ -324,11 +324,45 @@ func TestUserRepository_ValidateUserPassword(t *testing.T) {
 	})
 }
 
+func TestUserRepository_UpdateUserPassword(t *testing.T) {
+	db := setupTestDB(t)
+	defer teardownTestDB(t, db)
+
+	repo := db.GetUserRepository()
+	user, err := repo.CreateUser("alice", "password")
+	if err != nil {
+		t.Fatalf("seed user error: %v", err)
+	}
+
+	hashed, err := HashPassword("newpassword")
+	if err != nil {
+		t.Fatalf("HashPassword error: %v", err)
+	}
+	if err = repo.UpdateUserPassword(user.ID, hashed); err != nil {
+		t.Fatalf("UpdatePassword error: %v", err)
+	}
+
+	u2, err := repo.GetUserByID(user.ID)
+	if err != nil {
+		t.Fatalf("GetUserByID error: %v", err)
+	}
+	if CheckPassword("newpassword", u2.Password) != nil {
+		t.Fatalf("password not updated")
+	}
+}
+
 func TestPostRepository_CreatePost(t *testing.T) {
 	t.Run("creates post with invalid user", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer teardownTestDB(t, db)
 
+		postRepo := db.GetPostRepository()
+
+		invalidUserID := 99999
+		_, err := postRepo.CreatePost("title", "body", invalidUserID)
+		if err == nil {
+			t.Fatalf("expected error when creating post with invalid user ID, got nil")
+		}
 	})
 
 	t.Run("creates post with valid user", func(t *testing.T) {
@@ -358,13 +392,13 @@ func TestPostRepository_GetPostByQID(t *testing.T) {
 		defer teardownTestDB(t, db)
 
 		userRepo := db.GetUserRepository()
-		u, err := userRepo.CreateUser("poster", "pwd")
+		u, err := userRepo.CreateUser("alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
 		postRepo := db.GetPostRepository()
-		p, err := postRepo.CreatePost("t1", "b1", u.ID)
+		p, err := postRepo.CreatePost("title", "body", u.ID)
 		if err != nil {
 			t.Fatalf("CreatePost error: %v", err)
 		}
@@ -372,7 +406,7 @@ func TestPostRepository_GetPostByQID(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetPostByQID error: %v", err)
 		}
-		if got == nil || got.QID != p.QID || got.Title != "t1" || got.Body != "b1" {
+		if got == nil || got.QID != p.QID || got.Title != "title" || got.Body != "body" || got.UserID != u.ID {
 			t.Fatalf("unexpected post: %+v", got)
 		}
 	})
@@ -394,8 +428,8 @@ func TestPostRepository_GetPostsByUserID(t *testing.T) {
 	defer teardownTestDB(t, db)
 
 	userRepo := db.GetUserRepository()
-	u1, _ := userRepo.CreateUser("u1", "p1")
-	u2, _ := userRepo.CreateUser("u2", "p2")
+	u1, _ := userRepo.CreateUser("alice", "password")
+	u2, _ := userRepo.CreateUser("bob", "password")
 
 	postRepo := db.GetPostRepository()
 	if _, err := postRepo.CreatePost("a", "A", u1.ID); err != nil {
@@ -573,31 +607,4 @@ func TestPostRepository_CleanupExpiredPosts(t *testing.T) {
 			t.Fatalf("unexpected remaining post: %+v", remaining)
 		}
 	})
-}
-
-func TestUserRepository_UpdateUserPassword(t *testing.T) {
-	db := setupTestDB(t)
-	defer teardownTestDB(t, db)
-
-	repo := db.GetUserRepository()
-	user, err := repo.CreateUser("update_me", "oldpass")
-	if err != nil {
-		t.Fatalf("seed user error: %v", err)
-	}
-
-	hashed, err := HashPassword("newpass")
-	if err != nil {
-		t.Fatalf("HashPassword error: %v", err)
-	}
-	if err := repo.UpdateUserPassword(user.ID, hashed); err != nil {
-		t.Fatalf("UpdatePassword error: %v", err)
-	}
-
-	u2, err := repo.GetUserByID(user.ID)
-	if err != nil {
-		t.Fatalf("GetUserByID error: %v", err)
-	}
-	if CheckPassword("newpass", u2.Password) != nil {
-		t.Fatalf("password not updated")
-	}
 }

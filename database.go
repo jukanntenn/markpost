@@ -31,6 +31,7 @@ func NewDatabase(url string) (*Database, error) {
 		}
 		if sqlDB, err2 := gdb.DB(); err2 == nil {
 			_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL;")
+			_, _ = sqlDB.Exec("PRAGMA foreign_keys = ON;")
 		}
 	}
 
@@ -86,6 +87,7 @@ func NewTestDatabase() (*Database, error) {
 	}
 	if sqlDB, err2 := gdb.DB(); err2 == nil {
 		_, _ = sqlDB.Exec("PRAGMA journal_mode=WAL;")
+		_, _ = sqlDB.Exec("PRAGMA foreign_keys = ON;")
 	}
 
 	if err = gdb.AutoMigrate(&User{}, &Post{}); err != nil {

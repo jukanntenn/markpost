@@ -191,7 +191,7 @@ func (r *postRepository) CreatePostWithUser(title, body string, userID int) (*Po
 
 func (r *postRepository) GetPostByQID(qid string) (*Post, error) {
 	var post Post
-	err := r.db.Take(&post, "qid = ?", qid).Error
+	err := r.db.Take(&post, "QID = ?", qid).Error
 	if err == nil {
 		return &post, nil
 	}

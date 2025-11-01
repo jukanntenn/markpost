@@ -1,10 +1,10 @@
 package main
 
 import (
-    "html/template"
-    "net/http"
+	"html/template"
+	"net/http"
 
-    "github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin"
 )
 
 func GenerateGitHubOAuthURLHandler(c *gin.Context) {
@@ -156,38 +156,38 @@ func LoginWithPasswordHandler(c *gin.Context) {
 }
 
 type RefreshTokenRequest struct {
-    RefreshToken string `json:"refresh_token" binding:"required"`
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
 func RefreshTokenHandler(c *gin.Context) {
-    var req RefreshTokenRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_request", "message": GetMessage(c, "error.invalid_request")})
-        return
-    }
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_request", "message": GetMessage(c, "error.invalid_request")})
+		return
+	}
 
-    user, tokens, err := authSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
-    if err != nil {
-        if se, ok := err.(*ServiceError); ok {
-            switch se.Code {
-            case ErrUnauthorized:
-                c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": GetMessage(c, "error.invalid_token")})
-            case ErrNotFound:
-                c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": GetMessage(c, "error.not_found")})
-            default:
-                c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
-            }
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
-        }
-        return
-    }
+	user, tokens, err := authSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		if se, ok := err.(*ServiceError); ok {
+			switch se.Code {
+			case ErrUnauthorized:
+				c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": GetMessage(c, "error.invalid_token")})
+			case ErrNotFound:
+				c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": GetMessage(c, "error.not_found")})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+		}
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "user":          gin.H{"id": user.ID, "username": user.Username},
-        "access_token":  tokens.AccessToken,
-        "refresh_token": tokens.RefreshToken,
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"user":          gin.H{"id": user.ID, "username": user.Username},
+		"access_token":  tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+	})
 }
 
 type PasswordChangeRequest struct {
@@ -231,73 +231,73 @@ func ChangePasswordHandler(c *gin.Context) {
 }
 
 func HealthHandler(c *gin.Context) {
-    c.JSON(http.StatusOK, gin.H{"status": "ok", "message": GetMessage(c, "health.running")})
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "message": GetMessage(c, "health.running")})
 }
 
 func PostsListHandler(c *gin.Context) {
-    u, ok := c.Get("user")
-    if !ok {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": GetMessage(c, "error.failed_get_user")})
-        return
-    }
-    user := u.(*User)
+	u, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": GetMessage(c, "error.failed_get_user")})
+		return
+	}
+	user := u.(*User)
 
-    var query struct {
-        Page  int `form:"page" binding:"omitempty,min=1"`
-        Limit int `form:"limit" binding:"omitempty,min=1"`
-    }
-    if err := c.ShouldBindQuery(&query); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
-        return
-    }
-    if query.Page == 0 {
-        query.Page = 1
-    }
-    if query.Limit == 0 {
-        query.Limit = 20
-    }
-    if query.Limit > 100 {
-        c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
-        return
-    }
+	var query struct {
+		Page  int `form:"page" binding:"omitempty,min=1"`
+		Limit int `form:"limit" binding:"omitempty,min=1"`
+	}
+	if err := c.ShouldBindQuery(&query); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
+		return
+	}
+	if query.Page == 0 {
+		query.Page = 1
+	}
+	if query.Limit == 0 {
+		query.Limit = 20
+	}
+	if query.Limit > 100 {
+		c.JSON(http.StatusBadRequest, gin.H{"code": ErrValidation, "message": GetMessage(c, "error.invalid_request")})
+		return
+	}
 
-    posts, total, err := postSvc.GetUserPostsPaginated(c.Request.Context(), user.ID, query.Page, query.Limit)
-    if err != nil {
-        if se, ok := err.(*ServiceError); ok {
-            switch se.Code {
-            case ErrUnauthorized:
-                c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": GetMessage(c, "error.unauthorized")})
-            case ErrNotFound:
-                c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": GetMessage(c, "error.not_found")})
-            default:
-                c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
-            }
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
-        }
-        return
-    }
+	posts, total, err := postSvc.GetUserPostsPaginated(c.Request.Context(), user.ID, query.Page, query.Limit)
+	if err != nil {
+		if se, ok := err.(*ServiceError); ok {
+			switch se.Code {
+			case ErrUnauthorized:
+				c.JSON(http.StatusUnauthorized, gin.H{"code": ErrUnauthorized, "message": GetMessage(c, "error.unauthorized")})
+			case ErrNotFound:
+				c.JSON(http.StatusNotFound, gin.H{"code": ErrNotFound, "message": GetMessage(c, "error.not_found")})
+			default:
+				c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+			}
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"code": ErrInternal, "message": GetMessage(c, "error.internal")})
+		}
+		return
+	}
 
-    items := make([]gin.H, 0, len(posts))
-    for _, p := range posts {
-        items = append(items, gin.H{
-            "id":         p.ID,
-            "title":      p.Title,
-            "created_at": p.CreatedAt,
-        })
-    }
-    totalPages := int64(0)
-    if query.Limit > 0 {
-        totalPages = (total + int64(query.Limit) - 1) / int64(query.Limit)
-    }
+	items := make([]gin.H, 0, len(posts))
+	for _, p := range posts {
+		items = append(items, gin.H{
+			"id":         p.ID,
+			"title":      p.Title,
+			"created_at": p.CreatedAt,
+		})
+	}
+	totalPages := int64(0)
+	if query.Limit > 0 {
+		totalPages = (total + int64(query.Limit) - 1) / int64(query.Limit)
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "posts": items,
-        "pagination": gin.H{
-            "page":        query.Page,
-            "limit":       query.Limit,
-            "total":       total,
-            "total_pages": totalPages,
-        },
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"posts": items,
+		"pagination": gin.H{
+			"page":        query.Page,
+			"limit":       query.Limit,
+			"total":       total,
+			"total_pages": totalPages,
+		},
+	})
 }

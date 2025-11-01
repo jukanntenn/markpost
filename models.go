@@ -17,7 +17,7 @@ type User struct {
 type Post struct {
 	ID        int       `json:"id" gorm:"primaryKey;autoIncrement"`
 	QID       string    `json:"qid" gorm:"unique;not null"`
-	Title     string    `json:"title" gorm:"not null;default:''"`
+	Title     string    `json:"title" gorm:"not null"`
 	Body      string    `json:"body" gorm:"not null;type:text"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`

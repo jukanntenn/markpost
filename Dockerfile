@@ -1,19 +1,22 @@
 # Build stage for Go backend
-FROM golang:1.24-alpine AS backend-builder
+FROM --platform=$TARGETPLATFORM golang:1.24-alpine AS backend-builder
 
 RUN apk add --no-cache git gcc musl-dev sqlite-dev
 
 WORKDIR /app
+
+ARG TARGETOS
+ARG TARGETARCH
 
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o markpost .
+RUN CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -o markpost .
 
 # Build stage for React frontend
-FROM node:24-alpine AS frontend-builder
+FROM --platform=$TARGETPLATFORM node:24-alpine AS frontend-builder
 
 RUN npm install -g pnpm
 
@@ -28,7 +31,7 @@ COPY frontend/ .
 RUN pnpm build
 
 # Final stage
-FROM alpine:latest
+FROM --platform=$TARGETPLATFORM alpine:latest
 
 WORKDIR /app
 

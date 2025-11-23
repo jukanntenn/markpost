@@ -1,5 +1,3 @@
-import React from "react";
-
 function LoginTitle() {
   return (
     <div className="text-center mb-5">

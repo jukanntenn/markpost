@@ -254,6 +254,7 @@ func PostsListHandler(c *gin.Context) {
 	for _, p := range posts {
 		items = append(items, gin.H{
 			"id":         p.ID,
+			"qid":        p.QID,
 			"title":      p.Title,
 			"created_at": p.CreatedAt,
 		})

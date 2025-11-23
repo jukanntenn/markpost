@@ -101,7 +101,7 @@ function Posts() {
                         {items.map((p) => (
                           <tr key={p.id}>
                             <td>
-                              <a href={`/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
+                              <a href={`/${p.qid}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
                             </td>
                             <td>
                               <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
@@ -117,7 +117,7 @@ function Posts() {
                         <li key={p.id} className="py-2">
                           <div className="d-flex flex-column">
                             <a
-                              href={`/${p.id}`}
+                              href={`/${p.qid}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-decoration-none fw-medium"

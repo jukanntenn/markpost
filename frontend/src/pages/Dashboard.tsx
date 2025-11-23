@@ -274,7 +274,7 @@ function Dashboard() {
                       <li key={p.id} className="py-2">
                         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between">
                           <a
-                            href={`/${p.id}`}
+                            href={`/${p.qid}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-decoration-none fw-medium flex-grow-1"

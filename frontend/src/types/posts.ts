@@ -1,5 +1,6 @@
 export interface PostListItem {
   id: string;
+  qid: string;
   title: string;
   created_at: string;
 }

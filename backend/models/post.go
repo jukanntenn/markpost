@@ -47,7 +47,7 @@ func GetPosts(database *Database, query map[string]any, offset, limit int) ([]Po
 	db := database.DB()
 
 	var models []Post
-	err := db.Where(query).Offset(offset).Limit(limit).Find(&models).Error
+	err := db.Where(query).Order("created_at DESC").Offset(offset).Limit(limit).Find(&models).Error
 
 	if err != nil {
 		return nil, fmt.Errorf("GetPosts: %w", err)

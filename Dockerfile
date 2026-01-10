@@ -41,7 +41,7 @@ COPY --from=backend-builder /app/backend/templates /app/templates
 COPY --from=backend-builder /app/backend/locales /app/locales
 
 # Copy frontend build output
-COPY --from=frontend-builder /app/frontend/dist /dist
+COPY --from=frontend-builder /app/dist /dist
 
 ENV GIN_MODE=release
 

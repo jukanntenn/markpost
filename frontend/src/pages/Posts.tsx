@@ -2,8 +2,7 @@ import { Alert, Button, Card, Container, Spinner, Table } from "react-bootstrap"
 import { useEffect, useState } from "react";
 
 import { JournalText } from "react-bootstrap-icons";
-import type { PostListItem } from "../types/posts";
-import { fetchPosts } from "../utils/posts";
+import { usePosts } from "../hooks/swr/usePosts";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -22,33 +21,17 @@ const formatToLocalTime = (utcString: string): string => {
 function Posts() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [items, setItems] = useState<PostListItem[]>([]);
   const [page, setPage] = useState<number>(() => parseInt(searchParams.get("page") || "1", 10));
   const limit = 20;
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const { data, isLoading, error } = usePosts(page, limit, { refreshInterval: 3000 });
+
+  const items = data?.posts || [];
+  const totalPages = data?.pagination?.total_pages || 1;
 
   useEffect(() => {
     document.title = t("common.pageTitle.allPosts");
   }, [t]);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchPosts(page, limit);
-        setItems(data.posts);
-        setTotalPages(data.pagination.total_pages || 1);
-      } catch (err) {
-        setError(t("posts.error"));
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [page]);
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage < 1 || nextPage > totalPages) return;
@@ -72,7 +55,7 @@ function Posts() {
                 </div>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
-              {loading ? (
+              {isLoading ? (
                 <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
                   <Spinner animation="border" role="status" variant="primary">
                     <span className="visually-hidden">Loading...</span>
@@ -81,7 +64,7 @@ function Posts() {
                 </div>
               ) : error ? (
                 <Alert variant="danger" className="mb-0">
-                  <p>{error}</p>
+                  <p>{t("posts.error")}</p>
                 </Alert>
               ) : items.length === 0 ? (
                 <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">

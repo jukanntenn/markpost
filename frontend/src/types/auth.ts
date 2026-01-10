@@ -34,5 +34,4 @@ export type LoginResponse = {
 
 export type OAuthUrlResponse = {
   url: string;
-  state: string;
 };

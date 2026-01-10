@@ -12,8 +12,9 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { Gear, Lock, CheckCircle, InfoCircle } from "react-bootstrap-icons";
-import { auth } from "../utils/api";
- 
+import * as api from "../utils/api";
+
+import { useChangePassword } from "../hooks/swr/useChangePassword";
 import { useTranslation } from "react-i18next";
 import LanguageToggle from "../components/LanguageToggle";
 
@@ -30,10 +31,11 @@ function Settings() {
     new_password: "",
     confirm_password: "",
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showValidation, setShowValidation] = useState(false);
+
+  const { trigger, isMutating, reset } = useChangePassword();
 
   useEffect(() => {
     document.title = t("common.pageTitle.settings");
@@ -45,7 +47,6 @@ function Settings() {
       ...prev,
       [name]: value,
     }));
-    // Clear error and success messages when user starts typing
     setError("");
     setSuccess("");
     setShowValidation(false);
@@ -58,7 +59,6 @@ function Settings() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Client-side validation
     setShowValidation(true);
 
     if (!validatePassword(formData.new_password)) {
@@ -76,39 +76,24 @@ function Settings() {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
     try {
-      await auth.post("/api/auth/change-password", {
+      await trigger({
         current_password: formData.current_password,
         new_password: formData.new_password,
       });
 
       setSuccess(t("settings.passwordChangeSuccess"));
 
-      // Clear form and reset validation state
       setFormData({
         current_password: "",
         new_password: "",
         confirm_password: "",
       });
       setShowValidation(false);
-
-      // Keep user on settings page to see success message
-      // No automatic navigation - let user decide when to leave
-    } catch (err: any) {
+      reset();
+    } catch (err: unknown) {
       console.error("Password change failed:", err);
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError(t("settings.passwordChangeFailed"));
-      }
-    } finally {
-      setLoading(false);
+      setError(api.getErrorMessage(err, t("settings.passwordChangeFailed")));
     }
   };
 
@@ -119,7 +104,7 @@ function Settings() {
 
   return (
     <Container className="py-4">
-      
+
 
       <Row className="justify-content-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
@@ -199,7 +184,7 @@ function Settings() {
                     value={formData.current_password}
                     onChange={handleInputChange}
                     placeholder={t("settings.currentPasswordPlaceholder")}
-                    disabled={loading}
+                    disabled={isMutating}
                     className="py-3 px-3 border-1"
                     style={{ borderRadius: "8px" }}
                   />
@@ -219,7 +204,7 @@ function Settings() {
                     onChange={handleInputChange}
                     placeholder={t("settings.newPasswordPlaceholder")}
                     required
-                    disabled={loading}
+                    disabled={isMutating}
                     className="py-3 px-3 border-1"
                     style={{ borderRadius: "8px" }}
                     isInvalid={
@@ -260,7 +245,7 @@ function Settings() {
                     onChange={handleInputChange}
                     placeholder={t("settings.confirmPasswordPlaceholder")}
                     required
-                    disabled={loading}
+                    disabled={isMutating}
                     className="py-3 px-3 border-1"
                     style={{ borderRadius: "8px" }}
                     isInvalid={
@@ -295,14 +280,14 @@ function Settings() {
                     variant="primary"
                     type="submit"
                     disabled={
-                      loading ||
+                      isMutating ||
                       !formData.new_password ||
                       !formData.confirm_password
                     }
                     className="py-3 fw-semibold"
                     style={{ borderRadius: "8px" }}
                   >
-                    {loading ? (
+                    {isMutating ? (
                       <>
                         <Spinner
                           as="span"

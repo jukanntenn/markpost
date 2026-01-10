@@ -50,20 +50,20 @@ describe("checkLoginResponse", () => {
     const response = {
       access_token: "test_token",
       refresh_token: "test_refresh_token",
-    } as any;
+    } as unknown as LoginResponse;
 
     expect(checkLoginResponse(response)).toBe(false);
   });
 
   it("should return false when user id is null", () => {
-    const response: LoginResponse = {
+    const response = {
       access_token: "test_token",
       refresh_token: "test_refresh_token",
       user: {
-        id: null as any,
+        id: null,
         username: "testuser",
       },
-    };
+    } as unknown as LoginResponse;
 
     expect(checkLoginResponse(response)).toBe(false);
   });
@@ -88,7 +88,7 @@ describe("checkLoginResponse", () => {
       user: {
         id: 1,
       },
-    } as any;
+    } as unknown as LoginResponse;
 
     expect(checkLoginResponse(response)).toBe(false);
   });

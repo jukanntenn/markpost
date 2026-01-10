@@ -3,15 +3,15 @@ FROM --platform=$TARGETPLATFORM golang:1.24-alpine AS backend-builder
 
 RUN apk add --no-cache git gcc musl-dev sqlite-dev
 
-WORKDIR /app
+WORKDIR /app/backend
 
 ARG TARGETOS
 ARG TARGETARCH
 
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-COPY . .
+COPY backend/ .
 
 RUN CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -o markpost .
 
@@ -36,12 +36,12 @@ FROM --platform=$TARGETPLATFORM alpine:latest
 WORKDIR /app
 
 # Copy Go backend binary
-COPY --from=backend-builder /app/markpost /app/markpost
-COPY --from=backend-builder /app/templates /app/templates
-COPY --from=backend-builder /app/locales /app/locales
+COPY --from=backend-builder /app/backend/markpost /app/markpost
+COPY --from=backend-builder /app/backend/templates /app/templates
+COPY --from=backend-builder /app/backend/locales /app/locales
 
 # Copy frontend build output
-COPY --from=frontend-builder /app/dist /app/dist
+COPY --from=frontend-builder /app/frontend/dist /dist
 
 ENV GIN_MODE=release
 

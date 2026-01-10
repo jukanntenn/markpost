@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "dbhub": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@bytebase/dbhub@latest",
+        "--transport",
+        "stdio",
+        "--dsn",
+        "sqlite:///home/alice/Workspace/markpost/data/markpost.db"
+      ],
+      "env": {}
+    }
+  }
+}

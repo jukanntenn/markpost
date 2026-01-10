@@ -12,6 +12,7 @@ import {
 import { Github } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 import { anno } from "../utils/api";
+import * as api from "../utils/api";
 import { storage, auth } from "../utils";
 import type { LoginResponse, OAuthUrlResponse } from "../types/auth";
 import axios from "axios";
@@ -91,8 +92,6 @@ function LoginPage() {
     try {
       const res = await anno.get<OAuthUrlResponse>("/api/oauth/url");
       const url = res.data.url;
-      const state = res.data.state;
-      storage.set("oauth_state", state);
 
       authWindowRef.current = openAuthWindow(url);
       if (!authWindowRef.current) {
@@ -124,7 +123,7 @@ function LoginPage() {
 
           closeAuthWindow();
           window.removeEventListener("message", handleMessage);
-          storage.remove("oauth_state");
+          // no state storage
           setLoadingGitHub(false);
         }
       };
@@ -137,7 +136,7 @@ function LoginPage() {
         showErrorToast(t("login.loginFailed"), t("login.unknownError"));
       }
       closeAuthWindow();
-      storage.remove("oauth_state");
+      // no state storage
       setLoadingGitHub(false);
     }
   }
@@ -161,8 +160,9 @@ function LoginPage() {
       // navigate("/dashboard", { replace: true });
       window.location.href = "/ui/dashboard";
     } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response?.data?.message) {
-        setError(err.response?.data?.message);
+      if (axios.isAxiosError(err)) {
+        const msg = api.getErrorMessage(err, t("login.unknownError"));
+        setError(msg);
       } else {
         showErrorToast(t("login.loginFailed"), t("login.unknownError"));
       }

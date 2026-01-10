@@ -7,21 +7,14 @@ import {
   Spinner,
 } from "react-bootstrap";
 import { Book, Copy, Eye, EyeSlash, Key, FilePlus, JournalText } from "react-bootstrap-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import CreateTestPostModal from "../components/CreateTestPostModal";
-import type { PostListItem } from "../types/posts";
-import { auth } from "../utils/api";
-import { fetchPosts } from "../utils/posts";
+import { usePostKey } from "../hooks/swr/usePostKey";
+import { usePosts } from "../hooks/swr/usePosts";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-interface PostKeyResponse {
-  post_key: string;
-  created_at: string;
-}
-
-// Function to format UTC time to local browser timezone
 const formatToLocalTime = (utcString: string): string => {
   if (!utcString) return "";
 
@@ -41,58 +34,16 @@ function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showKey, setShowKey] = useState(false);
-  const [postKey, setPostKey] = useState<string>("");
-  const [createdAt, setCreatedAt] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [recentPosts, setRecentPosts] = useState<PostListItem[]>([]);
-  const [recentLoading, setRecentLoading] = useState(false);
-  const [recentError, setRecentError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    document.title = t("common.pageTitle.dashboard");
-  }, [t]);
+  const { data: postKeyData, isLoading: keyLoading, error: keyError } = usePostKey();
+  const { data: postsData, isLoading: postsLoading, error: postsError, mutate: mutatePosts } = usePosts(1, 10, { refreshInterval: 3000 });
 
-  // Fetch post key from API
-  useEffect(() => {
-    const fetchPostKey = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const postKey = postKeyData?.post_key || "";
+  const createdAt = postKeyData?.created_at || "";
+  const recentPosts = postsData?.posts || [];
 
-        const response = await auth.get<PostKeyResponse>("/api/post_key");
-        setPostKey(response.data.post_key);
-        setCreatedAt(response.data.created_at);
-      } catch (err) {
-        console.error("Failed to fetch post key:", err);
-        setError(t("dashboard.postKey.errorLoadingKey"));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPostKey();
-  }, []);
-
-  const loadRecentPosts = async () => {
-    try {
-      setRecentLoading(true);
-      setRecentError(null);
-      const data = await fetchPosts(1, 10);
-      setRecentPosts(data.posts);
-    } catch {
-      setRecentError(t("dashboard.recentPosts.error"));
-    } finally {
-      setRecentLoading(false);
-    }
-  };
-  useEffect(() => {
-    loadRecentPosts();
-  }, []);
-
-  // Copy to clipboard function
   const handleCopyKey = async () => {
     if (postKey) {
       try {
@@ -109,7 +60,6 @@ function Dashboard() {
     <>
     <Container className="py-4">
       <div className="row g-4">
-        {/* Left Column: Post Key + Docs stacked */}
         <div className="col-12 col-xl-6">
           <div className="d-flex flex-column gap-4">
           <Card className="border-0 shadow-lg h-100">
@@ -124,7 +74,7 @@ function Dashboard() {
               </div>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
-              {loading ? (
+              {keyLoading ? (
                 <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
                   <Spinner animation="border" role="status" variant="primary">
                     <span className="visually-hidden">Loading...</span>
@@ -133,9 +83,9 @@ function Dashboard() {
                     {t("dashboard.postKey.loadingKey")}
                   </p>
                 </div>
-              ) : error ? (
+              ) : keyError ? (
                 <Alert variant="danger" className="mb-0">
-                  <p>{error}</p>
+                  <p>{t("dashboard.postKey.errorLoadingKey")}</p>
                 </Alert>
               ) : (
                 <div>
@@ -228,7 +178,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Right Column: Recent Posts */}
         <div className="col-12 col-xl-6">
           <Card className="border-0 shadow-lg h-100">
             <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
@@ -252,16 +201,16 @@ function Dashboard() {
               </div>
             </Card.Header>
             <Card.Body className="px-4 pb-4">
-              {recentLoading ? (
+              {postsLoading ? (
                 <div className="text-center">
                   <Spinner animation="border" role="status" variant="primary">
                     <span className="visually-hidden">Loading...</span>
                   </Spinner>
                   <p className="mt-3 text-muted mb-0">{t("dashboard.recentPosts.loading")}</p>
                 </div>
-              ) : recentError ? (
+              ) : postsError ? (
                 <Alert variant="danger" className="mb-0">
-                  <p>{recentError}</p>
+                  <p>{t("dashboard.recentPosts.error")}</p>
                 </Alert>
               ) : recentPosts.length === 0 ? (
                 <div className="text-center">
@@ -299,7 +248,7 @@ function Dashboard() {
       onHide={() => setShowCreateModal(false)}
       onSuccess={() => {
         setShowCreateModal(false);
-        loadRecentPosts();
+        mutatePosts();
       }}
     />
     </>

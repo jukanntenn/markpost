@@ -1,13 +1,14 @@
 import { get, remove, set } from "./storage";
 
-import type { CreateTestPostResponse } from "../types/posts";
 import type { LoginResponse } from "../types/auth";
 import axios from "axios";
 import { getAcceptLanguageHeader } from "../utils/i18n";
 
-const addLanguageHeader = (config: any) => {
+import type { InternalAxiosRequestConfig } from "axios";
+
+const addLanguageHeader = (config: InternalAxiosRequestConfig) => {
   const acceptLanguage = getAcceptLanguageHeader();
-  config.headers = config.headers || {};
+  config.headers = (config.headers || {}) as InternalAxiosRequestConfig["headers"];
   config.headers["Accept-Language"] = acceptLanguage;
   return config;
 };
@@ -31,13 +32,12 @@ export const auth = axios.create({
   timeout: 10000,
 });
 
-// Add request interceptor to include JWT token
 auth.interceptors.request.use(
   (config) => {
     config = addLanguageHeader(config);
 
     try {
-      const loginData = get<any>("login");
+      const loginData = get<LoginResponse | null>("login");
       const accessToken = loginData?.access_token;
 
       if (accessToken) {
@@ -55,12 +55,10 @@ auth.interceptors.request.use(
 );
 
 let isRefreshing = false;
-let pendingQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (err: any) => void;
-}> = [];
+type PendingItem = { resolve: (token: string) => void; reject: (err: unknown) => void };
+let pendingQueue: PendingItem[] = [];
 
-const processQueue = (error: any, token: string | null) => {
+const processQueue = (error: unknown, token: string | null) => {
   pendingQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
@@ -74,7 +72,7 @@ const processQueue = (error: any, token: string | null) => {
 auth.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config as any;
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     originalRequest.headers = originalRequest.headers || {};
 
     if (!error.response) {
@@ -146,7 +144,27 @@ auth.interceptors.response.use(
   }
 );
 
-export async function createTestPost(postKey: string, title: string, body: string): Promise<string> {
-  const res = await anno.post<CreateTestPostResponse>(`/${postKey}`, { title, body });
-  return res.data.id;
+type ErrorItem = { field?: string; code?: string; message?: string };
+type ErrorResponseData = { code?: string; message?: string; errors?: ErrorItem[]; error?: string };
+type AxiosErrorLike = { response?: { data?: unknown } };
+
+function isErrorResponseData(d: unknown): d is ErrorResponseData {
+  if (!d || typeof d !== "object") return false;
+  const anyObj = d as Record<string, unknown>;
+  if (typeof anyObj.message === "string") return true;
+  if (typeof anyObj.error === "string") return true;
+  if (Array.isArray(anyObj.errors)) return true;
+  return false;
+}
+
+export function getErrorMessage(error: unknown, fallback: string): string {
+  const data = (error as AxiosErrorLike)?.response?.data;
+  if (!isErrorResponseData(data)) return fallback;
+  if (data.message) return data.message;
+  if (Array.isArray(data.errors) && data.errors.length > 0) {
+    const first = data.errors[0];
+    if (first?.message) return first.message;
+  }
+  if (data.error) return data.error;
+  return fallback;
 }

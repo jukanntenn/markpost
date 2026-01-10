@@ -56,19 +56,22 @@ test("renders post key masked by default and toggles visibility", async ({ page 
 
 test("copies post key and shows temporary success badge", async ({ page }) => {
   await page.addInitScript(() => {
-    const nav: Navigator = window.navigator as Navigator;
+    const nav = window.navigator as Navigator & {
+      clipboard?: { writeText?: (text: string) => Promise<void> };
+    };
     try {
-      if ("clipboard" in nav && nav.clipboard && typeof nav.clipboard.writeText === "function") {
-        nav.clipboard.writeText = (_text: string) => Promise.resolve();
+      const clip = nav.clipboard;
+      if (clip && typeof clip.writeText === "function") {
+        clip.writeText = () => Promise.resolve();
       } else {
         Object.defineProperty(nav, "clipboard", {
-          value: { writeText: (_text: string) => Promise.resolve() },
+          value: { writeText: () => Promise.resolve() },
           configurable: true,
         });
       }
     } catch {
       Object.defineProperty(nav, "clipboard", {
-        value: { writeText: (_text: string) => Promise.resolve() },
+        value: { writeText: () => Promise.resolve() },
         configurable: true,
       });
     }

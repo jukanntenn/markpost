@@ -6,8 +6,10 @@ import {
   Navigate,
 } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { SWRConfig } from "swr";
 import Layout from "./components/Layout";
 import { UserInfoContext } from "./components/UserInfoProvider";
+import { swrConfig } from "./swr/config";
 
 const Login = React.lazy(() => import("./pages/Login"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -48,17 +50,18 @@ function App() {
 
   return (
     <Router basename="/ui">
-      <div className="App">
-        <React.Suspense
-          fallback={
-            <div className="d-flex justify-content-center align-items-center min-vh-100">
-              <div className="spinner-border" role="status">
-                <span className="visually-hidden">Loading...</span>
+      <SWRConfig value={swrConfig}>
+        <div className="App">
+          <React.Suspense
+            fallback={
+              <div className="d-flex justify-content-center align-items-center min-vh-100">
+                <div className="spinner-border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
               </div>
-            </div>
-          }
-        >
-          <Routes>
+            }
+          >
+            <Routes>
             <Route path="login/callback" element={<LoginCallbackPage />} />
 
             <Route path="/" element={<Layout />}>
@@ -99,8 +102,9 @@ function App() {
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </React.Suspense>
-      </div>
+          </React.Suspense>
+        </div>
+      </SWRConfig>
     </Router>
   );
 }

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
-import { createTestPost } from "../utils/api";
+import { useCreateTestPost } from "../hooks/swr/useCreateTestPost";
+import * as api from "../utils/api";
 import { useToasts } from "react-bootstrap-toasts";
 
 interface CreateTestPostModalProps {
@@ -16,9 +17,10 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   const toasts = useToasts();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const titleRef = useRef<HTMLInputElement | null>(null);
+
+  const { trigger, isMutating, reset } = useCreateTestPost(postKey);
 
   useEffect(() => {
     if (show) {
@@ -28,7 +30,6 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       setTitle("");
       setBody("");
       setError("");
-      setLoading(false);
     }
   }, [show]);
 
@@ -39,19 +40,16 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       return;
     }
     try {
-      setLoading(true);
-      setError("");
-      await createTestPost(postKey, title.trim(), body);
+      await trigger({ title: title.trim(), body });
       toasts.success({
         headerContent: <span className="me-auto">{t("createTestPost.successHeader")}</span>,
         bodyContent: t("createTestPost.successBody"),
       });
       onSuccess();
-    } catch (err: any) {
-      const msg = err?.response?.data?.error || t("createTestPost.errorServer");
+      reset();
+    } catch (err: unknown) {
+      const msg = api.getErrorMessage(err, t("createTestPost.errorServer"));
       setError(msg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -77,7 +75,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("createTestPost.titlePlaceholder")}
-              disabled={loading}
+              disabled={isMutating}
               className="py-2 px-3 border-1"
             />
           </Form.Group>
@@ -91,17 +89,17 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={t("createTestPost.bodyPlaceholder")}
-              disabled={loading}
+              disabled={isMutating}
               className="py-2 px-3 border-1"
             />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={onHide} disabled={loading}>
+          <Button variant="secondary" onClick={onHide} disabled={isMutating}>
             {t("createTestPost.cancel")}
           </Button>
-          <Button variant="primary" type="submit" disabled={loading || !body.trim()}>
-            {loading ? (
+          <Button variant="primary" type="submit" disabled={isMutating || !body.trim()}>
+            {isMutating ? (
               <span className="d-inline-flex align-items-center gap-2">
                 <Spinner size="sm" animation="border" />
                 {t("createTestPost.creating")}

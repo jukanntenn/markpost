@@ -4,6 +4,7 @@ import { storage, auth } from "../utils";
 import Spinner from "react-bootstrap/Spinner";
 import { anno } from "../utils/api";
 import { isAxiosError } from "axios";
+import * as api from "../utils/api";
 import { useTranslation } from "react-i18next";
 
 const LoginSpinner = () => {
@@ -36,9 +37,6 @@ const LoginCallback: React.FC = () => {
         "/api/oauth/login",
         { code: params.get("code") },
         {
-          headers: {
-            "X-Oauth-State": storage.get<string>("oauth_state"),
-          },
           params: { state: params.get("state") },
         }
       );
@@ -50,9 +48,7 @@ const LoginCallback: React.FC = () => {
       }
     } catch (err: unknown) {
       message = isAxiosError(err)
-        ? err.response?.data?.message ||
-          err.code ||
-          t("loginCallback.authFailed")
+        ? api.getErrorMessage(err, t("loginCallback.authFailed"))
         : t("loginCallback.unknownError");
     } finally {
       if (window.opener && !window.opener.closed) {

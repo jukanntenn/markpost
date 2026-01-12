@@ -8,14 +8,24 @@ import (
 	"markpost/repositories"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 type PostService struct {
 	postRepo repositories.PostRepoInterface
+	md       goldmark.Markdown
 }
 
 func NewPostService(postRepo repositories.PostRepoInterface) *PostService {
-	return &PostService{postRepo: postRepo}
+	md := goldmark.New(
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(),
+		),
+	)
+	return &PostService{
+		postRepo: postRepo,
+		md:       md,
+	}
 }
 
 func (s *PostService) CreatePost(title, body string, userID int) (string, error) {
@@ -37,7 +47,7 @@ func (s *PostService) RenderPostHTML(qid string) (string, string, error) {
 	}
 
 	var buf bytes.Buffer
-	if err := goldmark.Convert([]byte(post.Body), &buf); err != nil {
+	if err := s.md.Convert([]byte(post.Body), &buf); err != nil {
 		return "", "", NewServiceErrorWrap(ErrInternal, fmt.Sprintf("convert post with qid %s failed", qid), err)
 	}
 

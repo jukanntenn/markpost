@@ -9,6 +9,7 @@ import {
 import { Book, Copy, Eye, EyeSlash, Key, FilePlus, JournalText } from "react-bootstrap-icons";
 import { useState } from "react";
 
+import { buildPostUrl } from "../utils/url";
 import CreateTestPostModal from "../components/CreateTestPostModal";
 import { usePostKey } from "../hooks/swr/usePostKey";
 import { usePosts } from "../hooks/swr/usePosts";
@@ -223,7 +224,7 @@ function Dashboard() {
                       <li key={p.id} className="py-2">
                         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between">
                           <a
-                            href={`/${p.qid}`}
+                            href={buildPostUrl(p.qid)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-decoration-none fw-medium flex-grow-1"

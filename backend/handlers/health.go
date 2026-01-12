@@ -8,6 +8,14 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// Health godoc
+// @Summary      Health check
+// @Description  Check API health status
+// @Tags         health
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func Health() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

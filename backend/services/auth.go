@@ -15,6 +15,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type AuthServiceInterface interface {
+	GenerateGitHubAuthURL(ctx context.Context) (string, error)
+	LoginWithGitHub(ctx context.Context, code string) (*models.User, *JWTTokenPair, error)
+	LoginWithPassword(username, password string) (*models.User, *JWTTokenPair, error)
+	RefreshToken(refreshToken string) (*models.User, *JWTTokenPair, error)
+	ChangePassword(userID int, current, new string) error
+	QueryPostKey(userID int) (string, time.Time, error)
+}
+
 type AuthService struct {
 	users repositories.UserRepoInterface
 	oauth *oauth2.Config
@@ -155,3 +164,5 @@ func (s *AuthService) QueryPostKey(userID int) (string, time.Time, error) {
 	}
 	return user.PostKey, user.CreatedAt, nil
 }
+
+var _ AuthServiceInterface = (*AuthService)(nil)

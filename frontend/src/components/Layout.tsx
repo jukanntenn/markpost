@@ -2,7 +2,7 @@ import { Container, Navbar, Dropdown } from "react-bootstrap";
 import { Outlet } from "react-router-dom";
 import { Gear, BoxArrowRight } from "react-bootstrap-icons";
 import { useContext } from "react";
-import { UserInfoContext } from "./UserInfoProvider";
+import { UserInfoContext } from "./UserInfoContext";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ThemeToggle from "./ThemeToggle";

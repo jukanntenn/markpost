@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	apperrors "markpost/errors"
 	"markpost/models"
@@ -23,19 +24,19 @@ func ExtractUser(c *gin.Context) (*models.User, bool) {
 
 func bindJSON(c *gin.Context, req interface{}) bool {
 	if err := c.ShouldBindJSON(req); err != nil {
-		return handleBindingError(c, req, err)
+		return writeBindingError(c, req, err)
 	}
 	return true
 }
 
 func bindQuery(c *gin.Context, req interface{}) bool {
 	if err := c.ShouldBindQuery(req); err != nil {
-		return handleBindingError(c, req, err)
+		return writeBindingError(c, req, err)
 	}
 	return true
 }
 
-func handleBindingError(c *gin.Context, req interface{}, err error) bool {
+func writeBindingError(c *gin.Context, req interface{}, err error) bool {
 	var causes []services.ServiceError
 	if ve, ok := err.(validator.ValidationErrors); ok {
 		t := reflect.TypeOf(req)
@@ -91,7 +92,7 @@ func handleBindingError(c *gin.Context, req interface{}, err error) bool {
 	return false
 }
 
-func sendAuthResponse(c *gin.Context, user *models.User, tokens *services.JWTTokenPair) {
+func writeAuthResponse(c *gin.Context, user *models.User, tokens *services.JWTTokenPair) {
 	c.JSON(http.StatusOK, gin.H{
 		"user":          gin.H{"id": user.ID, "username": user.Username},
 		"access_token":  tokens.AccessToken,
@@ -104,4 +105,40 @@ func defaultInt(value, defaultValue int) int {
 		return defaultValue
 	}
 	return value
+}
+
+type AuthResponse struct {
+	User         UserInfo `json:"user"`
+	AccessToken  string   `json:"access_token"`
+	RefreshToken string   `json:"refresh_token"`
+}
+
+type UserInfo struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+type PostKeyResponse struct {
+	PostKey   string    `json:"post_key"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type CreatePostResponse struct {
+	ID int `json:"id"`
+}
+
+type PostsListResponse struct {
+	Posts      []models.Post `json:"posts"`
+	Pagination Pagination    `json:"pagination"`
+}
+
+type Pagination struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	Total      int `json:"total"`
+	TotalPages int `json:"total_pages"`
 }

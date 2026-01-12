@@ -2,6 +2,7 @@ import { Alert, Button, Card, Container, Spinner, Table } from "react-bootstrap"
 import { useEffect, useState } from "react";
 
 import { JournalText } from "react-bootstrap-icons";
+import { buildPostUrl } from "../utils/url";
 import { usePosts } from "../hooks/swr/usePosts";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -84,7 +85,7 @@ function Posts() {
                         {items.map((p) => (
                           <tr key={p.id}>
                             <td>
-                              <a href={`/${p.qid}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
+                              <a href={buildPostUrl(p.qid)} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
                             </td>
                             <td>
                               <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
@@ -100,7 +101,7 @@ function Posts() {
                         <li key={p.id} className="py-2">
                           <div className="d-flex flex-column">
                             <a
-                              href={`/${p.qid}`}
+                              href={buildPostUrl(p.qid)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-decoration-none fw-medium"

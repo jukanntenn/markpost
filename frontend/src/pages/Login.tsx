@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Button,
   Container,
@@ -73,11 +73,11 @@ function LoginPage() {
     );
   };
 
-  const closeAuthWindow = () => {
+  const closeAuthWindow = useCallback(() => {
     if (!authWindowClosed()) {
       authWindowRef.current!.close();
     }
-  };
+  }, []);
 
   const clearCheckAuthWindowInterval = () => {
     if (checkAuthWindowIntervalRef.current) {
@@ -159,16 +159,20 @@ function LoginPage() {
       // FIXME: why navigate does not work here?
       // navigate("/dashboard", { replace: true });
       window.location.href = "/ui/dashboard";
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
-        const msg = api.getErrorMessage(err, t("login.unknownError"));
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      const msg = api.getErrorMessage(err, t("login.unknownError"));
+      if (err.response) {
         setError(msg);
       } else {
-        showErrorToast(t("login.loginFailed"), t("login.unknownError"));
+        showErrorToast(t("login.loginFailed"), msg);
       }
-    } finally {
-      setLoading(false);
+    } else {
+      showErrorToast(t("login.loginFailed"), t("login.unknownError"));
     }
+  } finally {
+    setLoading(false);
+  }
   }
 
   // 清理函数
@@ -177,7 +181,7 @@ function LoginPage() {
       clearCheckAuthWindowInterval();
       closeAuthWindow();
     };
-  }, []);
+  }, [closeAuthWindow]);
 
   const gitHubButtonText = loadingGitHub
     ? t("login.processingGitHubLogin")

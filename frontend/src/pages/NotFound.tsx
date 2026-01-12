@@ -1,7 +1,7 @@
 import { Container, Row, Col, Card, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
-import { UserInfoContext } from "../components/UserInfoProvider";
+import { UserInfoContext } from "../components/UserInfoContext";
 import { useTranslation } from "react-i18next";
 
 function NotFound() {
@@ -22,7 +22,10 @@ function NotFound() {
                   : t("notFound.pageNotFoundLoginRequired")}
               </p>
               {isAuthenticated ? (
-                <Button variant="primary" onClick={() => navigate("/dashboard")}>
+                <Button
+                  variant="primary"
+                  onClick={() => navigate("/dashboard")}
+                >
                   {t("notFound.backToDashboard")}
                 </Button>
               ) : (

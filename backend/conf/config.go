@@ -47,8 +47,9 @@ type PostConfig struct {
 }
 
 type CORSConfig struct {
-	AllowOrigins []string `mapstructure:"allow_origins"`
-	AllowHeaders []string `mapstructure:"allow_headers"`
+	AllowOrigins   []string `mapstructure:"allow_origins"`
+	AllowHeaders   []string `mapstructure:"allow_headers"`
+	ExposeHeaders  []string `mapstructure:"expose_headers"`
 }
 
 type OAuthConfig struct {
@@ -170,6 +171,15 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("post.retention_days", 7)
 	v.SetDefault("cors.allow_origins", []string{"*"})
 	v.SetDefault("cors.allow_headers", []string{"Content-Type", "Authorization", "X-OAuth-State"})
+	v.SetDefault("cors.expose_headers", []string{
+		"X-Rate-Limit-Limit",
+		"X-Rate-Limit-Duration",
+		"X-Rate-Limit-Request-Forwarded-For",
+		"X-Rate-Limit-Request-Remote-Addr",
+		"RateLimit-Limit",
+		"RateLimit-Reset",
+		"RateLimit-Remaining",
+	})
 	v.SetDefault("oauth.github.client_id", "")
 	v.SetDefault("oauth.github.client_secret", "")
 	v.SetDefault("oauth.github.redirect_uri", "")

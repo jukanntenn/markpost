@@ -1,7 +1,26 @@
 package main
 
+// @title           Markpost API
+// @version         1.0
+// @description     A simple pastebin-like markdown blog service with OAuth and JWT authentication
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    https://github.com/yourusername/markpost
+// @contact.email  support@example.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:7330
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 import (
-	"encoding/json"
 	"log"
 	"os"
 
@@ -11,11 +30,13 @@ import (
 	"markpost/models"
 	"markpost/repositories"
 	"markpost/services"
+	"markpost/utils"
 
 	"github.com/gin-contrib/cors"
 	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -42,15 +63,7 @@ func UseCors(r *gin.Engine) {
 	c := cors.DefaultConfig()
 	c.AllowOrigins = cfg.CORS.AllowOrigins
 	c.AllowHeaders = cfg.CORS.AllowHeaders
-	// FIXME: 设置为 tollbooth 实际暴露的 Headers
-	c.ExposeHeaders = []string{
-		"X-Rate-Limit-Limit",
-		"X-Rate-Limit-Remaining",
-		"X-Rate-Limit-Duration",
-		"RateLimit-Limit",
-		"RateLimit-Remaining",
-		"RateLimit-Reset",
-	}
+	c.ExposeHeaders = cfg.CORS.ExposeHeaders
 
 	r.Use(cors.New(c))
 }
@@ -159,8 +172,9 @@ func serve(configPath string) {
 		RootPath:         "./locales",
 		AcceptLanguage:   []language.Tag{language.English, language.Chinese},
 		DefaultLanguage:  language.English,
-		UnmarshalFunc:    json.Unmarshal,
-		FormatBundleFile: "json",
+		UnmarshalFunc:    toml.Unmarshal,
+		FormatBundleFile: "toml",
+		Loader:           utils.ActiveLocaleLoader{},
 	})))
 
 	r.Use(middlewares.Fallback())

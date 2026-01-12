@@ -1,4 +1,4 @@
-import { get, remove, set } from "./storage";
+import { get } from "./storage";
 
 import type { LoginResponse } from "../types/auth";
 import axios from "axios";
@@ -36,111 +36,17 @@ auth.interceptors.request.use(
   (config) => {
     config = addLanguageHeader(config);
 
-    try {
-      const loginData = get<LoginResponse | null>("login");
-      const accessToken = loginData?.access_token;
+    const loginData = get<LoginResponse | null>("login");
+    const accessToken = loginData?.access_token;
 
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
-      }
-    } catch (error) {
-      console.error("Error reading login data from storage:", error);
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
 
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
-);
-
-let isRefreshing = false;
-type PendingItem = { resolve: (token: string) => void; reject: (err: unknown) => void };
-let pendingQueue: PendingItem[] = [];
-
-const processQueue = (error: unknown, token: string | null) => {
-  pendingQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else if (token) {
-      resolve(token);
-    }
-  });
-  pendingQueue = [];
-};
-
-auth.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    originalRequest.headers = originalRequest.headers || {};
-
-    if (!error.response) {
-      return Promise.reject(error);
-    }
-
-    const status = error.response.status;
-
-    if (status !== 401) {
-      return Promise.reject(error);
-    }
-
-    const loginData = get<LoginResponse | null>("login");
-    const refreshToken = loginData?.refresh_token;
-
-    if (!refreshToken) {
-      remove("login");
-      window.location.href = "/ui/login";
-      return Promise.reject(error);
-    }
-
-    if (originalRequest._retry) {
-      remove("login");
-      window.location.href = "/ui/login";
-      return Promise.reject(error);
-    }
-
-    originalRequest._retry = true;
-
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        pendingQueue.push({ resolve, reject });
-      })
-        .then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return auth.request(originalRequest);
-        })
-        .catch((err) => {
-          return Promise.reject(err);
-        });
-    }
-
-    isRefreshing = true;
-
-    try {
-      const res = await anno.post<LoginResponse>("/api/auth/refresh", {
-        refresh_token: refreshToken,
-      });
-      const data = res.data;
-
-      if (!data?.access_token || !data?.refresh_token) {
-        throw new Error("invalid refresh response");
-      }
-
-      set("login", data);
-
-      processQueue(null, data.access_token);
-
-      originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
-      return auth.request(originalRequest);
-    } catch (refreshErr) {
-      processQueue(refreshErr, null);
-      remove("login");
-      window.location.href = "/ui/login";
-      return Promise.reject(refreshErr);
-    } finally {
-      isRefreshing = false;
-    }
   }
 );
 

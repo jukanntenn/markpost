@@ -8,7 +8,7 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import { SWRConfig } from "swr";
 import Layout from "./components/Layout";
-import { UserInfoContext } from "./components/UserInfoProvider";
+import { UserInfoContext } from "./components/UserInfoContext";
 import { swrConfig } from "./swr/config";
 
 const Login = React.lazy(() => import("./pages/Login"));
@@ -62,46 +62,46 @@ function App() {
             }
           >
             <Routes>
-            <Route path="login/callback" element={<LoginCallbackPage />} />
+              <Route path="login/callback" element={<LoginCallbackPage />} />
 
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route
-                path="login"
-                element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="posts"
-                element={
-                  <ProtectedRoute>
-                    <Posts />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route
+                  path="login"
+                  element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  }
+                />
+                <Route
+                  path="dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="posts"
+                  element={
+                    <ProtectedRoute>
+                      <Posts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Route>
               <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
           </React.Suspense>
         </div>
       </SWRConfig>

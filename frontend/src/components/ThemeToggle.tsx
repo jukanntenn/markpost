@@ -1,5 +1,5 @@
 import React from "react";
-import { useTheme } from "../contexts/ThemeContext";
+import { useTheme } from "../contexts/useTheme";
 import { Dropdown } from "react-bootstrap";
 import { Sun, Moon, CircleHalf } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";

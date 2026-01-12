@@ -1,5 +1,6 @@
 import useSWRMutation from "swr/mutation";
 import { auth } from "../../utils/api";
+import { withAuthRefresh } from "../../swr/middleware";
 
 export interface ChangePasswordArgs {
   current_password: string;
@@ -7,7 +8,7 @@ export interface ChangePasswordArgs {
 }
 
 const sendRequest = async (url: string, { arg }: { arg: ChangePasswordArgs }) => {
-  return auth.post(url, arg);
+  return withAuthRefresh(() => auth.post(url, arg));
 };
 
 export function useChangePassword() {

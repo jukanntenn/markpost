@@ -56,6 +56,18 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if !reflect.DeepEqual(cfg.CORS.AllowHeaders, []string{"Content-Type", "Authorization", "X-OAuth-State"}) {
 		t.Fatalf("unexpected cors.allow_headers: %+v", cfg.CORS.AllowHeaders)
 	}
+	expectedExposeHeaders := []string{
+		"X-Rate-Limit-Limit",
+		"X-Rate-Limit-Duration",
+		"X-Rate-Limit-Request-Forwarded-For",
+		"X-Rate-Limit-Request-Remote-Addr",
+		"RateLimit-Limit",
+		"RateLimit-Reset",
+		"RateLimit-Remaining",
+	}
+	if !reflect.DeepEqual(cfg.CORS.ExposeHeaders, expectedExposeHeaders) {
+		t.Fatalf("unexpected cors.expose_headers: %+v", cfg.CORS.ExposeHeaders)
+	}
 	if cfg.OAuth.GitHub.ClientID != "" || cfg.OAuth.GitHub.ClientSecret != "" || cfg.OAuth.GitHub.RedirectURI != "" {
 		t.Fatalf("unexpected oauth.github defaults: %+v", cfg.OAuth.GitHub)
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	apperrors "markpost/errors"
@@ -11,7 +12,19 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-func GenerateGitHubOAuthURL(authSvc *services.AuthService) gin.HandlerFunc {
+type GitHubAuthURLGenerator interface {
+	GenerateGitHubAuthURL(ctx context.Context) (string, error)
+}
+
+// GenerateGitHubOAuthURL godoc
+// @Summary      Get GitHub OAuth URL
+// @Description  Generate GitHub OAuth authorization URL
+// @Tags         oauth
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /oauth/url [get]
+func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
 		if err != nil {
@@ -22,7 +35,20 @@ func GenerateGitHubOAuthURL(authSvc *services.AuthService) gin.HandlerFunc {
 	}
 }
 
-func LoginGitHub(authSvc *services.AuthService) gin.HandlerFunc {
+// LoginGitHub godoc
+// @Summary      Login with GitHub
+// @Description  Handle GitHub OAuth callback and authenticate user
+// @Tags         oauth
+// @Accept       json
+// @Produce      json
+// @Param        state  query    string  true  "OAuth state parameter"
+// @Param        code   body     object  true  "GitHub OAuth code"
+// @Success      200    {object}  AuthResponse
+// @Failure      400    {object}  map[string]interface{}
+// @Failure      401    {object}  map[string]interface{}
+// @Failure      500    {object}  map[string]interface{}
+// @Router       /oauth/login [post]
+func LoginGitHub(authSvc services.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var query struct {
 			State string `form:"state" binding:"required"`
@@ -42,7 +68,7 @@ func LoginGitHub(authSvc *services.AuthService) gin.HandlerFunc {
 			apperrors.RespondError(c, err)
 			return
 		}
-		sendAuthResponse(c, user, tokens)
+		writeAuthResponse(c, user, tokens)
 	}
 }
 
@@ -51,7 +77,18 @@ type PasswordLoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-func LoginWithPassword(authSvc *services.AuthService) gin.HandlerFunc {
+// LoginWithPassword godoc
+// @Summary      Login with username and password
+// @Description  Authenticate user with credentials
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body  PasswordLoginRequest  true  "Login credentials"
+// @Success      200  {object}  AuthResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /auth/login [post]
+func LoginWithPassword(authSvc services.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req PasswordLoginRequest
 		if !bindJSON(c, &req) {
@@ -63,7 +100,7 @@ func LoginWithPassword(authSvc *services.AuthService) gin.HandlerFunc {
 			apperrors.RespondError(c, err)
 			return
 		}
-		sendAuthResponse(c, user, tokens)
+		writeAuthResponse(c, user, tokens)
 	}
 }
 
@@ -71,7 +108,18 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
-func RefreshToken(authSvc *services.AuthService) gin.HandlerFunc {
+// RefreshToken godoc
+// @Summary      Refresh JWT token
+// @Description  Get new access token using refresh token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body  RefreshTokenRequest  true  "Refresh token"
+// @Success      200  {object}  AuthResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /auth/refresh [post]
+func RefreshToken(authSvc services.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req RefreshTokenRequest
 		if !bindJSON(c, &req) {
@@ -83,7 +131,7 @@ func RefreshToken(authSvc *services.AuthService) gin.HandlerFunc {
 			apperrors.RespondError(c, err)
 			return
 		}
-		sendAuthResponse(c, user, tokens)
+		writeAuthResponse(c, user, tokens)
 	}
 }
 
@@ -92,7 +140,19 @@ type PasswordChangeRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 }
 
-func ChangePassword(authSvc *services.AuthService) gin.HandlerFunc {
+// ChangePassword godoc
+// @Summary      Change password
+// @Description  Change authenticated user's password
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body  PasswordChangeRequest  true  "Password change request"
+// @Success      200  {object}  MessageResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /auth/change-password [post]
+func ChangePassword(authSvc services.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := ExtractUser(c)
 		if !ok {
@@ -122,7 +182,18 @@ func ChangePassword(authSvc *services.AuthService) gin.HandlerFunc {
 	}
 }
 
-func QueryPostKey(authSvc *services.AuthService) gin.HandlerFunc {
+// QueryPostKey godoc
+// @Summary      Get post key
+// @Description  Query user's post key for creating posts
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  PostKeyResponse
+// @Failure      401  {object}  map[string]interface{}
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /post_key [get]
+func QueryPostKey(authSvc services.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := ExtractUser(c)
 		if !ok {

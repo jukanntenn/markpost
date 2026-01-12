@@ -1,29 +1,7 @@
-import { createContext, useEffect, useState } from "react";
-import { get, remove, set } from "../utils/storage";
-
-// 用户信息接口，与后端返回的数据结构匹配
-interface UserInfo {
-  user: {
-    id: number;
-    username: string;
-  };
-  access_token: string;
-  refresh_token: string;
-}
-
-interface UserInfoContextType {
-  isAuthenticated: boolean;
-  userInfo: UserInfo | null;
-  setUserInfo: (info: UserInfo | null) => void;
-  logout: () => void;
-}
-
-export const UserInfoContext = createContext<UserInfoContextType>({
-  isAuthenticated: false,
-  userInfo: null,
-  setUserInfo: () => {},
-  logout: () => {},
-});
+import { useState } from "react";
+import { get, remove } from "../utils/storage";
+import { UserInfoContext } from "./UserInfoContext";
+import type { UserInfo } from "./UserInfoContext";
 
 export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
@@ -36,13 +14,6 @@ export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
       return null;
     }
   });
-
-  useEffect(() => {
-    if (userInfo) {
-      // 存储到 "login" 键，与 LoginCallback 保持一致
-      set("login", userInfo);
-    }
-  }, [userInfo]);
 
   // 登出函数
   const logout = () => {
@@ -70,5 +41,3 @@ export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
     </UserInfoContext.Provider>
   );
 };
-
-export type { UserInfo };

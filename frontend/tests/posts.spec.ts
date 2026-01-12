@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.context().clearCookies();
@@ -11,7 +11,7 @@ test("redirects to login when unauthenticated", async ({ page }) => {
   await page.waitForURL("**/login");
 });
 
-test("renders posts page with empty state (English)", async ({ page }) => {
+test("renders posts page with empty state (English)", async ({ page, postsPage }) => {
   await page.route("**/api/posts**", async (route) => {
     await route.fulfill({
       status: 200,
@@ -21,12 +21,14 @@ test("renders posts page with empty state (English)", async ({ page }) => {
   });
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "t", refresh_token: "r", user: { id: 1, username: "tester" } })));
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
-  await page.goto("posts");
-  await expect(page.getByRole("heading", { name: "All Posts", exact: true })).toBeVisible();
-  await expect(page.getByText("No posts yet", { exact: true })).toBeVisible();
+  await postsPage.goto();
+
+  await expect(postsPage.allPostsHeading).toBeVisible();
+  const noPostsMsg = await postsPage.getNoPostsMessage();
+  await expect(noPostsMsg).toBeVisible();
 });
 
-test("lists posts and shows pagination", async ({ page }) => {
+test("lists posts and shows pagination", async ({ page, postsPage }) => {
   await page.route("**/api/posts**", async (route) => {
     const url = new URL(route.request().url());
     const pageParam = url.searchParams.get("page");
@@ -48,15 +50,21 @@ test("lists posts and shows pagination", async ({ page }) => {
   });
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "t", refresh_token: "r", user: { id: 1, username: "tester" } })));
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
-  await page.goto("posts");
-  await expect(page.getByRole("columnheader", { name: "Title" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Post One" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Post Two" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+  await postsPage.goto();
+
+  await expect(postsPage.titleColumnHeader).toBeVisible();
+
+  const postOneLink = await postsPage.getPostLink("Post One");
+  await expect(postOneLink).toBeVisible();
+
+  const postTwoLink = await postsPage.getPostLink("Post Two");
+  await expect(postTwoLink).toBeVisible();
+
+  await expect(postsPage.previousButton).toBeDisabled();
+  await expect(postsPage.nextButton).toBeDisabled();
 });
 
-test("uses Authorization header when fetching posts", async ({ page }) => {
+test("uses Authorization header when fetching posts", async ({ page, postsPage }) => {
   await page.route("**/api/posts**", async (route) => {
     const headers = route.request().headers();
     expect(headers["authorization"]).toBe("Bearer e2e_access_token");
@@ -64,10 +72,10 @@ test("uses Authorization header when fetching posts", async ({ page }) => {
   });
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "e2e_access_token", refresh_token: "e2e_refresh_token", user: { id: 1, username: "tester" } })));
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
-  await page.goto("posts");
+  await postsPage.goto();
 });
 
-test("uses Accept-Language header on fetch (English)", async ({ page }, testInfo) => {
+test("uses Accept-Language header on fetch (English)", async ({ page, postsPage }, testInfo) => {
   await page.route("**/api/posts**", async (route) => {
     const h = route.request().headers();
     if (testInfo.project.name === "chromium") {
@@ -77,5 +85,5 @@ test("uses Accept-Language header on fetch (English)", async ({ page }, testInfo
   });
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
   await page.evaluate(() => localStorage.setItem("markpost_dev_login", JSON.stringify({ access_token: "t_en", refresh_token: "r_en", user: { id: 1, username: "tester" } })));
-  await page.goto("posts");
+  await postsPage.goto();
 });

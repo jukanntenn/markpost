@@ -1,4 +1,4 @@
-const prefix = import.meta.env.VITE_STORAGE_PREFIX as string;
+const prefix = (import.meta.env.VITE_STORAGE_PREFIX as string | undefined) || "markpost_dev_";
 
 export const get = <T>(key: string, storage: Storage = localStorage): T => {
   const json = storage.getItem(prefix + key);

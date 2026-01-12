@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { storage, auth } from "../utils";
 import Spinner from "react-bootstrap/Spinner";
@@ -26,7 +26,7 @@ const LoginCallback: React.FC = () => {
   const processing = useRef(false);
   const { t } = useTranslation();
 
-  const handleCallback = async () => {
+  const handleCallback = useCallback(async () => {
     if (processing.current) return;
     processing.current = true;
 
@@ -56,12 +56,12 @@ const LoginCallback: React.FC = () => {
       }
       setLoading(false);
     }
-  };
+  }, [location.search, t]);
 
   useEffect(() => {
     // FIXME: 临时解决 strict 模式下触发两次的问题，需要找到更加优雅的解决方式
     handleCallback();
-  }, []);
+  }, [handleCallback]);
 
   return loading ? <LoginSpinner /> : "";
 };

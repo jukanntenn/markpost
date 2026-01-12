@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	apperrors "markpost/errors"
+	"markpost/models"
 	"markpost/services"
 
 	ginI18n "github.com/gin-contrib/i18n"
@@ -17,7 +18,25 @@ type PostRequest struct {
 	Body  string `json:"body" binding:"required,bodysize"`
 }
 
-func CreatePost(postSvc *services.PostService) gin.HandlerFunc {
+type PostServiceInterface interface {
+	CreatePost(title, body string, userID int) (string, error)
+	RenderPostHTML(qid string) (string, string, error)
+	GetUserPosts(userID int, page, limit int) ([]models.Post, int64, error)
+}
+
+// CreatePost godoc
+// @Summary      Create a new post
+// @Description  Create a new markdown post using post key
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Param        post_key  path    string         true  "Post key for authentication"
+// @Param        request   body    PostRequest    true  "Post content"
+// @Success      201  {object}  CreatePostResponse
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /{post_key} [post]
+func CreatePost(postSvc PostServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := ExtractUser(c)
 		if !ok {
@@ -41,7 +60,17 @@ func CreatePost(postSvc *services.PostService) gin.HandlerFunc {
 	}
 }
 
-func RenderPost(postSvc *services.PostService) gin.HandlerFunc {
+// RenderPost godoc
+// @Summary      Render post as HTML
+// @Description  Render a post as HTML page
+// @Tags         posts
+// @Accept       json
+// @Produce      html
+// @Param        id  path    string  true  "Post QID"
+// @Success      200  {string}  string  "HTML content"
+// @Failure      404  {object}  map[string]interface{}
+// @Router       /{id} [get]
+func RenderPost(postSvc PostServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 		title, htmlContent, err := postSvc.RenderPostHTML(id)
@@ -67,7 +96,19 @@ func RenderPost(postSvc *services.PostService) gin.HandlerFunc {
 	}
 }
 
-func PostsList(postSvc *services.PostService) gin.HandlerFunc {
+// PostsList godoc
+// @Summary      Get user's posts
+// @Description  Get paginated list of user's posts
+// @Tags         posts
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page   query    int  false  "Page number"  minimum(1)  default(1)
+// @Param        limit  query    int  false  "Items per page"  minimum(1)  maximum(100)  default(20)
+// @Success      200  {object}  PostsListResponse
+// @Failure      401  {object}  map[string]interface{}
+// @Router       /posts [get]
+func PostsList(postSvc PostServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user, ok := ExtractUser(c)
 		if !ok {

@@ -3,18 +3,26 @@ package main
 import (
 	"net/http"
 
+	"markpost/conf"
 	"markpost/handlers"
 	"markpost/middlewares"
 
 	"github.com/didip/tollbooth/v8"
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/files"
+	_ "markpost/docs"
 )
 
 func SetupRoutes(r *gin.Engine) {
-	lmt := tollbooth.NewLimiter(2, nil)
-	lmt.SetBurst(10)
+	cfg := conf.Conf()
+	lmt := tollbooth.NewLimiter(float64(cfg.Ratelimit.PerSecond), nil)
+	lmt.SetBurst(cfg.Ratelimit.Burst)
+	lmt.SetMessageContentType("application/json; charset=utf-8")
 
 	r.Use(middlewares.RateLimitByIP(lmt))
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := r.Group("/api")
 

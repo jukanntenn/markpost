@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.context().clearCookies();
@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test("creates a test post via modal and refreshes recent posts", async ({ page }) => {
+test("creates a test post via modal and refreshes recent posts", async ({ page, dashboardPage }) => {
   await page.route("**/api/post_key", async (route) => {
     await route.fulfill({
       status: 200,
@@ -48,11 +48,12 @@ test("creates a test post via modal and refreshes recent posts", async ({ page }
     )
   );
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
-  await page.goto("dashboard");
+  await dashboardPage.goto();
 
-  await expect(page.getByText("Post Key", { exact: true })).toBeVisible();
+  await expect(dashboardPage.postKeyHeading).toBeVisible();
 
-  await page.getByTitle("Quickly create a sample Markdown post").click();
+  const quickCreateButton = await dashboardPage.getQuickCreateButton();
+  await quickCreateButton.click();
   await expect(page.getByRole("dialog")).toBeVisible();
 
   await page.getByPlaceholder("Write some Markdown content...").fill("Hello world body");
@@ -67,18 +68,17 @@ test("creates a test post via modal and refreshes recent posts", async ({ page }
 
   await page.getByRole("dialog").getByRole("button", { name: "Create", exact: true }).click();
 
-  await expect(page.getByText("Post Created", { exact: true })).toBeVisible();
-  await expect(
-    page.getByText("Your test post has been created successfully.", { exact: true })
-  ).toBeVisible();
+  const toast = page.getByRole("alert").filter({ hasText: "Post Created" }).first();
+  await expect(toast).toBeVisible();
+  await expect(toast).toContainText("Your test post has been created successfully.");
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await expect(page.getByText("Latest Posts", { exact: true })).toBeVisible();
+  await expect(dashboardPage.latestPostsHeading).toBeVisible();
   await expect(page.getByText("Hello world", { exact: true })).toBeVisible();
 });
 
-test("disables Create when body is empty", async ({ page }) => {
+test("disables Create when body is empty", async ({ page, dashboardPage }) => {
   await page.route("**/api/post_key", async (route) => {
     await route.fulfill({
       status: 200,
@@ -101,9 +101,10 @@ test("disables Create when body is empty", async ({ page }) => {
     )
   );
   await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
-  await page.goto("dashboard");
+  await dashboardPage.goto();
 
-  await page.getByTitle("Quickly create a sample Markdown post").click();
+  const quickCreateButton = await dashboardPage.getQuickCreateButton();
+  await quickCreateButton.click();
   await expect(
     page.getByRole("dialog").getByRole("button", { name: "Create", exact: true })
   ).toBeDisabled();

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { ToastsProvider as BootstrapToastsProvider } from "react-bootstrap-toasts";
 import { UserInfoProvider } from "./components/UserInfoProvider";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider } from "./contexts/ThemeProvider";
 import "./i18n";
 
 createRoot(document.getElementById("root")!).render(
@@ -11,7 +11,11 @@ createRoot(document.getElementById("root")!).render(
     <UserInfoProvider>
       <ThemeProvider>
         <BootstrapToastsProvider
-          toastContainerProps={{ position: "top-end", className: "p-4" }}
+          toastContainerProps={{
+            position: "top-end",
+            className: "p-4",
+            style: { zIndex: 2000 },
+          }}
           limit={5}
         >
           <App />

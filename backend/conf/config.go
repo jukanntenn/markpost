@@ -31,7 +31,7 @@ type ServerConfig struct {
 }
 
 type DBConfig struct {
-	Driver string `mapstructure:"driver" validate:"oneof=sqlite mysql postgres"`
+	Driver string `mapstructure:"driver" validate:"oneof=sqlite mysql postgresql"`
 	DSN    string `mapstructure:"dsn" validate:"required"`
 }
 
@@ -47,9 +47,9 @@ type PostConfig struct {
 }
 
 type CORSConfig struct {
-	AllowOrigins   []string `mapstructure:"allow_origins"`
-	AllowHeaders   []string `mapstructure:"allow_headers"`
-	ExposeHeaders  []string `mapstructure:"expose_headers"`
+	AllowOrigins  []string `mapstructure:"allow_origins"`
+	AllowHeaders  []string `mapstructure:"allow_headers"`
+	ExposeHeaders []string `mapstructure:"expose_headers"`
 }
 
 type OAuthConfig struct {

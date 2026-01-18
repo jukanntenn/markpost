@@ -1,0 +1,10 @@
+services:
+  markpost:
+    image: jukanntenn/markpost:latest
+    container_name: markpost
+    ports:
+      - "8089:7330"
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./data:/app/data
+    restart: always

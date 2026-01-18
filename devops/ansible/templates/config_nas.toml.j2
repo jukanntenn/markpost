@@ -1,0 +1,29 @@
+debug = false
+
+[server]
+host = "127.0.0.1"
+port = 7330
+trusted_proxies = ["127.0.0.1", "::1", "localhost"]
+
+[db]
+driver = "sqlite"
+dsn = "file:./data/db.sqlite3?_foreign_keys=on&_journal_mode=WAL"
+
+[post]
+title_max_length = 500
+body_max_bytes = 1048576 # 1MB
+retention_days = 30
+
+[cors]
+allow_origins = ["*"]
+allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+[jwt]
+access_signing_key = "{{ signing_key }}"
+refresh_signing_key = "{{ signing_key }}"
+access_token_expire = "24h"
+refresh_token_expire = "720h"
+
+[ratelimit]
+per_second = 5
+burst = 50

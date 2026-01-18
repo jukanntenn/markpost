@@ -1,0 +1,24 @@
+services:
+  markpost:
+    image: jukanntenn/markpost:latest
+    container_name: markpost
+    ports:
+      - "127.0.0.1:8089:7330"
+    volumes:
+      - ./config.toml:/app/config.toml
+    restart: always
+    depends_on:
+      - db
+
+  db:
+    image: postgres:18
+    restart: always
+    environment:
+      - POSTGRES_USER={{ postgres_user }}
+      - POSTGRES_PASSWORD={{ postgres_password }}
+      - POSTGRES_DB=markpost
+    volumes:
+      - markpost-db:/var/lib/postgresql/18/docker
+
+volumes:
+  markpost-db:

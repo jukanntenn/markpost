@@ -48,7 +48,7 @@ func (r *PostRepo) CreatePost(title, body string, userID int) (*models.Post, err
 }
 
 func (r *PostRepo) GetPostByQID(qid string) (*models.Post, error) {
-	post, err := models.GetPost(r.database, map[string]any{"QID": qid})
+	post, err := models.GetPost(r.database, map[string]any{"qid": qid})
 	if err == nil {
 		return post, nil
 	}

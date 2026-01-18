@@ -1,0 +1,59 @@
+---
+# Usage:
+# ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook -i ansible/hosts.yml ansible/main.yml --vault-password-file ~/.ansible-vault/markpost.pwd -K
+
+- name: Deploy markpost
+  hosts: ttyo
+  gather_facts: no
+  vars_files:
+    - vars/vault_main.yml
+
+  vars:
+    app_name: markpost
+    apps_path: "{{ home }}/docker"
+    app_path: "{{ apps_path }}/{{ app_name }}"
+    compose_file: "{{ app_path }}/docker-compose.yml"
+    config_file: "{{ app_path }}/config.toml"
+
+  tasks:
+    - name: Ensure paths
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ apps_path }}"
+        - "{{ app_path }}"
+
+    - name: Copy docker-compose.yml
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ compose_file }}"
+        mode: "0644"
+
+    - name: Copy config.toml
+      template:
+        src: config.toml.j2
+        dest: "{{ config_file }}"
+        mode: "0600"
+
+    - name: Stop containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        state: absent
+      become: yes
+      become_method: sudo
+
+    - name: Pull images
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        pull: always
+        state: present
+      become: yes
+      become_method: sudo
+
+    - name: Start containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        state: present
+      become: yes
+      become_method: sudo

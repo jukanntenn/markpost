@@ -43,38 +43,44 @@ docker run -d \
 
 ### Go Build
 
-1. Prerequisites: Go 1.23.0 or higher
+1. Prerequisites: Go 1.24.0 or higher
 
 2. Clone repository and enter project directory
 
-3. Install dependencies:
+3. Build frontend assets (required for Web UI under `/ui`):
 
    ```bash
-   go mod download
+   cd frontend
+   pnpm install
+   pnpm build
    ```
 
-4. Build project:
+4. Build backend:
 
    ```bash
+   cd ../backend
+   go mod download
    go build -o markpost .
    ```
 
-5. Run executable:
+5. Run server:
 
    ```bash
-   ./markpost
+   ./markpost serve -c ./config.toml
    ```
 
 ## Configuration
 
-The project reads `config.toml` configuration file, see [config.example.toml](config.example.toml) for details.
+The project reads `config.toml` configuration file. See [config.example.toml](backend/config.example.toml) for details.
+
+By default, it looks for `./config.toml` in the process working directory, or you can pass `-c/--config` to specify a path. Configuration can also be overridden via environment variables with prefix `MARKPOST__` (for example: `MARKPOST__JWT__ACCESS_SIGNING_KEY`).
 
 When using Docker, you can mount configuration file:
 
 ```bash
 docker run -d \
   --name markpost \
-  -p 8080:8080 \
+  -p 7330:7330 \
   -v ./data:/app/data \
   -v ./config.toml:/app/config.toml:ro \
   --restart unless-stopped \
@@ -91,38 +97,12 @@ volumes:
 
 ### Obtaining post_key
 
-There are two ways to obtain the post_key:
-
-#### Method 1: From Startup Logs
-
-After starting the service, check the startup logs to get the generated post_key. The log will contain content similar to:
-
-```text
-created markpost user with post_key: abc12345
-```
-
-For Docker containers, view logs with:
-
-```bash
-docker logs markpost
-```
-
-For Docker Compose, view logs with:
-
-```bash
-docker-compose logs markpost
-```
-
-For direct execution, the log will be displayed in the console.
-
-#### Method 2: Via Web Management Console
-
-You can also obtain the post_key from the web UI:
+You can obtain the post_key from the web UI:
 
 1. Access the web UI at: `http://127.0.0.1:7330`
 2. Use the initial credentials:
-   - **Username**: configurable via `initial_user.username` or env `INIT_USERNAME` (defaults to `markpost`)
-   - **Password**: configurable via `initial_user.password` or env `INIT_PASSWORD` (defaults to `markpost`). If configured, the password will not be printed in logs.
+   - **Username**: configurable via `admin.initial_username` or env `MARKPOST__ADMIN__INITIAL_USERNAME` (defaults to `markpost`)
+   - **Password**: configurable via `admin.initial_password` or env `MARKPOST__ADMIN__INITIAL_PASSWORD` (defaults to `markpost`)
 3. After successful login, your post_key will be displayed on the dashboard
 
 ## APIs
@@ -131,7 +111,7 @@ You can also obtain the post_key from the web UI:
 
 **POST** `/:post_key`
 
-Upload markdown content using a valid post_key. The system automatically generates a post_key for the admin user at startup; check the startup log to get it.
+Upload markdown content using a valid post_key. The system generates a post_key for the initial admin user on first startup; retrieve it from the web UI after login.
 
 Request body:
 

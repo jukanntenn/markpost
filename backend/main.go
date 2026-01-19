@@ -21,8 +21,10 @@ package main
 // @description Type "Bearer" followed by a space and JWT token.
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	appcmd "markpost/cmd"
 	"markpost/conf"
@@ -168,6 +170,10 @@ func serve(configPath string) {
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 
+	if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
+		log.Fatalf("Failed to set trusted proxies: %v", err)
+	}
+
 	r.Use(ginI18n.Localize(ginI18n.WithBundle(&ginI18n.BundleCfg{
 		RootPath:         "./locales",
 		AcceptLanguage:   []language.Tag{language.English, language.Chinese},
@@ -185,8 +191,10 @@ func serve(configPath string) {
 	SetupRoutes(r)
 
 	log.Println("Server starting...")
-	log.Println("Visit http://localhost:7330")
-	if err := r.Run(":7330"); err != nil {
+	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	visitHost := cfg.Server.Host
+	log.Println("Visit http://" + visitHost + ":" + strconv.FormatUint(uint64(cfg.Server.Port), 10))
+	if err := r.Run(listenAddr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

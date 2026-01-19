@@ -1,0 +1,47 @@
+debug = false
+
+[server]
+host = "127.0.0.1"
+port = 7330
+trusted_proxies = ["127.0.0.1", "::1"]
+
+[db]
+driver = "sqlite"
+dsn = "file:../data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+
+[admin]
+initial_username = "markpost"
+initial_password = "markpost"
+
+[post]
+title_max_length = 150
+body_max_bytes = 32768
+retention_days = 7
+
+[cors]
+allow_origins = ["*"]
+allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+expose_headers = [
+    "X-Rate-Limit-Limit",
+    "X-Rate-Limit-Duration",
+    "X-Rate-Limit-Request-Forwarded-For",
+    "X-Rate-Limit-Request-Remote-Addr",
+    "RateLimit-Limit",
+    "RateLimit-Reset",
+    "RateLimit-Remaining",
+]
+
+[oauth.github]
+client_id = ""
+client_secret = ""
+redirect_uri = ""
+
+[jwt]
+access_signing_key = "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_ACCESS"
+refresh_signing_key = "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_REFRESH"
+access_token_expire = "24h"
+refresh_token_expire = "720h"
+
+[ratelimit]
+per_second = 5
+burst = 50

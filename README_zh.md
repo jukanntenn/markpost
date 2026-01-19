@@ -43,38 +43,44 @@ docker run -d \
 
 ### Go 编译
 
-1. 环境要求：Go 1.23.0 或更高版本
+1. 环境要求：Go 1.24.0 或更高版本
 
 2. 克隆仓库并进入项目目录
 
-3. 安装依赖：
+3. 构建前端静态资源（Web UI `/ui` 需要）：
 
    ```bash
-   go mod download
+   cd frontend
+   pnpm install
+   pnpm build
    ```
 
-4. 编译项目：
+4. 编译后端：
 
    ```bash
+   cd ../backend
+   go mod download
    go build -o markpost .
    ```
 
-5. 运行可执行文件：
+5. 启动服务：
 
    ```bash
-   ./markpost
+   ./markpost serve -c ./config.toml
    ```
 
 ## 配置
 
-项目会读取 `config.toml` 配置文件，详情请参考 [config.example.toml](config.example.toml)。
+项目会读取 `config.toml` 配置文件，详情请参考 [config.example.toml](backend/config.example.toml)。
+
+默认会在进程工作目录下查找 `./config.toml`，也可以通过 `-c/--config` 指定路径。配置支持通过环境变量覆盖，前缀为 `MARKPOST__`（例如：`MARKPOST__JWT__ACCESS_SIGNING_KEY`）。
 
 使用 Docker 时，可挂载配置文件：
 
 ```bash
 docker run -d \
   --name markpost \
-  -p 8080:8080 \
+  -p 7330:7330 \
   -v ./data:/app/data \
   -v ./config.toml:/app/config.toml:ro \
   --restart unless-stopped \
@@ -91,38 +97,12 @@ volumes:
 
 ### 获取 post_key
 
-有两种方式可以获取 post_key：
-
-#### 方式 1：从启动日志获取
-
-启动服务后，查看启动日志以获取生成的 post_key。日志中会包含类似以下内容：
-
-```text
-created markpost user with post_key: abc12345
-```
-
-Docker 容器查看日志：
-
-```bash
-docker logs markpost
-```
-
-Docker Compose 查看日志：
-
-```bash
-docker-compose logs markpost
-```
-
-直接执行时，日志会显示在控制台。
-
-#### 方式 2：通过 Web 管理控制台
-
-您也可以通过登录 Web 管理控制台获取 post_key：
+您可以通过登录 Web 管理控制台获取 post_key：
 
 1. 访问 Web 界面：`http://127.0.0.1:7330`
 2. 使用初始凭据：
-   - **用户名**：可通过 `initial_user.username` 或环境变量 `INIT_USERNAME` 指定（默认 `markpost`）
-   - **密码**：可通过 `initial_user.password` 或环境变量 `INIT_PASSWORD` 指定（默认 `markpost`）。如果通过配置或环境变量指定了密码，系统不会在日志中打印密码值。
+   - **用户名**：可通过 `admin.initial_username` 或环境变量 `MARKPOST__ADMIN__INITIAL_USERNAME` 指定（默认 `markpost`）
+   - **密码**：可通过 `admin.initial_password` 或环境变量 `MARKPOST__ADMIN__INITIAL_PASSWORD` 指定（默认 `markpost`）
 3. 成功登录后，您的 post_key 将显示在仪表板上
 
 ## API 接口
@@ -131,7 +111,7 @@ docker-compose logs markpost
 
 **POST** `/:post_key`
 
-使用有效的 post_key 上传 markdown 内容。系统会在启动时为管理员用户自动生成 post_key，请查看启动日志获取。
+使用有效的 post_key 上传 markdown 内容。系统会在首次启动时为初始管理员用户生成 post_key，可在登录 Web 管理控制台后获取。
 
 请求体：
 

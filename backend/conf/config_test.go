@@ -28,6 +28,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.Debug != false {
 		t.Fatalf("unexpected debug: %v", cfg.Debug)
 	}
+	if cfg.PostKeyLength != 16 {
+		t.Fatalf("unexpected post_key_length: %d", cfg.PostKeyLength)
+	}
 	if cfg.Server.Host != "127.0.0.1" {
 		t.Fatalf("unexpected server.host: %s", cfg.Server.Host)
 	}
@@ -68,7 +71,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if !reflect.DeepEqual(cfg.CORS.ExposeHeaders, expectedExposeHeaders) {
 		t.Fatalf("unexpected cors.expose_headers: %+v", cfg.CORS.ExposeHeaders)
 	}
-	if cfg.OAuth.GitHub.ClientID != "" || cfg.OAuth.GitHub.ClientSecret != "" || cfg.OAuth.GitHub.RedirectURI != "" {
+	if cfg.OAuth.GitHub.ClientID != "" || cfg.OAuth.GitHub.ClientSecret != "" || cfg.OAuth.GitHub.RedirectURL != "" {
 		t.Fatalf("unexpected oauth.github defaults: %+v", cfg.OAuth.GitHub)
 	}
 	if cfg.JWT.AccessSigningKey != TEST_ACCESS_SIGNING_KEY || cfg.JWT.RefreshSigningKey != TEST_REFRESH_SIGNING_KEY {
@@ -79,6 +82,23 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 	if cfg.Ratelimit.PerSecond != math.MaxInt || cfg.Ratelimit.Burst != math.MaxInt {
 		t.Fatalf("unexpected ratelimit defaults: %+v", cfg.Ratelimit)
+	}
+}
+
+func TestLoadConfig_PostKeyLengthEnvOverride(t *testing.T) {
+	t.Setenv("MARKPOST_JWT__ACCESS_SIGNING_KEY", TEST_ACCESS_SIGNING_KEY)
+	t.Setenv("MARKPOST_JWT__REFRESH_SIGNING_KEY", TEST_REFRESH_SIGNING_KEY)
+	t.Setenv("MARKPOST_POST_KEY_LENGTH", "18")
+
+	ResetForTest()
+
+	if err := LoadConfig(""); err != nil {
+		t.Fatalf("LoadConfig error: %v", err)
+	}
+
+	cfg := Conf()
+	if cfg.PostKeyLength != 18 {
+		t.Fatalf("unexpected post_key_length: %d", cfg.PostKeyLength)
 	}
 }
 
@@ -211,7 +231,30 @@ refresh_signing_key = "` + TEST_REFRESH_SIGNING_KEY + `"
 access_token_expire = "1h"
 refresh_token_expire = "48h"
 [oauth.github]
-redirect_uri = "not a url"
+redirect_url = "not a url"
+`
+	if err := os.WriteFile(p, []byte(content), 0644); err != nil {
+		t.Fatalf("write file error: %v", err)
+	}
+
+	ResetForTest()
+
+	err := LoadConfig(p)
+	if err == nil || !strings.Contains(err.Error(), "failed to validate config") {
+		t.Fatalf("expected validate error, got: %v", err)
+	}
+}
+
+func TestLoadConfig_InvalidPostKeyLength(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "config.toml")
+	content := `
+post_key_length = 11
+[jwt]
+access_signing_key = "` + TEST_ACCESS_SIGNING_KEY + `"
+refresh_signing_key = "` + TEST_REFRESH_SIGNING_KEY + `"
+access_token_expire = "1h"
+refresh_token_expire = "48h"
 `
 	if err := os.WriteFile(p, []byte(content), 0644); err != nil {
 		t.Fatalf("write file error: %v", err)

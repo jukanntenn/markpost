@@ -73,7 +73,7 @@ docker run -d \
 
 项目会读取 `config.toml` 配置文件，详情请参考 [config.example.toml](backend/config.example.toml)。
 
-默认会在进程工作目录下查找 `./config.toml`，也可以通过 `-c/--config` 指定路径。配置支持通过环境变量覆盖，前缀为 `MARKPOST__`（例如：`MARKPOST__JWT__ACCESS_SIGNING_KEY`）。
+默认会在进程工作目录下查找 `./config.toml`，也可以通过 `-c/--config` 指定路径。配置支持通过环境变量覆盖，前缀为 `MARKPOST`（例如：`MARKPOST_JWT__ACCESS_SIGNING_KEY`）。
 
 使用 Docker 时，可挂载配置文件：
 
@@ -101,8 +101,8 @@ volumes:
 
 1. 访问 Web 界面：`http://127.0.0.1:7330`
 2. 使用初始凭据：
-   - **用户名**：可通过 `admin.initial_username` 或环境变量 `MARKPOST__ADMIN__INITIAL_USERNAME` 指定（默认 `markpost`）
-   - **密码**：可通过 `admin.initial_password` 或环境变量 `MARKPOST__ADMIN__INITIAL_PASSWORD` 指定（默认 `markpost`）
+   - **用户名**：可通过 `admin.initial_username` 或环境变量 `MARKPOST_ADMIN__INITIAL_USERNAME` 指定（默认 `markpost`）
+   - **密码**：可通过 `admin.initial_password` 或环境变量 `MARKPOST_ADMIN__INITIAL_PASSWORD` 指定（默认 `markpost`）
 3. 成功登录后，您的 post_key 将显示在仪表板上
 
 ## API 接口

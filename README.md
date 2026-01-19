@@ -73,7 +73,7 @@ docker run -d \
 
 The project reads `config.toml` configuration file. See [config.example.toml](backend/config.example.toml) for details.
 
-By default, it looks for `./config.toml` in the process working directory, or you can pass `-c/--config` to specify a path. Configuration can also be overridden via environment variables with prefix `MARKPOST__` (for example: `MARKPOST__JWT__ACCESS_SIGNING_KEY`).
+By default, it looks for `./config.toml` in the process working directory, or you can pass `-c/--config` to specify a path. Configuration can also be overridden via environment variables with prefix `MARKPOST` (for example: `MARKPOST_JWT__ACCESS_SIGNING_KEY`).
 
 When using Docker, you can mount configuration file:
 
@@ -101,8 +101,8 @@ You can obtain the post_key from the web UI:
 
 1. Access the web UI at: `http://127.0.0.1:7330`
 2. Use the initial credentials:
-   - **Username**: configurable via `admin.initial_username` or env `MARKPOST__ADMIN__INITIAL_USERNAME` (defaults to `markpost`)
-   - **Password**: configurable via `admin.initial_password` or env `MARKPOST__ADMIN__INITIAL_PASSWORD` (defaults to `markpost`)
+   - **Username**: configurable via `admin.initial_username` or env `MARKPOST_ADMIN__INITIAL_USERNAME` (defaults to `markpost`)
+   - **Password**: configurable via `admin.initial_password` or env `MARKPOST_ADMIN__INITIAL_PASSWORD` (defaults to `markpost`)
 3. After successful login, your post_key will be displayed on the dashboard
 
 ## APIs

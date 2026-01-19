@@ -13,15 +13,16 @@ import (
 )
 
 type Config struct {
-	Debug     bool            `mapstructure:"debug"`
-	Server    ServerConfig    `mapstructure:"server"`
-	DB        DBConfig        `mapstructure:"db"`
-	Admin     AdminConfig     `mapstructure:"admin"`
-	Post      PostConfig      `mapstructure:"post"`
-	CORS      CORSConfig      `mapstructure:"cors"`
-	OAuth     OAuthConfig     `mapstructure:"oauth"`
-	JWT       JWTConfig       `mapstructure:"jwt"`
-	Ratelimit RatelimitConfig `mapstructure:"ratelimit"`
+	Debug         bool            `mapstructure:"debug"`
+	PostKeyLength int             `mapstructure:"post_key_length" validate:"gte=12"`
+	Server        ServerConfig    `mapstructure:"server"`
+	DB            DBConfig        `mapstructure:"db"`
+	Admin         AdminConfig     `mapstructure:"admin"`
+	Post          PostConfig      `mapstructure:"post"`
+	CORS          CORSConfig      `mapstructure:"cors"`
+	OAuth         OAuthConfig     `mapstructure:"oauth"`
+	JWT           JWTConfig       `mapstructure:"jwt"`
+	Ratelimit     RatelimitConfig `mapstructure:"ratelimit"`
 }
 
 type ServerConfig struct {
@@ -59,7 +60,7 @@ type OAuthConfig struct {
 type GitHubOAuthConfig struct {
 	ClientID     string `mapstructure:"client_id"`
 	ClientSecret string `mapstructure:"client_secret"`
-	RedirectURI  string `mapstructure:"redirect_uri" validate:"omitempty,url"`
+	RedirectURL  string `mapstructure:"redirect_url" validate:"omitempty,url"`
 }
 
 type JWTConfig struct {
@@ -159,6 +160,7 @@ func Conf() Config {
 
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("debug", false)
+	v.SetDefault("post_key_length", 16)
 	v.SetDefault("server.host", "127.0.0.1")
 	v.SetDefault("server.port", 7330)
 	v.SetDefault("server.trusted_proxies", []string{"127.0.0.1", "::1", "localhost"})
@@ -182,7 +184,7 @@ func setDefaults(v *viper.Viper) {
 	})
 	v.SetDefault("oauth.github.client_id", "")
 	v.SetDefault("oauth.github.client_secret", "")
-	v.SetDefault("oauth.github.redirect_uri", "")
+	v.SetDefault("oauth.github.redirect_url", "")
 	v.SetDefault("jwt.access_signing_key", "")
 	v.SetDefault("jwt.refresh_signing_key", "")
 	v.SetDefault("jwt.access_token_expire", "24h")

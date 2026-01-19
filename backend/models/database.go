@@ -58,7 +58,7 @@ func NewDatabase(dsn string) (*Database, error) {
 			return nil, err
 		}
 
-		postKey, err := utils.GeneratePostKey(16)
+		postKey, err := utils.GeneratePostKey(cfg.PostKeyLength)
 		if err != nil {
 			return nil, err
 		}

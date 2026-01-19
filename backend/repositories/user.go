@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"markpost/conf"
 	"markpost/models"
 	"markpost/utils"
 )
@@ -133,7 +134,7 @@ func (r *UserRepo) createUserWithUniquePostKey(username, password string, github
 }
 
 func makeUser(username, password string, githubID *int64) (*models.User, error) {
-	postKey, err := utils.GeneratePostKey(16)
+	postKey, err := utils.GeneratePostKey(conf.Conf().PostKeyLength)
 	if err != nil {
 		return nil, err
 	}

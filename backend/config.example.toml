@@ -1,5 +1,9 @@
 debug = false
 
+# post_key_length controls the random suffix length of generated post_key values
+# (excluding the "mpk-" prefix). Default is 16, minimum is 12.
+post_key_length = 16
+
 [server]
 host = "127.0.0.1"
 port = 7330
@@ -34,7 +38,7 @@ expose_headers = [
 [oauth.github]
 client_id = ""
 client_secret = ""
-redirect_uri = ""
+redirect_url = ""
 
 [jwt]
 access_signing_key = "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_ACCESS"

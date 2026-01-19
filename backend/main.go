@@ -160,7 +160,7 @@ func serve(configPath string) {
 	authSvc = services.NewAuthService(userRepo, &oauth2.Config{
 		ClientID:     cfg.OAuth.GitHub.ClientID,
 		ClientSecret: cfg.OAuth.GitHub.ClientSecret,
-		RedirectURL:  cfg.OAuth.GitHub.RedirectURI,
+		RedirectURL:  cfg.OAuth.GitHub.RedirectURL,
 		Scopes:       []string{},
 		Endpoint:     github.Endpoint,
 	}, jwtSvc)

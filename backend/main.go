@@ -114,6 +114,24 @@ func main() {
 					)
 				},
 			},
+			{
+				Name:  "import-fake-posts",
+				Usage: "Import fake posts from JSON file",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "file",
+						Aliases: []string{"f"},
+						Usage:   "Path to fake.json file",
+						Value:   "fake.json",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return appcmd.RunImportFakePosts(
+						c.String("config"),
+						c.String("file"),
+					)
+				},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			serve(c.String("config"))

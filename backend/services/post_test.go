@@ -76,6 +76,10 @@ func (s *stubPostRepo) CountExpiredPosts(retentionDays int) (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
 
+func (s *stubPostRepo) CreatePosts(posts []models.Post) (int, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func setupPostTestDatabase(t *testing.T) *models.Database {
 	t.Helper()
 

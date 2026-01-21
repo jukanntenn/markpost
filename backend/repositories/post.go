@@ -7,10 +7,12 @@ import (
 	"markpost/models"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
+	"gorm.io/gorm"
 )
 
 type PostRepoInterface interface {
 	CreatePost(title, body string, userID int) (*models.Post, error)
+	CreatePosts(posts []models.Post) (int, error)
 	GetPostByQID(qid string) (*models.Post, error)
 	CountPostsByUserID(userID int) (int64, error)
 	GetPostsByUserID(userID int, offset int, limit int) ([]models.Post, error)
@@ -45,6 +47,27 @@ func (r *PostRepo) CreatePost(title, body string, userID int) (*models.Post, err
 	}
 
 	return &post, nil
+}
+
+func (r *PostRepo) CreatePosts(posts []models.Post) (int, error) {
+	if len(posts) == 0 {
+		return 0, nil
+	}
+
+	db := r.database.DB()
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&posts).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		return 0, fmt.Errorf("CreatePosts: %w", err)
+	}
+
+	return len(posts), nil
 }
 
 func (r *PostRepo) GetPostByQID(qid string) (*models.Post, error) {

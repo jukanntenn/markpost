@@ -1,6 +1,6 @@
 ---
 # Usage:
-# ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook -i ansible/hosts.yml ansible/main.yml --vault-password-file ~/.ansible-vault/markpost.pwd -K
+# ANSIBLE_STDOUT_CALLBACK=yaml ansible-playbook -i devops/ansible/hosts.yml devops/ansible/main.yml --vault-password-file ~/.ansible-vault/markpost.pwd -K
 
 - name: Deploy markpost
   hosts: ttyo

@@ -11,6 +11,7 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
+	Role string `json:"role"`
 }
 
 func (c *Claims) UserID() (int, error) {
@@ -20,6 +21,10 @@ func (c *Claims) UserID() (int, error) {
 		return 0, fmt.Errorf("invalid subject")
 	}
 	return id, nil
+}
+
+func (c *Claims) IsAdmin() bool {
+	return c.Role == "admin"
 }
 
 type JWTTokenPair struct {
@@ -43,7 +48,7 @@ func NewJWTService(accessKey, refreshKey string, accessExpire, refreshExpire tim
 	}
 }
 
-func (s *JWTService) generate(userID int, expire time.Duration, signingKey string) (string, error) {
+func (s *JWTService) generate(userID int, role string, expire time.Duration, signingKey string) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -53,25 +58,26 @@ func (s *JWTService) generate(userID int, expire time.Duration, signingKey strin
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 		},
+		Role: role,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(signingKey))
 }
 
-func (s *JWTService) GenerateAccessToken(userID int) (string, error) {
-	return s.generate(userID, s.accessExpire, s.accessSigningKey)
+func (s *JWTService) GenerateAccessToken(userID int, role string) (string, error) {
+	return s.generate(userID, role, s.accessExpire, s.accessSigningKey)
 }
 
-func (s *JWTService) GenerateRefreshToken(userID int) (string, error) {
-	return s.generate(userID, s.refreshExpire, s.refreshSigningKey)
+func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, error) {
+	return s.generate(userID, role, s.refreshExpire, s.refreshSigningKey)
 }
 
-func (s *JWTService) GenerateTokenPair(userID int) (*JWTTokenPair, error) {
-	access, err := s.GenerateAccessToken(userID)
+func (s *JWTService) GenerateTokenPair(userID int, role string) (*JWTTokenPair, error) {
+	access, err := s.GenerateAccessToken(userID, role)
 	if err != nil {
 		return nil, err
 	}
-	refresh, err := s.GenerateRefreshToken(userID)
+	refresh, err := s.GenerateRefreshToken(userID, role)
 	if err != nil {
 		return nil, err
 	}

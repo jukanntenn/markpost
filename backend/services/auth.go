@@ -22,6 +22,8 @@ type AuthServiceInterface interface {
 	RefreshToken(refreshToken string) (*models.User, *JWTTokenPair, error)
 	ChangePassword(userID int, current, new string) error
 	QueryPostKey(userID int) (string, time.Time, error)
+	GetAllUsers(page, limit int) ([]models.User, int64, error)
+	InitializeFirstAdmin(initialUsername string) error
 }
 
 type AuthService struct {
@@ -59,7 +61,7 @@ func (s *AuthService) LoginWithGitHub(ctx context.Context, code string) (*models
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "create user failed", err)
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(user.ID)
+	pair, err := s.jwt.GenerateTokenPair(user.ID, string(user.Role))
 	if err != nil {
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
 	}
@@ -93,7 +95,7 @@ func (s *AuthService) LoginWithPassword(username, password string) (*models.User
 		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid username or password", err)
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(user.ID)
+	pair, err := s.jwt.GenerateTokenPair(user.ID, string(user.Role))
 	if err != nil {
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
 	}
@@ -120,7 +122,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (*models.User, *JWTToken
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "query user failed", err)
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(user.ID)
+	pair, err := s.jwt.GenerateTokenPair(user.ID, string(user.Role))
 	if err != nil {
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
 	}
@@ -163,6 +165,49 @@ func (s *AuthService) QueryPostKey(userID int) (string, time.Time, error) {
 		return "", time.Time{}, NewServiceErrorWrap(ErrInternal, fmt.Sprintf("query user with ID %d failed", userID), err)
 	}
 	return user.PostKey, user.CreatedAt, nil
+}
+
+func (s *AuthService) GetAllUsers(page, limit int) ([]models.User, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	offset := (page - 1) * limit
+
+	users, err := s.users.GetAllUsers(offset, limit)
+	if err != nil {
+		return nil, 0, NewServiceErrorWrap(ErrInternal, "failed to get users", err)
+	}
+
+	total, err := s.users.CountUsers()
+	if err != nil {
+		return nil, 0, NewServiceErrorWrap(ErrInternal, "failed to count users", err)
+	}
+
+	return users, total, nil
+}
+
+func (s *AuthService) InitializeFirstAdmin(initialUsername string) error {
+	user, err := s.users.GetUserByUsername(initialUsername)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return NewServiceError(ErrNotFound, fmt.Sprintf("initial admin user '%s' not found", initialUsername))
+		}
+		return NewServiceErrorWrap(ErrInternal, fmt.Sprintf("failed to get initial admin user '%s'", initialUsername), err)
+	}
+
+	if user.Role == models.RoleAdmin {
+		return nil
+	}
+
+	if err := s.users.SetUserRole(user.ID, models.RoleAdmin); err != nil {
+		return NewServiceErrorWrap(ErrInternal, fmt.Sprintf("failed to promote user '%s' to admin", initialUsername), err)
+	}
+
+	return nil
 }
 
 var _ AuthServiceInterface = (*AuthService)(nil)

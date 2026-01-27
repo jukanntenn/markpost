@@ -1,6 +1,6 @@
 import { Container, Navbar, Dropdown } from "react-bootstrap";
 import { Outlet } from "react-router-dom";
-import { Gear, BoxArrowRight } from "react-bootstrap-icons";
+import { Gear, BoxArrowRight, Shield } from "react-bootstrap-icons";
 import { useContext } from "react";
 import { UserInfoContext } from "./UserInfoContext";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import ThemeToggle from "./ThemeToggle";
 
 const Layout = () => {
-  const { logout, userInfo, isAuthenticated } = useContext(UserInfoContext);
+  const { logout, userInfo, isAuthenticated, isAdmin } = useContext(UserInfoContext);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -47,6 +47,15 @@ const Layout = () => {
               </Dropdown.Toggle>
 
               <Dropdown.Menu className="border-0 shadow-lg">
+                {isAdmin() && (
+                  <>
+                    <Dropdown.Item onClick={() => navigate("/admin")}>
+                      <Shield size={16} className="me-2" />
+                      {t("navigation.userMenu.admin")}
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                  </>
+                )}
                 <Dropdown.Item onClick={() => navigate("/settings")}>
                   <Gear size={16} className="me-2" />
                   {t("navigation.userMenu.settings")}

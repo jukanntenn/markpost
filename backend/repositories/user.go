@@ -19,6 +19,9 @@ type UserRepoInterface interface {
 	GetOrCreateUserFromGitHub(githubUser *models.GitHubUser) (*models.User, error)
 	ValidateUserPassword(username, password string) (*models.User, error)
 	SetUserPassword(userID int, password string) error
+	SetUserRole(userID int, role models.Role) error
+	GetAllUsers(offset, limit int) ([]models.User, error)
+	CountUsers() (int64, error)
 }
 
 type UserRepo struct {
@@ -107,6 +110,24 @@ func (r *UserRepo) SetUserPassword(userID int, password string) error {
 	}
 
 	user.Password = hashed
+	return user.Update(r.database)
+}
+
+func (r *UserRepo) GetAllUsers(offset, limit int) ([]models.User, error) {
+	return models.GetUsers(r.database, offset, limit)
+}
+
+func (r *UserRepo) CountUsers() (int64, error) {
+	return models.CountUsers(r.database)
+}
+
+func (r *UserRepo) SetUserRole(userID int, role models.Role) error {
+	user, err := r.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	user.Role = role
 	return user.Update(r.database)
 }
 

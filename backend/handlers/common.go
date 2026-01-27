@@ -94,7 +94,7 @@ func writeBindingError(c *gin.Context, req interface{}, err error) bool {
 
 func writeAuthResponse(c *gin.Context, user *models.User, tokens *services.JWTTokenPair) {
 	c.JSON(http.StatusOK, gin.H{
-		"user":          gin.H{"id": user.ID, "username": user.Username},
+		"user":          gin.H{"id": user.ID, "username": user.Username, "role": string(user.Role)},
 		"access_token":  tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
 	})
@@ -116,6 +116,7 @@ type AuthResponse struct {
 type UserInfo struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
+	Role     string `json:"role"`
 }
 
 type MessageResponse struct {

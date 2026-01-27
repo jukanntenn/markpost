@@ -4,6 +4,7 @@ export interface UserInfo {
   user: {
     id: number;
     username: string;
+    role?: string;
   };
   access_token: string;
   refresh_token: string;
@@ -14,6 +15,7 @@ interface UserInfoContextType {
   userInfo: UserInfo | null;
   setUserInfo: (info: UserInfo | null) => void;
   logout: () => void;
+  isAdmin: () => boolean;
 }
 
 export const UserInfoContext = createContext<UserInfoContextType>({
@@ -21,5 +23,6 @@ export const UserInfoContext = createContext<UserInfoContextType>({
   userInfo: null,
   setUserInfo: () => {},
   logout: () => {},
+  isAdmin: () => false,
 });
 

@@ -17,6 +17,7 @@ const Settings = React.lazy(() => import("./pages/Settings"));
 const LoginCallbackPage = React.lazy(() => import("./pages/LoginCallback"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Posts = React.lazy(() => import("./pages/Posts"));
+const Admin = React.lazy(() => import("./pages/Admin"));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -34,6 +35,20 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useContext(UserInfoContext);
 
   if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useContext(UserInfoContext);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin()) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -96,6 +111,14 @@ function App() {
                     <ProtectedRoute>
                       <Posts />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="admin"
+                  element={
+                    <AdminRoute>
+                      <Admin />
+                    </AdminRoute>
                   }
                 />
                 <Route path="*" element={<NotFound />} />

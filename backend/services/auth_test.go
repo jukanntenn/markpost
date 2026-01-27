@@ -95,6 +95,21 @@ func (s *stubUserRepo) SetUserPassword(userID int, password string) error {
 	return nil
 }
 
+func (s *stubUserRepo) SetUserRole(userID int, role models.Role) error {
+	if s.user != nil && s.user.ID == userID {
+		s.user.Role = role
+	}
+	return nil
+}
+
+func (s *stubUserRepo) GetAllUsers(offset, limit int) ([]models.User, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (s *stubUserRepo) CountUsers() (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func setupAuthTestDatabase(t *testing.T) *models.Database {
 	t.Helper()
 

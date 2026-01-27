@@ -22,6 +22,7 @@
   "navigation": {
     "posts": "Posts",
     "userMenu": {
+      "admin": "Admin",
       "settings": "Settings",
       "logout": "Logout"
     }
@@ -127,6 +128,24 @@
     "changingPassword": "Changing password...",
     "passwordChangeSuccess": "Password changed successfully!",
     "passwordChangeFailed": "Password change failed, please try again"
+  },
+  "admin": {
+    "title": "User Management",
+    "id": "ID",
+    "username": "Username",
+    "role": "Role",
+    "roleAdmin": "Admin",
+    "roleUser": "User",
+    "githubId": "GitHub ID",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "loading": "Loading...",
+    "error": "Failed to load users",
+    "noUsers": "No users found",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "{{current}} / {{total}}",
+    "totalUsers": "Total: {{count}} users"
   },
   "notFound": {
     "title": "404",

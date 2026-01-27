@@ -163,6 +163,10 @@ func serve(configPath string) {
 	}()
 	database = dbInstance
 
+	if err := database.DB().AutoMigrate(&models.User{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
 	userRepo = repositories.NewUserRepo(database)
 	postRepo = repositories.NewPostRepo(database)
 
@@ -182,6 +186,11 @@ func serve(configPath string) {
 		Scopes:       []string{},
 		Endpoint:     github.Endpoint,
 	}, jwtSvc)
+
+	log.Printf("Initializing first admin user: %s", cfg.Admin.InitialUsername)
+	if err := authSvc.InitializeFirstAdmin(cfg.Admin.InitialUsername); err != nil {
+		log.Fatalf("Failed to initialize first admin: %v", err)
+	}
 
 	postSvc = services.NewPostService(postRepo)
 

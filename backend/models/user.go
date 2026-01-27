@@ -8,6 +8,13 @@ import (
 	"gorm.io/gorm"
 )
 
+type Role string
+
+const (
+	RoleAdmin Role = "admin"
+	RoleUser  Role = "user"
+)
+
 type GitHubUser struct {
 	ID    int64  `json:"id"`
 	Login string `json:"login"`
@@ -19,8 +26,17 @@ type User struct {
 	Password  string    `json:"-" gorm:"not null"`
 	PostKey   string    `json:"post_key" gorm:"unique;not null"`
 	GitHubID  *int64    `json:"github_id" gorm:"unique;column:github_id"`
+	Role      Role      `json:"role" gorm:"not null;default:'user'"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+}
+
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}
+
+func (u *User) IsRegularUser() bool {
+	return u.Role == RoleUser
 }
 
 func (model *User) Create(database *Database) error {
@@ -67,4 +83,27 @@ func UserExists(database *Database, query map[string]any) (bool, error) {
 	}
 
 	return count > 0, nil
+}
+
+func GetUsers(database *Database, offset, limit int) ([]User, error) {
+	db := database.DB()
+
+	var users []User
+	err := db.Order("id asc").Offset(offset).Limit(limit).Find(&users).Error
+	if err != nil {
+		return nil, fmt.Errorf("GetUsers: %w", err)
+	}
+
+	return users, nil
+}
+
+func CountUsers(database *Database) (int64, error) {
+	db := database.DB()
+
+	var count int64
+	if err := db.Model(&User{}).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("CountUsers: %w", err)
+	}
+
+	return count, nil
 }

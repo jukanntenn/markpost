@@ -46,6 +46,14 @@ func SetupRoutes(r *gin.Engine) {
 		jwtAuth.GET("/posts", handlers.PostsList(postSvc))
 	}
 
+	admin := api.Group("/admin")
+	admin.Use(middlewares.Auth(jwtSvc, userRepo))
+	admin.Use(middlewares.RequireAdmin())
+	{
+		userHandler := handlers.NewUserHandler(authSvc)
+		admin.GET("/users", userHandler.ListAllUsers)
+	}
+
 	r.POST("/:post_key", middlewares.PostKey(userRepo), handlers.CreatePost(postSvc))
 
 	r.GET("/:id", handlers.RenderPost(postSvc))

@@ -28,6 +28,10 @@ export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
     userInfo?.refresh_token
   );
 
+  const isAdmin = () => {
+    return userInfo?.user?.role === "admin";
+  };
+
   return (
     <UserInfoContext.Provider
       value={{
@@ -35,6 +39,7 @@ export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
         userInfo,
         setUserInfo: (info: UserInfo | null) => setUserInfo(info),
         logout,
+        isAdmin,
       }}
     >
       {children}

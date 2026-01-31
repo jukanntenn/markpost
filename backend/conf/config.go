@@ -23,12 +23,14 @@ type Config struct {
 	OAuth         OAuthConfig     `mapstructure:"oauth"`
 	JWT           JWTConfig       `mapstructure:"jwt"`
 	Ratelimit     RatelimitConfig `mapstructure:"ratelimit"`
+	Delivery      DeliveryConfig  `mapstructure:"delivery"`
 }
 
 type ServerConfig struct {
 	Host           string   `mapstructure:"host" validate:"required"`
 	Port           uint16   `mapstructure:"port" validate:"required"`
 	TrustedProxies []string `mapstructure:"trusted_proxies"`
+	PublicURL      string   `mapstructure:"public_url" validate:"omitempty,url"`
 }
 
 type DBConfig struct {
@@ -73,6 +75,11 @@ type JWTConfig struct {
 type RatelimitConfig struct {
 	PerSecond int `mapstructure:"per_second" validate:"gte=0"`
 	Burst     int `mapstructure:"burst" validate:"gte=0"`
+}
+
+type DeliveryConfig struct {
+	BodyPreviewChars int           `mapstructure:"body_preview_chars" validate:"gte=0"`
+	RequestTimeout   time.Duration `mapstructure:"request_timeout" validate:"required"`
 }
 
 var (
@@ -164,6 +171,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.host", "127.0.0.1")
 	v.SetDefault("server.port", 7330)
 	v.SetDefault("server.trusted_proxies", []string{"127.0.0.1", "::1", "localhost"})
+	v.SetDefault("server.public_url", "")
 	v.SetDefault("db.driver", "sqlite")
 	v.SetDefault("db.dsn", "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL")
 	v.SetDefault("admin.initial_username", "markpost")
@@ -191,6 +199,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("jwt.refresh_token_expire", "720h")
 	v.SetDefault("ratelimit.per_second", math.MaxInt)
 	v.SetDefault("ratelimit.burst", math.MaxInt)
+	v.SetDefault("delivery.body_preview_chars", 200)
+	v.SetDefault("delivery.request_timeout", "5s")
 }
 
 func ResetForTest() {

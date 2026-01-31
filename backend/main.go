@@ -21,6 +21,7 @@ package main
 // @description Type "Bearer" followed by a space and JWT token.
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -48,9 +49,12 @@ import (
 var authSvc *services.AuthService
 var postSvc *services.PostService
 var jwtSvc *services.JWTService
+var deliveryChannelSvc *services.DeliveryChannelService
+var deliveryDispatcher *services.DeliveryDispatcher
 
 var userRepo repositories.UserRepoInterface
 var postRepo repositories.PostRepoInterface
+var deliveryChannelRepo repositories.DeliveryChannelRepoInterface
 
 var database *models.Database
 
@@ -163,12 +167,13 @@ func serve(configPath string) {
 	}()
 	database = dbInstance
 
-	if err := database.DB().AutoMigrate(&models.User{}); err != nil {
+	if err := database.DB().AutoMigrate(&models.User{}, &models.Post{}, &models.DeliveryChannel{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	userRepo = repositories.NewUserRepo(database)
 	postRepo = repositories.NewPostRepo(database)
+	deliveryChannelRepo = repositories.NewDeliveryChannelRepo(database)
 
 	RegisterValidators()
 
@@ -192,7 +197,12 @@ func serve(configPath string) {
 		log.Fatalf("Failed to initialize first admin: %v", err)
 	}
 
-	postSvc = services.NewPostService(postRepo)
+	postDeliverySvc := services.NewPostDeliveryService(deliveryChannelRepo)
+	deliveryDispatcher = services.NewDeliveryDispatcher(postDeliverySvc, 0)
+	deliveryDispatcher.Start(context.Background())
+
+	postSvc = services.NewPostService(postRepo, deliveryDispatcher)
+	deliveryChannelSvc = services.NewDeliveryChannelService(deliveryChannelRepo)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")

@@ -8,6 +8,7 @@ post_key_length = 16
 host = "0.0.0.0"
 port = 7330
 trusted_proxies = ["127.0.0.1", "::1"]
+public_url = ""
 
 [db]
 driver = "sqlite"
@@ -49,3 +50,7 @@ refresh_token_expire = "720h"
 [ratelimit]
 per_second = 5
 burst = 50
+
+[delivery]
+body_preview_chars = 200
+request_timeout = "5s"

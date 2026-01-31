@@ -102,7 +102,7 @@ func TestPostService_CreatePost(t *testing.T) {
 		}
 
 		postRepo := repositories.NewPostRepo(db)
-		svc := NewPostService(postRepo)
+		svc := NewPostService(postRepo, nil)
 
 		qid, err := svc.CreatePost("Test Title", "Test Body", user.ID)
 		if err != nil {
@@ -125,7 +125,7 @@ func TestPostService_CreatePost(t *testing.T) {
 		db := setupPostTestDatabase(t)
 
 		postRepo := repositories.NewPostRepo(db)
-		svc := NewPostService(postRepo)
+		svc := NewPostService(postRepo, nil)
 
 		_, err := svc.CreatePost("Title", "Body", 999999)
 		if err == nil {
@@ -144,7 +144,7 @@ func TestPostService_CreatePost(t *testing.T) {
 		stub := &stubPostRepo{
 			createPostErr: fmt.Errorf("db error"),
 		}
-		svc := NewPostService(stub)
+		svc := NewPostService(stub, nil)
 
 		_, err := svc.CreatePost("Title", "Body", 1)
 		if err == nil {
@@ -176,7 +176,7 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 			t.Fatalf("CreatePost error: %v", err)
 		}
 
-		svc := NewPostService(postRepo)
+		svc := NewPostService(postRepo, nil)
 		title, html, err := svc.RenderPostHTML(created.QID)
 		if err != nil {
 			t.Fatalf("RenderPostHTML error: %v", err)
@@ -196,7 +196,7 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 		stub := &stubPostRepo{
 			getPostErr: models.ErrNotFound,
 		}
-		svc := NewPostService(stub)
+		svc := NewPostService(stub, nil)
 
 		_, _, err := svc.RenderPostHTML("not-exist")
 		if err == nil {
@@ -215,7 +215,7 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 		stub := &stubPostRepo{
 			getPostErr: fmt.Errorf("db error"),
 		}
-		svc := NewPostService(stub)
+		svc := NewPostService(stub, nil)
 
 		_, _, err := svc.RenderPostHTML("qid")
 		if err == nil {
@@ -249,7 +249,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 			}
 		}
 
-		svc := NewPostService(postRepo)
+		svc := NewPostService(postRepo, nil)
 		posts, total, err := svc.GetUserPosts(user.ID, 0, 0)
 		if err != nil {
 			t.Fatalf("GetUserPosts error: %v", err)
@@ -284,7 +284,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 			}
 		}
 
-		svc := NewPostService(postRepo)
+		svc := NewPostService(postRepo, nil)
 		posts, total, err := svc.GetUserPosts(user.ID, 2, 1)
 		if err != nil {
 			t.Fatalf("GetUserPosts error: %v", err)
@@ -304,7 +304,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 		stub := &stubPostRepo{
 			countErr: fmt.Errorf("db error"),
 		}
-		svc := NewPostService(stub)
+		svc := NewPostService(stub, nil)
 
 		_, _, err := svc.GetUserPosts(1, 1, 10)
 		if err == nil {
@@ -324,7 +324,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 			countResult: 5,
 			listErr:     fmt.Errorf("db error"),
 		}
-		svc := NewPostService(stub)
+		svc := NewPostService(stub, nil)
 
 		_, _, err := svc.GetUserPosts(1, 1, 10)
 		if err == nil {

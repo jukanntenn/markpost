@@ -14,9 +14,10 @@ import (
 type PostService struct {
 	postRepo repositories.PostRepoInterface
 	md       goldmark.Markdown
+	delivery DeliveryEnqueuer
 }
 
-func NewPostService(postRepo repositories.PostRepoInterface) *PostService {
+func NewPostService(postRepo repositories.PostRepoInterface, delivery DeliveryEnqueuer) *PostService {
 	md := goldmark.New(
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
@@ -25,6 +26,7 @@ func NewPostService(postRepo repositories.PostRepoInterface) *PostService {
 	return &PostService{
 		postRepo: postRepo,
 		md:       md,
+		delivery: delivery,
 	}
 }
 
@@ -32,6 +34,14 @@ func (s *PostService) CreatePost(title, body string, userID int) (string, error)
 	post, err := s.postRepo.CreatePost(title, body, userID)
 	if err != nil {
 		return "", NewServiceErrorWrap(ErrInternal, "create post failed", err)
+	}
+	if s.delivery != nil {
+		s.delivery.Enqueue(DeliveryJob{
+			UserID:  userID,
+			PostQID: post.QID,
+			Title:   post.Title,
+			Body:    post.Body,
+		})
 	}
 	return post.QID, nil
 }

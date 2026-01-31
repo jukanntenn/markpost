@@ -44,6 +44,10 @@ func SetupRoutes(r *gin.Engine) {
 		jwtAuth.GET("/post_key", handlers.QueryPostKey(authSvc))
 		jwtAuth.POST("/auth/change-password", handlers.ChangePassword(authSvc))
 		jwtAuth.GET("/posts", handlers.PostsList(postSvc))
+		jwtAuth.GET("/delivery/channels", handlers.ListDeliveryChannels(deliveryChannelSvc))
+		jwtAuth.POST("/delivery/channels", handlers.CreateDeliveryChannel(deliveryChannelSvc))
+		jwtAuth.PUT("/delivery/channels/:id", handlers.UpdateDeliveryChannel(deliveryChannelSvc))
+		jwtAuth.DELETE("/delivery/channels/:id", handlers.DeleteDeliveryChannel(deliveryChannelSvc))
 	}
 
 	admin := api.Group("/admin")

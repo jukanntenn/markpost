@@ -98,6 +98,14 @@ func (s *stubAuthService) GenerateGitHubAuthURL(ctx context.Context) (string, er
 	return "", nil
 }
 
+func (s *stubAuthService) GetAllUsers(page, limit int) ([]models.User, int64, error) {
+	return nil, 0, nil
+}
+
+func (s *stubAuthService) InitializeFirstAdmin(initialUsername string) error {
+	return nil
+}
+
 type errorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`

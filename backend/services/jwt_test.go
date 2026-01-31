@@ -20,7 +20,7 @@ func TestJWTService_TokensAndValidation(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
 	t.Run("access token success", func(t *testing.T) {
-		token, err := jwtSvc.GenerateAccessToken(42)
+		token, err := jwtSvc.GenerateAccessToken(42, "user")
 		if err != nil || token == "" {
 			t.Fatalf("GenerateAccessToken error: %v", err)
 		}
@@ -38,7 +38,7 @@ func TestJWTService_TokensAndValidation(t *testing.T) {
 	})
 
 	t.Run("access validate fails on refresh token", func(t *testing.T) {
-		token, _ := jwtSvc.GenerateRefreshToken(7)
+		token, _ := jwtSvc.GenerateRefreshToken(7, "user")
 		if _, err := jwtSvc.ValidateAccess(token); err == nil {
 			t.Fatalf("expected error when validating refresh token as access")
 		}
@@ -81,7 +81,7 @@ func TestJWTService_TokensAndValidation(t *testing.T) {
 	})
 
 	t.Run("pair generation and both validate", func(t *testing.T) {
-		pair, err := jwtSvc.GenerateTokenPair(88)
+		pair, err := jwtSvc.GenerateTokenPair(88, "user")
 		if err != nil || pair == nil || pair.AccessToken == "" || pair.RefreshToken == "" {
 			t.Fatalf("GenerateTokenPair error: %v", err)
 		}

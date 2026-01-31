@@ -37,6 +37,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.Server.Port != 7330 {
 		t.Fatalf("unexpected server.port: %d", cfg.Server.Port)
 	}
+	if cfg.Server.PublicURL != "" {
+		t.Fatalf("unexpected server.public_url: %s", cfg.Server.PublicURL)
+	}
 	expectedProxies := []string{"127.0.0.1", "::1", "localhost"}
 	if !reflect.DeepEqual(cfg.Server.TrustedProxies, expectedProxies) {
 		t.Fatalf("unexpected server.trusted_proxies: %v", cfg.Server.TrustedProxies)
@@ -82,6 +85,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 	if cfg.Ratelimit.PerSecond != math.MaxInt || cfg.Ratelimit.Burst != math.MaxInt {
 		t.Fatalf("unexpected ratelimit defaults: %+v", cfg.Ratelimit)
+	}
+	if cfg.Delivery.BodyPreviewChars != 200 || cfg.Delivery.RequestTimeout != 5*time.Second {
+		t.Fatalf("unexpected delivery defaults: %+v", cfg.Delivery)
 	}
 }
 

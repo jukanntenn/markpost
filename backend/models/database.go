@@ -41,7 +41,7 @@ func NewDatabase(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.DB.Driver)
 	}
 
-	if err = db.AutoMigrate(&User{}, &Post{}); err != nil {
+	if err = db.AutoMigrate(&User{}, &Post{}, &DeliveryChannel{}); err != nil {
 		return nil, fmt.Errorf("NewDatabase auto migrate: %w", err)
 	}
 
@@ -87,7 +87,7 @@ func NewTestDatabase() (*Database, error) {
 		_, _ = sqlDB.Exec("PRAGMA foreign_keys = ON;")
 	}
 
-	if err = gdb.AutoMigrate(&User{}, &Post{}); err != nil {
+	if err = gdb.AutoMigrate(&User{}, &Post{}, &DeliveryChannel{}); err != nil {
 		return nil, fmt.Errorf("NewTestDatabase auto migrate: %w", err)
 	}
 

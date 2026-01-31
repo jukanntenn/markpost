@@ -283,7 +283,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		oauthCfg := &oauth2.Config{}
 		svc := NewAuthService(repo, oauthCfg, jwtSvc)
 
-		token, err := jwtSvc.GenerateRefreshToken(user.ID)
+		token, err := jwtSvc.GenerateRefreshToken(user.ID, string(user.Role))
 		if err != nil || token == "" {
 			t.Fatalf("generate token error: %v", err)
 		}
@@ -321,7 +321,7 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		oauthCfg := &oauth2.Config{}
 		svc := NewAuthService(repo, oauthCfg, jwtSvc)
 
-		token, err := jwtSvc.GenerateRefreshToken(99999)
+		token, err := jwtSvc.GenerateRefreshToken(99999, "user")
 		if err != nil || token == "" {
 			t.Fatalf("generate token error: %v", err)
 		}

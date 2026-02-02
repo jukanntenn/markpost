@@ -37,6 +37,7 @@ func TestDeliveryChannelRepository_CRUDAndScoping(t *testing.T) {
 		models.DeliveryChannelKindFeishu,
 		"feishu-1",
 		"https://open.feishu.cn/open-apis/bot/v2/hook/abcdef",
+		"keyword1, keyword2",
 		true,
 	)
 	if err != nil {
@@ -44,6 +45,9 @@ func TestDeliveryChannelRepository_CRUDAndScoping(t *testing.T) {
 	}
 	if created.ID == 0 || created.UserID != user1.ID || created.Kind != models.DeliveryChannelKindFeishu {
 		t.Fatalf("unexpected created channel: %+v", created)
+	}
+	if created.Keywords != "keyword1, keyword2" {
+		t.Fatalf("unexpected created keywords: %q", created.Keywords)
 	}
 
 	list, err := channelRepo.ListByUserID(user1.ID)
@@ -69,6 +73,7 @@ func TestDeliveryChannelRepository_CRUDAndScoping(t *testing.T) {
 
 	got.Name = "feishu-updated"
 	got.Enabled = false
+	got.Keywords = "a,b"
 	if err := channelRepo.Update(got); err != nil {
 		t.Fatalf("update error: %v", err)
 	}
@@ -79,6 +84,9 @@ func TestDeliveryChannelRepository_CRUDAndScoping(t *testing.T) {
 	}
 	if updated.Name != "feishu-updated" || updated.Enabled != false {
 		t.Fatalf("unexpected updated channel: %+v", updated)
+	}
+	if updated.Keywords != "a,b" {
+		t.Fatalf("unexpected updated keywords: %q", updated.Keywords)
 	}
 
 	rows, err := channelRepo.DeleteByIDAndUserID(created.ID, user2.ID)

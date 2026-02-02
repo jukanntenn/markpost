@@ -50,6 +50,9 @@ func (s *PostDeliveryService) Deliver(ctx context.Context, job DeliveryJob) {
 
 		switch channel.Kind {
 		case models.DeliveryChannelKindFeishu:
+			if !postTitleMatchesAllKeywords(job.Title, channel.Keywords) {
+				continue
+			}
 			if err := s.feishu.SendText(ctx, channel.WebhookURL, message); err != nil {
 				log.Printf("delivery feishu failed channel_id=%d user_id=%d err=%v", channel.ID, channel.UserID, err)
 			}
@@ -57,6 +60,38 @@ func (s *PostDeliveryService) Deliver(ctx context.Context, job DeliveryJob) {
 			log.Printf("delivery unsupported channel kind=%s channel_id=%d user_id=%d", channel.Kind, channel.ID, channel.UserID)
 		}
 	}
+}
+
+func postTitleMatchesAllKeywords(title string, rawKeywords string) bool {
+	keywords := parseCommaSeparatedKeywords(rawKeywords)
+	if len(keywords) == 0 {
+		return true
+	}
+
+	titleText := strings.ToLower(strings.TrimSpace(title))
+	if titleText == "" {
+		return false
+	}
+
+	for _, kw := range keywords {
+		if !strings.Contains(titleText, strings.ToLower(kw)) {
+			return false
+		}
+	}
+	return true
+}
+
+func parseCommaSeparatedKeywords(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		kw := strings.TrimSpace(part)
+		if kw == "" {
+			continue
+		}
+		out = append(out, kw)
+	}
+	return out
 }
 
 func truncateRunes(s string, max int) string {

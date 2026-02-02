@@ -42,9 +42,11 @@ function Settings() {
   const [deliverySuccess, setDeliverySuccess] = useState("");
   const [newChannelName, setNewChannelName] = useState("");
   const [newChannelWebhookURL, setNewChannelWebhookURL] = useState("");
+  const [newChannelKeywords, setNewChannelKeywords] = useState("");
   const [editingChannelID, setEditingChannelID] = useState<number | null>(null);
   const [editChannelName, setEditChannelName] = useState("");
   const [editChannelWebhookURL, setEditChannelWebhookURL] = useState("");
+  const [editChannelKeywords, setEditChannelKeywords] = useState("");
 
   const { trigger, isMutating, reset } = useChangePassword();
   const {
@@ -90,10 +92,12 @@ function Settings() {
     id: number;
     name: string;
     webhook_url: string;
+    keywords: string;
   }) => {
     setEditingChannelID(channel.id);
     setEditChannelName(channel.name ?? "");
     setEditChannelWebhookURL(channel.webhook_url ?? "");
+    setEditChannelKeywords(channel.keywords ?? "");
     setDeliveryError("");
     setDeliverySuccess("");
   };
@@ -102,6 +106,7 @@ function Settings() {
     setEditingChannelID(null);
     setEditChannelName("");
     setEditChannelWebhookURL("");
+    setEditChannelKeywords("");
   };
 
   const handleCreateChannel = async (e: React.FormEvent) => {
@@ -114,10 +119,12 @@ function Settings() {
         kind: "feishu",
         name: newChannelName,
         webhook_url: newChannelWebhookURL,
+        keywords: newChannelKeywords,
         enabled: true,
       });
       setNewChannelName("");
       setNewChannelWebhookURL("");
+      setNewChannelKeywords("");
       setDeliverySuccess(t("settings.deliveryChannelCreated"));
       await mutateDeliveryChannels();
     } catch (err: unknown) {
@@ -147,6 +154,7 @@ function Settings() {
         id: editingChannelID,
         name: editChannelName,
         webhook_url: editChannelWebhookURL,
+        keywords: editChannelKeywords,
       });
       setDeliverySuccess(t("settings.deliveryChannelUpdated"));
       cancelEditChannel();
@@ -321,6 +329,11 @@ function Settings() {
                             <div className="text-muted small">
                               {t("settings.deliveryChannelWebhook")}: {maskWebhookURL(ch.webhook_url)}
                             </div>
+                            {ch.keywords?.trim() ? (
+                              <div className="text-muted small">
+                                {t("settings.deliveryChannelKeywords")}: {ch.keywords}
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="d-flex flex-column align-items-end gap-2">
@@ -392,6 +405,21 @@ function Settings() {
                                 className="py-2 px-3 border-1"
                                 style={{ borderRadius: "8px" }}
                               />
+                            </Form.Group>
+                            <Form.Group>
+                              <Form.Label className="text-muted small fw-semibold mb-2">
+                                {t("settings.deliveryChannelKeywords")}
+                              </Form.Label>
+                              <Form.Control
+                                value={editChannelKeywords}
+                                onChange={(e) => setEditChannelKeywords(e.target.value)}
+                                placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
+                                className="py-2 px-3 border-1"
+                                style={{ borderRadius: "8px" }}
+                              />
+                              <div className="text-muted small mt-1">
+                                {t("settings.deliveryChannelKeywordsHelp")}
+                              </div>
                             </Form.Group>
                             <div className="d-flex justify-content-end gap-2">
                               <Button
@@ -465,6 +493,22 @@ function Settings() {
                       className="py-2 px-3 border-1"
                       style={{ borderRadius: "8px" }}
                     />
+                  </Form.Group>
+                  <Form.Group className="mb-3">
+                    <Form.Label className="text-muted small fw-semibold mb-2">
+                      {t("settings.deliveryChannelKeywords")}
+                    </Form.Label>
+                    <Form.Control
+                      value={newChannelKeywords}
+                      onChange={(e) => setNewChannelKeywords(e.target.value)}
+                      placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
+                      disabled={isCreatingDeliveryChannel || editingChannelID !== null}
+                      className="py-2 px-3 border-1"
+                      style={{ borderRadius: "8px" }}
+                    />
+                    <div className="text-muted small mt-1">
+                      {t("settings.deliveryChannelKeywordsHelp")}
+                    </div>
                   </Form.Group>
 
                   <div className="d-grid">

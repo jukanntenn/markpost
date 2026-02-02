@@ -102,3 +102,56 @@ func TestBuildDeliveryMessage_IncludesLink(t *testing.T) {
 		}
 	})
 }
+
+func TestParseCommaSeparatedKeywords(t *testing.T) {
+	t.Run("handles various spacing", func(t *testing.T) {
+		cases := []struct {
+			raw  string
+			want []string
+		}{
+			{raw: "keyword", want: []string{"keyword"}},
+			{raw: "keyword1,keyword2", want: []string{"keyword1", "keyword2"}},
+			{raw: "keyword1, keyword2", want: []string{"keyword1", "keyword2"}},
+			{raw: "  keyword1,   keyword2,keyword3,  keyword4,  ", want: []string{"keyword1", "keyword2", "keyword3", "keyword4"}},
+			{raw: "  ,   ,", want: nil},
+		}
+
+		for _, tc := range cases {
+			got := parseCommaSeparatedKeywords(tc.raw)
+			if len(got) != len(tc.want) {
+				t.Fatalf("raw=%q expected len=%d got=%d (%v)", tc.raw, len(tc.want), len(got), got)
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Fatalf("raw=%q expected[%d]=%q got[%d]=%q (%v)", tc.raw, i, tc.want[i], i, got[i], got)
+				}
+			}
+		}
+	})
+}
+
+func TestPostTitleMatchesAllKeywords(t *testing.T) {
+	t.Run("matches when all keywords present", func(t *testing.T) {
+		if !postTitleMatchesAllKeywords("hello keyword1 ... keyword2", "keyword1, keyword2") {
+			t.Fatalf("expected match")
+		}
+	})
+
+	t.Run("does not match when any keyword missing", func(t *testing.T) {
+		if postTitleMatchesAllKeywords("hello keyword1", "keyword1, keyword2") {
+			t.Fatalf("expected no match")
+		}
+	})
+
+	t.Run("is case-insensitive", func(t *testing.T) {
+		if !postTitleMatchesAllKeywords("Hello KEYWORD", "keyword") {
+			t.Fatalf("expected match")
+		}
+	})
+
+	t.Run("empty keywords always match", func(t *testing.T) {
+		if !postTitleMatchesAllKeywords("", "  ,  ") {
+			t.Fatalf("expected match")
+		}
+	})
+}

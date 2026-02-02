@@ -25,19 +25,19 @@ func (s *DeliveryChannelService) ListByUserID(userID int) ([]models.DeliveryChan
 	return channels, nil
 }
 
-func (s *DeliveryChannelService) Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, enabled bool) (*models.DeliveryChannel, error) {
+func (s *DeliveryChannelService) Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, keywords string, enabled bool) (*models.DeliveryChannel, error) {
 	if err := validateChannel(kind, webhookURL); err != nil {
 		return nil, err
 	}
 
-	channel, err := s.repo.Create(userID, kind, name, webhookURL, enabled)
+	channel, err := s.repo.Create(userID, kind, name, webhookURL, keywords, enabled)
 	if err != nil {
 		return nil, NewServiceErrorWrap(ErrInternal, "create delivery channel failed", err)
 	}
 	return channel, nil
 }
 
-func (s *DeliveryChannelService) Update(userID int, id int, name *string, webhookURL *string, enabled *bool) (*models.DeliveryChannel, error) {
+func (s *DeliveryChannelService) Update(userID int, id int, name *string, webhookURL *string, keywords *string, enabled *bool) (*models.DeliveryChannel, error) {
 	channel, err := s.repo.GetByIDAndUserID(id, userID)
 	if err != nil {
 		if err == models.ErrNotFound {
@@ -57,6 +57,9 @@ func (s *DeliveryChannelService) Update(userID int, id int, name *string, webhoo
 			return nil, err
 		}
 		channel.WebhookURL = *webhookURL
+	}
+	if keywords != nil {
+		channel.Keywords = *keywords
 	}
 
 	if err := s.repo.Update(channel); err != nil {

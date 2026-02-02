@@ -7,6 +7,7 @@ export interface UpdateDeliveryChannelArgs {
   name?: string;
   enabled?: boolean;
   webhook_url?: string;
+  keywords?: string;
 }
 
 const sendRequest = async (

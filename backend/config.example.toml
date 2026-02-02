@@ -8,6 +8,8 @@ post_key_length = 16
 host = "0.0.0.0"
 port = 7330
 trusted_proxies = ["127.0.0.1", "::1"]
+# public_url is the public base URL of your MarkPost instance, used for generating clickable links
+# in delivery messages. If empty, MarkPost falls back to http://{server.host}:{server.port}.
 public_url = ""
 
 [db]

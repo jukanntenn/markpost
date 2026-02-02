@@ -7,6 +7,7 @@ export interface DeliveryChannel {
   name: string;
   enabled: boolean;
   webhook_url: string;
+  keywords: string;
   created_at: string;
   updated_at: string;
 }

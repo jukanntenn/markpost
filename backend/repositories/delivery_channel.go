@@ -7,7 +7,7 @@ import (
 type DeliveryChannelRepoInterface interface {
 	ListByUserID(userID int) ([]models.DeliveryChannel, error)
 	GetByIDAndUserID(id int, userID int) (*models.DeliveryChannel, error)
-	Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, enabled bool) (*models.DeliveryChannel, error)
+	Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, keywords string, enabled bool) (*models.DeliveryChannel, error)
 	Update(channel *models.DeliveryChannel) error
 	DeleteByIDAndUserID(id int, userID int) (int64, error)
 }
@@ -28,13 +28,14 @@ func (r *DeliveryChannelRepo) GetByIDAndUserID(id int, userID int) (*models.Deli
 	return models.GetDeliveryChannel(r.database, map[string]any{"id": id, "user_id": userID})
 }
 
-func (r *DeliveryChannelRepo) Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, enabled bool) (*models.DeliveryChannel, error) {
+func (r *DeliveryChannelRepo) Create(userID int, kind models.DeliveryChannelKind, name string, webhookURL string, keywords string, enabled bool) (*models.DeliveryChannel, error) {
 	channel := &models.DeliveryChannel{
 		UserID:     userID,
 		Kind:       kind,
 		Name:       name,
 		Enabled:    enabled,
 		WebhookURL: webhookURL,
+		Keywords:   keywords,
 	}
 	if err := channel.Create(r.database); err != nil {
 		return nil, err

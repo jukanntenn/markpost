@@ -22,6 +22,7 @@ type DeliveryChannel struct {
 	Name       string             `json:"name" gorm:"not null;default:''"`
 	Enabled    bool               `json:"enabled" gorm:"not null;default:true"`
 	WebhookURL string             `json:"webhook_url" gorm:"not null;type:text;column:webhook_url"`
+	Keywords   string             `json:"keywords" gorm:"not null;type:text;default:''"`
 	CreatedAt  time.Time          `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time          `json:"updated_at" gorm:"autoUpdateTime"`
 }
@@ -41,6 +42,7 @@ func (model *DeliveryChannel) Update(database *Database) error {
 		"name":        model.Name,
 		"enabled":     model.Enabled,
 		"webhook_url": model.WebhookURL,
+		"keywords":    model.Keywords,
 	}
 	if err := db.Model(&model).Updates(updates).Error; err != nil {
 		return fmt.Errorf("DeliveryChannel.Update: %w", err)

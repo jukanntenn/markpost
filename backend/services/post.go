@@ -64,6 +64,19 @@ func (s *PostService) RenderPostHTML(qid string) (string, string, error) {
 	return post.Title, buf.String(), nil
 }
 
+func (s *PostService) GetPostMarkdown(qid string) (string, string, error) {
+	post, err := s.postRepo.GetPostByQID(qid)
+	if err != nil {
+		if err == models.ErrNotFound {
+			return "", "", NewServiceErrorWrap(ErrNotFound, fmt.Sprintf("post with qid %s not found", qid), err)
+		}
+
+		return "", "", NewServiceErrorWrap(ErrInternal, fmt.Sprintf("get post with qid %s failed", qid), err)
+	}
+
+	return post.Title, post.Body, nil
+}
+
 func (s *PostService) GetUserPosts(userID int, page int, limit int) ([]models.Post, int64, error) {
 	if page <= 0 {
 		page = 1

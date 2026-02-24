@@ -31,6 +31,7 @@ func init() {
 type stubPostService struct {
 	createPostFunc    func(title, body string, userID int) (string, error)
 	renderPostHTMLFunc func(qid string) (string, string, error)
+	getPostMarkdownFunc func(qid string) (string, string, error)
 	getUserPostsFunc  func(userID int, page, limit int) ([]models.Post, int64, error)
 	called            int
 	lastTitle         string
@@ -57,6 +58,15 @@ func (s *stubPostService) RenderPostHTML(qid string) (string, string, error) {
 	s.lastQID = qid
 	if s.renderPostHTMLFunc != nil {
 		return s.renderPostHTMLFunc(qid)
+	}
+	return "", "", nil
+}
+
+func (s *stubPostService) GetPostMarkdown(qid string) (string, string, error) {
+	s.called++
+	s.lastQID = qid
+	if s.getPostMarkdownFunc != nil {
+		return s.getPostMarkdownFunc(qid)
 	}
 	return "", "", nil
 }
@@ -291,6 +301,11 @@ func TestRenderPost(t *testing.T) {
 		t.Run("Chinese", testRenderPost_RenderError_ZH)
 		t.Run("English", testRenderPost_RenderError_EN)
 	})
+	t.Run("Raw", func(t *testing.T) {
+		t.Run("Success", testRenderPost_Raw_Success)
+		t.Run("Not found", testRenderPost_Raw_NotFound)
+		t.Run("Render error", testRenderPost_Raw_RenderError)
+	})
 }
 
 
@@ -405,6 +420,91 @@ func testRenderPost_RenderError_EN(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "Failed to render post") {
 		t.Fatalf("expected response to contain 'Failed to render post', got %q", body)
+	}
+}
+
+func testRenderPost_Raw_Success(t *testing.T) {
+	svc := &stubPostService{
+		getPostMarkdownFunc: func(qid string) (string, string, error) {
+			if qid != "post-qid-123" {
+				t.Fatalf("expected qid %q, got %q", "post-qid-123", qid)
+			}
+			return "Test Title", "Test body", nil
+		},
+	}
+
+	r := newTestI18nRouter(t)
+	r.GET("/posts/:id", RenderPost(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/post-qid-123?format=raw", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusOK, rec.Code, rec.Body.String())
+	}
+
+	contentType := rec.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "text/markdown") {
+		t.Fatalf("expected content-type to contain %q, got %q", "text/markdown", contentType)
+	}
+
+	expectedBody := "# Test Title\n\nTest body"
+	if rec.Body.String() != expectedBody {
+		t.Fatalf("expected body %q, got %q", expectedBody, rec.Body.String())
+	}
+}
+
+func testRenderPost_Raw_NotFound(t *testing.T) {
+	svc := &stubPostService{
+		getPostMarkdownFunc: func(qid string) (string, string, error) {
+			return "", "", services.NewServiceError(
+				services.ErrNotFound,
+				"post not found",
+			)
+		},
+	}
+
+	r := newTestI18nRouter(t)
+	r.GET("/posts/:id", RenderPost(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/invalid-qid?format=raw", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusNotFound, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "Not Found") {
+		t.Fatalf("expected response to contain 'Not Found', got %q", rec.Body.String())
+	}
+}
+
+func testRenderPost_Raw_RenderError(t *testing.T) {
+	svc := &stubPostService{
+		getPostMarkdownFunc: func(qid string) (string, string, error) {
+			return "", "", services.NewServiceErrorWrap(
+				services.ErrInternal,
+				"get post failed",
+				errors.New("db error"),
+			)
+		},
+	}
+
+	r := newTestI18nRouter(t)
+	r.GET("/posts/:id", RenderPost(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/post-qid-123?format=raw", nil)
+	req.Header.Set("Accept-Language", "en")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d body=%s", http.StatusInternalServerError, rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "Failed to render post") {
+		t.Fatalf("expected response to contain 'Failed to render post', got %q", rec.Body.String())
 	}
 }
 

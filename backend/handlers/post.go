@@ -21,6 +21,7 @@ type PostRequest struct {
 type PostServiceInterface interface {
 	CreatePost(title, body string, userID int) (string, error)
 	RenderPostHTML(qid string) (string, string, error)
+	GetPostMarkdown(qid string) (string, string, error)
 	GetUserPosts(userID int, page, limit int) ([]models.Post, int64, error)
 }
 
@@ -64,15 +65,43 @@ func CreatePost(postSvc PostServiceInterface) gin.HandlerFunc {
 // @Summary      Render post as HTML
 // @Description  Render a post as HTML page
 // @Tags         posts
-// @Accept       json
 // @Produce      html
+// @Produce      plain
 // @Param        id  path    string  true  "Post QID"
+// @Param        format  query    string  false  "Response format (raw=markdown)"  Enums(raw)
 // @Success      200  {string}  string  "HTML content"
 // @Failure      404  {object}  map[string]interface{}
 // @Router       /{id} [get]
 func RenderPost(postSvc PostServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
+
+		if c.Query("format") == "raw" {
+			title, body, err := postSvc.GetPostMarkdown(id)
+			if err != nil {
+				if se, ok := err.(*services.ServiceError); ok && se.Code == services.ErrNotFound {
+					c.String(http.StatusNotFound, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
+						DefaultMessage: &i18n.Message{
+							ID:    "error.not_found",
+							Other: "Not Found",
+						},
+					}))
+				} else {
+					c.String(http.StatusInternalServerError, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
+						DefaultMessage: &i18n.Message{
+							ID:    "error.failed_render_post",
+							Other: "Failed to render post",
+						},
+					}))
+				}
+				return
+			}
+
+			content := "# " + title + "\n\n" + body
+			c.Data(http.StatusOK, "text/markdown; charset=utf-8", []byte(content))
+			return
+		}
+
 		title, htmlContent, err := postSvc.RenderPostHTML(id)
 		if err != nil {
 			if se, ok := err.(*services.ServiceError); ok && se.Code == services.ErrNotFound {

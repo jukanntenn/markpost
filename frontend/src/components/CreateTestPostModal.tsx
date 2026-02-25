@@ -1,9 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
 import { useCreateTestPost } from "../hooks/swr/useCreateTestPost";
 import * as api from "../utils/api";
-import { useToasts } from "react-bootstrap-toasts";
+import { toast } from "sonner";
+import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreateTestPostModalProps {
   show: boolean;
@@ -14,7 +28,6 @@ interface CreateTestPostModalProps {
 
 function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPostModalProps) {
   const { t } = useTranslation();
-  const toasts = useToasts();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>("");
@@ -41,9 +54,8 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
     }
     try {
       await trigger({ title: title.trim(), body });
-      toasts.success({
-        headerContent: <span className="me-auto">{t("createTestPost.successHeader")}</span>,
-        bodyContent: t("createTestPost.successBody"),
+      toast.success(t("createTestPost.successHeader"), {
+        description: t("createTestPost.successBody"),
       });
       onSuccess();
       reset();
@@ -54,63 +66,66 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   };
 
   return (
-    <Modal show={show} onHide={onHide} backdrop keyboard size="lg" centered>
-      <Form onSubmit={handleSubmit}>
-        <Modal.Header closeButton>
-          <Modal.Title>{t("createTestPost.title")}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
+    <Dialog open={show} onOpenChange={(open) => (!open ? onHide() : undefined)}>
+      <DialogContent className="sm:max-w-2xl">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{t("createTestPost.title")}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("createTestPost.bodyLabel")}
+            </DialogDescription>
+          </DialogHeader>
+
           {error && (
-            <Alert variant="danger" className="mb-3">
-              {error}
+            <Alert variant="destructive">
+              <TriangleAlertIcon />
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Form.Group className="mb-3">
-            <Form.Label className="text-muted small fw-semibold">
-              {t("createTestPost.titleLabel")}
-            </Form.Label>
-            <Form.Control
+
+          <div className="space-y-2">
+            <Label htmlFor="test-post-title">{t("createTestPost.titleLabel")}</Label>
+            <Input
+              id="test-post-title"
               ref={titleRef}
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("createTestPost.titlePlaceholder")}
               disabled={isMutating}
-              className="py-2 px-3 border-1"
+              autoComplete="off"
             />
-          </Form.Group>
-          <Form.Group>
-            <Form.Label className="text-muted small fw-semibold">
-              {t("createTestPost.bodyLabel")}
-            </Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={8}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="test-post-body">{t("createTestPost.bodyLabel")}</Label>
+            <Textarea
+              id="test-post-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={t("createTestPost.bodyPlaceholder")}
               disabled={isMutating}
-              className="py-2 px-3 border-1"
+              rows={8}
             />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onHide} disabled={isMutating}>
-            {t("createTestPost.cancel")}
-          </Button>
-          <Button variant="primary" type="submit" disabled={isMutating || !body.trim()}>
-            {isMutating ? (
-              <span className="d-inline-flex align-items-center gap-2">
-                <Spinner size="sm" animation="border" />
-                {t("createTestPost.creating")}
-              </span>
-            ) : (
-              t("createTestPost.create")
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onHide} disabled={isMutating}>
+              {t("createTestPost.cancel")}
+            </Button>
+            <Button type="submit" disabled={isMutating || !body.trim()}>
+              {isMutating ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2Icon className="size-4 animate-spin" />
+                  {t("createTestPost.creating")}
+                </span>
+              ) : (
+                t("createTestPost.create")
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 

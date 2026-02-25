@@ -5,11 +5,11 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
 import { SWRConfig } from "swr";
 import Layout from "./components/Layout";
 import { UserInfoContext } from "./components/UserInfoContext";
 import { swrConfig } from "./swr/config";
+import { Loader2Icon } from "lucide-react";
 
 const Login = React.lazy(() => import("./pages/Login"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -69,10 +69,9 @@ function App() {
         <div className="App">
           <React.Suspense
             fallback={
-              <div className="d-flex justify-content-center align-items-center min-vh-100">
-                <div className="spinner-border" role="status">
-                  <span className="visually-hidden">Loading...</span>
-                </div>
+              <div className="flex min-h-svh items-center justify-center">
+                <Loader2Icon className="size-6 animate-spin" />
+                <span className="sr-only">Loading...</span>
               </div>
             }
           >

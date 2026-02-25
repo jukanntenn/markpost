@@ -1,9 +1,9 @@
 function LoginTitle() {
   return (
-    <div className="text-center mb-5">
-      <div className="d-inline-flex align-items-center justify-content-center">
-        <img src="markpost.svg" alt="Markpost" height="48" className="me-2" />
-        <span className="fs-2 fw-bold text-body">Markpost</span>
+    <div className="mb-6 flex flex-col items-center text-center">
+      <div className="flex items-center gap-2">
+        <img src="markpost.svg" alt="Markpost" className="h-10 w-auto" />
+        <span className="text-2xl font-semibold tracking-tight">Markpost</span>
       </div>
     </div>
   );

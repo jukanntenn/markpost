@@ -8,15 +8,12 @@ import { setMockAuth, createWrapper } from "../test/utils";
 import { server } from "../mocks/server";
 import { http, HttpResponse } from "msw";
 
-vi.mock("react-bootstrap-toasts", () => ({
-  useToasts: () => ({
+vi.mock("sonner", () => ({
+  toast: {
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
-  }),
-  ToastsProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  },
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -175,7 +172,7 @@ describe("CreateTestPostModal", () => {
     await user.click(createButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
+      expect(screen.getByText(/server error/i)).toBeInTheDocument();
     });
   });
 });

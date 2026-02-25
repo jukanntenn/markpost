@@ -1,25 +1,21 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import { ToastsProvider as BootstrapToastsProvider } from "react-bootstrap-toasts";
 import { UserInfoProvider } from "./components/UserInfoProvider";
 import { ThemeProvider } from "./contexts/ThemeProvider";
+import "./index.css";
 import "./i18n";
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <UserInfoProvider>
       <ThemeProvider>
-        <BootstrapToastsProvider
-          toastContainerProps={{
-            position: "top-end",
-            className: "p-4",
-            style: { zIndex: 2000 },
-          }}
-          limit={5}
-        >
+        <TooltipProvider delayDuration={200}>
           <App />
-        </BootstrapToastsProvider>
+          <Toaster position="top-right" style={{ zIndex: 2000 }} />
+        </TooltipProvider>
       </ThemeProvider>
     </UserInfoProvider>
   </StrictMode>

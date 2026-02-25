@@ -45,7 +45,7 @@ describe("ThemeToggle", () => {
     const toggle = screen.getByRole("button", { name: /theme/i });
     const svg = toggle.querySelector("svg");
     expect(svg).toBeInTheDocument();
-    expect(svg).toHaveClass("bi-circle-half");
+    expect(svg).toHaveClass("lucide");
   });
 
   it("opens dropdown menu on click", async () => {
@@ -94,12 +94,12 @@ describe("ThemeToggle", () => {
     const toggle = screen.getByRole("button", { name: /theme/i });
     await user.click(toggle);
 
-    const lightItem = screen.getByText(/light/i).closest(".dropdown-item");
-    const darkItem = screen.getByText(/dark/i).closest(".dropdown-item");
-    const systemItem = screen.getByText(/system/i).closest(".dropdown-item");
+    const lightItem = screen.getByRole("menuitemradio", { name: /light/i });
+    const darkItem = screen.getByRole("menuitemradio", { name: /dark/i });
+    const systemItem = screen.getByRole("menuitemradio", { name: /system/i });
 
-    expect(lightItem).toHaveClass("active");
-    expect(darkItem).not.toHaveClass("active");
-    expect(systemItem).not.toHaveClass("active");
+    expect(lightItem).toHaveAttribute("data-state", "checked");
+    expect(darkItem).toHaveAttribute("data-state", "unchecked");
+    expect(systemItem).toHaveAttribute("data-state", "unchecked");
   });
 });

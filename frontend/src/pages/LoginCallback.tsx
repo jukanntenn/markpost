@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { storage, auth } from "../utils";
-import Spinner from "react-bootstrap/Spinner";
+import { Loader2Icon } from "lucide-react";
 import { anno } from "../utils/api";
 import { isAxiosError } from "axios";
 import * as api from "../utils/api";
@@ -11,10 +11,10 @@ const LoginSpinner = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="d-flex justify-content-center mt-5">
-      <div className="text-center">
-        <Spinner animation="border" variant="primary" />
-        <div className="mt-2">{t("loginCallback.loading")}</div>
+    <div className="flex justify-center pt-10">
+      <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+        <Loader2Icon className="size-5 animate-spin" />
+        <div>{t("loginCallback.loading")}</div>
       </div>
     </div>
   );

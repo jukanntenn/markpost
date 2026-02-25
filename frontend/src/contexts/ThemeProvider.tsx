@@ -33,7 +33,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     const effectiveTheme = getEffectiveTheme(themeMode);
     setCurrentTheme(effectiveTheme);
-    document.documentElement.setAttribute("data-bs-theme", effectiveTheme);
+    document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
   }, [themeMode]);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       const handleChange = () => {
         const newTheme = mediaQuery.matches ? "dark" : "light";
         setCurrentTheme(newTheme);
-        document.documentElement.setAttribute("data-bs-theme", newTheme);
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
       };
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);
@@ -69,4 +69,3 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     </ThemeContext.Provider>
   );
 };
-

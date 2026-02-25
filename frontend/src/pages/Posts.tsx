@@ -1,11 +1,20 @@
-import { Alert, Button, Card, Container, Spinner, Table } from "react-bootstrap";
 import { useEffect, useState } from "react";
-
-import { JournalText } from "react-bootstrap-icons";
+import { FileTextIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { buildPostUrl } from "../utils/url";
 import { usePosts } from "../hooks/swr/usePosts";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const formatToLocalTime = (utcString: string): string => {
   if (!utcString) return "";
@@ -41,110 +50,114 @@ function Posts() {
   };
 
   return (
-    <Container className="py-4">
-      <div className="row g-4">
-        <div className="col-12">
-          <Card className="border-0 shadow-lg">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="d-flex align-items-center">
-                    <JournalText size={18} className="me-2 text-body" />
-                    <div className="flex-grow-1">
-                      <h6 className="mb-0 text-body">{t("posts.title")}</h6>
-                    </div>
-                  </div>
-                </div>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
-              {isLoading ? (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
-                  <Spinner animation="border" role="status" variant="primary">
-                    <span className="visually-hidden">Loading...</span>
-                  </Spinner>
-                  <p className="mt-3 text-muted mb-0">{t("posts.loading")}</p>
-                </div>
-              ) : error ? (
-                <Alert variant="danger" className="mb-0">
-                  <p>{t("posts.error")}</p>
-                </Alert>
-              ) : items.length === 0 ? (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
-                  <p className="text-muted mb-0">{t("posts.empty")}</p>
-                </div>
-              ) : (
-                <div>
-                  <div className="d-none d-md-block">
-                    <Table hover responsive className="mb-0">
-                      <thead>
-                        <tr>
-                          <th scope="col" style={{ width: "60%" }}>{t("posts.table.title")}</th>
-                          <th scope="col">{t("posts.table.createdAt")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((p) => (
-                          <tr key={p.id}>
-                            <td>
-                              <a href={buildPostUrl(p.qid)} target="_blank" rel="noopener noreferrer" className="text-decoration-none fw-medium">{p.title}</a>
-                            </td>
-                            <td>
-                              <small className="text-muted">{formatToLocalTime(p.created_at)}</small>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </div>
-                  <div className="d-block d-md-none">
-                    <ul className="list-unstyled mb-0">
-                      {items.map((p) => (
-                        <li key={p.id} className="py-2">
-                          <div className="d-flex flex-column">
-                            <a
-                              href={buildPostUrl(p.qid)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-decoration-none fw-medium"
-                            >
-                              {p.title}
-                            </a>
-                            <small className="text-muted mt-1">{formatToLocalTime(p.created_at)}</small>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="d-flex justify-content-between align-items-center">
-                    <div className="d-flex align-items-center gap-2">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        disabled={page <= 1}
-                        onClick={() => handlePageChange(page - 1)}
-                      >
-                        {t("posts.pagination.prev")}
-                      </Button>
-                      <span className="px-2 text-muted small">{page} / {totalPages}</span>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        disabled={page >= totalPages}
-                        onClick={() => handlePageChange(page + 1)}
-                      >
-                        {t("posts.pagination.next")}
-                      </Button>
-                    </div>
-                    <div>
-                      <small className="text-muted">{page} / {totalPages}</small>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <div className="flex items-center gap-2">
+          <FileTextIcon className="size-4" />
+          <CardTitle className="text-base">{t("posts.title")}</CardTitle>
         </div>
-      </div>
-    </Container>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/40 p-6 text-center">
+            <Loader2Icon className="size-5 animate-spin" />
+            <p className="text-sm text-muted-foreground">{t("posts.loading")}</p>
+          </div>
+        ) : error ? (
+          <Alert variant="destructive">
+            <TriangleAlertIcon />
+            <AlertDescription>{t("posts.error")}</AlertDescription>
+          </Alert>
+        ) : items.length === 0 ? (
+          <div className="rounded-lg border bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+            {t("posts.empty")}
+          </div>
+        ) : (
+          <>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[60%]">{t("posts.table.title")}</TableHead>
+                    <TableHead>{t("posts.table.createdAt")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="max-w-0">
+                        <a
+                          href={buildPostUrl(p.qid)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block truncate font-medium underline-offset-4 hover:underline"
+                        >
+                          {p.title}
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatToLocalTime(p.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="md:hidden">
+              <ul className="-mx-2 divide-y">
+                {items.map((p) => (
+                  <li key={p.id} className="px-2 py-3">
+                    <div className="flex flex-col gap-1">
+                      <a
+                        href={buildPostUrl(p.qid)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium underline-offset-4 hover:underline"
+                      >
+                        {p.title}
+                      </a>
+                      <span className="text-xs text-muted-foreground">
+                        {formatToLocalTime(p.created_at)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => handlePageChange(page - 1)}
+                >
+                  {t("posts.pagination.prev")}
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                >
+                  {t("posts.pagination.next")}
+                </Button>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {page} / {totalPages}
+              </span>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

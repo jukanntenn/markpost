@@ -1,9 +1,16 @@
-import React from "react";
-import { Dropdown } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
-import { Globe } from "react-bootstrap-icons";
+import { LanguagesIcon } from "lucide-react";
 
-const LanguageToggle: React.FC = () => {
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const LanguageToggle = () => {
   const { i18n, t } = useTranslation();
 
   const resolved = i18n.resolvedLanguage || i18n.language || "en";
@@ -21,37 +28,33 @@ const LanguageToggle: React.FC = () => {
   };
 
   return (
-    <Dropdown align="end">
-      <Dropdown.Toggle
-        variant="link"
-        className="text-decoration-none p-2 d-flex align-items-center gap-2 text-body"
-        id="language-dropdown"
-        title={t("language.changeLanguage")}
-        aria-label={t("language.changeLanguage")}
-      >
-        <Globe size={18} />
-        <span>{getCurrentLanguageLabel()}</span>
-      </Dropdown.Toggle>
-
-      <Dropdown.Menu className="border-0 shadow-lg">
-        <Dropdown.Item
-          active={isEnglish}
-          onClick={() => handleLanguageChange("en")}
-          className="d-flex align-items-center gap-2"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className="gap-2"
+          aria-label={t("language.changeLanguage")}
+          title={t("language.changeLanguage")}
         >
-          <span className="fi fi-gb"></span>
-          {t("language.english")}
-        </Dropdown.Item>
-        <Dropdown.Item
-          active={isChinese}
-          onClick={() => handleLanguageChange("zh")}
-          className="d-flex align-items-center gap-2"
+          <LanguagesIcon className="size-4" />
+          <span>{getCurrentLanguageLabel()}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup
+          value={isChinese ? "zh" : "en"}
+          onValueChange={(v) => handleLanguageChange(v)}
         >
-          <span className="fi fi-cn"></span>
-          {t("language.chinese")}
-        </Dropdown.Item>
-      </Dropdown.Menu>
-    </Dropdown>
+          <DropdownMenuRadioItem value="en">
+            {t("language.english")}
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="zh">
+            {t("language.chinese")}
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

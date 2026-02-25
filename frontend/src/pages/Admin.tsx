@@ -1,11 +1,19 @@
 import React, { useState } from "react";
 import { useUsers, type User } from "../hooks/swr/useUsers";
 import { useTranslation } from "react-i18next";
-import Card from "react-bootstrap/Card";
-import Table from "react-bootstrap/Table";
-import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import Spinner from "react-bootstrap/Spinner";
+import { Loader2Icon } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const Admin: React.FC = () => {
   const { t } = useTranslation();
@@ -21,113 +29,117 @@ const Admin: React.FC = () => {
   };
 
   const renderTableRow = (user: User) => (
-    <tr key={user.id}>
-      <td>{user.id}</td>
-      <td>{user.username}</td>
-      <td>
+    <TableRow key={user.id}>
+      <TableCell>{user.id}</TableCell>
+      <TableCell className="font-medium">{user.username}</TableCell>
+      <TableCell>
         {user.role === "admin" ? (
-          <Badge bg="danger">{t("admin.roleAdmin")}</Badge>
+          <Badge variant="destructive">{t("admin.roleAdmin")}</Badge>
         ) : (
-          <Badge bg="primary">{t("admin.roleUser")}</Badge>
+          <Badge variant="secondary">{t("admin.roleUser")}</Badge>
         )}
-      </td>
-      <td>{user.github_id ?? "-"}</td>
-      <td>{formatDate(user.created_at)}</td>
-      <td>{formatDate(user.updated_at)}</td>
-    </tr>
+      </TableCell>
+      <TableCell>{user.github_id ?? "-"}</TableCell>
+      <TableCell className="text-muted-foreground">{formatDate(user.created_at)}</TableCell>
+      <TableCell className="text-muted-foreground">{formatDate(user.updated_at)}</TableCell>
+    </TableRow>
   );
 
   const renderMobileCard = (user: User) => (
-    <Card key={user.id} className="mb-3">
-      <Card.Body>
-        <div className="d-flex justify-content-between align-items-start mb-2">
-          <div>
-            <strong>{user.username}</strong>
-            <div className="text-muted small">ID: {user.id}</div>
-          </div>
-          {user.role === "admin" ? (
-            <Badge bg="danger">{t("admin.roleAdmin")}</Badge>
-          ) : (
-            <Badge bg="primary">{t("admin.roleUser")}</Badge>
-          )}
+    <div key={user.id} className="rounded-lg border p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">{user.username}</div>
+          <div className="text-xs text-muted-foreground">ID: {user.id}</div>
         </div>
-        <div className="small">
-          <div className="mb-1">
-            <strong>{t("admin.githubId")}:</strong> {user.github_id ?? "-"}
-          </div>
-          <div className="mb-1">
-            <strong>{t("admin.createdAt")}:</strong> {formatDate(user.created_at)}
-          </div>
-          <div>
-            <strong>{t("admin.updatedAt")}:</strong> {formatDate(user.updated_at)}
-          </div>
+        {user.role === "admin" ? (
+          <Badge variant="destructive">{t("admin.roleAdmin")}</Badge>
+        ) : (
+          <Badge variant="secondary">{t("admin.roleUser")}</Badge>
+        )}
+      </div>
+      <div className="mt-3 space-y-1 text-sm">
+        <div>
+          <span className="font-medium">{t("admin.githubId")}:</span>{" "}
+          {user.github_id ?? "-"}
         </div>
-      </Card.Body>
-    </Card>
+        <div>
+          <span className="font-medium">{t("admin.createdAt")}:</span>{" "}
+          {formatDate(user.created_at)}
+        </div>
+        <div>
+          <span className="font-medium">{t("admin.updatedAt")}:</span>{" "}
+          {formatDate(user.updated_at)}
+        </div>
+      </div>
+    </div>
   );
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="text-center py-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">{t("admin.loading")}</span>
-          </Spinner>
+        <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+          <Loader2Icon className="mr-2 size-4 animate-spin" />
+          {t("admin.loading")}
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="text-center py-5">
-          <p className="text-danger">{t("admin.error")}</p>
+        <div className="py-10 text-center text-sm text-destructive">
+          {t("admin.error")}
         </div>
       );
     }
 
     if (!data || data.users.length === 0) {
       return (
-        <div className="text-center py-5">
-          <p className="text-muted">{t("admin.noUsers")}</p>
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          {t("admin.noUsers")}
         </div>
       );
     }
 
     return (
       <>
-        <div className="d-none d-md-block">
-          <Table responsive hover>
-            <thead>
-              <tr>
-                <th>{t("admin.id")}</th>
-                <th>{t("admin.username")}</th>
-                <th>{t("admin.role")}</th>
-                <th>{t("admin.githubId")}</th>
-                <th>{t("admin.createdAt")}</th>
-                <th>{t("admin.updatedAt")}</th>
-              </tr>
-            </thead>
-            <tbody>{data.users.map(renderTableRow)}</tbody>
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("admin.id")}</TableHead>
+                <TableHead>{t("admin.username")}</TableHead>
+                <TableHead>{t("admin.role")}</TableHead>
+                <TableHead>{t("admin.githubId")}</TableHead>
+                <TableHead>{t("admin.createdAt")}</TableHead>
+                <TableHead>{t("admin.updatedAt")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>{data.users.map(renderTableRow)}</TableBody>
           </Table>
         </div>
 
-        <div className="d-md-none">{data.users.map(renderMobileCard)}</div>
+        <div className="space-y-3 md:hidden">{data.users.map(renderMobileCard)}</div>
 
         {totalPages > 1 && (
-          <div className="d-flex justify-content-center mt-4">
-            <div className="btn-group" role="group">
+          <div className="mt-4 flex justify-center">
+            <div className="flex items-center gap-2">
               <Button
-                variant="outline-primary"
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
                 {t("admin.previous")}
               </Button>
-              <Button variant="outline-primary" disabled>
+              <Button type="button" variant="outline" size="sm" disabled>
                 {t("admin.page", { current: page, total: totalPages })}
               </Button>
               <Button
-                variant="outline-primary"
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
@@ -137,7 +149,7 @@ const Admin: React.FC = () => {
           </div>
         )}
 
-        <div className="text-center mt-3 text-muted small">
+        <div className="mt-3 text-center text-xs text-muted-foreground">
           {t("admin.totalUsers", { count: data.total })}
         </div>
       </>
@@ -145,15 +157,13 @@ const Admin: React.FC = () => {
   };
 
   return (
-    <div className="container py-4">
-      <div className="row justify-content-center">
-        <div className="col-12 col-lg-10">
-          <Card>
-            <Card.Header as="h5">{t("admin.title")}</Card.Header>
-            <Card.Body>{renderContent()}</Card.Body>
-          </Card>
-        </div>
-      </div>
+    <div className="mx-auto max-w-5xl">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("admin.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>{renderContent()}</CardContent>
+      </Card>
     </div>
   );
 };

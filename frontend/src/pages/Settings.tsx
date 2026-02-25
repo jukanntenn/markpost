@@ -1,17 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Card,
-  Button,
-  Container,
-  Form,
-  Alert,
-  Spinner,
-  Row,
-  Col,
-  OverlayTrigger,
-  Tooltip,
-} from "react-bootstrap";
-import { Gear, Lock, CheckCircle, InfoCircle } from "react-bootstrap-icons";
+import { CircleCheckIcon, InfoIcon, Loader2Icon, LockIcon, SettingsIcon } from "lucide-react";
 import * as api from "../utils/api";
 
 import { useChangePassword } from "../hooks/swr/useChangePassword";
@@ -21,6 +9,13 @@ import { useUpdateDeliveryChannel } from "../hooks/swr/useUpdateDeliveryChannel"
 import { useDeleteDeliveryChannel } from "../hooks/swr/useDeleteDeliveryChannel";
 import { useTranslation } from "react-i18next";
 import LanguageToggle from "../components/LanguageToggle";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PasswordChangeRequest {
   current_password: string;
@@ -228,490 +223,441 @@ function Settings() {
     formData.new_password.length > 0;
 
   return (
-    <Container className="py-4">
+    <div className="mx-auto max-w-xl space-y-6">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div className="flex items-center gap-2">
+            <SettingsIcon className="size-4" />
+            <CardTitle className="text-base">{t("settings.applicationSettings")}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {t("settings.language")}
+              </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    aria-label={t("settings.languageDescription")}
+                  >
+                    <InfoIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("settings.languageDescription")}</TooltipContent>
+              </Tooltip>
+            </div>
+            <LanguageToggle />
+          </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">{t("settings.deliveryChannels")}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {deliveryChannelsLoadError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {api.getErrorMessage(
+                  deliveryChannelsLoadError,
+                  t("settings.deliveryChannelsLoadFailed")
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          {deliveryError && (
+            <Alert variant="destructive">
+              <AlertDescription>{deliveryError}</AlertDescription>
+            </Alert>
+          )}
+          {deliverySuccess && (
+            <Alert>
+              <CircleCheckIcon />
+              <AlertDescription>{deliverySuccess}</AlertDescription>
+            </Alert>
+          )}
 
-      <Row className="justify-content-center">
-        <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-          <Card className="border-0 shadow-lg">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center">
-                <Gear size={18} className="me-2 text-body" />
-                <div className="flex-grow-1">
-                  <h6 className="mb-0 text-body">
-                    {t("settings.applicationSettings")}
-                  </h6>
-                </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-muted-foreground">
+              {t("settings.deliveryChannelsList")}
+            </div>
+            {isDeliveryChannelsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2Icon className="size-4 animate-spin" />
+                {t("settings.deliveryChannelsLoading")}
               </div>
-            </Card.Header>
-            <Card.Body className="p-4 p-md-5">
-              <div className="mb-3">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="form-label fw-semibold text-muted small mb-0">
-                      {t("settings.language")}
-                    </span>
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={<Tooltip id="language-help">{t("settings.languageDescription")}</Tooltip>}
-                    >
-                      <Button
-                        variant="link"
-                        className="p-0 text-muted d-inline-flex align-items-center"
-                        aria-label={t("settings.languageDescription")}
-                        style={{ lineHeight: 0 }}
-                      >
-                        <InfoCircle size={16} />
-                      </Button>
-                    </OverlayTrigger>
-                  </div>
-                  <LanguageToggle />
-                </div>
+            ) : (deliveryChannelsData?.channels?.length ?? 0) === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                {t("settings.deliveryChannelsEmpty")}
               </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-      <Row className="justify-content-center mt-5">
-        <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-          <Card className="border-0 shadow-lg">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center">
-                <div className="flex-grow-1">
-                  <h6 className="mb-0 text-body">{t("settings.deliveryChannels")}</h6>
-                </div>
-              </div>
-            </Card.Header>
-            <Card.Body className="p-4 p-md-5">
-              {deliveryChannelsLoadError && (
-                <Alert variant="danger" className="mb-4 border-0">
-                  {api.getErrorMessage(deliveryChannelsLoadError, t("settings.deliveryChannelsLoadFailed"))}
-                </Alert>
-              )}
-              {deliveryError && (
-                <Alert variant="danger" className="mb-4 border-0">
-                  {deliveryError}
-                </Alert>
-              )}
-              {deliverySuccess && (
-                <Alert variant="success" className="mb-4 border-0">
-                  <CheckCircle size={16} className="me-2" />
-                  {deliverySuccess}
-                </Alert>
-              )}
-
-              <div className="mb-4">
-                <div className="text-muted small fw-semibold mb-2">
-                  {t("settings.deliveryChannelsList")}
-                </div>
-                {isDeliveryChannelsLoading ? (
-                  <div className="d-flex align-items-center gap-2 text-muted small">
-                    <Spinner animation="border" size="sm" />
-                    {t("settings.deliveryChannelsLoading")}
-                  </div>
-                ) : (deliveryChannelsData?.channels?.length ?? 0) === 0 ? (
-                  <div className="text-muted small">{t("settings.deliveryChannelsEmpty")}</div>
-                ) : (
-                  <div className="d-flex flex-column gap-3">
-                    {deliveryChannelsData?.channels?.map((ch) => (
-                      <div
-                        key={ch.id}
-                        className="border rounded-3 p-3 d-flex flex-column gap-2"
-                      >
-                        <div className="d-flex align-items-start justify-content-between gap-3">
-                          <div className="flex-grow-1">
-                            <div className="fw-semibold text-body">
-                              {ch.name?.trim() ? ch.name : t("settings.deliveryChannelUnnamed")}
-                            </div>
-                            <div className="text-muted small">
-                              {t("settings.deliveryChannelType")}: {ch.kind}
-                            </div>
-                            <div className="text-muted small">
-                              {t("settings.deliveryChannelWebhook")}: {maskWebhookURL(ch.webhook_url)}
-                            </div>
-                            {ch.keywords?.trim() ? (
-                              <div className="text-muted small">
-                                {t("settings.deliveryChannelKeywords")}: {ch.keywords}
-                              </div>
-                            ) : null}
+            ) : (
+              <div className="space-y-3">
+                {deliveryChannelsData?.channels?.map((ch) => (
+                  <div key={ch.id} className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <div className="truncate text-sm font-medium">
+                          {ch.name?.trim()
+                            ? ch.name
+                            : t("settings.deliveryChannelUnnamed")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("settings.deliveryChannelType")}: {ch.kind}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {t("settings.deliveryChannelWebhook")}:{" "}
+                          {maskWebhookURL(ch.webhook_url)}
+                        </div>
+                        {ch.keywords?.trim() ? (
+                          <div className="text-xs text-muted-foreground">
+                            {t("settings.deliveryChannelKeywords")}: {ch.keywords}
                           </div>
+                        ) : null}
+                      </div>
 
-                          <div className="d-flex flex-column align-items-end gap-2">
-                            <Form.Check
-                              type="switch"
-                              id={`delivery-channel-enabled-${ch.id}`}
-                              label={t("settings.deliveryChannelEnabled")}
-                              checked={ch.enabled}
-                              onChange={() => handleToggleChannel(ch.id, !ch.enabled)}
-                              disabled={
-                                isUpdatingDeliveryChannel ||
-                                isDeletingDeliveryChannel ||
-                                isCreatingDeliveryChannel
-                              }
-                            />
-                            <div className="d-flex gap-2">
-                              <Button
-                                variant="outline-secondary"
-                                size="sm"
-                                onClick={() => beginEditChannel(ch)}
-                                disabled={
-                                  editingChannelID !== null ||
-                                  isUpdatingDeliveryChannel ||
-                                  isDeletingDeliveryChannel ||
-                                  isCreatingDeliveryChannel
-                                }
-                              >
-                                {t("settings.deliveryChannelEdit")}
-                              </Button>
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => handleDeleteChannel(ch.id)}
-                                disabled={
-                                  editingChannelID !== null ||
-                                  isDeletingDeliveryChannel ||
-                                  isUpdatingDeliveryChannel ||
-                                  isCreatingDeliveryChannel
-                                }
-                              >
-                                {t("settings.deliveryChannelDelete")}
-                              </Button>
-                            </div>
-                          </div>
+                      <div className="flex shrink-0 flex-col items-start gap-3 sm:items-end">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={ch.enabled}
+                            onCheckedChange={(checked) =>
+                              handleToggleChannel(ch.id, checked)
+                            }
+                            disabled={
+                              isUpdatingDeliveryChannel ||
+                              isDeletingDeliveryChannel ||
+                              isCreatingDeliveryChannel
+                            }
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {t("settings.deliveryChannelEnabled")}
+                          </span>
                         </div>
 
-                        {editingChannelID === ch.id && (
-                          <div className="border-top pt-3 d-flex flex-column gap-3">
-                            <Form.Group>
-                              <Form.Label className="text-muted small fw-semibold mb-2">
-                                {t("settings.deliveryChannelName")}
-                              </Form.Label>
-                              <Form.Control
-                                value={editChannelName}
-                                onChange={(e) => setEditChannelName(e.target.value)}
-                                placeholder={t("settings.deliveryChannelNamePlaceholder")}
-                                className="py-2 px-3 border-1"
-                                style={{ borderRadius: "8px" }}
-                              />
-                            </Form.Group>
-                            <Form.Group>
-                              <Form.Label className="text-muted small fw-semibold mb-2">
-                                {t("settings.deliveryChannelWebhookURL")}
-                              </Form.Label>
-                              <Form.Control
-                                value={editChannelWebhookURL}
-                                onChange={(e) => setEditChannelWebhookURL(e.target.value)}
-                                placeholder={t("settings.deliveryChannelWebhookPlaceholder")}
-                                className="py-2 px-3 border-1"
-                                style={{ borderRadius: "8px" }}
-                              />
-                            </Form.Group>
-                            <Form.Group>
-                              <Form.Label className="text-muted small fw-semibold mb-2">
-                                {t("settings.deliveryChannelKeywords")}
-                              </Form.Label>
-                              <Form.Control
-                                value={editChannelKeywords}
-                                onChange={(e) => setEditChannelKeywords(e.target.value)}
-                                placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
-                                className="py-2 px-3 border-1"
-                                style={{ borderRadius: "8px" }}
-                              />
-                              <div className="text-muted small mt-1">
-                                {t("settings.deliveryChannelKeywordsHelp")}
-                              </div>
-                            </Form.Group>
-                            <div className="d-flex justify-content-end gap-2">
-                              <Button
-                                variant="outline-secondary"
-                                onClick={cancelEditChannel}
-                                disabled={isUpdatingDeliveryChannel}
-                              >
-                                {t("settings.deliveryChannelCancel")}
-                              </Button>
-                              <Button
-                                variant="primary"
-                                onClick={handleSaveChannel}
-                                disabled={
-                                  isUpdatingDeliveryChannel ||
-                                  editChannelWebhookURL.trim().length === 0
-                                }
-                              >
-                                {isUpdatingDeliveryChannel ? (
-                                  <>
-                                    <Spinner
-                                      as="span"
-                                      animation="border"
-                                      size="sm"
-                                      role="status"
-                                      aria-hidden="true"
-                                      className="me-2"
-                                    />
-                                    {t("settings.deliveryChannelSaving")}
-                                  </>
-                                ) : (
-                                  t("settings.deliveryChannelSave")
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="border-top pt-4">
-                <div className="text-muted small fw-semibold mb-2">
-                  {t("settings.deliveryChannelAdd")}
-                </div>
-                <Form onSubmit={handleCreateChannel}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="text-muted small fw-semibold mb-2">
-                      {t("settings.deliveryChannelName")}
-                    </Form.Label>
-                    <Form.Control
-                      value={newChannelName}
-                      onChange={(e) => setNewChannelName(e.target.value)}
-                      placeholder={t("settings.deliveryChannelNamePlaceholder")}
-                      disabled={isCreatingDeliveryChannel || editingChannelID !== null}
-                      className="py-2 px-3 border-1"
-                      style={{ borderRadius: "8px" }}
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="text-muted small fw-semibold mb-2">
-                      {t("settings.deliveryChannelWebhookURL")}
-                    </Form.Label>
-                    <Form.Control
-                      value={newChannelWebhookURL}
-                      onChange={(e) => setNewChannelWebhookURL(e.target.value)}
-                      placeholder={t("settings.deliveryChannelWebhookPlaceholder")}
-                      required
-                      disabled={isCreatingDeliveryChannel || editingChannelID !== null}
-                      className="py-2 px-3 border-1"
-                      style={{ borderRadius: "8px" }}
-                    />
-                  </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="text-muted small fw-semibold mb-2">
-                      {t("settings.deliveryChannelKeywords")}
-                    </Form.Label>
-                    <Form.Control
-                      value={newChannelKeywords}
-                      onChange={(e) => setNewChannelKeywords(e.target.value)}
-                      placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
-                      disabled={isCreatingDeliveryChannel || editingChannelID !== null}
-                      className="py-2 px-3 border-1"
-                      style={{ borderRadius: "8px" }}
-                    />
-                    <div className="text-muted small mt-1">
-                      {t("settings.deliveryChannelKeywordsHelp")}
-                    </div>
-                  </Form.Group>
-
-                  <div className="d-grid">
-                    <Button
-                      variant="primary"
-                      type="submit"
-                      className="py-2 fw-semibold"
-                      style={{ borderRadius: "8px" }}
-                      disabled={
-                        isCreatingDeliveryChannel ||
-                        editingChannelID !== null ||
-                        newChannelWebhookURL.trim().length === 0
-                      }
-                    >
-                      {isCreatingDeliveryChannel ? (
-                        <>
-                          <Spinner
-                            as="span"
-                            animation="border"
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
                             size="sm"
-                            role="status"
-                            aria-hidden="true"
-                            className="me-2"
+                            onClick={() => beginEditChannel(ch)}
+                            disabled={
+                              editingChannelID !== null ||
+                              isUpdatingDeliveryChannel ||
+                              isDeletingDeliveryChannel ||
+                              isCreatingDeliveryChannel
+                            }
+                          >
+                            {t("settings.deliveryChannelEdit")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteChannel(ch.id)}
+                            disabled={
+                              editingChannelID !== null ||
+                              isDeletingDeliveryChannel ||
+                              isUpdatingDeliveryChannel ||
+                              isCreatingDeliveryChannel
+                            }
+                          >
+                            {t("settings.deliveryChannelDelete")}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {editingChannelID === ch.id && (
+                      <div className="mt-4 space-y-3 border-t pt-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`edit-channel-name-${ch.id}`}>
+                            {t("settings.deliveryChannelName")}
+                          </Label>
+                          <Input
+                            id={`edit-channel-name-${ch.id}`}
+                            value={editChannelName}
+                            onChange={(e) => setEditChannelName(e.target.value)}
+                            placeholder={t("settings.deliveryChannelNamePlaceholder")}
                           />
-                          {t("settings.deliveryChannelCreating")}
-                        </>
-                      ) : (
-                        t("settings.deliveryChannelCreate")
-                      )}
-                    </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`edit-channel-webhook-${ch.id}`}>
+                            {t("settings.deliveryChannelWebhookURL")}
+                          </Label>
+                          <Input
+                            id={`edit-channel-webhook-${ch.id}`}
+                            value={editChannelWebhookURL}
+                            onChange={(e) => setEditChannelWebhookURL(e.target.value)}
+                            placeholder={t("settings.deliveryChannelWebhookPlaceholder")}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor={`edit-channel-keywords-${ch.id}`}>
+                            {t("settings.deliveryChannelKeywords")}
+                          </Label>
+                          <Input
+                            id={`edit-channel-keywords-${ch.id}`}
+                            value={editChannelKeywords}
+                            onChange={(e) => setEditChannelKeywords(e.target.value)}
+                            placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t("settings.deliveryChannelKeywordsHelp")}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={cancelEditChannel}
+                            disabled={isUpdatingDeliveryChannel}
+                          >
+                            {t("settings.deliveryChannelCancel")}
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={handleSaveChannel}
+                            disabled={
+                              isUpdatingDeliveryChannel ||
+                              editChannelWebhookURL.trim().length === 0
+                            }
+                          >
+                            {isUpdatingDeliveryChannel ? (
+                              <span className="inline-flex items-center gap-2">
+                                <Loader2Icon className="size-4 animate-spin" />
+                                {t("settings.deliveryChannelSaving")}
+                              </span>
+                            ) : (
+                              t("settings.deliveryChannelSave")
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </Form>
+                ))}
               </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+            )}
+          </div>
 
-      <Row className="justify-content-center mt-5">
-        <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-           <Card className="border-0 shadow-lg">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center">
-                <Lock size={18} className="me-2 text-body" />
-                <div className="flex-grow-1">
-                  <h6 className="mb-0 text-body">
-                    {t("settings.changePassword")}
-                  </h6>
-                </div>
+          <div className="space-y-3 border-t pt-4">
+            <div className="text-sm font-medium text-muted-foreground">
+              {t("settings.deliveryChannelAdd")}
+            </div>
+            <form onSubmit={handleCreateChannel} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="new-channel-name">
+                  {t("settings.deliveryChannelName")}
+                </Label>
+                <Input
+                  id="new-channel-name"
+                  value={newChannelName}
+                  onChange={(e) => setNewChannelName(e.target.value)}
+                  placeholder={t("settings.deliveryChannelNamePlaceholder")}
+                  disabled={isCreatingDeliveryChannel || editingChannelID !== null}
+                />
               </div>
-            </Card.Header>
-            <Card.Body className="p-4 p-md-5">
-              {error && (
-                <Alert variant="danger" className="mb-4 border-0">
-                  {error}
-                </Alert>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-channel-webhook">
+                  {t("settings.deliveryChannelWebhookURL")}
+                </Label>
+                <Input
+                  id="new-channel-webhook"
+                  value={newChannelWebhookURL}
+                  onChange={(e) => setNewChannelWebhookURL(e.target.value)}
+                  placeholder={t("settings.deliveryChannelWebhookPlaceholder")}
+                  required
+                  disabled={isCreatingDeliveryChannel || editingChannelID !== null}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-channel-keywords">
+                  {t("settings.deliveryChannelKeywords")}
+                </Label>
+                <Input
+                  id="new-channel-keywords"
+                  value={newChannelKeywords}
+                  onChange={(e) => setNewChannelKeywords(e.target.value)}
+                  placeholder={t("settings.deliveryChannelKeywordsPlaceholder")}
+                  disabled={isCreatingDeliveryChannel || editingChannelID !== null}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.deliveryChannelKeywordsHelp")}
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={
+                  isCreatingDeliveryChannel ||
+                  editingChannelID !== null ||
+                  newChannelWebhookURL.trim().length === 0
+                }
+              >
+                {isCreatingDeliveryChannel ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2Icon className="size-4 animate-spin" />
+                    {t("settings.deliveryChannelCreating")}
+                  </span>
+                ) : (
+                  t("settings.deliveryChannelCreate")
+                )}
+              </Button>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <div className="flex items-center gap-2">
+            <LockIcon className="size-4" />
+            <CardTitle className="text-base">{t("settings.changePassword")}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert>
+              <CircleCheckIcon />
+              <AlertDescription>{success}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current_password">{t("settings.currentPassword")}</Label>
+              <Input
+                id="current_password"
+                type="password"
+                name="current_password"
+                value={formData.current_password}
+                onChange={handleInputChange}
+                placeholder={t("settings.currentPasswordPlaceholder")}
+                disabled={isMutating}
+                autoComplete="current-password"
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("settings.currentPasswordHelp")}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_password">{t("settings.newPassword")}</Label>
+              <Input
+                id="new_password"
+                type="password"
+                name="new_password"
+                value={formData.new_password}
+                onChange={handleInputChange}
+                placeholder={t("settings.newPasswordPlaceholder")}
+                required
+                disabled={isMutating}
+                aria-invalid={
+                  showValidation &&
+                  !passwordValid &&
+                  formData.new_password.length > 0 &&
+                  !success
+                }
+                autoComplete="new-password"
+              />
+              {showValidation && formData.new_password.length > 0 && !success ? (
+                <p
+                  className={
+                    passwordValid
+                      ? "text-xs text-emerald-600"
+                      : "text-xs text-destructive"
+                  }
+                >
+                  {passwordValid
+                    ? t("settings.passwordStrengthValid")
+                    : t("settings.passwordMinLength")}
+                </p>
+              ) : showValidation && !formData.new_password && !success ? (
+                <p className="text-xs text-destructive">
+                  {t("settings.enterNewPassword")}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm_password">
+                {t("settings.confirmPassword")}
+              </Label>
+              <Input
+                id="confirm_password"
+                type="password"
+                name="confirm_password"
+                value={formData.confirm_password}
+                onChange={handleInputChange}
+                placeholder={t("settings.confirmPasswordPlaceholder")}
+                required
+                disabled={isMutating}
+                aria-invalid={
+                  showValidation &&
+                  formData.confirm_password.length > 0 &&
+                  !passwordsMatch &&
+                  !success
+                }
+                autoComplete="new-password"
+              />
+              {showValidation &&
+              formData.confirm_password.length > 0 &&
+              !success ? (
+                <p
+                  className={
+                    passwordsMatch
+                      ? "text-xs text-emerald-600"
+                      : "text-xs text-destructive"
+                  }
+                >
+                  {passwordsMatch
+                    ? t("settings.passwordsMatch")
+                    : t("settings.passwordsNotMatch")}
+                </p>
+              ) : showValidation && !formData.confirm_password && !success ? (
+                <p className="text-xs text-destructive">
+                  {t("settings.confirmPasswordRequired")}
+                </p>
+              ) : null}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={
+                isMutating || !formData.new_password || !formData.confirm_password
+              }
+            >
+              {isMutating ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2Icon className="size-4 animate-spin" />
+                  {t("settings.changingPassword")}
+                </span>
+              ) : (
+                t("settings.changePassword")
               )}
-              {success && (
-                <Alert variant="success" className="mb-4 border-0">
-                  <CheckCircle size={16} className="me-2" />
-                  {success}
-                </Alert>
-              )}
-
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-4">
-                  <Form.Label className="text-muted small fw-semibold mb-2">
-                    {t("settings.currentPassword")}
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="current_password"
-                    value={formData.current_password}
-                    onChange={handleInputChange}
-                    placeholder={t("settings.currentPasswordPlaceholder")}
-                    disabled={isMutating}
-                    className="py-3 px-3 border-1"
-                    style={{ borderRadius: "8px" }}
-                  />
-                  <div className="form-text mt-1">
-                    {t("settings.currentPasswordHelp")}
-                  </div>
-                </Form.Group>
-
-                <Form.Group className="mb-4">
-                  <Form.Label className="text-muted small fw-semibold mb-2">
-                    {t("settings.newPassword")}
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="new_password"
-                    value={formData.new_password}
-                    onChange={handleInputChange}
-                    placeholder={t("settings.newPasswordPlaceholder")}
-                    required
-                    disabled={isMutating}
-                    className="py-3 px-3 border-1"
-                    style={{ borderRadius: "8px" }}
-                    isInvalid={
-                      showValidation &&
-                      !passwordValid &&
-                      formData.new_password.length > 0 &&
-                      !success
-                    }
-                    isValid={showValidation && passwordValid && !success}
-                  />
-                  {showValidation &&
-                    formData.new_password.length > 0 &&
-                    !success && (
-                      <Form.Control.Feedback
-                        type={passwordValid ? "valid" : "invalid"}
-                        className="d-block"
-                      >
-                        {passwordValid
-                          ? t("settings.passwordStrengthValid")
-                          : t("settings.passwordMinLength")}
-                      </Form.Control.Feedback>
-                    )}
-                  {showValidation && !formData.new_password && !success && (
-                    <Form.Control.Feedback type="invalid" className="d-block">
-                      {t("settings.enterNewPassword")}
-                    </Form.Control.Feedback>
-                  )}
-                </Form.Group>
-
-                <Form.Group className="mb-4">
-                  <Form.Label className="text-muted small fw-semibold mb-2">
-                    {t("settings.confirmPassword")}
-                  </Form.Label>
-                  <Form.Control
-                    type="password"
-                    name="confirm_password"
-                    value={formData.confirm_password}
-                    onChange={handleInputChange}
-                    placeholder={t("settings.confirmPasswordPlaceholder")}
-                    required
-                    disabled={isMutating}
-                    className="py-3 px-3 border-1"
-                    style={{ borderRadius: "8px" }}
-                    isInvalid={
-                      showValidation &&
-                      formData.confirm_password.length > 0 &&
-                      !passwordsMatch &&
-                      !success
-                    }
-                    isValid={showValidation && passwordsMatch && !success}
-                  />
-                  {showValidation &&
-                    formData.confirm_password.length > 0 &&
-                    !success && (
-                      <Form.Control.Feedback
-                        type={passwordsMatch ? "valid" : "invalid"}
-                        className="d-block"
-                      >
-                        {passwordsMatch
-                          ? t("settings.passwordsMatch")
-                          : t("settings.passwordsNotMatch")}
-                      </Form.Control.Feedback>
-                    )}
-                  {showValidation && !formData.confirm_password && !success && (
-                    <Form.Control.Feedback type="invalid" className="d-block">
-                      {t("settings.confirmPasswordRequired")}
-                    </Form.Control.Feedback>
-                  )}
-                </Form.Group>
-
-                <div className="d-grid gap-2">
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={
-                      isMutating ||
-                      !formData.new_password ||
-                      !formData.confirm_password
-                    }
-                    className="py-3 fw-semibold"
-                    style={{ borderRadius: "8px" }}
-                  >
-                    {isMutating ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                          className="me-2"
-                        />
-                        {t("settings.changingPassword")}
-                      </>
-                    ) : (
-                      <>
-                        {t("settings.changePassword")}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

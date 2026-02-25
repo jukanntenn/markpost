@@ -16,15 +16,6 @@ function renderWithI18n() {
   );
 }
 
-function findDropdownItemByText(text: string) {
-  const elements = screen.getAllByText(text);
-  for (const el of elements) {
-    const item = el.closest(".dropdown-item");
-    if (item) return item as HTMLElement;
-  }
-  return null;
-}
-
 beforeEach(() => {
   localStorage.clear();
 });
@@ -47,7 +38,7 @@ describe("LanguageToggle", () => {
     await user.click(
       screen.getByRole("button", { name: i18n.t("language.changeLanguage") })
     );
-    await user.click(findDropdownItemByText("中文")!);
+    await user.click(screen.getByRole("menuitemradio", { name: "中文" }));
     expect(i18n.language).toBe("zh");
     const toggle = screen.getByRole("button", {
       name: i18n.t("language.changeLanguage"),
@@ -62,7 +53,7 @@ describe("LanguageToggle", () => {
     await user.click(
       screen.getByRole("button", { name: i18n.t("language.changeLanguage") })
     );
-    await user.click(findDropdownItemByText("English")!);
+    await user.click(screen.getByRole("menuitemradio", { name: "English" }));
     expect(i18n.language).toBe("en");
     const toggle = screen.getByRole("button", {
       name: i18n.t("language.changeLanguage"),
@@ -78,7 +69,7 @@ describe("LanguageToggle", () => {
     await user.click(
       screen.getByRole("button", { name: i18n.t("language.changeLanguage") })
     );
-    await user.click(findDropdownItemByText("中文")!);
+    await user.click(screen.getByRole("menuitemradio", { name: "中文" }));
     expect(spy).toHaveBeenCalledWith("zh");
     spy.mockRestore();
   });
@@ -90,12 +81,10 @@ describe("LanguageToggle", () => {
     await user.click(
       screen.getByRole("button", { name: i18n.t("language.changeLanguage") })
     );
-    const englishItem = findDropdownItemByText("English");
-    const chineseItem = findDropdownItemByText("中文");
-    expect(englishItem).not.toBeNull();
-    expect(chineseItem).not.toBeNull();
-    expect(englishItem!).toHaveClass("active");
-    expect(chineseItem!).not.toHaveClass("active");
+    const englishItem = screen.getByRole("menuitemradio", { name: "English" });
+    const chineseItem = screen.getByRole("menuitemradio", { name: "中文" });
+    expect(englishItem).toHaveAttribute("data-state", "checked");
+    expect(chineseItem).toHaveAttribute("data-state", "unchecked");
   });
 
   it("marks Chinese item active when language is Chinese", async () => {
@@ -105,11 +94,9 @@ describe("LanguageToggle", () => {
     await user.click(
       screen.getByRole("button", { name: i18n.t("language.changeLanguage") })
     );
-    const englishItem = findDropdownItemByText("English");
-    const chineseItem = findDropdownItemByText("中文");
-    expect(englishItem).not.toBeNull();
-    expect(chineseItem).not.toBeNull();
-    expect(chineseItem!).toHaveClass("active");
-    expect(englishItem!).not.toHaveClass("active");
+    const englishItem = screen.getByRole("menuitemradio", { name: "English" });
+    const chineseItem = screen.getByRole("menuitemradio", { name: "中文" });
+    expect(chineseItem).toHaveAttribute("data-state", "checked");
+    expect(englishItem).toHaveAttribute("data-state", "unchecked");
   });
 });

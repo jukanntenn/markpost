@@ -1,24 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Button,
-  Container,
-  Card,
-  Spinner,
-  Row,
-  Col,
-  Form,
-  Alert,
-} from "react-bootstrap";
-import { Github } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 import { anno } from "../utils/api";
 import * as api from "../utils/api";
 import { storage, auth } from "../utils";
 import type { LoginResponse, OAuthUrlResponse } from "../types/auth";
 import axios from "axios";
-import { useToasts } from "react-bootstrap-toasts";
 import LoginTitle from "../components/login/LoginTitle";
 import LoginDivider from "../components/login/LoginDivider";
+import { toast } from "sonner";
+import { GithubIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
+
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function LoginPage() {
   const { t } = useTranslation();
@@ -31,14 +27,10 @@ function LoginPage() {
     password: "",
   });
   const authWindowRef = useRef<Window | null>(null);
-  const checkAuthWindowIntervalRef = useRef<number | null>(null);
+  const checkAuthWindowIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const toasts = useToasts();
-  const showErrorToast = (header: string, body: string) => {
-    toasts.danger({
-      headerContent: <span className="me-auto">{header}</span>,
-      bodyContent: body,
-    });
+  const showErrorToast = (header: string, body?: string) => {
+    toast.error(header, body ? { description: body } : undefined);
   };
 
   useEffect(() => {
@@ -95,7 +87,7 @@ function LoginPage() {
 
       authWindowRef.current = openAuthWindow(url);
       if (!authWindowRef.current) {
-        showErrorToast(t("login.cannotOpenAuthWindow"), "");
+        showErrorToast(t("login.cannotOpenAuthWindow"));
         return;
       }
 
@@ -188,126 +180,95 @@ function LoginPage() {
     : t("login.githubLogin");
 
   return (
-    <div className="mt-5">
-      <Container>
-        <Row className="justify-content-center">
-          <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-            <LoginTitle />
+    <div className="flex min-h-svh items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <LoginTitle />
 
-            {/* Login Card */}
-            <Card className="border-0 shadow-lg">
-              <Card.Body className="p-4 p-md-5">
-                {/* Error and Success Alerts */}
-                {error && (
-                  <Alert variant="danger" className="mb-4 border-0">
-                    {error}
-                  </Alert>
+        <Card className="shadow-sm">
+          <CardContent className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <TriangleAlertIcon />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-username">{t("login.username")}</Label>
+                <Input
+                  id="login-username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  placeholder={t("login.usernamePlaceholder")}
+                  required
+                  disabled={loading}
+                  autoComplete="username"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="login-password">{t("login.password")}</Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder={t("login.passwordPlaceholder")}
+                  required
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || !formData.username || !formData.password}
+              >
+                {loading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2Icon className="size-4 animate-spin" />
+                    {t("login.signingIn")}
+                  </span>
+                ) : (
+                  t("login.loginButton")
                 )}
-                {success && (
-                  <Alert variant="success" className="mb-4 border-0">
-                    {success}
-                  </Alert>
-                )}
+              </Button>
+            </form>
 
-                {/* Password Login Form */}
-                <Form onSubmit={handleLogin} className="mb-4">
-                  <Form.Group className="mb-3">
-                    <Form.Label className="text-muted fw-semibold">
-                      {t("login.username")}
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      placeholder={t("login.usernamePlaceholder")}
-                      required
-                      disabled={loading}
-                      className="py-3 px-3 border-1"
-                      style={{ fontSize: "0.875rem" }}
-                    />
-                  </Form.Group>
+            <LoginDivider />
 
-                  <Form.Group className="mb-4">
-                    <Form.Label className="text-muted fw-semibold">
-                      {t("login.password")}
-                    </Form.Label>
-                    <Form.Control
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder={t("login.passwordPlaceholder")}
-                      required
-                      disabled={loading}
-                      className="py-3 px-3 border-1"
-                      style={{ fontSize: "0.875rem" }}
-                    />
-                  </Form.Group>
-
-                  <div className="d-grid gap-2">
-                    <Button
-                      variant="primary"
-                      type="submit"
-                      disabled={
-                        loading || !formData.username || !formData.password
-                      }
-                      className="py-3 fw-semibold"
-                    >
-                      {loading ? (
-                        <>
-                          <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                            className="me-2"
-                          />
-                          {t("login.signingIn")}
-                        </>
-                      ) : (
-                        t("login.loginButton")
-                      )}
-                    </Button>
-                  </div>
-                </Form>
-
-                <LoginDivider />
-
-                {/* GitHub Login Button */}
-                <div className="d-grid gap-2">
-                  <Button
-                    variant="outline-secondary"
-                    onClick={handleGitHubLogin}
-                    disabled={loadingGitHub}
-                    className="py-3 fw-semibold"
-                  >
-                    {loadingGitHub ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                          className="me-2"
-                        />
-                        {gitHubButtonText}
-                      </>
-                    ) : (
-                      <>
-                        <Github size={16} className="me-2" />
-                        {t("login.githubLogin")}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGitHubLogin}
+              disabled={loadingGitHub}
+            >
+              {loadingGitHub ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2Icon className="size-4 animate-spin" />
+                  {gitHubButtonText}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <GithubIcon className="size-4" />
+                  {t("login.githubLogin")}
+                </span>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

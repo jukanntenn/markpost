@@ -5,7 +5,9 @@ import { http, HttpResponse } from "msw";
 import { setMockAuth, createWrapper } from "../../test/utils";
 import { useDeliveryChannels } from "./useDeliveryChannels";
 import { useCreateDeliveryChannel } from "./useCreateDeliveryChannel";
+import type { CreateDeliveryChannelArgs } from "./useCreateDeliveryChannel";
 import { useUpdateDeliveryChannel } from "./useUpdateDeliveryChannel";
+import type { UpdateDeliveryChannelArgs } from "./useUpdateDeliveryChannel";
 import { useDeleteDeliveryChannel } from "./useDeleteDeliveryChannel";
 
 describe("delivery channel hooks", () => {
@@ -48,7 +50,7 @@ describe("delivery channel hooks", () => {
   it("creates a delivery channel", async () => {
     server.use(
       http.post("/api/delivery/channels", async ({ request }) => {
-        const body = (await request.json()) as any;
+        const body = (await request.json()) as CreateDeliveryChannelArgs;
         expect(body.kind).toBe("feishu");
         expect(body.webhook_url).toContain("feishu");
         return HttpResponse.json({ ok: true });
@@ -69,7 +71,7 @@ describe("delivery channel hooks", () => {
     server.use(
       http.put("/api/delivery/channels/:id", async ({ params, request }) => {
         expect(params.id).toBe("1");
-        const body = (await request.json()) as any;
+        const body = (await request.json()) as Omit<UpdateDeliveryChannelArgs, "id">;
         expect(body.enabled).toBe(false);
         return HttpResponse.json({ ok: true });
       })

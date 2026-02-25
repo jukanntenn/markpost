@@ -1,13 +1,15 @@
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Container,
-  Spinner,
-} from "react-bootstrap";
-import { Book, Copy, Eye, EyeSlash, Key, FilePlus, JournalText } from "react-bootstrap-icons";
 import { useState } from "react";
+import {
+  BookIcon,
+  CopyIcon,
+  EyeIcon,
+  EyeOffIcon,
+  FilePlusIcon,
+  FileTextIcon,
+  KeyIcon,
+  Loader2Icon,
+  TriangleAlertIcon,
+} from "lucide-react";
 
 import { buildPostUrl } from "../utils/url";
 import CreateTestPostModal from "../components/CreateTestPostModal";
@@ -15,6 +17,10 @@ import { usePostKey } from "../hooks/swr/usePostKey";
 import { usePosts } from "../hooks/swr/usePosts";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const formatToLocalTime = (utcString: string): string => {
   if (!utcString) return "";
@@ -59,190 +65,167 @@ function Dashboard() {
 
   return (
     <>
-    <Container className="py-4">
-      <div className="row g-4">
-        <div className="col-12 col-xl-6">
-          <div className="d-flex flex-column gap-4">
-          <Card className="border-0 shadow-lg h-100">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center">
-                <Key size={18} className="me-2 text-body" />
-                <div className="flex-grow-1">
-                  <h6 className="mb-0 text-body">
-                    {t("dashboard.postKey.title")}
-                  </h6>
-                </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <div className="flex items-center gap-2">
+                <KeyIcon className="size-4" />
+                <CardTitle className="text-base">{t("dashboard.postKey.title")}</CardTitle>
               </div>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
+            </CardHeader>
+            <CardContent className="space-y-3">
               {keyLoading ? (
-                <div className="bg-body-tertiary rounded-3 p-4 border border-secondary-subtle text-center">
-                  <Spinner animation="border" role="status" variant="primary">
-                    <span className="visually-hidden">Loading...</span>
-                  </Spinner>
-                  <p className="mt-3 text-muted mb-0">
+                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/40 p-6 text-center">
+                  <Loader2Icon className="size-5 animate-spin" />
+                  <p className="text-sm text-muted-foreground">
                     {t("dashboard.postKey.loadingKey")}
                   </p>
                 </div>
               ) : keyError ? (
-                <Alert variant="danger" className="mb-0">
-                  <p>{t("dashboard.postKey.errorLoadingKey")}</p>
+                <Alert variant="destructive">
+                  <TriangleAlertIcon />
+                  <AlertDescription>
+                    {t("dashboard.postKey.errorLoadingKey")}
+                  </AlertDescription>
                 </Alert>
               ) : (
-                <div>
-                  <div className="d-flex align-items-center justify-content-between">
-                    <div className="flex-grow-1">
-                      <div className="font-monospace fs-5 text-body">
-                        {showKey ? postKey : "•".repeat(postKey.length)}
-                      </div>
-                      {copySuccess && (
-                        <div className="mt-2">
-                          <Badge bg="success" className="animate-fade-in">
-                            {t("dashboard.postKey.copied")}
-                          </Badge>
-                        </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="font-mono text-base">
+                      {showKey ? postKey : "•".repeat(postKey.length)}
+                    </div>
+                    {copySuccess && (
+                      <Badge variant="secondary">{t("dashboard.postKey.copied")}</Badge>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {t("dashboard.postKey.createdAt")} {formatToLocalTime(createdAt)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowKey(!showKey)}
+                      title={
+                        showKey
+                          ? t("dashboard.postKey.hideKey")
+                          : t("dashboard.postKey.showKey")
+                      }
+                    >
+                      {showKey ? (
+                        <EyeOffIcon className="size-4" />
+                      ) : (
+                        <EyeIcon className="size-4" />
                       )}
-                    </div>
-                    <div className="d-flex gap-0 ms-3">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => setShowKey(!showKey)}
-                        className="d-flex align-items-center justify-content-center p-0 text-body"
-                        style={{ width: "40px", height: "40px" }}
-                        title={
-                          showKey
-                            ? t("dashboard.postKey.hideKey")
-                            : t("dashboard.postKey.showKey")
-                        }
-                      >
-                        {showKey ? <EyeSlash size={18} /> : <Eye size={18} />}
-                      </Button>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={handleCopyKey}
-                        className="d-flex align-items-center justify-content-center p-0 text-body"
-                        style={{ width: "40px", height: "40px" }}
-                        title={t("dashboard.postKey.copyKey")}
-                      >
-                        <Copy size={18} />
-                      </Button>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => setShowCreateModal(true)}
-                        className="d-flex align-items-center justify-content-center p-0 text-body"
-                        style={{ width: "40px", height: "40px" }}
-                        title={t("dashboard.postKey.createTestPostTip")}
-                      >
-                        <FilePlus size={18} />
-                      </Button>
-                    </div>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleCopyKey}
+                      title={t("dashboard.postKey.copyKey")}
+                    >
+                      <CopyIcon className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowCreateModal(true)}
+                      title={t("dashboard.postKey.createTestPostTip")}
+                    >
+                      <FilePlusIcon className="size-4" />
+                    </Button>
                   </div>
                 </div>
               )}
-              <div className="mt-3">
-                <small className="text-muted">
-                  {t("dashboard.postKey.createdAt")}{" "}
-                  {formatToLocalTime(createdAt)}
-                </small>
-              </div>
-            </Card.Body>
+            </CardContent>
           </Card>
-          <Card className="border-0 shadow-lg h-100">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center">
-                <Book size={18} className="me-2 text-body" />
-                <div className="flex-grow-1">
-                  <h6 className="mb-0 text-body">
-                    {t("dashboard.documentation.title")}
-                  </h6>
-                </div>
+
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <div className="flex items-center gap-2">
+                <BookIcon className="size-4" />
+                <CardTitle className="text-base">
+                  {t("dashboard.documentation.title")}
+                </CardTitle>
               </div>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4 text-center">
-              <p className="text-muted mb-0">
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
                 {t("dashboard.documentation.content")}{" "}
                 <a
                   href="https://github.com/jukanntenn/markpost?tab=readme-ov-file#apis"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary text-decoration-none fw-medium"
+                  className="text-foreground underline underline-offset-4"
                 >
                   {t("dashboard.documentation.apiLink")}
                 </a>{" "}
                 {t("dashboard.documentation.content2")}
               </p>
-            </Card.Body>
+            </CardContent>
           </Card>
-          </div>
         </div>
 
-        <div className="col-12 col-xl-6">
-          <Card className="border-0 shadow-lg h-100">
-            <Card.Header className="bg-body border-0 pt-3 px-4 pb-2">
-              <div className="d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center">
-                  <JournalText size={18} className="me-2 text-body" />
-                  <div className="flex-grow-1">
-                    <h6 className="mb-0 text-body">{t("dashboard.recentPosts.title")}</h6>
-                  </div>
-                </div>
-                <a
-                  href="/posts"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/posts");
-                  }}
-                  className="text-decoration-none small"
-                >
-                  {t("dashboard.recentPosts.viewAll")}
-                </a>
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-2">
+              <FileTextIcon className="size-4" />
+              <CardTitle className="text-base">{t("dashboard.recentPosts.title")}</CardTitle>
+            </div>
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0"
+              onClick={() => navigate("/posts")}
+            >
+              {t("dashboard.recentPosts.viewAll")}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {postsLoading ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                <Loader2Icon className="size-5 animate-spin" />
+                <p className="text-sm text-muted-foreground">
+                  {t("dashboard.recentPosts.loading")}
+                </p>
               </div>
-            </Card.Header>
-            <Card.Body className="px-4 pb-4">
-              {postsLoading ? (
-                <div className="text-center">
-                  <Spinner animation="border" role="status" variant="primary">
-                    <span className="visually-hidden">Loading...</span>
-                  </Spinner>
-                  <p className="mt-3 text-muted mb-0">{t("dashboard.recentPosts.loading")}</p>
-                </div>
-              ) : postsError ? (
-                <Alert variant="danger" className="mb-0">
-                  <p>{t("dashboard.recentPosts.error")}</p>
-                </Alert>
-              ) : recentPosts.length === 0 ? (
-                <div className="text-center">
-                  <p className="text-muted mb-0">{t("dashboard.recentPosts.empty")}</p>
-                </div>
-              ) : (
-                <div>
-                  <ul className="list-unstyled mb-0">
-                    {recentPosts.map((p) => (
-                      <li key={p.id} className="py-2">
-                        <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between">
-                          <a
-                            href={buildPostUrl(p.qid)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-decoration-none fw-medium flex-grow-1"
-                          >
-                            {p.title}
-                          </a>
-                          <small className="text-muted mt-1 mt-md-0 ms-md-3">{formatToLocalTime(p.created_at)}</small>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </div>
+            ) : postsError ? (
+              <Alert variant="destructive">
+                <TriangleAlertIcon />
+                <AlertDescription>{t("dashboard.recentPosts.error")}</AlertDescription>
+              </Alert>
+            ) : recentPosts.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {t("dashboard.recentPosts.empty")}
+              </p>
+            ) : (
+              <ul className="-mx-2 divide-y">
+                {recentPosts.map((p) => (
+                  <li key={p.id} className="px-2 py-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <a
+                        href={buildPostUrl(p.qid)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="truncate text-sm font-medium underline-offset-4 hover:underline"
+                      >
+                        {p.title}
+                      </a>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatToLocalTime(p.created_at)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </Container>
     <CreateTestPostModal
       show={showCreateModal}
       postKey={postKey}

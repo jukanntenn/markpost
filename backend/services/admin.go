@@ -6,6 +6,7 @@ import (
 
 	"markpost/models"
 	"markpost/repositories"
+	"markpost/utils"
 )
 
 type AdminService struct {
@@ -48,6 +49,43 @@ func (s *AdminService) DeleteUser(id int) error {
 		return NewServiceError(ErrNotFound, fmt.Sprintf("user with ID %d not found", id))
 	}
 	return nil
+}
+
+func (s *AdminService) CreateUser(username, password string) (*models.User, error) {
+	user, err := s.users.CreateUser(username, password)
+	if err != nil {
+		if err.Error() == "username is already taken" {
+			return nil, NewServiceErrorWithDetails(ErrValidation, "request validation failed", []ServiceError{
+				{Code: ErrFieldViolation, Description: "username"},
+			})
+		}
+		return nil, NewServiceErrorWrap(ErrInternal, "create user failed", err)
+	}
+	return user, nil
+}
+
+func (s *AdminService) ResetUserPassword(id int, password string, generateRandom bool) (string, error) {
+	_, err := s.users.GetUserByID(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return "", NewServiceErrorWrap(ErrNotFound, fmt.Sprintf("user with ID %d not found", id), err)
+		}
+		return "", NewServiceErrorWrap(ErrInternal, fmt.Sprintf("get user with ID %d failed", id), err)
+	}
+
+	finalPassword := password
+	if generateRandom {
+		finalPassword, err = utils.GenerateRandomPassword(12)
+		if err != nil {
+			return "", NewServiceErrorWrap(ErrInternal, "generate random password failed", err)
+		}
+	}
+
+	if err := s.users.SetUserPassword(id, finalPassword); err != nil {
+		return "", NewServiceErrorWrap(ErrInternal, fmt.Sprintf("set password for user with ID %d failed", id), err)
+	}
+
+	return finalPassword, nil
 }
 
 func (s *AdminService) ListAllPosts(search string, offset int, limit int) ([]models.Post, int64, error) {

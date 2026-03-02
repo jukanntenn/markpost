@@ -36,6 +36,100 @@ func TestAdminService_UpdateUserRole(t *testing.T) {
 	}
 }
 
+func TestAdminService_CreateUser_Success(t *testing.T) {
+	db := setupAdminTestDB(t)
+
+	svc := NewAdminService(repositories.NewUserRepo(db), repositories.NewPostRepo(db), repositories.NewDeliveryChannelRepo(db))
+
+	user, err := svc.CreateUser("new-user", "password123")
+	if err != nil {
+		t.Fatalf("CreateUser error: %v", err)
+	}
+	if user.ID == 0 {
+		t.Fatalf("expected non-zero user id")
+	}
+	if user.Username != "new-user" {
+		t.Fatalf("expected username new-user, got %s", user.Username)
+	}
+}
+
+func TestAdminService_CreateUser_DuplicateUsername(t *testing.T) {
+	db := setupAdminTestDB(t)
+
+	svc := NewAdminService(repositories.NewUserRepo(db), repositories.NewPostRepo(db), repositories.NewDeliveryChannelRepo(db))
+
+	if _, err := svc.CreateUser("dup", "password123"); err != nil {
+		t.Fatalf("CreateUser(1) error: %v", err)
+	}
+	if _, err := svc.CreateUser("dup", "password123"); err == nil {
+		t.Fatalf("expected CreateUser(2) error")
+	} else if se, ok := AsServiceError(err); !ok || se.Code != ErrValidation {
+		t.Fatalf("expected ErrValidation, got: %v", err)
+	} else if len(se.Details) == 0 || se.Details[0].Description != "username" {
+		t.Fatalf("expected username validation detail, got: %+v", se.Details)
+	}
+}
+
+func TestAdminService_ResetUserPassword_Manual(t *testing.T) {
+	db := setupAdminTestDB(t)
+
+	userRepo := repositories.NewUserRepo(db)
+	u, err := userRepo.CreateUser("u-reset", "oldpass")
+	if err != nil {
+		t.Fatalf("CreateUser error: %v", err)
+	}
+
+	svc := NewAdminService(userRepo, repositories.NewPostRepo(db), repositories.NewDeliveryChannelRepo(db))
+
+	newPassword, err := svc.ResetUserPassword(u.ID, "newpass123", false)
+	if err != nil {
+		t.Fatalf("ResetUserPassword error: %v", err)
+	}
+	if newPassword != "newpass123" {
+		t.Fatalf("expected returned password to match input")
+	}
+
+	if _, err := userRepo.ValidateUserPassword("u-reset", "newpass123"); err != nil {
+		t.Fatalf("ValidateUserPassword error: %v", err)
+	}
+}
+
+func TestAdminService_ResetUserPassword_Random(t *testing.T) {
+	db := setupAdminTestDB(t)
+
+	userRepo := repositories.NewUserRepo(db)
+	u, err := userRepo.CreateUser("u-random", "oldpass")
+	if err != nil {
+		t.Fatalf("CreateUser error: %v", err)
+	}
+
+	svc := NewAdminService(userRepo, repositories.NewPostRepo(db), repositories.NewDeliveryChannelRepo(db))
+
+	newPassword, err := svc.ResetUserPassword(u.ID, "", true)
+	if err != nil {
+		t.Fatalf("ResetUserPassword error: %v", err)
+	}
+	if newPassword == "" {
+		t.Fatalf("expected generated password")
+	}
+
+	if _, err := userRepo.ValidateUserPassword("u-random", newPassword); err != nil {
+		t.Fatalf("ValidateUserPassword error: %v", err)
+	}
+}
+
+func TestAdminService_ResetUserPassword_NotFound(t *testing.T) {
+	db := setupAdminTestDB(t)
+
+	svc := NewAdminService(repositories.NewUserRepo(db), repositories.NewPostRepo(db), repositories.NewDeliveryChannelRepo(db))
+
+	if _, err := svc.ResetUserPassword(999999, "x", false); err == nil {
+		t.Fatalf("expected error")
+	} else if se, ok := AsServiceError(err); !ok || se.Code != ErrNotFound {
+		t.Fatalf("expected ErrNotFound, got: %v", err)
+	}
+}
+
 func TestAdminService_DeleteUser_Cascade(t *testing.T) {
 	db := setupAdminTestDB(t)
 

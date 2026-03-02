@@ -27,6 +27,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import AddUserDialog from "@/components/admin/AddUserDialog";
+import ResetPasswordDialog from "@/components/admin/ResetPasswordDialog";
 
 type Role = "admin" | "user";
 
@@ -47,6 +49,10 @@ export default function AdminUsers() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
+
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
 
@@ -116,6 +122,18 @@ export default function AdminUsers() {
       <div className="flex items-center justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={() => openRoleDialog(user)} disabled={disabled}>
           {t("admin.users.changeRole")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setResetPasswordUser(user);
+            setResetPasswordOpen(true);
+          }}
+          disabled={disabled}
+        >
+          {t("admin.users.resetPassword")}
         </Button>
         <Button
           type="button"
@@ -243,11 +261,39 @@ export default function AdminUsers() {
   return (
     <>
       <Card className="border-0 shadow-none">
-        <CardHeader className="px-0">
+        <CardHeader className="flex flex-col gap-3 px-0 md:flex-row md:items-center md:justify-between">
           <CardTitle>{t("admin.users.title")}</CardTitle>
+          <div className="flex w-full justify-end md:w-auto">
+            <Button type="button" onClick={() => setAddUserOpen(true)}>
+              {t("admin.users.addUser")}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="px-0">{renderContent()}</CardContent>
       </Card>
+
+      <AddUserDialog
+        open={addUserOpen}
+        onOpenChange={setAddUserOpen}
+        onSuccess={async () => {
+          setPage(1);
+          await mutate();
+        }}
+      />
+
+      <ResetPasswordDialog
+        open={resetPasswordOpen}
+        onOpenChange={(open) => {
+          setResetPasswordOpen(open);
+          if (!open) setResetPasswordUser(null);
+        }}
+        userId={resetPasswordUser?.id ?? 0}
+        username={resetPasswordUser?.username ?? ""}
+        onSuccess={async () => {
+          setResetPasswordUser(null);
+          await mutate();
+        }}
+      />
 
       <Dialog
         open={roleDialogOpen}
@@ -306,4 +352,3 @@ export default function AdminUsers() {
     </>
   );
 }
-

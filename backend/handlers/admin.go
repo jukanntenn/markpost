@@ -12,6 +12,9 @@ import (
 )
 
 type AdminServiceInterface interface {
+	CreateUser(username, password string) (*models.User, error)
+	ResetUserPassword(id int, password string, generateRandom bool) (string, error)
+
 	UpdateUserRole(id int, role models.Role) (*models.User, error)
 	DeleteUser(id int) error
 
@@ -34,6 +37,16 @@ func NewAdminHandler(svc AdminServiceInterface) *AdminHandler {
 
 type updateUserRoleRequest struct {
 	Role models.Role `json:"role" binding:"required,oneof=admin user"`
+}
+
+type createUserRequest struct {
+	Username string `json:"username" binding:"required,min=1,max=50"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type resetPasswordRequest struct {
+	Password        string `json:"password"`
+	GenerateRandom  *bool  `json:"generate_random"`
 }
 
 type adminUserResponse struct {
@@ -75,6 +88,61 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 			UpdatedAt: user.UpdatedAt.Format(timeFormatRFC3339),
 		},
 	})
+}
+
+func (h *AdminHandler) CreateUser(c *gin.Context) {
+	var req createUserRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	user, err := h.svc.CreateUser(req.Username, req.Password)
+	if err != nil {
+		apperrors.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": adminUserResponse{
+			ID:        user.ID,
+			Username:  user.Username,
+			Role:      string(user.Role),
+			GitHubID:  user.GitHubID,
+			CreatedAt: user.CreatedAt.Format(timeFormatRFC3339),
+			UpdatedAt: user.UpdatedAt.Format(timeFormatRFC3339),
+		},
+	})
+}
+
+func (h *AdminHandler) ResetUserPassword(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		apperrors.RespondError(c, services.NewServiceErrorWithDetails(services.ErrValidation, "request validation failed", []services.ServiceError{
+			{Code: services.ErrFieldViolation, Description: "id"},
+		}))
+		return
+	}
+
+	var req resetPasswordRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+
+	generateRandom := req.GenerateRandom != nil && *req.GenerateRandom
+	if !generateRandom && req.Password == "" {
+		apperrors.RespondError(c, services.NewServiceErrorWithDetails(services.ErrValidation, "request validation failed", []services.ServiceError{
+			{Code: services.ErrFieldViolation, Description: "password"},
+		}))
+		return
+	}
+
+	password, err := h.svc.ResetUserPassword(id, req.Password, generateRandom)
+	if err != nil {
+		apperrors.RespondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"password": password})
 }
 
 func (h *AdminHandler) DeleteUser(c *gin.Context) {

@@ -51,6 +51,7 @@ var postSvc *services.PostService
 var jwtSvc *services.JWTService
 var deliveryChannelSvc *services.DeliveryChannelService
 var deliveryDispatcher *services.DeliveryDispatcher
+var adminSvc *services.AdminService
 
 var userRepo repositories.UserRepoInterface
 var postRepo repositories.PostRepoInterface
@@ -203,6 +204,7 @@ func serve(configPath string) {
 
 	postSvc = services.NewPostService(postRepo, deliveryDispatcher)
 	deliveryChannelSvc = services.NewDeliveryChannelService(deliveryChannelRepo)
+	adminSvc = services.NewAdminService(userRepo, postRepo, deliveryChannelRepo)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")

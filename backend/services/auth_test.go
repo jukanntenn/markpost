@@ -102,6 +102,10 @@ func (s *stubUserRepo) SetUserRole(userID int, role models.Role) error {
 	return nil
 }
 
+func (s *stubUserRepo) DeleteUserByID(userID int) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func (s *stubUserRepo) GetAllUsers(offset, limit int) ([]models.User, error) {
 	return nil, fmt.Errorf("not implemented")
 }

@@ -1,6 +1,12 @@
 {
   "common": {
     "user": "用户",
+    "cancel": "取消",
+    "confirm": "确认",
+    "save": "保存",
+    "processing": "处理中...",
+    "yes": "是",
+    "no": "否",
     "pageTitle": {
       "login": "登录 | Markpost",
       "dashboard": "仪表盘 | Markpost",
@@ -160,7 +166,6 @@
     "deliveryChannelDeleteFailed": "渠道删除失败"
   },
   "admin": {
-    "title": "用户管理",
     "id": "ID",
     "username": "用户名",
     "role": "角色",
@@ -175,7 +180,79 @@
     "previous": "上一页",
     "next": "下一页",
     "page": "{{current}} / {{total}}",
-    "totalUsers": "总计：{{count}} 位用户"
+    "totalUsers": "总计：{{count}} 位用户",
+    "nav": {
+      "title": "管理后台",
+      "users": "用户",
+      "posts": "Posts",
+      "channels": "渠道"
+    },
+    "errors": {
+      "forbidden": "无权限访问",
+      "notFound": "资源不存在",
+      "deleteFailed": "删除失败",
+      "updateFailed": "更新失败",
+      "default": "发生错误"
+    },
+    "users": {
+      "title": "用户管理",
+      "actions": "操作",
+      "changeRole": "修改角色",
+      "changeRoleFor": "修改 {{username}} 的角色",
+      "roleUpdated": "角色已更新",
+      "delete": "删除",
+      "deleteTitle": "删除用户",
+      "deleteConfirm": "确认删除用户 {{username}}？该用户的 Posts 和渠道也会被删除。",
+      "deleteConfirmEmpty": "确认删除该用户？该用户的 Posts 和渠道也会被删除。",
+      "deleted": "用户已删除"
+    },
+    "posts": {
+      "title": "Posts 管理",
+      "id": "ID",
+      "titleCol": "标题",
+      "body": "正文",
+      "user": "用户",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "actions": "操作",
+      "searchPlaceholder": "按标题搜索...",
+      "error": "加载 Posts 失败",
+      "empty": "未找到 Posts",
+      "total": "总计：{{count}} 条 Posts",
+      "edit": "编辑",
+      "editTitle": "编辑 Post",
+      "updated": "Post 已更新",
+      "delete": "删除",
+      "deleteTitle": "删除 Post",
+      "deleteConfirm": "确认删除 Post「{{title}}」？",
+      "deleteConfirmEmpty": "确认删除该 Post？",
+      "deleted": "Post 已删除"
+    },
+    "channels": {
+      "title": "渠道管理",
+      "id": "ID",
+      "user": "用户",
+      "kind": "类型",
+      "name": "名称",
+      "enabled": "启用",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "actions": "操作",
+      "error": "加载渠道失败",
+      "empty": "未找到渠道",
+      "edit": "编辑",
+      "editTitle": "编辑渠道",
+      "webhookUrl": "Webhook URL",
+      "keywords": "关键词",
+      "keywordsPlaceholder": "keyword1, keyword2",
+      "enabledHelp": "开关投递",
+      "updated": "渠道已更新",
+      "delete": "删除",
+      "deleteTitle": "删除渠道",
+      "deleteConfirm": "确认删除渠道「{{name}}」？",
+      "deleteConfirmEmpty": "确认删除该渠道？",
+      "deleted": "渠道已删除"
+    }
   },
   "notFound": {
     "title": "404",

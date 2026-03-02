@@ -20,6 +20,7 @@ type UserRepoInterface interface {
 	ValidateUserPassword(username, password string) (*models.User, error)
 	SetUserPassword(userID int, password string) error
 	SetUserRole(userID int, role models.Role) error
+	DeleteUserByID(userID int) (int64, error)
 	GetAllUsers(offset, limit int) ([]models.User, error)
 	CountUsers() (int64, error)
 }
@@ -129,6 +130,15 @@ func (r *UserRepo) SetUserRole(userID int, role models.Role) error {
 
 	user.Role = role
 	return user.Update(r.database)
+}
+
+func (r *UserRepo) DeleteUserByID(userID int) (int64, error) {
+	db := r.database.DB()
+	tx := db.Delete(&models.User{}, userID)
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+	return tx.RowsAffected, nil
 }
 
 func (r *UserRepo) createUserWithUniquePostKey(username, password string, githubID *int64) (*models.User, error) {

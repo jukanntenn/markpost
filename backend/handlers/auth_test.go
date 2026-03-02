@@ -1559,7 +1559,7 @@ func testChangePassword_InternalError(t *testing.T) {
 }
 
 type postKeyResponse struct {
-	PostKey   string `json:"post_key"`
+	PostKey   string    `json:"post_key"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

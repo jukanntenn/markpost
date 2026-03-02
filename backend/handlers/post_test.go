@@ -29,17 +29,17 @@ func init() {
 }
 
 type stubPostService struct {
-	createPostFunc    func(title, body string, userID int) (string, error)
-	renderPostHTMLFunc func(qid string) (string, string, error)
+	createPostFunc      func(title, body string, userID int) (string, error)
+	renderPostHTMLFunc  func(qid string) (string, string, error)
 	getPostMarkdownFunc func(qid string) (string, string, error)
-	getUserPostsFunc  func(userID int, page, limit int) ([]models.Post, int64, error)
-	called            int
-	lastTitle         string
-	lastBody          string
-	lastUserID        int
-	lastQID           string
-	lastPage          int
-	lastLimit         int
+	getUserPostsFunc    func(userID int, page, limit int) ([]models.Post, int64, error)
+	called              int
+	lastTitle           string
+	lastBody            string
+	lastUserID          int
+	lastQID             string
+	lastPage            int
+	lastLimit           int
 }
 
 func (s *stubPostService) CreatePost(title, body string, userID int) (string, error) {
@@ -307,7 +307,6 @@ func TestRenderPost(t *testing.T) {
 		t.Run("Render error", testRenderPost_Raw_RenderError)
 	})
 }
-
 
 func testRenderPost_NotFound_ZH(t *testing.T) {
 	svc := &stubPostService{

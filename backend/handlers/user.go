@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"markpost/models"
 	"markpost/services"
 
 	"github.com/gin-gonic/gin"
@@ -19,10 +18,10 @@ func NewUserHandler(authSvc services.AuthServiceInterface) *UserHandler {
 }
 
 type ListUsersResponse struct {
-	Users     []models.User `json:"users"`
-	Total     int64         `json:"total"`
-	Page      int           `json:"page"`
-	PageSize  int           `json:"page_size"`
+	Users    []adminUserResponse `json:"users"`
+	Total    int64               `json:"total"`
+	Page     int                 `json:"page"`
+	PageSize int                 `json:"page_size"`
 }
 
 func (h *UserHandler) ListAllUsers(c *gin.Context) {
@@ -58,9 +57,22 @@ func (h *UserHandler) ListAllUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ListUsersResponse{
-		Users:     users,
-		Total:     total,
-		Page:      page,
-		PageSize:  limit,
+		Users: func() []adminUserResponse {
+			resp := make([]adminUserResponse, 0, len(users))
+			for _, u := range users {
+				resp = append(resp, adminUserResponse{
+					ID:        u.ID,
+					Username:  u.Username,
+					Role:      string(u.Role),
+					GitHubID:  u.GitHubID,
+					CreatedAt: u.CreatedAt.Format(timeFormatRFC3339),
+					UpdatedAt: u.UpdatedAt.Format(timeFormatRFC3339),
+				})
+			}
+			return resp
+		}(),
+		Total:    total,
+		Page:     page,
+		PageSize: limit,
 	})
 }

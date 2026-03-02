@@ -1,6 +1,12 @@
 {
   "common": {
     "user": "User",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "processing": "Processing...",
+    "yes": "Yes",
+    "no": "No",
     "pageTitle": {
       "login": "Login | Markpost",
       "dashboard": "Dashboard | Markpost",
@@ -160,7 +166,6 @@
     "deliveryChannelDeleteFailed": "Failed to delete channel"
   },
   "admin": {
-    "title": "User Management",
     "id": "ID",
     "username": "Username",
     "role": "Role",
@@ -175,7 +180,79 @@
     "previous": "Previous",
     "next": "Next",
     "page": "{{current}} / {{total}}",
-    "totalUsers": "Total: {{count}} users"
+    "totalUsers": "Total: {{count}} users",
+    "nav": {
+      "title": "Admin",
+      "users": "Users",
+      "posts": "Posts",
+      "channels": "Channels"
+    },
+    "errors": {
+      "forbidden": "Access denied",
+      "notFound": "Resource not found",
+      "deleteFailed": "Failed to delete",
+      "updateFailed": "Failed to update",
+      "default": "Something went wrong"
+    },
+    "users": {
+      "title": "User Management",
+      "actions": "Actions",
+      "changeRole": "Change Role",
+      "changeRoleFor": "Change role for {{username}}",
+      "roleUpdated": "Role updated",
+      "delete": "Delete",
+      "deleteTitle": "Delete user",
+      "deleteConfirm": "Delete user {{username}}? This will also remove their posts and channels.",
+      "deleteConfirmEmpty": "Delete this user? This will also remove their posts and channels.",
+      "deleted": "User deleted"
+    },
+    "posts": {
+      "title": "Post Management",
+      "id": "ID",
+      "titleCol": "Title",
+      "body": "Body",
+      "user": "User",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "actions": "Actions",
+      "searchPlaceholder": "Search title...",
+      "error": "Failed to load posts",
+      "empty": "No posts found",
+      "total": "Total: {{count}} posts",
+      "edit": "Edit",
+      "editTitle": "Edit post",
+      "updated": "Post updated",
+      "delete": "Delete",
+      "deleteTitle": "Delete post",
+      "deleteConfirm": "Delete post \"{{title}}\"?",
+      "deleteConfirmEmpty": "Delete this post?",
+      "deleted": "Post deleted"
+    },
+    "channels": {
+      "title": "Delivery Channel Management",
+      "id": "ID",
+      "user": "User",
+      "kind": "Type",
+      "name": "Name",
+      "enabled": "Enabled",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "actions": "Actions",
+      "error": "Failed to load channels",
+      "empty": "No channels found",
+      "edit": "Edit",
+      "editTitle": "Edit channel",
+      "webhookUrl": "Webhook URL",
+      "keywords": "Keywords",
+      "keywordsPlaceholder": "keyword1, keyword2",
+      "enabledHelp": "Toggle delivery",
+      "updated": "Channel updated",
+      "delete": "Delete",
+      "deleteTitle": "Delete channel",
+      "deleteConfirm": "Delete channel \"{{name}}\"?",
+      "deleteConfirmEmpty": "Delete this channel?",
+      "deleted": "Channel deleted"
+    }
   },
   "notFound": {
     "title": "404",

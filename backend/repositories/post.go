@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,8 +15,13 @@ type PostRepoInterface interface {
 	CreatePost(title, body string, userID int) (*models.Post, error)
 	CreatePosts(posts []models.Post) (int, error)
 	GetPostByQID(qid string) (*models.Post, error)
+	GetPostByID(id int) (*models.Post, error)
 	CountPostsByUserID(userID int) (int64, error)
 	GetPostsByUserID(userID int, offset int, limit int) ([]models.Post, error)
+	ListAllPosts(search string, offset int, limit int) ([]models.Post, error)
+	CountAllPosts(search string) (int64, error)
+	UpdatePostByID(id int, title string, body string) (*models.Post, error)
+	DeletePostByID(id int) (int64, error)
 
 	PruneExpiredPosts(retentionDays int, batchSize int) error
 	CountExpiredPosts(retentionDays int) (int64, error)
@@ -79,6 +85,14 @@ func (r *PostRepo) GetPostByQID(qid string) (*models.Post, error) {
 	return nil, err
 }
 
+func (r *PostRepo) GetPostByID(id int) (*models.Post, error) {
+	post, err := models.GetPost(r.database, map[string]any{"id": id})
+	if err == nil {
+		return post, nil
+	}
+	return nil, err
+}
+
 func (r *PostRepo) CountPostsByUserID(userID int) (int64, error) {
 	count, err := models.CountPosts(r.database, map[string]any{"user_id": userID})
 	if err != nil {
@@ -95,6 +109,76 @@ func (r *PostRepo) GetPostsByUserID(userID int, offset int, limit int) ([]models
 	}
 
 	return posts, nil
+}
+
+func (r *PostRepo) ListAllPosts(search string, offset int, limit int) ([]models.Post, error) {
+	db := r.database.DB()
+
+	var posts []models.Post
+	query := db.Model(&models.Post{}).Preload("User").Order("created_at DESC").Offset(offset).Limit(limit)
+	if search != "" {
+		query = query.Where("title LIKE ?", "%"+search+"%")
+	}
+
+	if err := query.Find(&posts).Error; err != nil {
+		return nil, err
+	}
+
+	return posts, nil
+}
+
+func (r *PostRepo) CountAllPosts(search string) (int64, error) {
+	db := r.database.DB()
+
+	query := db.Model(&models.Post{})
+	if search != "" {
+		query = query.Where("title LIKE ?", "%"+search+"%")
+	}
+
+	var count int64
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (r *PostRepo) UpdatePostByID(id int, title string, body string) (*models.Post, error) {
+	db := r.database.DB()
+
+	_, err := r.GetPostByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]any{
+		"title": title,
+		"body":  body,
+	}
+	if err := db.Model(&models.Post{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		return nil, err
+	}
+
+	var post models.Post
+	if err := db.Preload("User").Take(&post, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, models.ErrNotFound
+		}
+		return nil, err
+	}
+
+	return &post, nil
+}
+
+func (r *PostRepo) DeletePostByID(id int) (int64, error) {
+	db := r.database.DB()
+
+	tx := db.Delete(&models.Post{}, id)
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+
+	return tx.RowsAffected, nil
 }
 
 func (r *PostRepo) PruneExpiredPosts(retentionDays int, batchSize int) error {

@@ -51,6 +51,10 @@ func (s *stubPostRepo) GetPostByQID(qid string) (*models.Post, error) {
 	}, nil
 }
 
+func (s *stubPostRepo) GetPostByID(id int) (*models.Post, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (s *stubPostRepo) CountPostsByUserID(userID int) (int64, error) {
 	if s.countErr != nil {
 		return 0, s.countErr
@@ -66,6 +70,22 @@ func (s *stubPostRepo) GetPostsByUserID(userID int, offset int, limit int) ([]mo
 		return s.listResult, nil
 	}
 	return []models.Post{}, nil
+}
+
+func (s *stubPostRepo) ListAllPosts(search string, offset int, limit int) ([]models.Post, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (s *stubPostRepo) CountAllPosts(search string) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
+func (s *stubPostRepo) UpdatePostByID(id int, title string, body string) (*models.Post, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (s *stubPostRepo) DeletePostByID(id int) (int64, error) {
+	return 0, fmt.Errorf("not implemented")
 }
 
 func (s *stubPostRepo) PruneExpiredPosts(retentionDays int, batchSize int) error {

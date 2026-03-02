@@ -9,8 +9,8 @@ import (
 
 	"github.com/didip/tollbooth/v8"
 	"github.com/gin-gonic/gin"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	_ "markpost/docs"
 )
 
@@ -55,7 +55,16 @@ func SetupRoutes(r *gin.Engine) {
 	admin.Use(middlewares.RequireAdmin())
 	{
 		userHandler := handlers.NewUserHandler(authSvc)
+		adminHandler := handlers.NewAdminHandler(adminSvc)
 		admin.GET("/users", userHandler.ListAllUsers)
+		admin.PUT("/users/:id/role", adminHandler.UpdateUserRole)
+		admin.DELETE("/users/:id", adminHandler.DeleteUser)
+		admin.GET("/posts", adminHandler.ListAllPosts)
+		admin.PUT("/posts/:id", adminHandler.UpdatePost)
+		admin.DELETE("/posts/:id", adminHandler.DeletePost)
+		admin.GET("/channels", adminHandler.ListAllDeliveryChannels)
+		admin.PUT("/channels/:id", adminHandler.UpdateDeliveryChannel)
+		admin.DELETE("/channels/:id", adminHandler.DeleteDeliveryChannel)
 	}
 
 	r.POST("/:post_key", middlewares.PostKey(userRepo), handlers.CreatePost(postSvc))

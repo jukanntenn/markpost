@@ -17,7 +17,10 @@ const Settings = React.lazy(() => import("./pages/Settings"));
 const LoginCallbackPage = React.lazy(() => import("./pages/LoginCallback"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 const Posts = React.lazy(() => import("./pages/Posts"));
-const Admin = React.lazy(() => import("./pages/Admin"));
+const AdminDashboard = React.lazy(() => import("./pages/AdminDashboard"));
+const AdminUsers = React.lazy(() => import("./pages/AdminUsers"));
+const AdminPosts = React.lazy(() => import("./pages/AdminPosts"));
+const AdminChannels = React.lazy(() => import("./pages/AdminChannels"));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -116,10 +119,15 @@ function App() {
                   path="admin"
                   element={
                     <AdminRoute>
-                      <Admin />
+                      <AdminDashboard />
                     </AdminRoute>
                   }
-                />
+                >
+                  <Route index element={<Navigate to="users" replace />} />
+                  <Route path="users" element={<AdminUsers />} />
+                  <Route path="posts" element={<AdminPosts />} />
+                  <Route path="channels" element={<AdminChannels />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route path="*" element={<NotFound />} />

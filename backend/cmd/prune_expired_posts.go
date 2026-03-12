@@ -3,29 +3,28 @@ package cmd
 import (
 	"fmt"
 
-	"markpost/conf"
-	"markpost/models"
-	"markpost/repositories"
+	"markpost/internal/config"
+	"markpost/internal/infra/database"
 )
 
 func RunPruneExpiredPosts(configPath string, dryRun bool, batchSize int) error {
-	if err := conf.LoadConfig(configPath); err != nil {
+	if err := config.Load(configPath); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	config := conf.Conf()
+	cfg := config.Get()
 
-	database, err := models.NewDatabase(config.DB.DSN)
+	dbInstance, err := database.New(cfg.DB.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	retentionDays := config.Post.RetentionDays
+	retentionDays := cfg.Post.RetentionDays
 
-	postRepo := repositories.NewPostRepo(database)
+	postRepo := database.NewPostRepository(dbInstance.DB())
 
 	if dryRun {
-		count, err := postRepo.CountExpiredPosts(retentionDays)
+		count, err := postRepo.CountExpired(nil, retentionDays)
 		if err != nil {
 			return fmt.Errorf("failed to count expired posts: %w", err)
 		}
@@ -34,7 +33,7 @@ func RunPruneExpiredPosts(configPath string, dryRun bool, batchSize int) error {
 		return nil
 	}
 
-	if err := postRepo.PruneExpiredPosts(retentionDays, batchSize); err != nil {
+	if err := postRepo.PruneExpired(nil, retentionDays, batchSize); err != nil {
 		return fmt.Errorf("failed to cleanup expired posts: %w", err)
 	}
 

@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"markpost/conf"
-	"markpost/models"
-	"markpost/repositories"
+	"markpost/internal/config"
+	"markpost/internal/domain/post"
+	"markpost/internal/infra/database"
 )
 
 type FakePostData struct {
@@ -20,23 +20,25 @@ type FakePostData struct {
 }
 
 func RunImportFakePosts(configPath, filePath string) error {
-	if err := conf.LoadConfig(configPath); err != nil {
+	if err := config.Load(configPath); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	database, err := models.NewDatabase(conf.Conf().DB.DSN)
+	cfg := config.Get()
+
+	dbInstance, err := database.New(cfg.DB.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 	defer func() {
-		sqlDB, err := database.DB().DB()
+		sqlDB, err := dbInstance.DB().DB()
 		if err == nil && sqlDB != nil {
 			sqlDB.Close()
 		}
 	}()
 
-	userRepo := repositories.NewUserRepo(database)
-	user, err := userRepo.GetUserByUsername("markpost")
+	userRepo := database.NewUserRepository(dbInstance.DB())
+	u, err := userRepo.GetByUsername(nil, "markpost")
 	if err != nil {
 		return fmt.Errorf("user 'markpost' not found: %w", err)
 	}
@@ -51,21 +53,21 @@ func RunImportFakePosts(configPath, filePath string) error {
 		return fmt.Errorf("failed to parse JSON: %w", err)
 	}
 
-	posts := make([]models.Post, 0, len(fakePosts))
+	posts := make([]post.Post, 0, len(fakePosts))
 	for _, fp := range fakePosts {
-		post := models.Post{
+		p := post.Post{
 			QID:       fp.QID,
 			Title:     fp.Title,
 			Body:      fp.Body,
 			CreatedAt: fp.CreatedAt,
 			UpdatedAt: fp.UpdatedAt,
-			UserID:    user.ID,
+			UserID:    u.ID,
 		}
-		posts = append(posts, post)
+		posts = append(posts, p)
 	}
 
-	postRepo := repositories.NewPostRepo(database)
-	count, err := postRepo.CreatePosts(posts)
+	postRepo := database.NewPostRepository(dbInstance.DB())
+	count, err := postRepo.CreateBatch(nil, posts)
 	if err != nil {
 		return fmt.Errorf("failed to import posts: %w", err)
 	}

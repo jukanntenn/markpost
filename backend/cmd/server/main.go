@@ -1,0 +1,205 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+
+	v1 "markpost/internal/api/rest/v1"
+	"markpost/internal/config"
+	"markpost/internal/domain/user"
+	"markpost/internal/infra/database"
+	"markpost/internal/middleware"
+	"markpost/internal/service/auth"
+	postsvc "markpost/internal/service/post"
+
+	"github.com/didip/tollbooth/v8"
+	"github.com/gin-contrib/cors"
+	ginI18n "github.com/gin-contrib/i18n"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
+	"github.com/pelletier/go-toml/v2"
+	"github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
+	"golang.org/x/text/language"
+)
+
+var authSvc *auth.AuthService
+var postSvc *postsvc.PostService
+var jwtSvc *auth.JWTService
+
+var userRepo user.Repository
+
+var validate *validator.Validate
+
+func init() {
+	validate = validator.New()
+}
+
+func UseCors(r *gin.Engine) {
+	cfg := config.Get()
+	c := cors.DefaultConfig()
+	c.AllowOrigins = cfg.CORS.AllowOrigins
+	c.AllowHeaders = cfg.CORS.AllowHeaders
+	c.ExposeHeaders = cfg.CORS.ExposeHeaders
+	r.Use(cors.New(c))
+}
+
+func main() {
+	app := &cli.App{
+		Name:  "markpost",
+		Usage: "Markpost backend server and management commands",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "config",
+				Aliases: []string{"c"},
+				Usage:   "Path to config file",
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name:  "serve",
+				Usage: "Start HTTP server",
+				Action: func(c *cli.Context) error {
+					serve(c.String("config"))
+					return nil
+				},
+			},
+		},
+		Action: func(c *cli.Context) error {
+			serve(c.String("config"))
+			return nil
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		log.Fatalf("Failed to run markpost: %v", err)
+	}
+}
+
+func serve(configPath string) {
+	if err := config.Load(configPath); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
+	cfg := config.Get()
+
+	dbInstance, err := database.New(cfg.DB.DSN)
+	if err != nil {
+		log.Fatalf("Failed to init database: %v", err)
+	}
+	defer func() {
+		sqlDB, err := dbInstance.DB().DB()
+		if err == nil && sqlDB != nil {
+			sqlDB.Close()
+		}
+	}()
+
+	userRepo = database.NewUserRepository(dbInstance.DB())
+	postRepo := database.NewPostRepository(dbInstance.DB())
+
+	RegisterValidators()
+
+	jwtSvc = auth.NewJWTService(
+		cfg.JWT.AccessSigningKey,
+		cfg.JWT.RefreshSigningKey,
+		cfg.JWT.AccessTokenExpire,
+		cfg.JWT.RefreshTokenExpire,
+	)
+
+	authSvc = auth.NewAuthService(userRepo, &oauth2.Config{
+		ClientID:     cfg.OAuth.GitHub.ClientID,
+		ClientSecret: cfg.OAuth.GitHub.ClientSecret,
+		RedirectURL:  cfg.OAuth.GitHub.RedirectURL,
+		Scopes:       []string{},
+		Endpoint:     github.Endpoint,
+	}, jwtSvc)
+
+	log.Printf("Initializing first admin user: %s", cfg.Admin.InitialUsername)
+	if err := authSvc.InitializeFirstAdmin(context.Background(), cfg.Admin.InitialUsername); err != nil {
+		log.Fatalf("Failed to initialize first admin: %v", err)
+	}
+
+	postSvc = postsvc.NewPostService(postRepo, nil)
+
+	r := gin.Default()
+	r.LoadHTMLGlob("templates/*")
+
+	if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
+		log.Fatalf("Failed to set trusted proxies: %v", err)
+	}
+
+	r.Use(ginI18n.Localize(ginI18n.WithBundle(&ginI18n.BundleCfg{
+		RootPath:         "./locales",
+		AcceptLanguage:   []language.Tag{language.English, language.Chinese},
+		DefaultLanguage:  language.English,
+		UnmarshalFunc:    toml.Unmarshal,
+		FormatBundleFile: "toml",
+	})))
+
+	r.Use(middleware.Fallback())
+
+	UseCors(r)
+
+	log.Printf("Initializing rate limiting...")
+	SetupRoutes(r)
+
+	log.Println("Server starting...")
+	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	visitHost := cfg.Server.Host
+	log.Println("Visit http://" + visitHost + ":" + strconv.FormatUint(uint64(cfg.Server.Port), 10))
+	if err := r.Run(listenAddr); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
+}
+
+func SetupRoutes(r *gin.Engine) {
+	cfg := config.Get()
+	lmt := tollbooth.NewLimiter(float64(cfg.Ratelimit.PerSecond), nil)
+	lmt.SetBurst(cfg.Ratelimit.Burst)
+	lmt.SetMessageContentType("application/json; charset=utf-8")
+
+	r.Use(middleware.RateLimitByIP(lmt))
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	api := r.Group("/api")
+
+	oauthGroup := api.Group("/oauth")
+	{
+		oauthGroup.GET("/url", v1.GenerateGitHubOAuthURL(authSvc))
+		oauthGroup.POST("/login", v1.LoginGitHub(authSvc))
+	}
+
+	authGroup := api.Group("/auth")
+	{
+		authGroup.POST("/login", v1.LoginWithPassword(authSvc))
+		authGroup.POST("/refresh", v1.RefreshToken(authSvc))
+	}
+
+	jwtAuth := api.Group("")
+	jwtAuth.Use(middleware.Auth(jwtSvc, userRepo))
+	{
+		jwtAuth.GET("/post_key", v1.QueryPostKey(authSvc))
+		jwtAuth.POST("/auth/change-password", v1.ChangePassword(authSvc))
+		jwtAuth.GET("/posts", v1.PostsList(postSvc))
+	}
+
+	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))
+
+	r.GET("/:id", v1.RenderPost(postSvc))
+	r.GET("/health", v1.Health())
+
+	r.Static("/ui/assets", "../dist/assets")
+	r.StaticFile("/ui/markpost.svg", "../dist/markpost.svg")
+
+	r.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusNotFound, "Not Found")
+	})
+}

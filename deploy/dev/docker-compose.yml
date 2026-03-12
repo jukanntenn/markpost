@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: markpost-dev-postgres
+    environment:
+      POSTGRES_USER: markpost
+      POSTGRES_PASSWORD: markpost_dev
+      POSTGRES_DB: markpost
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U markpost -d markpost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile.dev
+    container_name: markpost-dev-backend
+    volumes:
+      - ../../backend:/app
+    ports:
+      - "7330:7330"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MARKPOST_DB_DRIVER: postgresql
+      MARKPOST_DB_DSN: "host=postgres port=5432 user=markpost password=markpost_dev dbname=markpost sslmode=disable"
+      MARKPOST_SERVER_PORT: 7330
+      MARKPOST_JWT_SECRET: dev-secret-key-change-in-production
+      MARKPOST_ADMIN_INITIALUSERNAME: admin
+      MARKPOST_ADMIN_INITIALPASSWORD: admin123
+
+volumes:
+  postgres_data:

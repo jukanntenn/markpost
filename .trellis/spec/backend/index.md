@@ -6,19 +6,20 @@
 
 ## Overview
 
-This directory contains guidelines for backend development using Go with Gin framework and GORM ORM.
+Guidelines for backend development using Go with Gin framework and GORM ORM.
 
 ---
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | ✓ Filled |
-| [Database Guidelines](./database-guidelines.md) | GORM patterns, queries, migrations | ✓ Filled |
-| [Error Handling](./error-handling.md) | ServiceError, error codes, i18n support | ✓ Filled |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, testing, Swagger | ✓ Filled |
-| [Logging Guidelines](./logging-guidelines.md) | Log levels, patterns, what to log | ✓ Filled |
+| Guide | Description |
+|-------|-------------|
+| [Directory Structure](./directory-structure.md) | Module organization |
+| [Layered Architecture](./layered-architecture.md) | Handler → Service → Repository → Domain |
+| [Database Guidelines](./database-guidelines.md) | GORM patterns |
+| [Error Handling](./error-handling.md) | Error handling patterns |
+| [Quality Guidelines](./quality-guidelines.md) | Testing, Swagger |
+| [Logging Guidelines](./logging-guidelines.md) | Logging patterns |
 
 ---
 
@@ -34,31 +35,23 @@ This directory contains guidelines for backend development using Go with Gin fra
 
 ### Architecture Pattern
 ```
-Request → Handler → Service → Repository → Database
+Request → Handler → Service → Repository → Domain
                 ↓
-         ServiceError
+         Error wrapping
                 ↓
-         ErrorResponse (JSON)
+         JSON Response
 ```
 
 ### Key Conventions
-1. **Handlers** - HTTP layer only, no business logic
-2. **Services** - Business logic, returns ServiceError
-3. **Repositories** - Data access, interfaces for testability
-4. **Models** - GORM models with CRUD methods
+1. **Handlers** - HTTP layer only
+2. **Services** - Business logic
+3. **Repositories** - Data access with interfaces
+4. **Domain** - GORM models
 
-### Running Tests
+### Common Commands
 ```bash
 cd backend
-go test ./...
+go run cmd/server/main.go    # Run server
+go test ./...                # Run tests
+swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 ```
-
-### Generating Swagger Docs
-```bash
-cd backend
-swag init -g main.go -o docs --parseDependency --parseInternal
-```
-
----
-
-**Language**: All documentation is written in **English**.

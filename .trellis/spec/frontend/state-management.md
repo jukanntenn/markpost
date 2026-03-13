@@ -6,9 +6,9 @@
 
 ## Overview
 
-This project uses a hybrid state management approach:
-- **Server state**: SWR for API data caching and synchronization
-- **Global client state**: React Context for authentication and theme
+Hybrid state management approach:
+- **Server state**: TanStack Query for API data
+- **Global client state**: Zustand for auth, React Context for user info
 - **Local state**: useState for component-specific state
 
 ---
@@ -17,67 +17,92 @@ This project uses a hybrid state management approach:
 
 | Category | Solution | Examples |
 |----------|----------|----------|
-| Server state | SWR | Posts, users, delivery channels |
-| Auth state | React Context | User info, tokens, isAuthenticated |
+| Server state | TanStack Query | Posts, users, settings |
+| Auth state | Zustand + localStorage | User info, tokens |
 | Theme state | next-themes | Dark/light mode |
 | Form state | useState | Input values, form errors |
-| UI state | useState | Modal visibility, loading states |
+| UI state | useState | Modal visibility, loading |
 
 ---
 
-## Server State with SWR
+## Server State with TanStack Query
 
-### When to Use SWR
-
-Use SWR for all data that comes from an API:
-- Lists (posts, users, channels)
-- Single resources
-- User-specific data
-
-### Data Fetching Pattern
+### Data Fetching Hook
 
 ```tsx
-// hooks/swr/usePosts.ts
-export function usePosts(page: number, limit: number = 20) {
-  return useSWR<PostsPaginatedResponse>(
-    page ? `/api/posts?page=${page}&limit=${limit}` : null,
-    authFetcher
-  );
+// hooks/usePosts.ts
+import { useQuery } from "@tanstack/react-query";
+
+export function usePosts() {
+  return useQuery({
+    queryKey: ["posts"],
+    queryFn: async () => {
+      const res = await fetch("/api/posts");
+      return res.json();
+    },
+  });
 }
 ```
 
-### Cache Invalidation
-
-Use `mutate` to refresh data after mutations:
+### Mutation Hook
 
 ```tsx
-const { mutate } = usePosts(1, 20);
-const { trigger } = useCreatePost();
+// hooks/useCreatePost.ts
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-await trigger(data);
-mutate(); // Revalidate cache
+export function useCreatePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreatePostInput) => {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
+}
 ```
 
 ---
 
 ## Global Client State
 
-### Auth Context
+### Auth State (Zustand)
 
-User authentication state is managed via React Context:
+```tsx
+// stores/auth.ts
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+interface AuthState {
+  token: string | null;
+  user: User | null;
+  setAuth: (token: string, user: User) => void;
+  logout: () => void;
+}
+
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      user: null,
+      setAuth: (token, user) => set({ token, user }),
+      logout: () => set({ token: null, user: null }),
+    }),
+    { name: "auth" }
+  )
+);
+```
+
+### User Info Context
 
 ```tsx
 // components/UserInfoContext.ts
-export interface UserInfo {
-  access_token: string;
-  refresh_token: string;
-  user: {
-    id: number;
-    username: string;
-    role: string;
-  };
-}
-
 export interface UserInfoContextType {
   isAuthenticated: boolean;
   userInfo: UserInfo | null;
@@ -87,162 +112,41 @@ export interface UserInfoContextType {
 }
 ```
 
-### Provider Implementation
-
-```tsx
-// components/UserInfoProvider.tsx:6-48
-export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
-    try {
-      const loginData = get<UserInfo>("login");
-      return loginData || null;
-    } catch (error) {
-      console.error("Error reading login data from storage:", error);
-      return null;
-    }
-  });
-
-  const logout = () => {
-    setUserInfo(null);
-    remove("login");
-  };
-
-  const isAuthenticated = !!(
-    userInfo?.user?.id &&
-    userInfo?.access_token &&
-    userInfo?.refresh_token
-  );
-
-  const isAdmin = () => {
-    return userInfo?.user?.role === "admin";
-  };
-
-  return (
-    <UserInfoContext.Provider value={{ isAuthenticated, userInfo, setUserInfo, logout, isAdmin }}>
-      {children}
-    </UserInfoContext.Provider>
-  );
-};
-```
-
-### Using Context
-
-```tsx
-// components/Layout.tsx:24
-const { logout, userInfo, isAuthenticated, isAdmin } = useContext(UserInfoContext);
-```
-
----
-
-## Theme State
-
-Theme is managed by `next-themes`:
-
-```tsx
-// contexts/ThemeProvider.tsx
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <NextThemesProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      {children}
-    </NextThemesProvider>
-  );
-}
-```
-
----
-
-## Local State
-
-### Form State
-
-Use `useState` for form inputs:
-
-```tsx
-// components/CreateTestPostModal.tsx:31-33
-const [title, setTitle] = useState("");
-const [body, setBody] = useState("");
-const [error, setError] = useState<string>("");
-```
-
-### UI State
-
-Use `useState` for UI-specific state:
-
-```tsx
-const [isOpen, setIsOpen] = useState(false);
-const [isLoading, setIsLoading] = useState(false);
-```
-
 ---
 
 ## When to Use Global State
 
-Promote state to global (Context) when:
+Promote to global when:
+1. Multiple components need access
+2. State affects routing
+3. State persists across navigation
 
-1. **Multiple components need access** - User info used across app
-2. **State affects routing** - isAuthenticated determines protected routes
-3. **State persists across navigation** - Theme preference
-
-Keep state local when:
-
-1. **Only one component uses it** - Form input values
-2. **State is temporary** - Modal visibility
-3. **State is derived** - Computed values from props
+Keep local when:
+1. Only one component uses it
+2. State is temporary
+3. State is derived from props
 
 ---
 
 ## Common Mistakes
 
-### 1. Using Context for Server State
-
-```tsx
-// Bad - fetching in context, no caching
-const [posts, setPosts] = useState([]);
-useEffect(() => { fetchPosts().then(setPosts); }, []);
-
-// Good - use SWR for server state
-const { data: posts } = usePosts(1);
-```
-
-### 2. Prop Drilling Instead of Context
+### Using Context for Server State
 
 ```tsx
 // Bad
-<App user={user} onLogout={logout}>
-  <Layout user={user} onLogout={logout}>
-    <Header user={user} onLogout={logout}>
+const [posts, setPosts] = useState([]);
+useEffect(() => { fetchPosts().then(setPosts); }, []);
 
-// Good - use context
-<UserInfoProvider>
-  <App>
-    <Layout>
-      <Header>  {/* uses useContext */}
+// Good
+const { data: posts } = usePosts();
 ```
 
-### 3. Not Persisting Auth State
+### Not Persisting Auth State
 
 ```tsx
-// Bad - state lost on refresh
+// Bad - lost on refresh
 const [user, setUser] = useState(null);
 
-// Good - persist to localStorage
-const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
-  const loginData = get<UserInfo>("login");
-  return loginData || null;
-});
-```
-
-### 4. Storing Server State in Context
-
-```tsx
-// Bad - no caching, no revalidation
-const [posts, setPosts] = useContext(PostsContext);
-
-// Good - SWR handles caching
-const { data: posts } = usePosts(1);
+// Good - Zustand persist
+useAuthStore with persist middleware
 ```

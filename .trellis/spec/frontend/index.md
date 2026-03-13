@@ -6,58 +6,52 @@
 
 ## Overview
 
-This directory contains guidelines for frontend development using React, TypeScript, and Tailwind CSS v4 with shadcn/ui components.
+Guidelines for frontend development using Next.js 16, React 19, TypeScript, and Tailwind CSS v4.
 
 ---
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Component/page/hook organization | ✓ Filled |
-| [Component Guidelines](./component-guidelines.md) | React patterns, props, styling | ✓ Filled |
-| [Hook Guidelines](./hook-guidelines.md) | SWR hooks, data fetching patterns | ✓ Filled |
-| [State Management](./state-management.md) | SWR + React Context patterns | ✓ Filled |
-| [Type Safety](./type-safety.md) | TypeScript conventions | ✓ Filled |
-| [Quality Guidelines](./quality-guidelines.md) | Testing, accessibility, linting | ✓ Filled |
+| Guide | Description |
+|-------|-------------|
+| [Directory Structure](./directory-structure.md) | Component/page/hook organization |
+| [Component Guidelines](./component-guidelines.md) | React patterns, props, styling |
+| [Hook Guidelines](./hook-guidelines.md) | TanStack Query patterns |
+| [State Management](./state-management.md) | Zustand + Context patterns |
+| [Type Safety](./type-safety.md) | TypeScript conventions |
+| [Quality Guidelines](./quality-guidelines.md) | Testing, accessibility |
 
 ---
 
 ## Quick Reference
 
 ### Technology Stack
-- **Framework**: React 18 with TypeScript
-- **Build**: Vite 7
+- **Framework**: Next.js 16 with App Router
+- **React**: React 19
 - **Styling**: Tailwind CSS v4 + shadcn/ui
-- **Data Fetching**: SWR
-- **Routing**: React Router v6
-- **i18n**: i18next
-- **Testing**: Vitest + Testing Library + MSW
+- **State**: Zustand (client), TanStack Query (server)
+- **i18n**: next-intl
+- **Testing**: Vitest + Testing Library + MSW + Playwright
 
 ### Architecture Pattern
 ```
-Page Component
-    ├── SWR Hook (server state)
-    │   └── fetcher → API
-    ├── Context (global client state)
+Page (app/)
+    ├── TanStack Query Hook (server state)
+    ├── Zustand Store (client state)
     └── useState (local UI state)
 ```
 
 ### Key Conventions
-1. **Function components only** - No class components
-2. **shadcn/ui primitives** - Use components from `components/ui/`
-3. **Design tokens** - Use `bg-background`, `text-foreground`, etc.
-4. **SWR for server state** - No useEffect for data fetching
-5. **Context for auth** - UserInfoContext for authentication
+1. **App Router** - File-based routing with route groups
+2. **shadcn/ui** - Use components from `components/ui/`
+3. **TanStack Query** - No useEffect for data fetching
+4. **Zustand** - Global client state with persist
 
 ### Common Commands
 ```bash
-pnpm dev        # Start development server
+pnpm dev        # Start dev server
 pnpm build      # Build for production
 pnpm lint       # Run ESLint
-pnpm test       # Run tests
+pnpm test       # Run unit tests
+pnpm test:e2e   # Run E2E tests
 ```
-
----
-
-**Language**: All documentation is written in **English**.

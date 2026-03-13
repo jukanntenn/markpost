@@ -6,11 +6,11 @@
 
 ## Overview
 
-The backend follows a layered architecture pattern with clear separation of concerns:
-- **Handlers** - HTTP request handling and validation
-- **Services** - Business logic and orchestration
-- **Repositories** - Data access layer
-- **Models** - Data structures and database schemas
+The backend follows **Go standard project layout** with clean architecture:
+
+- **Domain-driven design** - Business logic in `internal/domain/`
+- **Layered architecture** - Handler → Service → Repository → Domain
+- **Standard Go layout** - `cmd/`, `internal/`, `pkg/`
 
 ---
 
@@ -18,57 +18,158 @@ The backend follows a layered architecture pattern with clear separation of conc
 
 ```
 backend/
-├── cmd/                    # CLI commands (prune, import, etc.)
-├── conf/                   # Configuration loading and management
-├── docs/                   # Swagger documentation (generated)
-├── errors/                 # Error response handling utilities
-├── handlers/               # HTTP request handlers
-├── middlewares/            # Gin middlewares (auth, rate limit, etc.)
-├── models/                 # Data models and database operations
-├── repositories/           # Repository layer for data access
-├── services/               # Business logic layer
-├── templates/              # Server-side HTML templates
-├── tools/                  # Development tools
-├── locales/                # i18n translation files
-├── main.go                 # Application entrypoint
-├── routes.go               # Route definitions
-└── validators.go           # Custom request validators
+├── cmd/                    # CLI commands
+│   ├── server/             # HTTP server
+│   │   ├── main.go         # Entry point
+│   │   └── validators.go   # Custom validators
+│   ├── import_fake_posts.go
+│   └── prune_expired_posts.go
+├── internal/               # Internal packages
+│   ├── api/rest/v1/        # REST API handlers
+│   ├── config/             # Configuration
+│   ├── domain/             # Domain models
+│   │   ├── post/           # Post entity
+│   │   ├── user/           # User entity
+│   │   └── delivery/       # Delivery entity
+│   ├── infra/database/     # Database repositories
+│   ├── middleware/         # Gin middlewares
+│   └── service/            # Business services
+│       ├── auth/           # Auth service
+│       └── post/           # Post service
+├── pkg/                    # Public packages
+│   ├── apierr/             # API error types
+│   ├── auth/               # JWT utilities
+│   ├── crypto/             # Crypto utilities
+│   ├── i18n/               # i18n loader
+│   └── utils/              # General utilities
+├── docs/                   # Swagger docs
+└── tools/                  # Dev tools
 ```
 
 ---
 
-## Layer Responsibilities
+## Directory Responsibilities
 
-### handlers/ - HTTP Layer
-- Parse and validate incoming requests
-- Extract user context from gin.Context
-- Call service methods
-- Format and return HTTP responses
-- Define request/response DTOs
+### cmd/
 
-**Example**: `handlers/post.go:40-62` - CreatePost handler
+CLI commands and entry points:
 
-### services/ - Business Logic Layer
-- Implement business rules and orchestration
-- Transform data between layers
-- Handle cross-cutting concerns (e.g., delivery dispatch)
-- Return ServiceError for error cases
+```
+cmd/
+├── server/
+│   ├── main.go             # HTTP server entry
+│   └── validators.go       # Gin validators
+├── import_fake_posts.go    # Import test data
+└── prune_expired_posts.go  # Cleanup job
+```
 
-**Example**: `services/post.go:33-47` - CreatePost service method
+### internal/api/rest/v1/
 
-### repositories/ - Data Access Layer
-- Abstract database operations
-- Define interfaces for testability
-- Handle query building and execution
+HTTP handlers (Handler layer):
 
-**Example**: `repositories/post.go:32-50` - CreatePost repository
+```
+internal/api/rest/v1/
+├── auth.go                 # Auth handlers
+├── auth_test.go
+├── post.go                 # Post handlers
+├── post_test.go
+├── health.go               # Health check
+└── common.go               # Shared utilities
+```
 
-### models/ - Data Structures
-- Define GORM models with tags
-- Implement model-level CRUD methods (for simple operations)
-- Define domain errors
+### internal/domain/
 
-**Example**: `models/post.go:11-20` - Post model definition
+Domain entities (Model layer):
+
+```
+internal/domain/
+├── post/
+│   ├── post.go             # Post entity
+│   └── repository.go       # Repository interface
+├── user/
+│   ├── user.go             # User entity
+│   └── repository.go
+└── delivery/
+    ├── delivery.go         # Delivery entity
+    └── repository.go
+```
+
+### internal/infra/database/
+
+Repository implementations:
+
+```
+internal/infra/database/
+├── database.go             # DB connection
+├── post_repository.go
+├── post_repository_test.go
+├── user_repository.go
+├── user_repository_test.go
+└── delivery_repository.go
+```
+
+### internal/service/
+
+Business services:
+
+```
+internal/service/
+├── auth/                   # Auth service
+│   ├── auth.go
+│   ├── auth_test.go
+│   ├── jwt.go
+│   ├── jwt_test.go
+│   └── errors.go
+├── post/                   # Post service
+│   ├── post.go
+│   ├── post_test.go
+│   └── errors.go
+└── errors.go               # Common service errors
+```
+
+### internal/middleware/
+
+Gin middlewares:
+
+```
+internal/middleware/
+├── auth.go                 # JWT auth
+├── admin.go                # Admin check
+├── rate_limit.go           # Rate limiting
+├── post_key.go             # Post key validation
+└── fallback.go             # Fallback handler
+```
+
+### internal/config/
+
+Configuration:
+
+```
+internal/config/
+├── config.go               # Config loading
+└── config_test.go
+```
+
+### pkg/
+
+Public packages:
+
+```
+pkg/
+├── apierr/                 # API error types
+│   └── apierr.go
+├── auth/                   # JWT utilities
+│   └── jwt.go
+├── crypto/                 # Password hashing
+│   ├── password.go
+│   └── password_test.go
+├── i18n/                   # i18n loader
+│   └── loader.go
+└── utils/                  # General utilities
+    ├── oauth.go
+    ├── post_key.go
+    └── password.go
+```
 
 ---
 
@@ -76,27 +177,19 @@ backend/
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Files | lowercase, underscore for multi-word | `delivery_channel.go` |
-| Packages | lowercase, single word preferred | `handlers`, `services` |
-| Structs | PascalCase | `PostService`, `UserRepoInterface` |
-| Interfaces | PascalCase with `Interface` suffix | `PostRepoInterface` |
-| Functions | PascalCase (exported), camelCase (private) | `CreatePost`, `newTestRouter` |
+| Files | snake_case | `post_repository.go` |
+| Packages | lowercase | `database`, `auth` |
+| Structs | PascalCase | `PostService` |
+| Interfaces | PascalCase | `PostRepository` |
+| Functions | PascalCase (exported) | `CreatePost` |
 
 ---
 
 ## Adding a New Feature
 
-1. Define model in `models/` if new entity
-2. Create repository interface and implementation in `repositories/`
-3. Create service in `services/`
-4. Create handler in `handlers/`
-5. Register routes in `routes.go`
+1. Define entity in `internal/domain/{entity}/`
+2. Define repository interface in domain
+3. Implement repository in `internal/infra/database/`
+4. Create service in `internal/service/{entity}/`
+5. Create handler in `internal/api/rest/v1/`
 6. Add tests alongside source files
-
----
-
-## Examples
-
-- **Complete CRUD feature**: `handlers/delivery_channels.go` + `services/delivery_channels.go` + `repositories/delivery_channel.go`
-- **CLI command**: `cmd/prune_expired_posts.go`
-- **Middleware**: `middlewares/auth.go`

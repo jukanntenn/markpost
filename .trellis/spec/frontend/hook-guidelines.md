@@ -6,10 +6,10 @@
 
 ## Overview
 
-This project uses **SWR** for data fetching and caching. Custom hooks follow these conventions:
-- Data fetching hooks use `useSWR` or `useSWRMutation`
-- Hooks are organized in `hooks/swr/`
-- Return types are explicitly typed with generics
+This project uses **TanStack Query** for data fetching. Custom hooks follow these conventions:
+- Data fetching hooks use `useQuery` or `useMutation`
+- Hooks are organized in `hooks/`
+- Return types are explicitly typed
 
 ---
 
@@ -17,127 +17,66 @@ This project uses **SWR** for data fetching and caching. Custom hooks follow the
 
 ### Data Fetching Hook
 
-Use `useSWR` for GET requests:
-
 ```tsx
-// hooks/swr/usePosts.ts:1-19
-import useSWR from "swr";
-import { authFetcher } from "../../swr/fetcher";
-import type { PostsPaginatedResponse } from "../../types/posts";
+// hooks/usePosts.ts
+import { useQuery } from "@tanstack/react-query";
+import type { PostsResponse } from "@/types/posts";
 
-interface UsePostsOptions {
-  refreshInterval?: number;
-}
-
-export function usePosts(page: number, limit: number = 20, options?: UsePostsOptions) {
-  return useSWR<PostsPaginatedResponse>(
-    page ? `/api/posts?page=${page}&limit=${limit}` : null,
-    authFetcher,
-    {
-      refreshInterval: options?.refreshInterval,
-      refreshWhenHidden: false,
-      revalidateOnFocus: false,
-    }
-  );
+export function usePosts() {
+  return useQuery<PostsResponse>({
+    queryKey: ["posts"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/posts");
+      if (!res.ok) throw new Error("Failed to fetch posts");
+      return res.json();
+    },
+  });
 }
 ```
 
 ### Mutation Hook
 
-Use `useSWRMutation` for POST/PUT/DELETE:
-
 ```tsx
-// hooks/swr/useCreateTestPost.ts:1-20
-import useSWRMutation from "swr/mutation";
-import { anno } from "../../utils/api";
-import type { CreateTestPostResponse } from "../../types/posts";
+// hooks/useCreatePost.ts
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-export interface CreateTestPostArgs {
-  title: string;
-  body: string;
-}
+export function useCreatePost() {
+  const queryClient = useQueryClient();
 
-const sendRequest = async (
-  url: string,
-  { arg }: { arg: CreateTestPostArgs }
-): Promise<CreateTestPostResponse> => {
-  const res = await anno.post<CreateTestPostResponse>(url, arg);
-  return res.data;
-};
-
-export function useCreateTestPost(postKey: string) {
-  return useSWRMutation(postKey ? `/${postKey}` : null, sendRequest);
+  return useMutation({
+    mutationFn: async (data: CreatePostInput) => {
+      const res = await fetch("/api/v1/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create post");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+    },
+  });
 }
 ```
 
 ### Using Hooks in Components
 
 ```tsx
-// components/CreateTestPostModal.tsx:36
-const { trigger, isMutating, reset } = useCreateTestPost(postKey);
+// components/PostsPage.tsx
+export function PostsPage() {
+  const { data, isLoading, error } = usePosts();
+  const { mutate, isPending } = useCreatePost();
 
-// Trigger mutation
-await trigger({ title: title.trim(), body });
-```
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
 
----
-
-## Data Fetching
-
-### SWR Configuration
-
-Global SWR config in `swr/config.ts`:
-
-```tsx
-// swr/config.ts:16-31
-export const swrConfig: SWRConfiguration = {
-  fetcher: authFetcher,
-  use: [authMiddleware],
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
-  dedupingInterval: 2000,
-  errorRetryCount: 3,
-  shouldRetryOnError: (err) => {
-    const status = getStatus(err);
-    const message = (err as Error)?.message;
-    if (message === "No access token available") {
-      return false;
-    }
-    return status !== 401 && status !== 404;
-  },
-};
-```
-
-### Fetchers
-
-Two types of fetchers:
-
-```tsx
-// swr/fetcher.ts:1-16
-// Authenticated fetcher (includes access token)
-export const authFetcher = (url: string) => {
-  const loginData = get<LoginResponse | null>("login");
-  const accessToken = loginData?.access_token;
-  if (!accessToken) {
-    return Promise.reject(new Error("No access token available"));
-  }
-  return auth.get(url).then((res) => res.data);
-};
-
-// Anonymous fetcher (no auth required)
-export const annoFetcher = (url: string) => anno.get(url).then((res) => res.data);
-```
-
-### Conditional Fetching
-
-Pass `null` as key to disable fetching:
-
-```tsx
-// hooks/swr/usePosts.ts:11
-page ? `/api/posts?page=${page}&limit=${limit}` : null
-
-// hooks/swr/useCreateTestPost.ts:19
-postKey ? `/${postKey}` : null
+  return (
+    <div>
+      {data?.posts.map(post => <PostCard key={post.id} post={post} />)}
+    </div>
+  );
+}
 ```
 
 ---
@@ -146,55 +85,57 @@ postKey ? `/${postKey}` : null
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| Data fetching hook | `use<Resource>` | `usePosts`, `useUsers` |
-| Mutation hook | `use<Create/Update/Delete><Resource>` | `useCreateTestPost` |
-| Options interface | `Use<Resource>Options` | `UsePostsOptions` |
-| Args interface | `<Action>Args` | `CreateTestPostArgs` |
+| Query hook | `use<Resource>` | `usePosts`, `useUser` |
+| Mutation hook | `use<Create/Update/Delete><Resource>` | `useCreatePost` |
+| Params hook | `use<Param>` | `usePostKey` |
 
 ---
 
 ## Return Values
 
-### useSWR Return
+### useQuery Return
 
 ```tsx
-const { data, error, isLoading, mutate } = usePosts(1, 20);
+const { data, error, isLoading, isError, refetch } = usePosts();
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
 | `data` | `T \| undefined` | Fetched data |
-| `error` | `Error \| undefined` | Fetch error |
-| `isLoading` | `boolean` | Initial load in progress |
-| `mutate` | `function` | Revalidate or update cache |
+| `error` | `Error \| null` | Fetch error |
+| `isLoading` | `boolean` | Initial load |
+| `isError` | `boolean` | Error state |
+| `refetch` | `function` | Manual refetch |
 
-### useSWRMutation Return
+### useMutation Return
 
 ```tsx
-const { trigger, isMutating, reset } = useCreateTestPost(postKey);
+const { mutate, isPending, isError, error, reset } = useCreatePost();
 ```
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `trigger` | `function` | Execute mutation |
-| `isMutating` | `boolean` | Mutation in progress |
-| `reset` | `function` | Reset mutation state |
+| `mutate` | `function` | Execute mutation |
+| `isPending` | `boolean` | Mutation in progress |
+| `isError` | `boolean` | Error state |
+| `error` | `Error \| null` | Error object |
+| `reset` | `function` | Reset state |
 
 ---
 
 ## Common Mistakes
 
-### 1. Not Typing the Response
+### Not Typing the Response
 
 ```tsx
-// Bad - no type safety
-const { data } = useSWR("/api/posts", authFetcher);
+// Bad
+const { data } = useQuery({ queryKey: ["posts"], queryFn: fetchPosts });
 
-// Good - typed response
-const { data } = useSWR<PostsPaginatedResponse>("/api/posts", authFetcher);
+// Good
+const { data } = useQuery<PostsResponse>({ queryKey: ["posts"], queryFn: fetchPosts });
 ```
 
-### 2. Not Handling Loading State
+### Not Handling Loading State
 
 ```tsx
 // Bad
@@ -206,37 +147,27 @@ if (error) return <div>Error: {error.message}</div>;
 return <div>{data?.items}</div>;
 ```
 
-### 3. Not Using Conditional Fetching
+### Fetching in useEffect
 
 ```tsx
-// Bad - fetches even without required params
-const { data } = useSWR(`/api/posts?page=${page}`, authFetcher);
-
-// Good - only fetches when page is valid
-const { data } = useSWR(page ? `/api/posts?page=${page}` : null, authFetcher);
-```
-
-### 4. Fetching in useEffect
-
-```tsx
-// Bad - manual fetching
+// Bad
 useEffect(() => {
   fetch("/api/posts").then(res => res.json()).then(setData);
 }, []);
 
-// Good - use SWR
-const { data } = usePosts(1);
+// Good
+const { data } = usePosts();
 ```
 
-### 5. Not Resetting Mutation State
+### Not Invalidating Cache
 
 ```tsx
-// Bad - mutation state persists
-await trigger(args);
-onSuccess();
+// Bad - cache not updated after mutation
+const { mutate } = useMutation({ mutationFn: createPost });
 
-// Good - reset after success
-await trigger(args);
-onSuccess();
-reset();
+// Good - invalidate on success
+const { mutate } = useMutation({
+  mutationFn: createPost,
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
+});
 ```

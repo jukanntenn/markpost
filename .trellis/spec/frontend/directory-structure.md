@@ -6,11 +6,12 @@
 
 ## Overview
 
-The frontend follows a feature-based organization with clear separation between:
+The frontend uses **Next.js 16 with App Router**, following a feature-based organization:
+
+- **App Router** - File-based routing with route groups
 - **UI primitives** - shadcn/ui components in `components/ui/`
 - **Feature components** - Domain-specific components in `components/`
-- **Pages** - Route-level components in `pages/`
-- **Hooks** - Custom hooks organized by type in `hooks/`
+- **Hooks** - Custom hooks for data fetching and logic
 
 ---
 
@@ -18,109 +19,131 @@ The frontend follows a feature-based organization with clear separation between:
 
 ```
 frontend/src/
-├── components/             # Reusable UI + feature components
-│   ├── ui/                 # shadcn/ui primitives (button, dialog, etc.)
-│   └── login/              # Feature-specific components
-├── contexts/               # React context-based state
+├── app/                    # Next.js App Router
+│   ├── (auth)/             # Auth route group
+│   │   ├── login/page.tsx
+│   │   ├── auth/page.tsx
+│   │   └── layout.tsx
+│   ├── (dashboard)/        # Dashboard route group
+│   │   ├── admin/          # Admin pages
+│   │   ├── dashboard/page.tsx
+│   │   ├── posts/page.tsx
+│   │   ├── settings/page.tsx
+│   │   └── layout.tsx
+│   ├── layout.tsx          # Root layout
+│   ├── page.tsx            # Home page
+│   └── globals.css         # Global styles
+├── components/             # React components
+│   ├── ui/                 # shadcn/ui primitives
+│   ├── auth/               # Auth components
+│   ├── layout/             # Layout components
+│   ├── login/              # Login components
+│   ├── dashboard/          # Dashboard components
+│   ├── admin/              # Admin components
+│   └── posts/              # Post components
 ├── hooks/                  # Custom React hooks
-│   └── swr/                # SWR-based data fetching hooks
-├── i18n/                   # i18next configuration
-├── lib/                    # Shared library helpers (cn utility)
-├── mocks/                  # MSW handlers and test mocks
-├── pages/                  # Route-level page components
-├── swr/                    # SWR configuration and utilities
-├── test/                   # Test utilities and setup
-├── types/                  # TypeScript type definitions
-├── utils/                  # Utility helpers
-├── App.tsx                 # Root React component
-├── index.css               # Tailwind v4 + shadcn theme tokens
-├── main.tsx                # Frontend entry file
-└── vite-env.d.ts           # Vite-related TypeScript declarations
+├── lib/                    # Library utilities
+│   ├── utils.ts            # cn utility
+│   └── api/                # API fetchers
+├── types/                  # TypeScript types
+├── utils/                  # Utility functions
+├── i18n/                   # next-intl configuration
+├── mocks/                  # MSW handlers
+└── test/                   # Test utilities
 ```
 
 ---
 
 ## Directory Responsibilities
 
-### components/ui/
+### app/
 
-shadcn/ui primitives - do not modify unless customizing the design system:
+Next.js App Router with route groups for layout organization:
 
 ```
-components/ui/
-├── button.tsx
-├── dialog.tsx
-├── input.tsx
-├── textarea.tsx
-└── ...
+app/
+├── (auth)/                 # Auth routes (no sidebar)
+│   ├── login/page.tsx
+│   └── auth/page.tsx
+├── (dashboard)/            # Dashboard routes (with sidebar)
+│   ├── admin/
+│   │   ├── channels/page.tsx
+│   │   ├── posts/page.tsx
+│   │   ├── users/page.tsx
+│   │   ├── page.tsx
+│   │   └── layout.tsx
+│   ├── dashboard/page.tsx
+│   ├── posts/page.tsx
+│   ├── settings/page.tsx
+│   └── layout.tsx
+├── layout.tsx              # Root layout with providers
+├── page.tsx                # Home/landing page
+└── globals.css             # Tailwind + theme tokens
 ```
 
 ### components/
 
-Feature components organized by domain or function:
+Feature components organized by domain:
 
 ```
 components/
-├── Layout.tsx              # Main layout with header
-├── ThemeToggle.tsx         # Dark/light mode toggle
-├── LanguageToggle.tsx      # Language selector
-├── CreateTestPostModal.tsx # Modal component
-├── UserInfoProvider.tsx    # Context provider
-├── UserInfoContext.ts      # Context definition
-└── login/                  # Login page-specific components
-    ├── LoginTitle.tsx
-    └── LoginDivider.tsx
+├── ui/                     # shadcn/ui primitives
+│   ├── button.tsx
+│   ├── dialog.tsx
+│   ├── input.tsx
+│   └── ...
+├── auth/                   # Auth components
+│   ├── AdminRoute.tsx
+│   ├── ProtectedRoute.tsx
+│   └── PublicRoute.tsx
+├── layout/                 # Layout components
+│   ├── AdminLayout.tsx
+│   └── DashboardLayout.tsx
+├── login/                  # Login components
+│   ├── LoginPage.tsx
+│   ├── LoginCallbackPage.tsx
+│   ├── LoginTitle.tsx
+│   └── LoginDivider.tsx
+├── dashboard/
+│   └── DashboardPage.tsx
+├── admin/
+│   ├── AdminChannelsPage.tsx
+│   ├── AdminPostsPage.tsx
+│   └── AdminUsersPage.tsx
+└── posts/
+    └── PostsPage.tsx
 ```
 
-### pages/
+### hooks/
 
-Route-level components mapped to URL paths:
-
-```
-pages/
-├── Dashboard.tsx           # /dashboard
-├── Posts.tsx               # /posts
-├── Settings.tsx            # /settings
-├── Admin.tsx               # /admin
-├── Login.tsx               # /login
-├── LoginCallback.tsx       # /login/callback
-└── NotFound.tsx            # 404 page
-```
-
-### hooks/swr/
-
-SWR-based data fetching hooks:
+Custom React hooks:
 
 ```
-hooks/swr/
-├── usePosts.ts             # Fetch posts list
-├── useCreateTestPost.ts    # Create post mutation
-├── usePostKey.ts           # Fetch user's post key
-├── useUsers.ts             # Fetch users (admin)
-└── useDeliveryChannels.ts  # Delivery channel operations
+hooks/
+├── usePosts.ts
+├── usePostKey.ts
+└── useUserInfo.ts
+```
+
+### lib/
+
+Library utilities:
+
+```
+lib/
+├── utils.ts                # cn() utility
+└── api/
+    └── fetcher.ts          # API fetchers
 ```
 
 ### types/
 
-TypeScript type definitions by domain:
+TypeScript type definitions:
 
 ```
 types/
-├── posts.ts                # Post-related types
-├── auth.ts                 # Auth-related types
-```
-
-### utils/
-
-Utility functions and API configuration:
-
-```
-utils/
-├── api.ts                  # Axios instances and error handling
-├── storage.ts              # localStorage utilities
-├── auth.ts                 # Auth helpers
-├── i18n.ts                 # i18n helpers
-└── url.ts                  # URL utilities
+├── auth.ts
+└── posts.ts
 ```
 
 ---
@@ -129,28 +152,19 @@ utils/
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Component files | PascalCase | `CreateTestPostModal.tsx` |
+| Component files | PascalCase | `DashboardPage.tsx` |
 | Hook files | camelCase with `use` prefix | `usePosts.ts` |
-| Type files | camelCase | `posts.ts`, `auth.ts` |
-| Context files | PascalCase with `Context` suffix | `UserInfoContext.ts` |
-| Provider files | PascalCase with `Provider` suffix | `UserInfoProvider.tsx` |
-| Test files | Same as source with `.test.tsx` | `usePosts.test.ts` |
+| Type files | camelCase | `posts.ts` |
+| Page files | `page.tsx` (Next.js convention) | `app/dashboard/page.tsx` |
+| Layout files | `layout.tsx` (Next.js convention) | `app/(dashboard)/layout.tsx` |
+| Test files | `.test.tsx` suffix | `ThemeToggle.test.tsx` |
 
 ---
 
 ## Adding a New Feature
 
 1. Create types in `types/` if new data structures
-2. Create SWR hooks in `hooks/swr/` for data fetching
-3. Create page component in `pages/`
+2. Create hooks in `hooks/` for data fetching
+3. Create page component in `app/(dashboard)/` or `app/(auth)/`
 4. Create feature components in `components/`
-5. Add route in `App.tsx`
-6. Add tests alongside source files
-
----
-
-## Examples
-
-- **Complete feature**: `components/CreateTestPostModal.tsx` + `hooks/swr/useCreateTestPost.ts` + `types/posts.ts`
-- **Context pattern**: `components/UserInfoContext.ts` + `components/UserInfoProvider.tsx`
-- **SWR hook with tests**: `hooks/swr/usePosts.ts` + `hooks/swr/usePosts.test.ts`
+5. Add tests alongside source files

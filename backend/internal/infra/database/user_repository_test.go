@@ -22,7 +22,7 @@ func TestUserRepository_GetByPostKey(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		u, err := repo.Create(nil, "alice", "password")
+		u, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -41,7 +41,7 @@ func TestUserRepository_GetByPostKey(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		_, err := repo.Create(nil, "alice", "password")
+		_, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -58,7 +58,7 @@ func TestUserRepository_GetByID(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		u, err := repo.Create(nil, "alice", "password")
+		u, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -77,7 +77,7 @@ func TestUserRepository_GetByID(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		_, err := repo.Create(nil, "alice", "password")
+		_, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
@@ -94,7 +94,7 @@ func TestUserRepository_Create(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		u, err := repo.Create(nil, "alice", "password")
+		u, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("Create error: %v", err)
 		}
@@ -104,18 +104,18 @@ func TestUserRepository_Create(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error for duplicate username", func(t *testing.T) {
+	t.Run("returns error for duplicate email", func(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		_, err := repo.Create(nil, "alice", "password")
+		_, err := repo.Create(nil, "alice@example.com", "alice", "password")
 		if err != nil {
 			t.Fatalf("seed user error: %v", err)
 		}
 
-		_, err = repo.Create(nil, "alice", "password2")
-		if err == nil || err.Error() != "username is already taken" {
-			t.Fatalf("expected 'username is already taken' error, got %v", err)
+		_, err = repo.Create(nil, "alice@example.com", "alice2", "password2")
+		if err == nil || err.Error() != "email is already taken" {
+			t.Fatalf("expected 'email is already taken' error, got %v", err)
 		}
 	})
 }
@@ -126,12 +126,12 @@ func TestUserRepository_ValidatePassword(t *testing.T) {
 		repo := NewUserRepository(database.DB())
 
 		password := "password123"
-		_, err := repo.Create(nil, "alice", password)
+		_, err := repo.Create(nil, "alice@example.com", "alice", password)
 		if err != nil {
 			t.Fatalf("Create error: %v", err)
 		}
 
-		u, err := repo.ValidatePassword(nil, "alice", password)
+		u, err := repo.ValidatePassword(nil, "alice@example.com", password)
 		if err != nil {
 			t.Fatalf("ValidatePassword error: %v", err)
 		}
@@ -145,12 +145,12 @@ func TestUserRepository_ValidatePassword(t *testing.T) {
 		database := setupUserTestDatabase(t)
 		repo := NewUserRepository(database.DB())
 
-		_, err := repo.Create(nil, "alice", "password123")
+		_, err := repo.Create(nil, "alice@example.com", "alice", "password123")
 		if err != nil {
 			t.Fatalf("Create error: %v", err)
 		}
 
-		_, err = repo.ValidatePassword(nil, "alice", "wrongpassword")
+		_, err = repo.ValidatePassword(nil, "alice@example.com", "wrongpassword")
 		if err == nil || err.Error() != "invalid password" {
 			t.Fatalf("expected 'invalid password' error, got %v", err)
 		}

@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -9,7 +8,6 @@ import (
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
-	"markpost/internal/service/auth"
 	"markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
@@ -92,14 +90,6 @@ func writeBindingError(c *gin.Context, req interface{}, err error) bool {
 	}
 	apierr.RespondError(c, errResp)
 	return false
-}
-
-func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) {
-	c.JSON(http.StatusOK, gin.H{
-		"user":          gin.H{"id": u.ID, "username": u.Username, "role": string(u.Role)},
-		"access_token":  tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
-	})
 }
 
 func defaultInt(value, defaultValue int) int {

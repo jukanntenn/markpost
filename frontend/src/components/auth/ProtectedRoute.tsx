@@ -1,21 +1,22 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserInfoContext } from "@/components/UserInfoContext";
+import { useAuthStore } from "@/stores/auth";
 import { Loader2Icon } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useContext(UserInfoContext);
   const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (_hasHydrated && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, _hasHydrated, router]);
 
-  if (!isAuthenticated) {
+  if (!_hasHydrated || !isAuthenticated) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <Loader2Icon className="size-6 animate-spin" />

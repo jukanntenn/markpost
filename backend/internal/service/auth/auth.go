@@ -2,8 +2,12 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"markpost/internal/domain/user"
@@ -12,14 +16,29 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var (
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
+	ErrRefreshExpired     = errors.New("refresh token expired")
+	ErrTokenRevoked       = errors.New("token has been revoked")
+	ErrTokenExpired       = errors.New("token has expired")
+)
+
 type AuthService struct {
-	users user.Repository
-	oauth *oauth2.Config
-	jwt   *JWTService
+	users   user.Repository
+	tokens  user.TokenRepository
+	oauth   *oauth2.Config
+	jwt     *JWTService
+	issuer  string
 }
 
-func NewAuthService(users user.Repository, oauth *oauth2.Config, jwt *JWTService) *AuthService {
-	return &AuthService{users: users, oauth: oauth, jwt: jwt}
+func NewAuthService(users user.Repository, tokens user.TokenRepository, oauth *oauth2.Config, jwt *JWTService, issuer string) *AuthService {
+	return &AuthService{
+		users:  users,
+		tokens: tokens,
+		oauth:  oauth,
+		jwt:    jwt,
+		issuer: issuer,
+	}
 }
 
 func (s *AuthService) GenerateGitHubAuthURL(ctx context.Context) (string, error) {
@@ -47,10 +66,17 @@ func (s *AuthService) LoginWithGitHub(ctx context.Context, code string) (*user.U
 		return nil, nil, NewServiceErrorWrap(ErrInternal, "create user failed", err)
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(u.ID, string(u.Role))
-	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
+	if !u.IsActive {
+		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
 	}
+
+	pair, err := s.generateTokenPairWithStore(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	now := time.Now()
+	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
 
 	return u, pair, nil
 }
@@ -72,40 +98,169 @@ func (s *AuthService) getGitHubUser(ctx context.Context, token *oauth2.Token) (*
 		return nil, NewServiceErrorWrap(ErrInternal, "invalid GitHub user data", fmt.Errorf("ID=%d, Login='%s'", githubUser.ID, githubUser.Login))
 	}
 
+	emails, err := s.getGitHubUserEmails(client)
+	if err != nil {
+		return nil, err
+	}
+	if len(emails) > 0 {
+		githubUser.Email = emails[0]
+	}
+
 	return &githubUser, nil
 }
 
-func (s *AuthService) LoginWithPassword(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
-	u, err := s.users.ValidatePassword(ctx, username, password)
+func (s *AuthService) getGitHubUserEmails(client *http.Client) ([]string, error) {
+	resp, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid username or password", err)
+		return nil, nil
+	}
+	defer resp.Body.Close()
+
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		return nil, nil
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(u.ID, string(u.Role))
-	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
+	var result []string
+	for _, e := range emails {
+		if e.Verified {
+			result = append(result, e.Email)
+		}
 	}
+	return result, nil
+}
+
+func (s *AuthService) LoginWithEmail(ctx context.Context, email, password string) (*user.User, *JWTTokenPair, error) {
+	u, err := s.users.ValidatePassword(ctx, email, password)
+	if err != nil {
+		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid email or password", err)
+	}
+
+	if !u.IsActive {
+		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
+	}
+
+	pair, err := s.generateTokenPairWithStore(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	now := time.Now()
+	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
 
 	return u, pair, nil
 }
 
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*user.User, *JWTTokenPair, error) {
-	claims, err := s.jwt.ValidateRefresh(refreshToken)
+	tokenData, err := s.validateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrUnauthorized, "invalid refresh token", err)
+		return nil, nil, err
 	}
 
-	u, err := s.users.GetByID(ctx, claims.UserID)
+	u, err := s.users.GetByID(ctx, tokenData.UserID)
 	if err != nil {
 		return nil, nil, NewServiceErrorWrap(ErrUnauthorized, "user not found", err)
 	}
 
-	pair, err := s.jwt.GenerateTokenPair(u.ID, string(u.Role))
+	if !u.IsActive {
+		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
+	}
+
+	if err := s.revokeRefreshToken(ctx, refreshToken); err != nil {
+	}
+
+	pair, err := s.generateTokenPairWithStore(ctx, u)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInternal, "generate access/refresh token pair failed", err)
+		return nil, nil, err
 	}
 
 	return u, pair, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, accessToken string) error {
+	if accessToken == "" {
+		return nil
+	}
+
+	claims, err := s.jwt.ValidateAccess(accessToken)
+	if err != nil && !errors.Is(err, ErrTokenExpired) {
+		return nil
+	}
+
+	var ttl time.Duration
+	if claims != nil && claims.ExpiresAt != nil {
+		ttl = time.Until(claims.ExpiresAt.Time)
+		if ttl <= 0 {
+			return nil
+		}
+	} else {
+		ttl = 24 * time.Hour
+	}
+
+	tokenHash := hashToken(accessToken)
+	expiresAt := time.Now().Add(ttl)
+	if err := s.tokens.StoreBlacklistedToken(ctx, tokenHash, expiresAt); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *AuthService) RevokeAllUserTokens(ctx context.Context, userID int) error {
+	return s.tokens.DeleteRefreshTokensByUserID(ctx, userID)
+}
+
+func (s *AuthService) generateTokenPairWithStore(ctx context.Context, u *user.User) (*JWTTokenPair, error) {
+	pair, err := s.jwt.GenerateTokenPair(u.ID, u.Email, u.Username, string(u.Role))
+	if err != nil {
+		return nil, NewServiceErrorWrap(ErrInternal, "generate token pair failed", err)
+	}
+
+	tokenHash := hashToken(pair.RefreshToken)
+	expiresAt := time.Now().Add(s.jwt.refreshTokenExpire)
+	if err := s.tokens.StoreRefreshToken(ctx, u.ID, tokenHash, expiresAt); err != nil {
+		return nil, NewServiceErrorWrap(ErrInternal, "store refresh token failed", err)
+	}
+
+	return pair, nil
+}
+
+func (s *AuthService) validateRefreshToken(ctx context.Context, refreshToken string) (*user.RefreshToken, error) {
+	tokenHash := hashToken(refreshToken)
+
+	tokenData, err := s.tokens.GetRefreshToken(ctx, tokenHash)
+	if err != nil {
+		if errors.Is(err, user.ErrNotFound) {
+			return nil, ErrInvalidRefreshToken
+		}
+		return nil, NewServiceErrorWrap(ErrInternal, "failed to validate refresh token", err)
+	}
+
+	if time.Now().After(tokenData.ExpiresAt) {
+		_ = s.tokens.DeleteRefreshToken(ctx, tokenHash)
+		return nil, ErrRefreshExpired
+	}
+
+	return tokenData, nil
+}
+
+func (s *AuthService) revokeRefreshToken(ctx context.Context, refreshToken string) error {
+	tokenHash := hashToken(refreshToken)
+	return s.tokens.DeleteRefreshToken(ctx, tokenHash)
+}
+
+func (s *AuthService) IsTokenBlacklisted(ctx context.Context, token string) (bool, error) {
+	tokenHash := hashToken(token)
+	return s.tokens.IsTokenBlacklisted(ctx, tokenHash)
+}
+
+func hashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }
 
 func (s *AuthService) ChangePassword(ctx context.Context, userID int, current, new string) error {

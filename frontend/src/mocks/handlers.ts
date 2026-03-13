@@ -40,11 +40,11 @@ export const mockPosts: MockPostsResponse = {
 };
 
 export const handlers = [
-  http.get("/api/post_key", () => {
+  http.get("/api/v1/post_key", () => {
     return HttpResponse.json<MockPostKeyResponse>(mockPostKey);
   }),
 
-  http.get("/api/posts", ({ request }) => {
+  http.get("/api/v1/posts", ({ request }) => {
     const url = new URL(request.url);
     const page = url.searchParams.get("page");
 
@@ -58,34 +58,45 @@ export const handlers = [
     return HttpResponse.json<MockPostsResponse>(mockPosts);
   }),
 
-  http.post("/api/post_key", async () => {
+  http.post("/api/v1/post_key", async () => {
     return HttpResponse.json<MockPostKeyResponse>({
       post_key: "new_key_abc123",
       created_at: "2024-01-01T00:00:00Z",
     });
   }),
 
-  http.post("/api/auth/change-password", async () => {
-    return HttpResponse.json({});
+  http.post("/api/v1/auth/change-password", async () => {
+    return HttpResponse.json({ message: "Password changed successfully" });
   }),
 
   http.post("/:postKey", async () => {
     return HttpResponse.json<{ id: string }>({ id: "new_post_123" });
   }),
 
-  http.post("/api/auth/login", async () => {
+  http.post("/api/v1/auth/login", async () => {
     return HttpResponse.json({
+      token: "test_access_token",
       access_token: "test_access_token",
       refresh_token: "test_refresh_token",
-      user: { id: 1, username: "testuser" },
+      expires_in: 86400,
+      user: { id: 1, username: "testuser", email: "test@example.com" },
     });
   }),
 
-  http.post("/api/auth/refresh", async () => {
+  http.post("/api/v1/auth/refresh", async () => {
     return HttpResponse.json({
+      token: "refreshed_access_token",
       access_token: "refreshed_access_token",
       refresh_token: "refreshed_refresh_token",
-      user: { id: 1, username: "testuser" },
+      expires_in: 86400,
     });
+  }),
+
+  http.post("/api/v1/auth/logout", async () => {
+    return HttpResponse.json({ message: "Logged out successfully" });
+  }),
+
+  http.get("/api/v1/oauth/url", async () => {
+    return HttpResponse.json({ url: "https://github.com/login/oauth/authorize?mock=true" });
   }),
 ];

@@ -34,9 +34,9 @@ func (m *mockAuthService) LoginWithGitHub(ctx context.Context, code string) (*us
 	return nil, nil, service.NewServiceError(service.ErrUnauthorized, "not implemented")
 }
 
-func (m *mockAuthService) LoginWithPassword(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error) {
-	if username == "testuser" && password == "correctpassword" {
-		u := &user.User{ID: 1, Username: "testuser", Role: user.RoleUser}
+func (m *mockAuthService) LoginWithEmail(ctx context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error) {
+	if email == "test@example.com" && password == "correctpassword" {
+		u := &user.User{ID: 1, Email: email, Username: "testuser", Role: user.RoleUser}
 		tokens := &auth.JWTTokenPair{AccessToken: "test-access", RefreshToken: "test-refresh"}
 		return u, tokens, nil
 	}
@@ -45,11 +45,15 @@ func (m *mockAuthService) LoginWithPassword(ctx context.Context, username, passw
 
 func (m *mockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error) {
 	if refreshToken == "valid-refresh-token" {
-		u := &user.User{ID: 1, Username: "testuser", Role: user.RoleUser}
+		u := &user.User{ID: 1, Email: "test@example.com", Username: "testuser", Role: user.RoleUser}
 		tokens := &auth.JWTTokenPair{AccessToken: "new-access", RefreshToken: "new-refresh"}
 		return u, tokens, nil
 	}
 	return nil, nil, service.NewServiceError(service.ErrUnauthorized, "invalid refresh token")
+}
+
+func (m *mockAuthService) Logout(ctx context.Context, accessToken string) error {
+	return nil
 }
 
 func (m *mockAuthService) ChangePassword(ctx context.Context, userID int, current, new string) error {
@@ -71,17 +75,17 @@ func setupTestRouter() *gin.Engine {
 	return gin.New()
 }
 
-func TestLoginWithPassword_Success(t *testing.T) {
+func TestLoginWithEmail_Success(t *testing.T) {
 	mockSvc := newMockAuthService()
 	router := setupTestRouter()
 
 	router.POST("/login", func(c *gin.Context) {
-		var req PasswordLoginRequest
+		var req EmailLoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		u, tokens, err := mockSvc.LoginWithPassword(c.Request.Context(), req.Username, req.Password)
+		u, tokens, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 		if err != nil {
 			if se, ok := service.AsServiceError(err); ok && se.Code == service.ErrInvalidCredentials {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -91,13 +95,13 @@ func TestLoginWithPassword_Success(t *testing.T) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"user":          gin.H{"id": u.ID, "username": u.Username, "role": string(u.Role)},
+			"user":          gin.H{"id": u.ID, "email": u.Email, "username": u.Username, "role": string(u.Role)},
 			"access_token":  tokens.AccessToken,
 			"refresh_token": tokens.RefreshToken,
 		})
 	})
 
-	body := PasswordLoginRequest{Username: "testuser", Password: "correctpassword"}
+	body := EmailLoginRequest{Email: "test@example.com", Password: "correctpassword"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonBody))
@@ -118,17 +122,17 @@ func TestLoginWithPassword_Success(t *testing.T) {
 	}
 }
 
-func TestLoginWithPassword_InvalidCredentials(t *testing.T) {
+func TestLoginWithEmail_InvalidCredentials(t *testing.T) {
 	mockSvc := newMockAuthService()
 	router := setupTestRouter()
 
 	router.POST("/login", func(c *gin.Context) {
-		var req PasswordLoginRequest
+		var req EmailLoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		_, _, err := mockSvc.LoginWithPassword(c.Request.Context(), req.Username, req.Password)
+		_, _, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 		if err != nil {
 			if se, ok := service.AsServiceError(err); ok && se.Code == service.ErrInvalidCredentials {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -140,7 +144,7 @@ func TestLoginWithPassword_InvalidCredentials(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
-	body := PasswordLoginRequest{Username: "wronguser", Password: "wrongpass"}
+	body := EmailLoginRequest{Email: "wrong@example.com", Password: "wrongpass"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonBody))
@@ -170,7 +174,7 @@ func TestRefreshToken_Success(t *testing.T) {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"user":          gin.H{"id": u.ID, "username": u.Username, "role": string(u.Role)},
+			"user":          gin.H{"id": u.ID, "email": u.Email, "username": u.Username, "role": string(u.Role)},
 			"access_token":  tokens.AccessToken,
 			"refresh_token": tokens.RefreshToken,
 		})
@@ -234,7 +238,7 @@ func TestChangePassword_Success(t *testing.T) {
 	router := setupTestRouter()
 
 	router.POST("/change-password", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
+		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser", Role: user.RoleUser})
 		c.Next()
 	}, func(c *gin.Context) {
 		u, _ := c.Get("user")
@@ -273,7 +277,7 @@ func TestQueryPostKey_Success(t *testing.T) {
 	router := setupTestRouter()
 
 	router.GET("/post-key", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
+		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser", Role: user.RoleUser})
 		c.Next()
 	}, func(c *gin.Context) {
 		u, _ := c.Get("user")

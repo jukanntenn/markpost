@@ -3,7 +3,7 @@
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { authFetcher } from "@/lib/api/fetcher";
+import { request } from "@/lib/api";
 import { buildPostUrl } from "@/utils/url";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -30,7 +30,7 @@ interface PostsResponse {
 export function AdminPostsPage() {
   const { data, isLoading, error } = useQuery<PostsResponse>({
     queryKey: ["admin", "posts"],
-    queryFn: () => authFetcher("/api/admin/posts"),
+    queryFn: () => request<PostsResponse>("/api/v1/admin/posts"),
   });
 
   const posts = data?.posts || [];

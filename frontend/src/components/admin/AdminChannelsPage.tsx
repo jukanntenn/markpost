@@ -3,7 +3,7 @@
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { authFetcher } from "@/lib/api/fetcher";
+import { request } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
@@ -29,7 +29,7 @@ interface ChannelsResponse {
 export function AdminChannelsPage() {
   const { data, isLoading, error } = useQuery<ChannelsResponse>({
     queryKey: ["admin", "channels"],
-    queryFn: () => authFetcher("/api/admin/channels"),
+    queryFn: () => request<ChannelsResponse>("/api/v1/admin/channels"),
   });
 
   const channels = data?.channels || [];

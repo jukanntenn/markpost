@@ -20,6 +20,7 @@ const (
 	ErrMissingAuthorizationHeader ErrCode = "missing_authorization_header"
 	ErrInvalidToken               ErrCode = "invalid_token"
 	ErrInvalidPostKey             ErrCode = "invalid_post_key"
+	ErrUserDisabled              ErrCode = "user_disabled"
 
 	ErrMissingStateParam ErrCode = "missing_state_param"
 	ErrMissingCode       ErrCode = "missing_code"

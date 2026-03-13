@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"markpost/internal/config"
 	"markpost/internal/domain/delivery"
@@ -43,7 +44,13 @@ func New(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.DB.Driver)
 	}
 
-	if err = db.AutoMigrate(&user.User{}, &post.Post{}, &delivery.Channel{}); err != nil {
+	if err = db.AutoMigrate(
+		&user.User{},
+		&user.RefreshToken{},
+		&user.TokenBlacklist{},
+		&post.Post{},
+		&delivery.Channel{},
+	); err != nil {
 		return nil, fmt.Errorf("NewDatabase auto migrate: %w", err)
 	}
 
@@ -66,9 +73,11 @@ func New(dsn string) (*Database, error) {
 		}
 
 		u := user.User{
+			Email:    username + "@localhost",
 			Username: username,
 			Password: password,
 			PostKey:  postKey,
+			IsActive: true,
 		}
 		if err = database.createUser(&u); err != nil {
 			return nil, err
@@ -89,7 +98,13 @@ func NewTestDatabase() (*Database, error) {
 		_, _ = sqlDB.Exec("PRAGMA foreign_keys = ON;")
 	}
 
-	if err = gdb.AutoMigrate(&user.User{}, &post.Post{}, &delivery.Channel{}); err != nil {
+	if err = gdb.AutoMigrate(
+		&user.User{},
+		&user.RefreshToken{},
+		&user.TokenBlacklist{},
+		&post.Post{},
+		&delivery.Channel{},
+	); err != nil {
 		return nil, fmt.Errorf("NewTestDatabase auto migrate: %w", err)
 	}
 
@@ -168,8 +183,28 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*u
 	return &u, nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, username, password string) (*user.User, error) {
-	exists, err := r.existsByUsername(ctx, username)
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.User, error) {
+	var u user.User
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, user.ErrNotFound
+		}
+		return nil, fmt.Errorf("GetByEmail: %w", err)
+	}
+	return &u, nil
+}
+
+func (r *UserRepository) Create(ctx context.Context, email, username, password string) (*user.User, error) {
+	exists, err := r.existsByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf("email is already taken")
+	}
+
+	exists, err = r.existsByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +212,15 @@ func (r *UserRepository) Create(ctx context.Context, username, password string) 
 		return nil, fmt.Errorf("username is already taken")
 	}
 
-	return r.createWithUniquePostKey(ctx, username, password, nil)
+	return r.createWithUniquePostKey(ctx, email, username, password, nil, nil)
 }
 
 func (r *UserRepository) CreateFromGitHub(ctx context.Context, githubUser *user.GitHubUser) (*user.User, error) {
-	return r.createWithUniquePostKey(ctx, githubUser.Login, "", &githubUser.ID)
+	email := githubUser.Email
+	if email == "" {
+		email = fmt.Sprintf("%d@github.local", githubUser.ID)
+	}
+	return r.createWithUniquePostKey(ctx, email, githubUser.Login, "", &githubUser.ID, &githubUser.AvatarURL)
 }
 
 func (r *UserRepository) GetOrCreateFromGitHub(ctx context.Context, githubUser *user.GitHubUser) (*user.User, error) {
@@ -197,8 +236,8 @@ func (r *UserRepository) GetOrCreateFromGitHub(ctx context.Context, githubUser *
 	return r.CreateFromGitHub(ctx, githubUser)
 }
 
-func (r *UserRepository) ValidatePassword(ctx context.Context, username, password string) (*user.User, error) {
-	u, err := r.GetByUsername(ctx, username)
+func (r *UserRepository) ValidatePassword(ctx context.Context, email, password string) (*user.User, error) {
+	u, err := r.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +248,7 @@ func (r *UserRepository) ValidatePassword(ctx context.Context, username, passwor
 
 	ok, err := utils.CheckPassword(password, u.Password)
 	if err != nil {
-		return nil, fmt.Errorf("validate user %s password: %w", username, err)
+		return nil, fmt.Errorf("validate user %s password: %w", email, err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("invalid password")
@@ -219,28 +258,16 @@ func (r *UserRepository) ValidatePassword(ctx context.Context, username, passwor
 }
 
 func (r *UserRepository) SetPassword(ctx context.Context, userID int, password string) error {
-	u, err := r.GetByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-
 	hashed, err := utils.HashPassword(password)
 	if err != nil {
 		return err
 	}
 
-	u.Password = hashed
-	return r.db.WithContext(ctx).Model(u).Update("password", hashed).Error
+	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("password_hash", hashed).Error
 }
 
 func (r *UserRepository) SetRole(ctx context.Context, userID int, role user.Role) error {
-	u, err := r.GetByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-
-	u.Role = role
-	return r.db.WithContext(ctx).Model(u).Update("role", role).Error
+	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("role", role).Error
 }
 
 func (r *UserRepository) DeleteByID(ctx context.Context, userID int) (int64, error) {
@@ -268,6 +295,18 @@ func (r *UserRepository) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+func (r *UserRepository) UpdateLastLoginAt(ctx context.Context, userID int, lastLoginAt time.Time) error {
+	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("last_login_at", lastLoginAt).Error
+}
+
+func (r *UserRepository) existsByEmail(ctx context.Context, email string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("email = ?", email).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("existsByEmail: %w", err)
+	}
+	return count > 0, nil
+}
+
 func (r *UserRepository) existsByUsername(ctx context.Context, username string) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("username = ?", username).Count(&count).Error; err != nil {
@@ -276,9 +315,17 @@ func (r *UserRepository) existsByUsername(ctx context.Context, username string) 
 	return count > 0, nil
 }
 
-func (r *UserRepository) createWithUniquePostKey(ctx context.Context, username, password string, githubID *int64) (*user.User, error) {
+func (r *UserRepository) existsByPostKey(ctx context.Context, postKey string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("post_key = ?", postKey).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("existsByPostKey: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (r *UserRepository) createWithUniquePostKey(ctx context.Context, email, username, password string, githubID *int64, avatarURL *string) (*user.User, error) {
 	for {
-		u, err := r.makeUser(username, password, githubID)
+		u, err := r.makeUser(email, username, password, githubID, avatarURL)
 		if err != nil {
 			return nil, err
 		}
@@ -299,15 +346,7 @@ func (r *UserRepository) createWithUniquePostKey(ctx context.Context, username, 
 	}
 }
 
-func (r *UserRepository) existsByPostKey(ctx context.Context, postKey string) (bool, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("post_key = ?", postKey).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("existsByPostKey: %w", err)
-	}
-	return count > 0, nil
-}
-
-func (r *UserRepository) makeUser(username, password string, githubID *int64) (*user.User, error) {
+func (r *UserRepository) makeUser(email, username, password string, githubID *int64, avatarURL *string) (*user.User, error) {
 	postKey, err := gonanoid.New()
 	if err != nil {
 		return nil, err
@@ -322,11 +361,78 @@ func (r *UserRepository) makeUser(username, password string, githubID *int64) (*
 	}
 
 	u := user.User{
-		Username: username,
-		Password: hash,
-		PostKey:  postKey,
-		GitHubID: githubID,
+		Email:     email,
+		Username:  username,
+		Password:  hash,
+		PostKey:   postKey,
+		GitHubID:  githubID,
+		AvatarURL: avatarURL,
+		IsActive:  true,
 	}
 
 	return &u, nil
+}
+
+type TokenRepository struct {
+	db *gorm.DB
+}
+
+func NewTokenRepository(db *gorm.DB) user.TokenRepository {
+	return &TokenRepository{db: db}
+}
+
+func (r *TokenRepository) StoreRefreshToken(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
+	token := user.RefreshToken{
+		UserID:    userID,
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+	}
+	return r.db.WithContext(ctx).Create(&token).Error
+}
+
+func (r *TokenRepository) GetRefreshToken(ctx context.Context, tokenHash string) (*user.RefreshToken, error) {
+	var token user.RefreshToken
+	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, user.ErrNotFound
+		}
+		return nil, fmt.Errorf("GetRefreshToken: %w", err)
+	}
+	return &token, nil
+}
+
+func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
+	return r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).Delete(&user.RefreshToken{}).Error
+}
+
+func (r *TokenRepository) DeleteRefreshTokensByUserID(ctx context.Context, userID int) error {
+	return r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&user.RefreshToken{}).Error
+}
+
+func (r *TokenRepository) StoreBlacklistedToken(ctx context.Context, tokenHash string, expiresAt time.Time) error {
+	blacklist := user.TokenBlacklist{
+		TokenHash: tokenHash,
+		ExpiresAt: expiresAt,
+	}
+	return r.db.WithContext(ctx).Create(&blacklist).Error
+}
+
+func (r *TokenRepository) IsTokenBlacklisted(ctx context.Context, tokenHash string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&user.TokenBlacklist{}).
+		Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()).
+		Count(&count).Error
+	if err != nil {
+		return false, fmt.Errorf("IsTokenBlacklisted: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (r *TokenRepository) CleanupExpiredTokens(ctx context.Context) error {
+	now := time.Now()
+	if err := r.db.WithContext(ctx).Where("expires_at < ?", now).Delete(&user.RefreshToken{}).Error; err != nil {
+		return err
+	}
+	return r.db.WithContext(ctx).Where("expires_at < ?", now).Delete(&user.TokenBlacklist{}).Error
 }

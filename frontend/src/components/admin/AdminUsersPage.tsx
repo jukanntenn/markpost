@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2Icon, TriangleAlertIcon, UserPlusIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { authFetcher } from "@/lib/api/fetcher";
+import { request } from "@/lib/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,7 @@ interface UsersResponse {
 export function AdminUsersPage() {
   const { data, isLoading, error } = useQuery<UsersResponse>({
     queryKey: ["admin", "users"],
-    queryFn: () => authFetcher("/api/admin/users"),
+    queryFn: () => request<UsersResponse>("/api/v1/admin/users"),
   });
 
   const users = data?.users || [];

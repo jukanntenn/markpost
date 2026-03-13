@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { storage, auth } from "@/utils";
+import { useAuthStore } from "@/stores/auth";
+import { authApi } from "@/lib/api/auth";
 import { Loader2Icon } from "lucide-react";
 
 const LoginSpinner = () => {
@@ -20,6 +21,7 @@ const LoginCallbackPage: React.FC = () => {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const processing = useRef(false);
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleCallback = useCallback(async () => {
     if (processing.current) return;
@@ -29,25 +31,14 @@ const LoginCallbackPage: React.FC = () => {
     try {
       const code = searchParams.get("code");
       const state = searchParams.get("state");
-      
-      const res = await fetch("/api/oauth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, state }),
-      });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Authentication failed");
+      if (!code || !state) {
+        throw new Error("Missing code or state");
       }
 
-      const data = await res.json();
+      const data = await authApi.loginWithGitHub(code, state);
 
-      if (auth.checkLoginResponse(data)) {
-        storage.set("login", data);
-      } else {
-        message = "Authentication error";
-      }
+      setAuth(data.token, data.user, data.refresh_token);
     } catch (err: unknown) {
       message = err instanceof Error ? err.message : "Unknown error";
     } finally {
@@ -56,7 +47,7 @@ const LoginCallbackPage: React.FC = () => {
       }
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, setAuth]);
 
   useEffect(() => {
     handleCallback();

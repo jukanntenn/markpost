@@ -1,26 +1,30 @@
 "use client";
 
-import { useContext, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { UserInfoContext } from "@/components/UserInfoContext";
+import { useAuthStore } from "@/stores/auth";
 import { Loader2Icon } from "lucide-react";
 
 export function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isAdmin } = useContext(UserInfoContext);
   const router = useRouter();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace("/login");
-      return;
-    }
+    if (_hasHydrated) {
+      if (!isAuthenticated) {
+        router.replace("/login");
+        return;
+      }
 
-    if (!isAdmin()) {
-      router.replace("/dashboard");
+      if (!isAdmin) {
+        router.replace("/dashboard");
+      }
     }
-  }, [isAuthenticated, isAdmin, router]);
+  }, [isAuthenticated, isAdmin, _hasHydrated, router]);
 
-  if (!isAuthenticated || !isAdmin()) {
+  if (!_hasHydrated || !isAuthenticated || !isAdmin) {
     return (
       <div className="flex min-h-svh items-center justify-center">
         <Loader2Icon className="size-6 animate-spin" />

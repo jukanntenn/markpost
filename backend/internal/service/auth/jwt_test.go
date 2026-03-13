@@ -17,7 +17,7 @@ func newTestJWTService() *JWTService {
 func TestJWTService_GenerateTokenPair(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
-	pair, err := jwtSvc.GenerateTokenPair(1, "user")
+	pair, err := jwtSvc.GenerateTokenPair(1, "test@example.com", "testuser", "user")
 	if err != nil {
 		t.Fatalf("GenerateTokenPair error: %v", err)
 	}
@@ -29,12 +29,16 @@ func TestJWTService_GenerateTokenPair(t *testing.T) {
 	if pair.RefreshToken == "" {
 		t.Fatal("RefreshToken is empty")
 	}
+
+	if pair.ExpiresAt.IsZero() {
+		t.Fatal("ExpiresAt is zero")
+	}
 }
 
 func TestJWTService_ValidateAccess(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
-	token, err := jwtSvc.GenerateAccessToken(1, "user")
+	token, err := jwtSvc.GenerateAccessToken(1, "test@example.com", "testuser", "user")
 	if err != nil {
 		t.Fatalf("GenerateAccessToken error: %v", err)
 	}
@@ -46,6 +50,14 @@ func TestJWTService_ValidateAccess(t *testing.T) {
 
 	if claims.UserID != 1 {
 		t.Fatalf("expected UserID 1, got %d", claims.UserID)
+	}
+
+	if claims.Email != "test@example.com" {
+		t.Fatalf("expected Email 'test@example.com', got %s", claims.Email)
+	}
+
+	if claims.Username != "testuser" {
+		t.Fatalf("expected Username 'testuser', got %s", claims.Username)
 	}
 
 	if claims.Role != "user" {

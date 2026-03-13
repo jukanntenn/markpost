@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { storage, auth } from "@/utils";
-import type { LoginResponse, OAuthUrlResponse } from "@/types/auth";
+import { useAuthStore } from "@/stores/auth";
+import { authApi } from "@/lib/api/auth";
 import { toast } from "sonner";
 import { GithubIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
 
@@ -20,13 +20,13 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [loadingGitHub, setLoadingGitHub] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
   const authWindowRef = useRef<Window | null>(null);
   const checkAuthWindowIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const showErrorToast = (header: string, body?: string) => {
     toast.error(header, body ? { description: body } : undefined);
@@ -44,7 +44,6 @@ export function LoginPage() {
     }));
 
     setError("");
-    setSuccess("");
   };
 
   const authWindowClosed = () => {
@@ -81,9 +80,7 @@ export function LoginPage() {
     setLoadingGitHub(true);
 
     try {
-      const res = await fetch("/api/oauth/url");
-      if (!res.ok) throw new Error("Failed to get OAuth URL");
-      const data = await res.json() as OAuthUrlResponse;
+      const data = await authApi.getOAuthUrl();
       const url = data.url;
 
       authWindowRef.current = openAuthWindow(url);
@@ -133,25 +130,9 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const data = await authApi.login(formData.username, formData.password);
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Login failed");
-      }
-
-      const data = await res.json() as LoginResponse;
-
-      if (!auth.checkLoginResponse(data)) {
-        showErrorToast("Login failed", "Login error");
-        return;
-      }
-
-      storage.set("login", data);
+      setAuth(data.token, data.user, data.refresh_token);
       router.push("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -187,11 +168,6 @@ export function LoginPage() {
               <Alert variant="destructive">
                 <TriangleAlertIcon />
                 <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {success && (
-              <Alert>
-                <AlertDescription>{success}</AlertDescription>
               </Alert>
             )}
 

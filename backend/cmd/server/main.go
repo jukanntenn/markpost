@@ -35,6 +35,7 @@ var postSvc *postsvc.PostService
 var jwtSvc *auth.JWTService
 
 var userRepo user.Repository
+var tokenRepo user.TokenRepository
 
 var validate *validator.Validate
 
@@ -102,7 +103,7 @@ func serve(configPath string) {
 	}()
 
 	userRepo = database.NewUserRepository(dbInstance.DB())
-	postRepo := database.NewPostRepository(dbInstance.DB())
+	tokenRepo = database.NewTokenRepository(dbInstance.DB())
 
 	RegisterValidators()
 
@@ -113,19 +114,26 @@ func serve(configPath string) {
 		cfg.JWT.RefreshTokenExpire,
 	)
 
-	authSvc = auth.NewAuthService(userRepo, &oauth2.Config{
-		ClientID:     cfg.OAuth.GitHub.ClientID,
-		ClientSecret: cfg.OAuth.GitHub.ClientSecret,
-		RedirectURL:  cfg.OAuth.GitHub.RedirectURL,
-		Scopes:       []string{},
-		Endpoint:     github.Endpoint,
-	}, jwtSvc)
+	authSvc = auth.NewAuthService(
+		userRepo,
+		tokenRepo,
+		&oauth2.Config{
+			ClientID:     cfg.OAuth.GitHub.ClientID,
+			ClientSecret: cfg.OAuth.GitHub.ClientSecret,
+			RedirectURL:  cfg.OAuth.GitHub.RedirectURL,
+			Scopes:       []string{"user:email"},
+			Endpoint:     github.Endpoint,
+		},
+		jwtSvc,
+		"markpost",
+	)
 
 	log.Printf("Initializing first admin user: %s", cfg.Admin.InitialUsername)
 	if err := authSvc.InitializeFirstAdmin(context.Background(), cfg.Admin.InitialUsername); err != nil {
 		log.Fatalf("Failed to initialize first admin: %v", err)
 	}
 
+	postRepo := database.NewPostRepository(dbInstance.DB())
 	postSvc = postsvc.NewPostService(postRepo, nil)
 
 	r := gin.Default()
@@ -169,24 +177,25 @@ func SetupRoutes(r *gin.Engine) {
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	api := r.Group("/api")
+	apiV1 := r.Group("/api/v1")
 
-	oauthGroup := api.Group("/oauth")
+	oauthGroup := apiV1.Group("/oauth")
 	{
 		oauthGroup.GET("/url", v1.GenerateGitHubOAuthURL(authSvc))
 		oauthGroup.POST("/login", v1.LoginGitHub(authSvc))
 	}
 
-	authGroup := api.Group("/auth")
+	authGroup := apiV1.Group("/auth")
 	{
-		authGroup.POST("/login", v1.LoginWithPassword(authSvc))
+		authGroup.POST("/login", v1.LoginWithEmail(authSvc))
 		authGroup.POST("/refresh", v1.RefreshToken(authSvc))
 	}
 
-	jwtAuth := api.Group("")
-	jwtAuth.Use(middleware.Auth(jwtSvc, userRepo))
+	jwtAuth := apiV1.Group("")
+	jwtAuth.Use(middleware.AuthWithBlacklist(jwtSvc, userRepo, tokenRepo))
 	{
 		jwtAuth.GET("/post_key", v1.QueryPostKey(authSvc))
+		jwtAuth.POST("/auth/logout", v1.Logout(authSvc))
 		jwtAuth.POST("/auth/change-password", v1.ChangePassword(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
 	}

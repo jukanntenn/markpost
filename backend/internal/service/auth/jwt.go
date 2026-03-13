@@ -9,11 +9,14 @@ import (
 type JWTTokenPair struct {
 	AccessToken  string
 	RefreshToken string
+	ExpiresAt    time.Time
 }
 
 type AccessClaims struct {
-	UserID int    `json:"user_id"`
-	Role   string `json:"role"`
+	UserID   int    `json:"user_id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -39,8 +42,9 @@ func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire
 	}
 }
 
-func (s *JWTService) GenerateTokenPair(userID int, role string) (*JWTTokenPair, error) {
-	accessToken, err := s.GenerateAccessToken(userID, role)
+func (s *JWTService) GenerateTokenPair(userID int, email, username, role string) (*JWTTokenPair, error) {
+	expiresAt := time.Now().Add(s.accessTokenExpire)
+	accessToken, err := s.GenerateAccessToken(userID, email, username, role)
 	if err != nil {
 		return nil, err
 	}
@@ -53,16 +57,22 @@ func (s *JWTService) GenerateTokenPair(userID int, role string) (*JWTTokenPair, 
 	return &JWTTokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
+		ExpiresAt:    expiresAt,
 	}, nil
 }
 
-func (s *JWTService) GenerateAccessToken(userID int, role string) (string, error) {
+func (s *JWTService) GenerateAccessToken(userID int, email, username, role string) (string, error) {
+	now := time.Now()
+	expiresAt := now.Add(s.accessTokenExpire)
 	claims := AccessClaims{
-		UserID: userID,
-		Role:   role,
+		UserID:   userID,
+		Email:    email,
+		Username: username,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTokenExpire)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 		},
 	}
 

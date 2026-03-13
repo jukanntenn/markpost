@@ -1,9 +1,9 @@
 "use client";
 
-import { useContext } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { UserInfoContext } from "@/components/UserInfoContext";
+import { useAuthStore } from "@/stores/auth";
+import { authApi } from "@/lib/api/auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,13 +23,21 @@ import {
 } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { logout, userInfo, isAuthenticated, isAdmin } = useContext(UserInfoContext);
   const router = useRouter();
   const pathname = usePathname();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const logout = useAuthStore((state) => state.logout);
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/login");
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+    } finally {
+      logout();
+      router.replace("/login");
+    }
   };
 
   return (
@@ -54,17 +62,17 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   <Button type="button" variant="ghost" className="gap-2">
                     <UserIcon className="size-4" />
                     <span className="hidden sm:inline">
-                      {userInfo?.user?.username || "User"}
+                      {user?.username || "User"}
                     </span>
                     <ChevronDownIcon className="size-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
-                    {userInfo?.user?.username || "User"}
+                    {user?.username || "User"}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {isAdmin() && (
+                  {isAdmin && (
                     <DropdownMenuItem onClick={() => router.push("/admin")}>
                       <ShieldIcon className="size-4" />
                       Admin

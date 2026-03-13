@@ -11,7 +11,7 @@ func TestPostRepository_Create(t *testing.T) {
 	userRepo := NewUserRepository(database.DB())
 	postRepo := NewPostRepository(database.DB())
 
-	u, err := userRepo.Create(nil, "testuser", "password")
+	u, err := userRepo.Create(nil, "test@example.com", "testuser", "password")
 	if err != nil {
 		t.Fatalf("Create user error: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestPostRepository_GetByQID(t *testing.T) {
 	userRepo := NewUserRepository(database.DB())
 	postRepo := NewPostRepository(database.DB())
 
-	u, err := userRepo.Create(nil, "testuser", "password")
+	u, err := userRepo.Create(nil, "test@example.com", "testuser", "password")
 	if err != nil {
 		t.Fatalf("Create user error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestPostRepository_GetByUserID(t *testing.T) {
 	userRepo := NewUserRepository(database.DB())
 	postRepo := NewPostRepository(database.DB())
 
-	u, err := userRepo.Create(nil, "testuser", "password")
+	u, err := userRepo.Create(nil, "test@example.com", "testuser", "password")
 	if err != nil {
 		t.Fatalf("Create user error: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestPostRepository_CountByUserID(t *testing.T) {
 	userRepo := NewUserRepository(database.DB())
 	postRepo := NewPostRepository(database.DB())
 
-	u, err := userRepo.Create(nil, "testuser", "password")
+	u, err := userRepo.Create(nil, "test@example.com", "testuser", "password")
 	if err != nil {
 		t.Fatalf("Create user error: %v", err)
 	}

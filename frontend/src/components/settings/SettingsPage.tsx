@@ -17,20 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { authApi } from "@/lib/api/auth";
 
 async function changePassword(data: { currentPassword: string; newPassword: string }) {
-  const response = await fetch("/api/auth/change-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to change password");
-  }
-
-  return response.json();
+  return authApi.changePassword(data.currentPassword, data.newPassword);
 }
 
 export function SettingsPage() {

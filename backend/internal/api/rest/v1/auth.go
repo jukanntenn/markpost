@@ -32,8 +32,9 @@ func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 
 type AuthService interface {
 	LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error)
-	LoginWithPassword(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error)
+	LoginWithEmail(ctx context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error)
+	Logout(ctx context.Context, accessToken string) error
 	ChangePassword(ctx context.Context, userID int, current, new string) error
 	QueryPostKey(ctx context.Context, userID int) (string, time.Time, error)
 }
@@ -62,19 +63,19 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-type PasswordLoginRequest struct {
-	Username string `json:"username" binding:"required"`
+type EmailLoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
-func LoginWithPassword(authSvc AuthService) gin.HandlerFunc {
+func LoginWithEmail(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req PasswordLoginRequest
+		var req EmailLoginRequest
 		if !bindJSON(c, &req) {
 			return
 		}
 
-		u, tokens, err := authSvc.LoginWithPassword(c.Request.Context(), req.Username, req.Password)
+		u, tokens, err := authSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
@@ -99,7 +100,26 @@ func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 			apierr.RespondError(c, err)
 			return
 		}
-		writeAuthResponse(c, u, tokens)
+		writeRefreshResponse(c, u, tokens)
+	}
+}
+
+func Logout(authSvc AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.GetHeader("Authorization")
+		if token != "" && len(token) > 7 {
+			token = token[7:]
+			_ = authSvc.Logout(c.Request.Context(), token)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
+				DefaultMessage: &i18n.Message{
+					ID:    "auth.logout_success",
+					Other: "Logged out successfully",
+				},
+			}),
+		})
 	}
 }
 
@@ -155,4 +175,27 @@ func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{"post_key": postKey, "created_at": createdAt})
 	}
+}
+
+func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) {
+	c.JSON(http.StatusOK, gin.H{
+		"token":         tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"expires_in":    int64(tokens.ExpiresAt.Sub(time.Now()).Seconds()),
+		"user": gin.H{
+			"id":         u.ID,
+			"email":      u.Email,
+			"username":   u.Username,
+			"name":       u.Name,
+			"avatar_url": u.AvatarURL,
+		},
+	})
+}
+
+func writeRefreshResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) {
+	c.JSON(http.StatusOK, gin.H{
+		"token":         tokens.AccessToken,
+		"refresh_token": tokens.RefreshToken,
+		"expires_in":    int64(tokens.ExpiresAt.Sub(time.Now()).Seconds()),
+	})
 }

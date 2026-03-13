@@ -43,3 +43,5 @@ test-results/
 blob-report/
 
 .trae/documents/
+
+.next/

@@ -23,3 +23,8 @@ export interface CreateTestPostRequest {
 export interface CreateTestPostResponse {
   id: string;
 }
+
+export interface PostKeyResponse {
+  post_key: string;
+  created_at: string;
+}

@@ -17,7 +17,7 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/dist/**", "**/tests/**"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html", "lcov", "json"],
+      reporter: ["text", "json", "html", "cobertura", "junit"],
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "node_modules/",

@@ -1,7 +1,7 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useCreateTestPost } from "../hooks/swr/useCreateTestPost";
-import * as api from "../utils/api";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 
@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { CreateTestPostRequest, CreateTestPostResponse } from "@/types/posts";
 
 interface CreateTestPostModalProps {
   show: boolean;
@@ -26,14 +27,43 @@ interface CreateTestPostModalProps {
   onSuccess: () => void;
 }
 
+async function createTestPost(postKey: string, data: CreateTestPostRequest): Promise<CreateTestPostResponse> {
+  const response = await fetch("/api/posts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Post-Key": postKey,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || "Failed to create post");
+  }
+
+  return response.json();
+}
+
 function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPostModalProps) {
-  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>("");
   const titleRef = useRef<HTMLInputElement | null>(null);
 
-  const { trigger, isMutating, reset } = useCreateTestPost(postKey);
+  const { mutate, isPending, reset } = useMutation({
+    mutationFn: (data: CreateTestPostRequest) => createTestPost(postKey, data),
+    onSuccess: () => {
+      toast.success("Success", {
+        description: "Post created successfully",
+      });
+      onSuccess();
+      reset();
+    },
+    onError: (err: Error) => {
+      setError(err.message);
+    },
+  });
 
   useEffect(() => {
     if (show) {
@@ -49,20 +79,10 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) {
-      setError(t("createTestPost.errorEmptyBody"));
+      setError("Body cannot be empty");
       return;
     }
-    try {
-      await trigger({ title: title.trim(), body });
-      toast.success(t("createTestPost.successHeader"), {
-        description: t("createTestPost.successBody"),
-      });
-      onSuccess();
-      reset();
-    } catch (err: unknown) {
-      const msg = api.getErrorMessage(err, t("createTestPost.errorServer"));
-      setError(msg);
-    }
+    mutate({ title: title.trim(), body });
   };
 
   return (
@@ -70,9 +90,9 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>{t("createTestPost.title")}</DialogTitle>
+            <DialogTitle>Create Test Post</DialogTitle>
             <DialogDescription className="sr-only">
-              {t("createTestPost.bodyLabel")}
+              Create a test post
             </DialogDescription>
           </DialogHeader>
 
@@ -84,42 +104,42 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="test-post-title">{t("createTestPost.titleLabel")}</Label>
+            <Label htmlFor="test-post-title">Title</Label>
             <Input
               id="test-post-title"
               ref={titleRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("createTestPost.titlePlaceholder")}
-              disabled={isMutating}
+              placeholder="Enter post title"
+              disabled={isPending}
               autoComplete="off"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="test-post-body">{t("createTestPost.bodyLabel")}</Label>
+            <Label htmlFor="test-post-body">Body</Label>
             <Textarea
               id="test-post-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder={t("createTestPost.bodyPlaceholder")}
-              disabled={isMutating}
+              placeholder="Enter post body"
+              disabled={isPending}
               rows={8}
             />
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onHide} disabled={isMutating}>
-              {t("createTestPost.cancel")}
+            <Button type="button" variant="outline" onClick={onHide} disabled={isPending}>
+              Cancel
             </Button>
-            <Button type="submit" disabled={isMutating || !body.trim()}>
-              {isMutating ? (
+            <Button type="submit" disabled={isPending || !body.trim()}>
+              {isPending ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2Icon className="size-4 animate-spin" />
-                  {t("createTestPost.creating")}
+                  Creating...
                 </span>
               ) : (
-                t("createTestPost.create")
+                "Create"
               )}
             </Button>
           </DialogFooter>

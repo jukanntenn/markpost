@@ -1,6 +1,7 @@
-import { useTheme } from "../contexts/useTheme";
+"use client";
+
+import { useTheme } from "next-themes";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,16 +11,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
-const ThemeToggle = () => {
-  const { themeMode, setThemeMode } = useTheme();
-  const { t } = useTranslation();
+export function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
 
   const handleSelect = (mode: "light" | "dark" | "system") => {
-    setThemeMode(mode);
+    setTheme(mode);
   };
 
   const getThemeIcon = () => {
-    switch (themeMode) {
+    switch (theme) {
       case "light":
         return <SunIcon className="size-4" />;
       case "dark":
@@ -37,33 +37,33 @@ const ThemeToggle = () => {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label={t("theme.toggleTheme")}
-          title={t("theme.toggleTheme")}
+          aria-label="Toggle theme"
+          title="Toggle theme"
         >
           {getThemeIcon()}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup
-          value={themeMode}
+          value={theme}
           onValueChange={(v) => handleSelect(v as "light" | "dark" | "system")}
         >
           <DropdownMenuRadioItem value="light">
             <SunIcon className="size-4" />
-            {t("theme.light")}
+            Light
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
             <MoonIcon className="size-4" />
-            {t("theme.dark")}
+            Dark
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
             <MonitorIcon className="size-4" />
-            {t("theme.system")}
+            System
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+}
 
 export default ThemeToggle;

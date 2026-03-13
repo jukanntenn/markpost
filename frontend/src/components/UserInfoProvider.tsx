@@ -1,27 +1,34 @@
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect, type ReactNode } from "react";
 import { get, remove } from "../utils/storage";
 import { UserInfoContext } from "./UserInfoContext";
 import type { UserInfo } from "./UserInfoContext";
 
-export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(() => {
+interface UserInfoProviderProps {
+  children: ReactNode;
+}
+
+export const UserInfoProvider = ({ children }: UserInfoProviderProps) => {
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
     try {
-      // 从 storage 中读取 "login" 键的数据，与 LoginCallback 保持一致
       const loginData = get<UserInfo>("login");
-      return loginData || null;
+      setUserInfo(loginData);
     } catch (error) {
       console.error("Error reading login data from storage:", error);
-      return null;
+    } finally {
+      setIsLoading(false);
     }
-  });
+  }, []);
 
-  // 登出函数
   const logout = () => {
     setUserInfo(null);
     remove("login");
   };
 
-  // 认证状态：检查是否有完整的用户信息和 token
   const isAuthenticated = !!(
     userInfo?.user?.id &&
     userInfo?.access_token &&
@@ -31,6 +38,10 @@ export const UserInfoProvider = ({ children }: { children: JSX.Element }) => {
   const isAdmin = () => {
     return userInfo?.user?.role === "admin";
   };
+
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <UserInfoContext.Provider

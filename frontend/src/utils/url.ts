@@ -1,5 +1,5 @@
 export function buildPostUrl(qid: string): string {
-  const baseUrl = import.meta.env.VITE_BASE_URL?.trim() || "";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "";
 
   if (!baseUrl || !baseUrl.startsWith("http")) {
     return `/${qid}`;

@@ -1,0 +1,94 @@
+"use client";
+
+import { useState } from "react";
+import { Loader2Icon, TriangleAlertIcon, UserPlusIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+import { authFetcher } from "@/lib/api/fetcher";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+interface User {
+  id: number;
+  username: string;
+  role: string;
+  created_at: string;
+}
+
+interface UsersResponse {
+  users: User[];
+}
+
+export function AdminUsersPage() {
+  const { data, isLoading, error } = useQuery<UsersResponse>({
+    queryKey: ["admin", "users"],
+    queryFn: () => authFetcher("/api/admin/users"),
+  });
+
+  const users = data?.users || [];
+
+  return (
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Users</h1>
+        <Button>
+          <UserPlusIcon className="mr-2 size-4" />
+          Add User
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+          <Loader2Icon className="size-5 animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading users...</p>
+        </div>
+      ) : error ? (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertDescription>Error loading users</AlertDescription>
+        </Alert>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Username</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Created At</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.id}</TableCell>
+                    <TableCell>{user.username}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default AdminUsersPage;

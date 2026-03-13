@@ -1,7 +1,6 @@
-import { useTranslation } from "react-i18next";
+"use client";
 
 function LoginDivider() {
-  const { t } = useTranslation();
   return (
     <div className="relative my-6">
       <div className="absolute inset-0 flex items-center">
@@ -9,7 +8,7 @@ function LoginDivider() {
       </div>
       <div className="relative flex justify-center text-xs uppercase">
         <span className="bg-background px-2 text-muted-foreground">
-          {t("login.or")}
+          or
         </span>
       </div>
     </div>

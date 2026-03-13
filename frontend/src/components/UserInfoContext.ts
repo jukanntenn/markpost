@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext } from "react";
 
 export interface UserInfo {
@@ -25,4 +27,3 @@ export const UserInfoContext = createContext<UserInfoContextType>({
   logout: () => {},
   isAdmin: () => false,
 });
-

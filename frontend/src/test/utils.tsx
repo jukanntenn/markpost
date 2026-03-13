@@ -1,11 +1,21 @@
 import { render } from "@testing-library/react";
-import { I18nextProvider } from "react-i18next";
-import i18n from "../i18n";
 import type { LoginResponse } from "../types/auth";
-import { SWRConfig } from "swr";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-export function renderWithI18n(ui: React.ReactElement) {
-  return render(<I18nextProvider i18n={i18n}>{ui}</I18nextProvider>);
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+export function renderWithProviders(ui: React.ReactElement) {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
 }
 
 export function createMockUser(overrides = {}) {
@@ -35,16 +45,8 @@ export function clearMockAuth() {
 
 export function createWrapper() {
   return ({ children }: { children: React.ReactNode }) => (
-    <SWRConfig
-      value={{
-        dedupingInterval: 0,
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
-        refreshWhenHidden: false,
-        refreshInterval: 0,
-      }}
-    >
-      <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
-    </SWRConfig>
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
   );
 }

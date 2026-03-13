@@ -1,3 +1,5 @@
+"use client";
+
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -6,16 +8,15 @@ import {
   TriangleAlertIcon,
 } from "lucide-react"
 import * as React from "react"
+import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
-import { useTheme } from "@/contexts/useTheme"
-
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { themeMode } = useTheme()
+  const { theme } = useTheme()
 
   return (
     <Sonner
-      theme={themeMode as ToasterProps["theme"]}
+      theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

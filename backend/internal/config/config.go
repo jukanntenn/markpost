@@ -105,7 +105,6 @@ func loadConfig() {
 
 	setDefaults(v)
 
-	target := ""
 	if configPath != "" {
 		exists, err := fileExists(configPath)
 		if err != nil {
@@ -116,25 +115,21 @@ func loadConfig() {
 			loadErr = fmt.Errorf("config file does not exist: %s", configPath)
 			return
 		}
-		target = configPath
-	} else {
-		defaultPath := "./config.toml"
-		exists, err := fileExists(defaultPath)
-		if err != nil {
-			loadErr = fmt.Errorf("failed to check default config file: %w", err)
-			return
-		}
-		if exists {
-			target = defaultPath
-		}
-	}
-
-	if target != "" {
-		v.SetConfigFile(target)
+		v.SetConfigFile(configPath)
 		v.SetConfigType("toml")
 		if err := v.ReadInConfig(); err != nil {
 			loadErr = fmt.Errorf("failed to read config file: %w", err)
 			return
+		}
+	} else {
+		v.SetConfigName("markpost")
+		v.SetConfigType("toml")
+		v.AddConfigPath(".")
+		if err := v.ReadInConfig(); err != nil {
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+				loadErr = fmt.Errorf("failed to read config file: %w", err)
+				return
+			}
 		}
 	}
 

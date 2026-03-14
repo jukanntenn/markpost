@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const frontendPort = process.env.FRONTEND_PORT || "3034";
+
 export default defineConfig({
   testDir: "./tests",
   timeout: 30000,
@@ -7,12 +9,12 @@ export default defineConfig({
   workers: 2,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:5174/ui/",
+    baseURL: `http://localhost:${frontendPort}/ui/`,
     trace: "on-first-retry",
   },
   webServer: {
-    command: "VITE_PORT=5174 pnpm dev",
-    url: "http://localhost:5174/ui/",
+    command: `FRONTEND_PORT=${frontendPort} pnpm dev`,
+    url: `http://localhost:${frontendPort}/ui/`,
     reuseExistingServer: true,
     timeout: 120000,
   },

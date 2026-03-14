@@ -9,7 +9,7 @@ cd "$SCRIPT_DIR"
 
 if [ ! -f .env ]; then
     cat > .env <<EOF
-WEB_PORT=7330
+MARKPOST_SERVER__PORT=7330
 POSTGRES_PORT=5432
 EOF
     echo "Created .env file"
@@ -33,7 +33,7 @@ docker compose up -d backend
 
 echo ""
 echo "✅ Development environment started!"
-echo "🌐 API: http://localhost:${WEB_PORT:-7330}"
+echo "🌐 API: http://localhost:${MARKPOST_SERVER__PORT:-7330}"
 echo "📊 PostgreSQL: localhost:${POSTGRES_PORT:-5432}"
 echo ""
 echo "To view logs: docker compose logs -f backend"

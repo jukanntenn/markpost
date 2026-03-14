@@ -5,17 +5,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   async rewrites() {
+    const serverPort = process.env.MARKPOST_SERVER__PORT || "7330";
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8080/api/:path*",
+        destination: `http://localhost:${serverPort}/api/:path*`,
       },
     ];
-  },
-
-  env: {
-    NEXT_PUBLIC_PRIMARY_DOMAIN: process.env.PRIMARY_DOMAIN,
-    NEXT_PUBLIC_USE_HTTPS: process.env.USE_HTTPS,
   },
 };
 

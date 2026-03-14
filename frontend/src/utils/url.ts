@@ -1,10 +1,5 @@
 export function buildPostUrl(qid: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "";
-
-  if (!baseUrl || !baseUrl.startsWith("http")) {
-    return `/${qid}`;
-  }
-
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
-  return `${normalizedBaseUrl}/${qid}`;
+  const serverPort = process.env.MARKPOST_SERVER__PORT || "7330";
+  const baseUrl = `http://localhost:${serverPort}`;
+  return `${baseUrl}/${qid}`;
 }

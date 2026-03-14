@@ -31,7 +31,7 @@ services:
     environment:
       MARKPOST_DB_DRIVER: postgresql
       MARKPOST_DB_DSN: "host=postgres port=5432 user=markpost password=markpost_dev dbname=markpost sslmode=disable"
-      MARKPOST_SERVER_PORT: 7330
+      MARKPOST_SERVER__PORT: 7330
       MARKPOST_JWT_SECRET: dev-secret-key-change-in-production
       MARKPOST_ADMIN_INITIALUSERNAME: admin
       MARKPOST_ADMIN_INITIALPASSWORD: admin123

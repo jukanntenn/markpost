@@ -1,4 +1,4 @@
-const prefix = (process.env.NEXT_PUBLIC_STORAGE_PREFIX as string | undefined) || "markpost_dev_";
+const prefix = "markpost_";
 
 export const get = <T>(key: string, storage?: Storage): T | null => {
   if (typeof window === "undefined") return null;

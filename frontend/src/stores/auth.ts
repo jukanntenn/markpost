@@ -23,7 +23,7 @@ export interface AuthState {
   setHasHydrated: (state: boolean) => void;
 }
 
-const storagePrefix = process.env.NEXT_PUBLIC_STORAGE_PREFIX || "markpost_dev_";
+const storagePrefix = "markpost_";
 
 export const useAuthStore = create<AuthState>()(
   persist(

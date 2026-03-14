@@ -1,3 +1,4 @@
+// Package v1 provides REST API v1 handlers.
 package v1
 
 import (
@@ -14,11 +15,13 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// PostRequest represents a post creation request.
 type PostRequest struct {
 	Title string `json:"title" binding:"required,titlesize"`
 	Body  string `json:"body" binding:"required,bodysize"`
 }
 
+// PostService provides post operations.
 type PostService interface {
 	CreatePost(ctx context.Context, title, body string, userID int) (string, error)
 	RenderPostHTML(ctx context.Context, qid string) (string, string, error)
@@ -26,6 +29,7 @@ type PostService interface {
 	GetUserPosts(ctx context.Context, userID int, page, limit int) ([]post.Post, int64, error)
 }
 
+// CreatePost returns a handler for creating a new post.
 func CreatePost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, ok := ExtractUser(c)
@@ -50,6 +54,20 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
+// getI18nMessage gets an i18n message or returns a default value if i18n is not available.
+func getI18nMessage(c *gin.Context, defaultMsg string) string {
+	if _, exists := c.Get("i18n"); exists {
+		return ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
+			DefaultMessage: &i18n.Message{
+				ID:    defaultMsg,
+				Other: defaultMsg,
+			},
+		})
+	}
+	return defaultMsg
+}
+
+// RenderPost returns a handler for rendering a post.
 func RenderPost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -57,20 +75,10 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 		if c.Query("format") == "raw" {
 			title, body, err := postSvc.GetPostMarkdown(c.Request.Context(), id)
 			if err != nil {
-				if se, ok := err.(*service.ServiceError); ok && se.Code == service.ErrNotFound {
-					c.String(http.StatusNotFound, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-						DefaultMessage: &i18n.Message{
-							ID:    "error.not_found",
-							Other: "Not Found",
-						},
-					}))
+				if se, ok := err.(*service.Error); ok && se.Code == service.ErrNotFound {
+					c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
 				} else {
-					c.String(http.StatusInternalServerError, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-						DefaultMessage: &i18n.Message{
-							ID:    "error.failed_render_post",
-							Other: "Failed to render post",
-						},
-					}))
+					c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
 				}
 				return
 			}
@@ -82,20 +90,10 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 
 		title, htmlContent, err := postSvc.RenderPostHTML(c.Request.Context(), id)
 		if err != nil {
-			if se, ok := err.(*service.ServiceError); ok && se.Code == service.ErrNotFound {
-				c.String(http.StatusNotFound, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-					DefaultMessage: &i18n.Message{
-						ID:    "error.not_found",
-						Other: "Not Found",
-					},
-				}))
+			if se, ok := err.(*service.Error); ok && se.Code == service.ErrNotFound {
+				c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
 			} else {
-				c.String(http.StatusInternalServerError, ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-					DefaultMessage: &i18n.Message{
-						ID:    "error.failed_render_post",
-						Other: "Failed to render post",
-					},
-				}))
+				c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
 			}
 			return
 		}
@@ -103,6 +101,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
+// PostsList returns a handler for listing user's posts.
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, ok := ExtractUser(c)

@@ -1,3 +1,4 @@
+// Package auth provides JWT authentication utilities.
 package auth
 
 import (
@@ -6,23 +7,27 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// JWTTokenPair represents a pair of access and refresh tokens.
 type JWTTokenPair struct {
 	AccessToken  string
 	RefreshToken string
 }
 
+// AccessClaims represents JWT access token claims.
 type AccessClaims struct {
 	UserID int    `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// RefreshClaims represents JWT refresh token claims.
 type RefreshClaims struct {
 	UserID int    `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// JWTService provides JWT token generation and validation.
 type JWTService struct {
 	accessSigningKey   []byte
 	refreshSigningKey  []byte
@@ -30,6 +35,7 @@ type JWTService struct {
 	refreshTokenExpire time.Duration
 }
 
+// NewJWTService creates a new JWTService instance.
 func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire, refreshTokenExpire time.Duration) *JWTService {
 	return &JWTService{
 		accessSigningKey:   []byte(accessSigningKey),
@@ -39,6 +45,7 @@ func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire
 	}
 }
 
+// GenerateTokenPair generates a new pair of access and refresh tokens.
 func (s *JWTService) GenerateTokenPair(userID int, role string) (*JWTTokenPair, error) {
 	accessToken, err := s.GenerateAccessToken(userID, role)
 	if err != nil {
@@ -56,6 +63,7 @@ func (s *JWTService) GenerateTokenPair(userID int, role string) (*JWTTokenPair, 
 	}, nil
 }
 
+// GenerateAccessToken generates a new access token.
 func (s *JWTService) GenerateAccessToken(userID int, role string) (string, error) {
 	claims := AccessClaims{
 		UserID: userID,
@@ -70,6 +78,7 @@ func (s *JWTService) GenerateAccessToken(userID int, role string) (string, error
 	return token.SignedString(s.accessSigningKey)
 }
 
+// GenerateRefreshToken generates a new refresh token.
 func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, error) {
 	claims := RefreshClaims{
 		UserID: userID,
@@ -84,8 +93,9 @@ func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, erro
 	return token.SignedString(s.refreshSigningKey)
 }
 
+// ValidateAccess validates an access token.
 func (s *JWTService) ValidateAccess(tokenString string) (*AccessClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &AccessClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &AccessClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return s.accessSigningKey, nil
 	})
 
@@ -100,8 +110,9 @@ func (s *JWTService) ValidateAccess(tokenString string) (*AccessClaims, error) {
 	return nil, jwt.ErrSignatureInvalid
 }
 
+// ValidateRefresh validates a refresh token.
 func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return s.refreshSigningKey, nil
 	})
 
@@ -116,10 +127,12 @@ func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error)
 	return nil, jwt.ErrSignatureInvalid
 }
 
+// UserIDInt returns the user ID as an int.
 func (c *AccessClaims) UserIDInt() int {
 	return c.UserID
 }
 
+// UserIDInt returns the user ID as an int.
 func (c *RefreshClaims) UserIDInt() int {
 	return c.UserID
 }

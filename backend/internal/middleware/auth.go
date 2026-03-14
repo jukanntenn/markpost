@@ -14,10 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TokenBlacklistChecker defines the interface for checking blacklisted tokens.
 type TokenBlacklistChecker interface {
 	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
 }
 
+// Auth returns an authentication middleware.
 func Auth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -58,6 +60,7 @@ func Auth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFunc {
 	}
 }
 
+// AuthWithBlacklist returns an authentication middleware with token blacklist checking.
 func AuthWithBlacklist(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.TokenRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -111,6 +114,7 @@ func AuthWithBlacklist(jwtSvc *auth.JWTService, users user.Repository, tokenRepo
 	}
 }
 
+// OptionalAuth returns an optional authentication middleware.
 func OptionalAuth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

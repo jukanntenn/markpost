@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RateLimitByIP returns a rate limiting middleware by IP address.
 func RateLimitByIP(lmt *limiter.Limiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()

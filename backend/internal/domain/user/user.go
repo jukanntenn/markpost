@@ -5,13 +5,17 @@ import (
 	"time"
 )
 
+// Role represents a user role.
 type Role string
 
 const (
+	// RoleAdmin represents an admin user role.
 	RoleAdmin Role = "admin"
-	RoleUser  Role = "user"
+	// RoleUser represents a regular user role.
+	RoleUser Role = "user"
 )
 
+// GitHubUser represents a GitHub user.
 type GitHubUser struct {
 	ID        int64  `json:"id"`
 	Login     string `json:"login"`
@@ -20,6 +24,7 @@ type GitHubUser struct {
 	Name      string `json:"name"`
 }
 
+// User represents a user entity.
 type User struct {
 	ID              int        `json:"id" gorm:"primaryKey;autoIncrement"`
 	Email           string     `json:"email" gorm:"unique;not null"`
@@ -37,12 +42,15 @@ type User struct {
 	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
+// IsAdmin checks if the user has admin role.
 func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
 
+// IsRegularUser checks if the user has regular user role.
 func (u *User) IsRegularUser() bool {
 	return u.Role == RoleUser
 }
 
+// ErrNotFound is returned when a user is not found.
 var ErrNotFound = errors.New("record not found")

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Fallback returns a middleware that recovers from panics.
 func Fallback() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {

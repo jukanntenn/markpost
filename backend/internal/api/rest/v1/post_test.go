@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
+	"github.com/go-playground/validator/v10"
 )
 
 type mockPostService struct {
@@ -25,35 +28,34 @@ func newMockPostService() *mockPostService {
 	}
 }
 
-func (m *mockPostService) CreatePost(ctx context.Context, title, body string, userID int) (string, error) {
-	qid := "test-qid-123"
+func (m *mockPostService) CreatePost(_ context.Context, title, body string, userID int) (string, error) {
+	qid := "test-qid"
 	m.posts[qid] = &post.Post{
-		ID:     1,
-		QID:    qid,
-		Title:  title,
-		Body:   body,
-		UserID: userID,
+		ID:        1,
+		QID:       qid,
+		Title:     title,
+		Body:      body,
+		UserID:    userID,
+		CreatedAt: time.Now(),
 	}
 	return qid, nil
 }
 
-func (m *mockPostService) RenderPostHTML(ctx context.Context, qid string) (string, string, error) {
-	p, ok := m.posts[qid]
-	if !ok {
-		return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
+func (m *mockPostService) RenderPostHTML(_ context.Context, qid string) (string, string, error) {
+	if p, ok := m.posts[qid]; ok {
+		return p.Title, "<h1>" + p.Title + "</h1><p>" + p.Body + "</p>", nil
 	}
-	return p.Title, "<h1>" + p.Title + "</h1><p>" + p.Body + "</p>", nil
+	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
 }
 
-func (m *mockPostService) GetPostMarkdown(ctx context.Context, qid string) (string, string, error) {
-	p, ok := m.posts[qid]
-	if !ok {
-		return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
+func (m *mockPostService) GetPostMarkdown(_ context.Context, qid string) (string, string, error) {
+	if p, ok := m.posts[qid]; ok {
+		return p.Title, p.Body, nil
 	}
-	return p.Title, p.Body, nil
+	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
 }
 
-func (m *mockPostService) GetUserPosts(ctx context.Context, userID int, page, limit int) ([]post.Post, int64, error) {
+func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) ([]post.Post, int64, error) {
 	var result []post.Post
 	for _, p := range m.posts {
 		if p.UserID == userID {
@@ -63,39 +65,31 @@ func (m *mockPostService) GetUserPosts(ctx context.Context, userID int, page, li
 	return result, int64(len(result)), nil
 }
 
+func setupPostTestRouter() *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	// Register validators for testing
+	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
+		_ = v.RegisterValidation("titlesize", func(fl validator.FieldLevel) bool {
+			return len(fl.Field().String()) <= 255
+		})
+		_ = v.RegisterValidation("bodysize", func(fl validator.FieldLevel) bool {
+			return len(fl.Field().String()) <= 100000
+		})
+	}
+	return r
+}
+
 func TestCreatePost_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupTestRouter()
+	router := setupPostTestRouter()
 
 	router.POST("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
+		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser"})
 		c.Next()
-	}, func(c *gin.Context) {
-		var req struct {
-			Title string `json:"title" binding:"required"`
-			Body  string `json:"body" binding:"required"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	}, CreatePost(mockSvc))
 
-		u, _ := c.Get("user")
-		userObj := u.(*user.User)
-
-		qid, err := mockSvc.CreatePost(c.Request.Context(), req.Title, req.Body, userObj.ID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusCreated, gin.H{"id": qid})
-	})
-
-	body := struct {
-		Title string `json:"title"`
-		Body  string `json:"body"`
-	}{Title: "Test Title", Body: "Test Body"}
+	body := PostRequest{Title: "Test Title", Body: "Test Body"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/posts", bytes.NewBuffer(jsonBody))
@@ -109,117 +103,69 @@ func TestCreatePost_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 
 	if resp["id"] == nil {
 		t.Error("expected id in response")
 	}
 }
 
-func TestCreatePost_MissingTitle(t *testing.T) {
+func TestRenderPost_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupTestRouter()
+	router := setupPostTestRouter()
 
-	router.POST("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
-		c.Next()
-	}, func(c *gin.Context) {
-		var req struct {
-			Title string `json:"title" binding:"required"`
-			Body  string `json:"body" binding:"required"`
-		}
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+	// Create a post first
+	_, _ = mockSvc.CreatePost(context.Background(), "Test Title", "Test Body", 1)
 
-		u, _ := c.Get("user")
-		userObj := u.(*user.User)
+	router.GET("/posts/:id", RenderPost(mockSvc))
 
-		qid, err := mockSvc.CreatePost(c.Request.Context(), req.Title, req.Body, userObj.ID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(http.StatusCreated, gin.H{"id": qid})
-	})
-
-	body := struct {
-		Title string `json:"title"`
-		Body  string `json:"body"`
-	}{Title: "", Body: "Test Body"}
-	jsonBody, _ := json.Marshal(body)
-
-	req := httptest.NewRequest(http.MethodPost, "/posts", bytes.NewBuffer(jsonBody))
-	req.Header.Set("Content-Type", "application/json")
+	// Use format=raw to avoid HTML template rendering
+	req := httptest.NewRequest(http.MethodGet, "/posts/test-qid?format=raw", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Verify response content type is markdown
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "text/markdown; charset=utf-8" {
+		t.Errorf("expected content type text/markdown; charset=utf-8, got %s", contentType)
+	}
+}
+
+func TestRenderPost_NotFound(t *testing.T) {
+	mockSvc := newMockPostService()
+	router := setupPostTestRouter()
+
+	router.GET("/posts/:id", RenderPost(mockSvc))
+
+	// Use format=raw to avoid i18n dependency in tests
+	req := httptest.NewRequest(http.MethodGet, "/posts/nonexistent?format=raw", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
 
 func TestPostsList_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupTestRouter()
+	router := setupPostTestRouter()
 
-	mockSvc.CreatePost(context.Background(), "Post 1", "Body 1", 1)
-	mockSvc.CreatePost(context.Background(), "Post 2", "Body 2", 1)
+	// Create a post first
+	_, _ = mockSvc.CreatePost(context.Background(), "Test Title", "Test Body", 1)
 
 	router.GET("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
+		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser"})
 		c.Next()
-	}, func(c *gin.Context) {
-		u, _ := c.Get("user")
-		userObj := u.(*user.User)
-
-		type queryParams struct {
-			Page  int `form:"page" binding:"omitempty,min=1"`
-			Limit int `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if err := c.ShouldBindQuery(&query); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		query.Page = defaultInt(query.Page, 1)
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
-			return
-		}
-
-		posts, total, err := mockSvc.GetUserPosts(c.Request.Context(), userObj.ID, query.Page, query.Limit)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		items := make([]gin.H, 0, len(posts))
-		for _, p := range posts {
-			items = append(items, gin.H{
-				"id":         p.ID,
-				"qid":        p.QID,
-				"title":      p.Title,
-				"created_at": p.CreatedAt,
-			})
-		}
-		totalPages := (total + int64(query.Limit) - 1) / int64(query.Limit)
-
-		c.JSON(http.StatusOK, gin.H{
-			"posts": items,
-			"pagination": gin.H{
-				"page":        query.Page,
-				"limit":       query.Limit,
-				"total":       total,
-				"total_pages": totalPages,
-			},
-		})
-	})
+	}, PostsList(mockSvc))
 
 	req := httptest.NewRequest(http.MethodGet, "/posts", nil)
 	w := httptest.NewRecorder()
@@ -231,111 +177,11 @@ func TestPostsList_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 
 	if resp["posts"] == nil {
 		t.Error("expected posts in response")
-	}
-
-	pagination, ok := resp["pagination"].(map[string]interface{})
-	if !ok {
-		t.Error("expected pagination in response")
-	} else {
-		if pagination["page"] == nil {
-			t.Error("expected page in pagination")
-		}
-		if pagination["total"] == nil {
-			t.Error("expected total in pagination")
-		}
-	}
-}
-
-func TestPostsList_InvalidLimit(t *testing.T) {
-	router := setupTestRouter()
-
-	router.GET("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Username: "testuser", Role: user.RoleUser})
-		c.Next()
-	}, func(c *gin.Context) {
-		type queryParams struct {
-			Page  int `form:"page" binding:"omitempty,min=1"`
-			Limit int `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if err := c.ShouldBindQuery(&query); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid limit"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/posts?limit=200", nil)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
-	}
-}
-
-func TestRenderPost_HTML(t *testing.T) {
-	mockSvc := newMockPostService()
-	router := setupTestRouter()
-
-	mockSvc.CreatePost(context.Background(), "Test Post", "Test Body", 1)
-
-	router.GET("/posts/:id", func(c *gin.Context) {
-		qid := c.Param("id")
-
-		title, html, err := mockSvc.RenderPostHTML(c.Request.Context(), qid)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"title": title, "html": html})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/posts/test-qid-123", nil)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
-	}
-}
-
-func TestRenderPost_NotFound(t *testing.T) {
-	mockSvc := newMockPostService()
-	router := setupTestRouter()
-
-	router.GET("/posts/:id", func(c *gin.Context) {
-		qid := c.Param("id")
-
-		_, _, err := mockSvc.RenderPostHTML(c.Request.Context(), qid)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{})
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/posts/nonexistent", nil)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }

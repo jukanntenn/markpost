@@ -1,3 +1,4 @@
+// Command generate_fake_data generates fake post data for testing.
 package main
 
 import (

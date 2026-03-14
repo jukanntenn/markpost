@@ -1,3 +1,4 @@
+// Package i18n provides internationalization utilities.
 package i18n
 
 import (
@@ -9,8 +10,10 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// ActiveLocaleLoader loads locale messages from the filesystem.
 type ActiveLocaleLoader struct{}
 
+// LoadMessage loads a message file for the given locale.
 func (ActiveLocaleLoader) LoadMessage(locale string) ([]byte, error) {
 	localesPath := "./locales"
 	filePath := filepath.Join(localesPath, locale+".toml")
@@ -18,6 +21,7 @@ func (ActiveLocaleLoader) LoadMessage(locale string) ([]byte, error) {
 	return os.ReadFile(filePath)
 }
 
+// MustLoadMessage loads a message file and panics on error.
 func (ActiveLocaleLoader) MustLoadMessage(locale string) []byte {
 	data, err := ActiveLocaleLoader{}.LoadMessage(locale)
 	if err != nil {
@@ -26,6 +30,7 @@ func (ActiveLocaleLoader) MustLoadMessage(locale string) []byte {
 	return data
 }
 
+// LoadLocales loads all locale files into the bundle.
 func (ActiveLocaleLoader) LoadLocales(bundle *i18n.Bundle) error {
 	localesPath := "./locales"
 

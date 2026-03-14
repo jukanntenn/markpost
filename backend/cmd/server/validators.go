@@ -11,8 +11,8 @@ import (
 
 func RegisterValidators() {
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		v.RegisterValidation("titlesize", validateTitleLength)
-		v.RegisterValidation("bodysize", validateBodySize)
+		_ = v.RegisterValidation("titlesize", validateTitleLength)
+		_ = v.RegisterValidation("bodysize", validateBodySize)
 	}
 }
 

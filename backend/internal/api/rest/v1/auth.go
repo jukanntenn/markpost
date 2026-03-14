@@ -1,3 +1,4 @@
+// Package v1 provides REST API v1 handlers.
 package v1
 
 import (
@@ -15,10 +16,12 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// GitHubAuthURLGenerator generates GitHub OAuth authorization URLs.
 type GitHubAuthURLGenerator interface {
 	GenerateGitHubAuthURL(ctx context.Context) (string, error)
 }
 
+// GenerateGitHubOAuthURL returns a handler that generates GitHub OAuth URL.
 func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
@@ -30,15 +33,17 @@ func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	}
 }
 
+// AuthService provides authentication operations.
 type AuthService interface {
 	LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error)
 	LoginWithEmail(ctx context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error)
 	Logout(ctx context.Context, accessToken string) error
-	ChangePassword(ctx context.Context, userID int, current, new string) error
+	ChangePassword(ctx context.Context, userID int, current, newPassword string) error
 	QueryPostKey(ctx context.Context, userID int) (string, time.Time, error)
 }
 
+// LoginGitHub returns a handler for GitHub OAuth login.
 func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var query struct {
@@ -63,11 +68,13 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// EmailLoginRequest represents an email login request.
 type EmailLoginRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
 }
 
+// LoginWithEmail returns a handler for email/password login.
 func LoginWithEmail(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req EmailLoginRequest
@@ -84,10 +91,12 @@ func LoginWithEmail(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// RefreshTokenRequest represents a token refresh request.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// RefreshToken returns a handler for refreshing access tokens.
 func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req RefreshTokenRequest
@@ -104,6 +113,7 @@ func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// Logout returns a handler for user logout.
 func Logout(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")
@@ -123,11 +133,13 @@ func Logout(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// PasswordChangeRequest represents a password change request.
 type PasswordChangeRequest struct {
 	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 }
 
+// ChangePassword returns a handler for changing user password.
 func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, ok := ExtractUser(c)
@@ -158,6 +170,7 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// QueryPostKey returns a handler for querying user's post key.
 func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, ok := ExtractUser(c)
@@ -181,7 +194,7 @@ func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) 
 	c.JSON(http.StatusOK, gin.H{
 		"token":         tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
-		"expires_in":    int64(tokens.ExpiresAt.Sub(time.Now()).Seconds()),
+		"expires_in":    int64(time.Until(tokens.ExpiresAt).Seconds()),
 		"user": gin.H{
 			"id":         u.ID,
 			"email":      u.Email,
@@ -192,10 +205,10 @@ func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) 
 	})
 }
 
-func writeRefreshResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) {
+func writeRefreshResponse(c *gin.Context, _ *user.User, tokens *auth.JWTTokenPair) {
 	c.JSON(http.StatusOK, gin.H{
 		"token":         tokens.AccessToken,
 		"refresh_token": tokens.RefreshToken,
-		"expires_in":    int64(tokens.ExpiresAt.Sub(time.Now()).Seconds()),
+		"expires_in":    int64(time.Until(tokens.ExpiresAt).Seconds()),
 	})
 }

@@ -26,15 +26,15 @@ func newMockAuthService() *mockAuthService {
 	}
 }
 
-func (m *mockAuthService) GenerateGitHubAuthURL(ctx context.Context) (string, error) {
+func (m *mockAuthService) GenerateGitHubAuthURL(_ context.Context) (string, error) {
 	return "https://github.com/login/oauth/authorize?...", nil
 }
 
-func (m *mockAuthService) LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error) {
+func (m *mockAuthService) LoginWithGitHub(_ context.Context, _ string) (*user.User, *auth.JWTTokenPair, error) {
 	return nil, nil, service.NewServiceError(service.ErrUnauthorized, "not implemented")
 }
 
-func (m *mockAuthService) LoginWithEmail(ctx context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error) {
+func (m *mockAuthService) LoginWithEmail(_ context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error) {
 	if email == "test@example.com" && password == "correctpassword" {
 		u := &user.User{ID: 1, Email: email, Username: "testuser", Role: user.RoleUser}
 		tokens := &auth.JWTTokenPair{AccessToken: "test-access", RefreshToken: "test-refresh"}
@@ -43,7 +43,7 @@ func (m *mockAuthService) LoginWithEmail(ctx context.Context, email, password st
 	return nil, nil, service.NewServiceError(service.ErrInvalidCredentials, "invalid credentials")
 }
 
-func (m *mockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error) {
+func (m *mockAuthService) RefreshToken(_ context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error) {
 	if refreshToken == "valid-refresh-token" {
 		u := &user.User{ID: 1, Email: "test@example.com", Username: "testuser", Role: user.RoleUser}
 		tokens := &auth.JWTTokenPair{AccessToken: "new-access", RefreshToken: "new-refresh"}
@@ -52,18 +52,18 @@ func (m *mockAuthService) RefreshToken(ctx context.Context, refreshToken string)
 	return nil, nil, service.NewServiceError(service.ErrUnauthorized, "invalid refresh token")
 }
 
-func (m *mockAuthService) Logout(ctx context.Context, accessToken string) error {
+func (m *mockAuthService) Logout(_ context.Context, _ string) error {
 	return nil
 }
 
-func (m *mockAuthService) ChangePassword(ctx context.Context, userID int, current, new string) error {
+func (m *mockAuthService) ChangePassword(_ context.Context, userID int, _, _ string) error {
 	if userID == 1 {
 		return nil
 	}
 	return service.NewServiceError(service.ErrNotFound, "user not found")
 }
 
-func (m *mockAuthService) QueryPostKey(ctx context.Context, userID int) (string, time.Time, error) {
+func (m *mockAuthService) QueryPostKey(_ context.Context, userID int) (string, time.Time, error) {
 	if userID == 1 {
 		return "test-post-key", time.Now(), nil
 	}
@@ -115,7 +115,9 @@ func TestLoginWithEmail_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 
 	if resp["access_token"] == nil {
 		t.Error("expected access_token in response")
@@ -194,7 +196,9 @@ func TestRefreshToken_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 
 	if resp["access_token"] == nil {
 		t.Error("expected access_token in response")
@@ -302,7 +306,9 @@ func TestQueryPostKey_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
 
 	if resp["post_key"] == nil {
 		t.Error("expected post_key in response")

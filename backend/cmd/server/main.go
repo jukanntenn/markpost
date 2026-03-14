@@ -1,3 +1,4 @@
+// Package main provides the entry point for the Markpost server.
 package main
 
 import (
@@ -11,7 +12,7 @@ import (
 	v1 "markpost/internal/api/rest/v1"
 	"markpost/internal/config"
 	"markpost/internal/domain/user"
-	"markpost/internal/infra/database"
+	"markpost/internal/infra"
 	"markpost/internal/middleware"
 	"markpost/internal/service/auth"
 	postsvc "markpost/internal/service/post"
@@ -22,7 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/pelletier/go-toml/v2"
-	"github.com/swaggo/files"
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/oauth2"
@@ -30,19 +31,18 @@ import (
 	"golang.org/x/text/language"
 )
 
-var authSvc *auth.AuthService
-var postSvc *postsvc.PostService
+var authSvc *auth.Service
+var postSvc *postsvc.Service
 var jwtSvc *auth.JWTService
 
 var userRepo user.Repository
 var tokenRepo user.TokenRepository
 
-var validate *validator.Validate
-
 func init() {
-	validate = validator.New()
+	_ = validator.New()
 }
 
+// UseCors configures CORS middleware for the gin router.
 func UseCors(r *gin.Engine) {
 	cfg := config.Get()
 	c := cors.DefaultConfig()
@@ -91,19 +91,19 @@ func serve(configPath string) {
 
 	cfg := config.Get()
 
-	dbInstance, err := database.New(cfg.DB.DSN)
+	dbInstance, err := infra.New(cfg.DB.DSN)
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
 	defer func() {
 		sqlDB, err := dbInstance.DB().DB()
 		if err == nil && sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}()
 
-	userRepo = database.NewUserRepository(dbInstance.DB())
-	tokenRepo = database.NewTokenRepository(dbInstance.DB())
+	userRepo = infra.NewUserRepository(dbInstance.DB())
+	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
 
 	RegisterValidators()
 
@@ -114,7 +114,7 @@ func serve(configPath string) {
 		cfg.JWT.RefreshTokenExpire,
 	)
 
-	authSvc = auth.NewAuthService(
+	authSvc = auth.NewService(
 		userRepo,
 		tokenRepo,
 		&oauth2.Config{
@@ -133,8 +133,8 @@ func serve(configPath string) {
 		log.Fatalf("Failed to initialize first admin: %v", err)
 	}
 
-	postRepo := database.NewPostRepository(dbInstance.DB())
-	postSvc = postsvc.NewPostService(postRepo, nil)
+	postRepo := infra.NewPostRepository(dbInstance.DB())
+	postSvc = postsvc.NewService(postRepo, nil)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
@@ -167,6 +167,7 @@ func serve(configPath string) {
 	}
 }
 
+// SetupRoutes configures all API routes for the application.
 func SetupRoutes(r *gin.Engine) {
 	cfg := config.Get()
 	lmt := tollbooth.NewLimiter(float64(cfg.Ratelimit.PerSecond), nil)

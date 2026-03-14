@@ -8,9 +8,9 @@ import (
 )
 
 type mockPostRepository struct {
-	posts    map[string]*post.Post
-	idPosts  map[int]*post.Post
-	nextID   int
+	posts   map[string]*post.Post
+	idPosts map[int]*post.Post
+	nextID  int
 }
 
 func newMockPostRepository() *mockPostRepository {
@@ -21,7 +21,7 @@ func newMockPostRepository() *mockPostRepository {
 	}
 }
 
-func (m *mockPostRepository) Create(ctx context.Context, title, body string, userID int) (*post.Post, error) {
+func (m *mockPostRepository) Create(_ context.Context, title, body string, userID int) (*post.Post, error) {
 	p := &post.Post{
 		ID:     m.nextID,
 		QID:    "test-qid-" + string(rune(m.nextID+'0')),
@@ -35,7 +35,7 @@ func (m *mockPostRepository) Create(ctx context.Context, title, body string, use
 	return p, nil
 }
 
-func (m *mockPostRepository) GetByQID(ctx context.Context, qid string) (*post.Post, error) {
+func (m *mockPostRepository) GetByQID(_ context.Context, qid string) (*post.Post, error) {
 	p, ok := m.posts[qid]
 	if !ok {
 		return nil, post.ErrNotFound
@@ -43,7 +43,7 @@ func (m *mockPostRepository) GetByQID(ctx context.Context, qid string) (*post.Po
 	return p, nil
 }
 
-func (m *mockPostRepository) GetByUserID(ctx context.Context, userID, offset, limit int) ([]post.Post, error) {
+func (m *mockPostRepository) GetByUserID(_ context.Context, userID, offset, limit int) ([]post.Post, error) {
 	var result []post.Post
 	for _, p := range m.posts {
 		if p.UserID == userID {
@@ -60,7 +60,7 @@ func (m *mockPostRepository) GetByUserID(ctx context.Context, userID, offset, li
 	return result[offset:end], nil
 }
 
-func (m *mockPostRepository) CountByUserID(ctx context.Context, userID int) (int64, error) {
+func (m *mockPostRepository) CountByUserID(_ context.Context, userID int) (int64, error) {
 	var count int64
 	for _, p := range m.posts {
 		if p.UserID == userID {
@@ -70,15 +70,15 @@ func (m *mockPostRepository) CountByUserID(ctx context.Context, userID int) (int
 	return count, nil
 }
 
-func (m *mockPostRepository) CountAll(ctx context.Context, search string) (int64, error) {
+func (m *mockPostRepository) CountAll(_ context.Context, _ string) (int64, error) {
 	return int64(len(m.posts)), nil
 }
 
-func (m *mockPostRepository) CreateBatch(ctx context.Context, posts []post.Post) (int, error) {
+func (m *mockPostRepository) CreateBatch(_ context.Context, posts []post.Post) (int, error) {
 	return len(posts), nil
 }
 
-func (m *mockPostRepository) GetByID(ctx context.Context, id int) (*post.Post, error) {
+func (m *mockPostRepository) GetByID(_ context.Context, id int) (*post.Post, error) {
 	p, ok := m.idPosts[id]
 	if !ok {
 		return nil, post.ErrNotFound
@@ -86,29 +86,29 @@ func (m *mockPostRepository) GetByID(ctx context.Context, id int) (*post.Post, e
 	return p, nil
 }
 
-func (m *mockPostRepository) ListAll(ctx context.Context, search string, offset, limit int) ([]post.Post, error) {
+func (m *mockPostRepository) ListAll(_ context.Context, _ string, _, _ int) ([]post.Post, error) {
 	return nil, nil
 }
 
-func (m *mockPostRepository) UpdateByID(ctx context.Context, id int, title, body string) (*post.Post, error) {
+func (m *mockPostRepository) UpdateByID(_ context.Context, _ int, _, _ string) (*post.Post, error) {
 	return nil, nil
 }
 
-func (m *mockPostRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
+func (m *mockPostRepository) DeleteByID(_ context.Context, _ int) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockPostRepository) PruneExpired(ctx context.Context, retentionDays, batchSize int) error {
+func (m *mockPostRepository) PruneExpired(_ context.Context, _, _ int) error {
 	return nil
 }
 
-func (m *mockPostRepository) CountExpired(ctx context.Context, retentionDays int) (int64, error) {
+func (m *mockPostRepository) CountExpired(_ context.Context, _ int) (int64, error) {
 	return 0, nil
 }
 
-func TestPostService_CreatePost(t *testing.T) {
+func TestService_CreatePost(t *testing.T) {
 	mockRepo := newMockPostRepository()
-	svc := NewPostService(mockRepo, nil)
+	svc := NewService(mockRepo, nil)
 	ctx := context.Background()
 
 	t.Run("creates post successfully", func(t *testing.T) {
@@ -137,9 +137,9 @@ func TestPostService_CreatePost(t *testing.T) {
 	})
 }
 
-func TestPostService_GetPostMarkdown(t *testing.T) {
+func TestService_GetPostMarkdown(t *testing.T) {
 	mockRepo := newMockPostRepository()
-	svc := NewPostService(mockRepo, nil)
+	svc := NewService(mockRepo, nil)
 	ctx := context.Background()
 
 	created, _ := mockRepo.Create(ctx, "Test Title", "Test Body", 1)
@@ -165,9 +165,9 @@ func TestPostService_GetPostMarkdown(t *testing.T) {
 	})
 }
 
-func TestPostService_RenderPostHTML(t *testing.T) {
+func TestService_RenderPostHTML(t *testing.T) {
 	mockRepo := newMockPostRepository()
-	svc := NewPostService(mockRepo, nil)
+	svc := NewService(mockRepo, nil)
 	ctx := context.Background()
 
 	created, _ := mockRepo.Create(ctx, "Test Title", "# Heading\n\nParagraph", 1)
@@ -193,14 +193,14 @@ func TestPostService_RenderPostHTML(t *testing.T) {
 	})
 }
 
-func TestPostService_GetUserPosts(t *testing.T) {
+func TestService_GetUserPosts(t *testing.T) {
 	mockRepo := newMockPostRepository()
-	svc := NewPostService(mockRepo, nil)
+	svc := NewService(mockRepo, nil)
 	ctx := context.Background()
 
-	mockRepo.Create(ctx, "Title 1", "Body 1", 1)
-	mockRepo.Create(ctx, "Title 2", "Body 2", 1)
-	mockRepo.Create(ctx, "Title 3", "Body 3", 2)
+	_, _ = mockRepo.Create(ctx, "Title 1", "Body 1", 1)
+	_, _ = mockRepo.Create(ctx, "Title 2", "Body 2", 1)
+	_, _ = mockRepo.Create(ctx, "Title 3", "Body 3", 2)
 
 	t.Run("returns posts for user", func(t *testing.T) {
 		posts, total, err := svc.GetUserPosts(ctx, 1, 1, 10)
@@ -229,9 +229,9 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	})
 
 	t.Run("handles pagination correctly", func(t *testing.T) {
-		mockRepo.Create(ctx, "Title 4", "Body 4", 3)
-		mockRepo.Create(ctx, "Title 5", "Body 5", 3)
-		mockRepo.Create(ctx, "Title 6", "Body 6", 3)
+		_, _ = mockRepo.Create(ctx, "Title 4", "Body 4", 3)
+		_, _ = mockRepo.Create(ctx, "Title 5", "Body 5", 3)
+		_, _ = mockRepo.Create(ctx, "Title 6", "Body 6", 3)
 
 		posts, total, err := svc.GetUserPosts(ctx, 3, 1, 2)
 		if err != nil {

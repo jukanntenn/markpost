@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// PostKey returns a middleware that validates post key.
 func PostKey(users user.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postKey := c.Param("post_key")

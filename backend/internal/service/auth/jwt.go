@@ -1,3 +1,5 @@
+// Package auth provides authentication services including OAuth, JWT token management,
+// and user session handling.
 package auth
 
 import (
@@ -6,12 +8,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// JWTTokenPair contains an access token and refresh token pair.
 type JWTTokenPair struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresAt    time.Time
 }
 
+// AccessClaims contains the claims embedded in access tokens.
 type AccessClaims struct {
 	UserID   int    `json:"user_id"`
 	Email    string `json:"email"`
@@ -20,12 +24,14 @@ type AccessClaims struct {
 	jwt.RegisteredClaims
 }
 
+// RefreshClaims contains the claims embedded in refresh tokens.
 type RefreshClaims struct {
 	UserID int    `json:"user_id"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// JWTService handles JWT token generation and validation.
 type JWTService struct {
 	accessSigningKey   []byte
 	refreshSigningKey  []byte
@@ -33,6 +39,7 @@ type JWTService struct {
 	refreshTokenExpire time.Duration
 }
 
+// NewJWTService creates a new JWTService with the provided signing keys and expiration durations.
 func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire, refreshTokenExpire time.Duration) *JWTService {
 	return &JWTService{
 		accessSigningKey:   []byte(accessSigningKey),
@@ -42,6 +49,7 @@ func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire
 	}
 }
 
+// GenerateTokenPair generates a new access and refresh token pair for the user.
 func (s *JWTService) GenerateTokenPair(userID int, email, username, role string) (*JWTTokenPair, error) {
 	expiresAt := time.Now().Add(s.accessTokenExpire)
 	accessToken, err := s.GenerateAccessToken(userID, email, username, role)
@@ -61,6 +69,7 @@ func (s *JWTService) GenerateTokenPair(userID int, email, username, role string)
 	}, nil
 }
 
+// GenerateAccessToken generates a new access token for the user.
 func (s *JWTService) GenerateAccessToken(userID int, email, username, role string) (string, error) {
 	now := time.Now()
 	expiresAt := now.Add(s.accessTokenExpire)
@@ -80,6 +89,7 @@ func (s *JWTService) GenerateAccessToken(userID int, email, username, role strin
 	return token.SignedString(s.accessSigningKey)
 }
 
+// GenerateRefreshToken generates a new refresh token for the user.
 func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, error) {
 	claims := RefreshClaims{
 		UserID: userID,
@@ -94,8 +104,9 @@ func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, erro
 	return token.SignedString(s.refreshSigningKey)
 }
 
+// ValidateAccess validates an access token and returns its claims.
 func (s *JWTService) ValidateAccess(tokenString string) (*AccessClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &AccessClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &AccessClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return s.accessSigningKey, nil
 	})
 
@@ -110,8 +121,9 @@ func (s *JWTService) ValidateAccess(tokenString string) (*AccessClaims, error) {
 	return nil, jwt.ErrSignatureInvalid
 }
 
+// ValidateRefresh validates a refresh token and returns its claims.
 func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(_ *jwt.Token) (interface{}, error) {
 		return s.refreshSigningKey, nil
 	})
 
@@ -126,10 +138,12 @@ func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error)
 	return nil, jwt.ErrSignatureInvalid
 }
 
+// UserIDInt returns the user ID as an int from AccessClaims.
 func (c *AccessClaims) UserIDInt() int {
 	return c.UserID
 }
 
+// UserIDInt returns the user ID as an int from RefreshClaims.
 func (c *RefreshClaims) UserIDInt() int {
 	return c.UserID
 }

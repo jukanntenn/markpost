@@ -1,3 +1,4 @@
+// Package apierr provides API error handling utilities.
 package apierr
 
 import (
@@ -11,18 +12,21 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// FieldError represents a validation field error.
 type FieldError struct {
 	Field   string `json:"field,omitempty"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+// ErrorResponse represents an API error response.
 type ErrorResponse struct {
 	Code    string       `json:"code"`
 	Message string       `json:"message"`
 	Errors  []FieldError `json:"errors,omitempty"`
 }
 
+// ServiceErrorMapping maps service error codes to HTTP status and i18n messages.
 type serviceErrorMapping struct {
 	Status  int
 	Message *i18n.Message
@@ -137,6 +141,7 @@ var validationFieldMessages = map[service.ErrCode]*i18n.Message{
 	},
 }
 
+// RespondError writes an error response to the gin context.
 func RespondError(c *gin.Context, err error) {
 	se, ok := service.AsServiceError(err)
 	if !ok {
@@ -168,7 +173,7 @@ func RespondError(c *gin.Context, err error) {
 	})
 }
 
-func buildFieldErrors(c *gin.Context, causes []service.ServiceError) []FieldError {
+func buildFieldErrors(c *gin.Context, causes []service.Error) []FieldError {
 	if len(causes) == 0 {
 		return nil
 	}

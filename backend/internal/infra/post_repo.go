@@ -1,4 +1,5 @@
-package database
+// Package infra provides infrastructure layer implementations.
+package infra
 
 import (
 	"context"
@@ -12,14 +13,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// PostRepository provides post data access operations.
 type PostRepository struct {
 	db *gorm.DB
 }
 
+// NewPostRepository creates a new PostRepository instance.
 func NewPostRepository(db *gorm.DB) post.Repository {
 	return &PostRepository{db: db}
 }
 
+// Create creates a new post.
 func (r *PostRepository) Create(ctx context.Context, title, body string, userID int) (*post.Post, error) {
 	qid, err := gonanoid.New()
 	if err != nil {
@@ -40,6 +44,7 @@ func (r *PostRepository) Create(ctx context.Context, title, body string, userID 
 	return &p, nil
 }
 
+// CreateBatch creates multiple posts in a batch.
 func (r *PostRepository) CreateBatch(ctx context.Context, posts []post.Post) (int, error) {
 	if len(posts) == 0 {
 		return 0, nil
@@ -56,6 +61,7 @@ func (r *PostRepository) CreateBatch(ctx context.Context, posts []post.Post) (in
 	return len(posts), nil
 }
 
+// GetByQID retrieves a post by its QID.
 func (r *PostRepository) GetByQID(ctx context.Context, qid string) (*post.Post, error) {
 	var p post.Post
 	err := r.db.WithContext(ctx).Where("qid = ?", qid).First(&p).Error
@@ -68,6 +74,7 @@ func (r *PostRepository) GetByQID(ctx context.Context, qid string) (*post.Post, 
 	return &p, nil
 }
 
+// GetByID retrieves a post by its ID.
 func (r *PostRepository) GetByID(ctx context.Context, id int) (*post.Post, error) {
 	var p post.Post
 	err := r.db.WithContext(ctx).First(&p, id).Error
@@ -80,6 +87,7 @@ func (r *PostRepository) GetByID(ctx context.Context, id int) (*post.Post, error
 	return &p, nil
 }
 
+// CountByUserID counts posts for a specific user.
 func (r *PostRepository) CountByUserID(ctx context.Context, userID int) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&post.Post{}).Where("user_id = ?", userID).Count(&count).Error
@@ -89,6 +97,7 @@ func (r *PostRepository) CountByUserID(ctx context.Context, userID int) (int64, 
 	return count, nil
 }
 
+// GetByUserID retrieves posts for a specific user with pagination.
 func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]post.Post, error) {
 	var posts []post.Post
 	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Offset(offset).Limit(limit).Find(&posts).Error
@@ -98,6 +107,7 @@ func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int
 	return posts, nil
 }
 
+// ListAll retrieves all posts with optional search and pagination.
 func (r *PostRepository) ListAll(ctx context.Context, search string, offset int, limit int) ([]post.Post, error) {
 	var posts []post.Post
 	query := r.db.WithContext(ctx).Model(&post.Post{}).Preload("User").Order("created_at DESC").Offset(offset).Limit(limit)
@@ -112,6 +122,7 @@ func (r *PostRepository) ListAll(ctx context.Context, search string, offset int,
 	return posts, nil
 }
 
+// CountAll counts all posts with optional search filter.
 func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, error) {
 	query := r.db.WithContext(ctx).Model(&post.Post{})
 	if search != "" {
@@ -126,6 +137,7 @@ func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, er
 	return count, nil
 }
 
+// UpdateByID updates a post by its ID.
 func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, body string) (*post.Post, error) {
 	_, err := r.GetByID(ctx, id)
 	if err != nil {
@@ -151,6 +163,7 @@ func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, b
 	return &p, nil
 }
 
+// DeleteByID deletes a post by its ID.
 func (r *PostRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
 	tx := r.db.WithContext(ctx).Delete(&post.Post{}, id)
 	if tx.Error != nil {
@@ -160,6 +173,7 @@ func (r *PostRepository) DeleteByID(ctx context.Context, id int) (int64, error) 
 	return tx.RowsAffected, nil
 }
 
+// PruneExpired deletes expired posts based on retention days.
 func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, batchSize int) error {
 	if retentionDays <= 0 {
 		return fmt.Errorf("retention days must be positive, got: %d", retentionDays)
@@ -194,6 +208,7 @@ func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, ba
 	return nil
 }
 
+// CountExpired counts expired posts based on retention days.
 func (r *PostRepository) CountExpired(ctx context.Context, retentionDays int) (int64, error) {
 	if retentionDays <= 0 {
 		return 0, fmt.Errorf("retention days must be positive, got: %d", retentionDays)

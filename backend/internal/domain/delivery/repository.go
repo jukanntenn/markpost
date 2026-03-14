@@ -2,6 +2,7 @@ package delivery
 
 import "context"
 
+// Repository defines the interface for delivery channel data access.
 type Repository interface {
 	GetByID(ctx context.Context, id int) (*Channel, error)
 	GetByUserID(ctx context.Context, userID int) ([]Channel, error)

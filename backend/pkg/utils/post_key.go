@@ -2,6 +2,7 @@ package utils
 
 import "crypto/rand"
 
+// GeneratePostKey generates a random post key.
 func GeneratePostKey(byteLength int) (string, error) {
 	if byteLength <= 0 {
 		byteLength = 20
@@ -19,6 +20,7 @@ func GeneratePostKey(byteLength int) (string, error) {
 	return "mpk-" + string(out), nil
 }
 
+// GenerateRandomPassword generates a random password.
 func GenerateRandomPassword(length int) (string, error) {
 	if length <= 0 {
 		length = 12

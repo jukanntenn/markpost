@@ -1,3 +1,4 @@
+// Package crypto provides cryptographic utilities.
 package crypto
 
 import (
@@ -7,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// HashPassword hashes a password using bcrypt.
 func HashPassword(password string) (string, error) {
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -15,6 +17,7 @@ func HashPassword(password string) (string, error) {
 	return string(hashedBytes), nil
 }
 
+// CheckPassword checks if a password matches a hashed password.
 func CheckPassword(password, hashedPassword string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {

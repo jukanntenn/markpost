@@ -1,3 +1,4 @@
+// Package config provides configuration management for the application.
 package config
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config holds all application configuration.
 type Config struct {
 	Debug         bool            `mapstructure:"debug"`
 	PostKeyLength int             `mapstructure:"post_key_length" validate:"gte=12"`
@@ -26,6 +28,7 @@ type Config struct {
 	Delivery      DeliveryConfig  `mapstructure:"delivery"`
 }
 
+// ServerConfig holds server-related configuration.
 type ServerConfig struct {
 	Host           string   `mapstructure:"host" validate:"required"`
 	Port           uint16   `mapstructure:"port" validate:"required"`
@@ -33,38 +36,45 @@ type ServerConfig struct {
 	PublicURL      string   `mapstructure:"public_url" validate:"omitempty,url"`
 }
 
+// DBConfig holds database-related configuration.
 type DBConfig struct {
 	Driver string `mapstructure:"driver" validate:"oneof=sqlite mysql postgresql"`
 	DSN    string `mapstructure:"dsn" validate:"required"`
 }
 
+// AdminConfig holds admin-related configuration.
 type AdminConfig struct {
 	InitialUsername string `mapstructure:"initial_username" validate:"required"`
 	InitialPassword string `mapstructure:"initial_password" validate:"required"`
 }
 
+// PostConfig holds post-related configuration.
 type PostConfig struct {
 	TitleMaxLength int `mapstructure:"title_max_length" validate:"gte=0"`
 	BodyMaxBytes   int `mapstructure:"body_max_bytes" validate:"gte=0"`
 	RetentionDays  int `mapstructure:"retention_days" validate:"gte=0"`
 }
 
+// CORSConfig holds CORS-related configuration.
 type CORSConfig struct {
 	AllowOrigins  []string `mapstructure:"allow_origins"`
 	AllowHeaders  []string `mapstructure:"allow_headers"`
 	ExposeHeaders []string `mapstructure:"expose_headers"`
 }
 
+// OAuthConfig holds OAuth-related configuration.
 type OAuthConfig struct {
 	GitHub GitHubOAuthConfig `mapstructure:"github"`
 }
 
+// GitHubOAuthConfig holds GitHub OAuth configuration.
 type GitHubOAuthConfig struct {
 	ClientID     string `mapstructure:"client_id"`
 	ClientSecret string `mapstructure:"client_secret"`
 	RedirectURL  string `mapstructure:"redirect_url" validate:"omitempty,url"`
 }
 
+// JWTConfig holds JWT-related configuration.
 type JWTConfig struct {
 	AccessSigningKey   string        `mapstructure:"access_signing_key"`
 	RefreshSigningKey  string        `mapstructure:"refresh_signing_key"`
@@ -72,14 +82,17 @@ type JWTConfig struct {
 	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire"`
 }
 
+// RatelimitConfig holds rate limiting configuration.
 type RatelimitConfig struct {
 	PerSecond int `mapstructure:"per_second" validate:"gte=0"`
 	Burst     int `mapstructure:"burst" validate:"gte=0"`
 }
 
+// DeliveryConfig holds delivery-related configuration.
 type DeliveryConfig struct {
 	BodyPreviewChars int           `mapstructure:"body_preview_chars" validate:"gte=0"`
 	RequestTimeout   time.Duration `mapstructure:"request_timeout" validate:"required"`
+	RetryCount       int           `mapstructure:"retry_count" validate:"gte=0"`
 }
 
 var (
@@ -149,12 +162,14 @@ func loadConfig() {
 	}
 }
 
+// Load loads the configuration from the specified path.
 func Load(path string) error {
 	configPath = path
 	loadConfigOnce.Do(loadConfig)
 	return loadErr
 }
 
+// Get returns the loaded configuration.
 func Get() Config {
 	loadConfigOnce.Do(loadConfig)
 	return configInstance
@@ -198,6 +213,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("delivery.request_timeout", "5s")
 }
 
+// ResetForTest resets the configuration for testing purposes.
 func ResetForTest() {
 	configInstance = Config{}
 	loadConfigOnce = sync.Once{}

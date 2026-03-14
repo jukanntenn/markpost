@@ -2,6 +2,7 @@ package post
 
 import "context"
 
+// Repository defines the interface for post data access.
 type Repository interface {
 	Create(ctx context.Context, title, body string, userID int) (*Post, error)
 	CreateBatch(ctx context.Context, posts []Post) (int, error)

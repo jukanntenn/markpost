@@ -1,6 +1,8 @@
+// Package cmd provides CLI commands for the application.
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,9 +10,10 @@ import (
 
 	"markpost/internal/config"
 	"markpost/internal/domain/post"
-	"markpost/internal/infra/database"
+	"markpost/internal/infra"
 )
 
+// FakePostData represents a fake post data structure for importing.
 type FakePostData struct {
 	QID       string    `json:"qid"`
 	Title     string    `json:"title"`
@@ -19,6 +22,7 @@ type FakePostData struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+// RunImportFakePosts imports fake posts from a JSON file.
 func RunImportFakePosts(configPath, filePath string) error {
 	if err := config.Load(configPath); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -26,19 +30,19 @@ func RunImportFakePosts(configPath, filePath string) error {
 
 	cfg := config.Get()
 
-	dbInstance, err := database.New(cfg.DB.DSN)
+	dbInstance, err := infra.New(cfg.DB.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
 	defer func() {
 		sqlDB, err := dbInstance.DB().DB()
 		if err == nil && sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}()
 
-	userRepo := database.NewUserRepository(dbInstance.DB())
-	u, err := userRepo.GetByUsername(nil, "markpost")
+	userRepo := infra.NewUserRepository(dbInstance.DB())
+	u, err := userRepo.GetByUsername(context.Background(), "markpost")
 	if err != nil {
 		return fmt.Errorf("user 'markpost' not found: %w", err)
 	}
@@ -66,8 +70,8 @@ func RunImportFakePosts(configPath, filePath string) error {
 		posts = append(posts, p)
 	}
 
-	postRepo := database.NewPostRepository(dbInstance.DB())
-	count, err := postRepo.CreateBatch(nil, posts)
+	postRepo := infra.NewPostRepository(dbInstance.DB())
+	count, err := postRepo.CreateBatch(context.Background(), posts)
 	if err != nil {
 		return fmt.Errorf("failed to import posts: %w", err)
 	}

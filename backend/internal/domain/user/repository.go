@@ -1,3 +1,4 @@
+// Package user provides domain models for users.
 package user
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// Repository defines the interface for user data access.
 type Repository interface {
 	GetByPostKey(ctx context.Context, postKey string) (*User, error)
 	GetByID(ctx context.Context, id int) (*User, error)
@@ -23,6 +25,7 @@ type Repository interface {
 	UpdateLastLoginAt(ctx context.Context, userID int, lastLoginAt time.Time) error
 }
 
+// TokenRepository defines the interface for token data access.
 type TokenRepository interface {
 	StoreRefreshToken(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error
 	GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)

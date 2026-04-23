@@ -34,9 +34,9 @@ func (m *mockAuthService) LoginWithGitHub(_ context.Context, _ string) (*user.Us
 	return nil, nil, service.NewServiceError(service.ErrUnauthorized, "not implemented")
 }
 
-func (m *mockAuthService) LoginWithEmail(_ context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error) {
-	if email == "test@example.com" && password == "correctpassword" {
-		u := &user.User{ID: 1, Email: email, Username: "testuser", Role: user.RoleUser}
+func (m *mockAuthService) LoginWithEmail(_ context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error) {
+	if username == "testuser" && password == "correctpassword" {
+		u := &user.User{ID: 1, Email: "test@example.com", Username: username, Role: user.RoleUser}
 		tokens := &auth.JWTTokenPair{AccessToken: "test-access", RefreshToken: "test-refresh"}
 		return u, tokens, nil
 	}
@@ -80,12 +80,12 @@ func TestLoginWithEmail_Success(t *testing.T) {
 	router := setupTestRouter()
 
 	router.POST("/login", func(c *gin.Context) {
-		var req EmailLoginRequest
+		var req UsernameLoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		u, tokens, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
+		u, tokens, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Username, req.Password)
 		if err != nil {
 			if se, ok := service.AsServiceError(err); ok && se.Code == service.ErrInvalidCredentials {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -101,7 +101,7 @@ func TestLoginWithEmail_Success(t *testing.T) {
 		})
 	})
 
-	body := EmailLoginRequest{Email: "test@example.com", Password: "correctpassword"}
+	body := UsernameLoginRequest{Username: "testuser", Password: "correctpassword"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonBody))
@@ -129,12 +129,12 @@ func TestLoginWithEmail_InvalidCredentials(t *testing.T) {
 	router := setupTestRouter()
 
 	router.POST("/login", func(c *gin.Context) {
-		var req EmailLoginRequest
+		var req UsernameLoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		_, _, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
+		_, _, err := mockSvc.LoginWithEmail(c.Request.Context(), req.Username, req.Password)
 		if err != nil {
 			if se, ok := service.AsServiceError(err); ok && se.Code == service.ErrInvalidCredentials {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
@@ -146,7 +146,7 @@ func TestLoginWithEmail_InvalidCredentials(t *testing.T) {
 		c.JSON(http.StatusOK, gin.H{})
 	})
 
-	body := EmailLoginRequest{Email: "wrong@example.com", Password: "wrongpass"}
+	body := UsernameLoginRequest{Username: "wronguser", Password: "wrongpass"}
 	jsonBody, _ := json.Marshal(body)
 
 	req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonBody))

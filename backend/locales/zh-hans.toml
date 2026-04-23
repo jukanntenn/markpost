@@ -1,0 +1,75 @@
+["error.failed_get_user"]
+hash = "sha1-dfa8bda69732c86a41fc6c0fe12b1ea6a47c0730"
+other = "获取用户信息失败"
+
+["error.failed_render_post"]
+hash = "sha1-2466fb43c0a6c34b225ee2708fce6aa3cda64680"
+other = "渲染文章失败"
+
+["error.internal"]
+hash = "sha1-fbb5b2a6d5252a4f6e3d33341268fab223c77c30"
+other = "服务器内部错误"
+
+["error.invalid_credentials"]
+hash = "sha1-4f4b9008c43268d692f6adcbb01c43244c6cb849"
+other = "用户名或密码错误"
+
+["error.invalid_current_password"]
+hash = "sha1-3dd580e7dc68b01dd9dec0ba7d5e413e6bad5404"
+other = "当前密码不正确"
+
+["error.invalid_post_key"]
+hash = "sha1-0ced0266739362717ed91bd79df1bde97dc12206"
+other = "发布密钥无效"
+
+["error.invalid_request"]
+hash = "sha1-80d0f00d274857a9b3a9ab3da9ef1539d8631e3d"
+other = "请求格式无效"
+
+["error.invalid_token"]
+hash = "sha1-7ac1506119d660dbaca215d74b0768e238ddc6fa"
+other = "令牌无效"
+
+["error.missing_authorization_header"]
+hash = "sha1-eca72537568b4c59b6d54d901af9ec75c3d690f8"
+other = "缺少 Authorization 头"
+
+["error.missing_code"]
+hash = "sha1-e6b88fbca9526736dc47ae3482b07f59f9c81fb9"
+other = "缺少 code 字段"
+
+["error.missing_state_param"]
+hash = "sha1-debd26062ee624e1bc21a260d89661bf43c0a7fd"
+other = "缺少 state 查询参数"
+
+["error.not_found"]
+hash = "sha1-d205cbd6783332a212c5ae92d73c77178c2d2f28"
+other = "未找到"
+
+["error.rate_limited"]
+hash = "sha1-4f7f7129dddde77a849f06a53a94abb60b861cc4"
+other = "请求过于频繁，请稍后再试"
+
+["error.password_changed_success"]
+hash = "sha1-e12081a4a6d4521224c6eba397f2db9b0f6fb798"
+other = "密码修改成功"
+
+["error.unauthorized"]
+hash = "sha1-740b83150add8d2de17b3ab10d33605bb00e9589"
+other = "未授权"
+
+["error.validation_failed"]
+hash = "sha1-162118e766a474790b1bcf722a3a730224247e16"
+other = "请求参数验证失败"
+
+["error.validation_min_length"]
+hash = "sha1-0cc2ed9bbe6be4565bc238e5052a3f6e61eb44a1"
+other = "不满足最小长度要求"
+
+["error.validation_required"]
+hash = "sha1-dedbaded6d5a4ed17eefa2e4ee3eee026b7d1d11"
+other = "该字段为必填项"
+
+["health.running"]
+hash = "sha1-27c078f52179432f05645f29a49d159612806f97"
+other = "markpost 正在运行"

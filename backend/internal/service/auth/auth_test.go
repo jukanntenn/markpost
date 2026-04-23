@@ -77,8 +77,8 @@ func (m *mockUserRepository) Create(_ context.Context, email, username, password
 	return u, nil
 }
 
-func (m *mockUserRepository) ValidatePassword(_ context.Context, email, password string) (*user.User, error) {
-	u, err := m.GetByEmail(context.Background(), email)
+func (m *mockUserRepository) ValidatePassword(_ context.Context, username, password string) (*user.User, error) {
+	u, err := m.GetByUsername(context.Background(), username)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func TestService_LoginWithEmail(t *testing.T) {
 		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
 		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
 
-		u, tokens, err := authSvc.LoginWithEmail(ctx, "test@example.com", "correctpassword")
+		u, tokens, err := authSvc.LoginWithEmail(ctx, "testuser", "correctpassword")
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -240,9 +240,9 @@ func TestService_LoginWithEmail(t *testing.T) {
 		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
 		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
 
-		_, _, err := authSvc.LoginWithEmail(ctx, "nonexistent@example.com", "password")
+		_, _, err := authSvc.LoginWithEmail(ctx, "nonexistent", "password")
 		if err == nil {
-			t.Fatal("expected error for invalid email")
+			t.Fatal("expected error for invalid username")
 		}
 	})
 
@@ -257,7 +257,7 @@ func TestService_LoginWithEmail(t *testing.T) {
 		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
 		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
 
-		_, _, err := authSvc.LoginWithEmail(ctx, "test@example.com", "wrongpassword")
+		_, _, err := authSvc.LoginWithEmail(ctx, "testuser", "wrongpassword")
 		if err == nil {
 			t.Fatal("expected error for invalid password")
 		}

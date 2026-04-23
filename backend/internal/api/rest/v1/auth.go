@@ -36,7 +36,7 @@ func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 // AuthService provides authentication operations.
 type AuthService interface {
 	LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error)
-	LoginWithEmail(ctx context.Context, email, password string) (*user.User, *auth.JWTTokenPair, error)
+	LoginWithEmail(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error)
 	Logout(ctx context.Context, accessToken string) error
 	ChangePassword(ctx context.Context, userID int, current, newPassword string) error
@@ -68,21 +68,21 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-// EmailLoginRequest represents an email login request.
-type EmailLoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+// UsernameLoginRequest represents a username login request.
+type UsernameLoginRequest struct {
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-// LoginWithEmail returns a handler for email/password login.
-func LoginWithEmail(authSvc AuthService) gin.HandlerFunc {
+// LoginWithUsername returns a handler for username/password login.
+func LoginWithUsername(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var req EmailLoginRequest
+		var req UsernameLoginRequest
 		if !bindJSON(c, &req) {
 			return
 		}
 
-		u, tokens, err := authSvc.LoginWithEmail(c.Request.Context(), req.Email, req.Password)
+		u, tokens, err := authSvc.LoginWithEmail(c.Request.Context(), req.Username, req.Password)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return

@@ -23,10 +23,10 @@ export interface LogoutResponse {
 }
 
 export const authApi = {
-  login: (email: string, password: string) =>
+  login: (username: string, password: string) =>
     request<LoginResponse>("/api/v1/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
       skipAuthRefresh: true,
     }),
 

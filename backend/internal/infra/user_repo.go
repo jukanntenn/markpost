@@ -134,8 +134,8 @@ func (r *UserRepository) GetOrCreateFromGitHub(ctx context.Context, githubUser *
 }
 
 // ValidatePassword validates a user's password and returns the user if valid.
-func (r *UserRepository) ValidatePassword(ctx context.Context, email, password string) (*user.User, error) {
-	u, err := r.GetByEmail(ctx, email)
+func (r *UserRepository) ValidatePassword(ctx context.Context, username, password string) (*user.User, error) {
+	u, err := r.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (r *UserRepository) ValidatePassword(ctx context.Context, email, password s
 
 	ok, err := utils.CheckPassword(password, u.Password)
 	if err != nil {
-		return nil, fmt.Errorf("validate user %s password: %w", email, err)
+		return nil, fmt.Errorf("validate user %s password: %w", username, err)
 	}
 	if !ok {
 		return nil, fmt.Errorf("invalid password")

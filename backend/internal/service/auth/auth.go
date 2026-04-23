@@ -143,10 +143,10 @@ func (s *Service) getGitHubUserEmails(client *http.Client) ([]string, error) {
 }
 
 // LoginWithEmail authenticates a user with email and password, returning user info with JWT tokens.
-func (s *Service) LoginWithEmail(ctx context.Context, email, password string) (*user.User, *JWTTokenPair, error) {
-	u, err := s.users.ValidatePassword(ctx, email, password)
+func (s *Service) LoginWithEmail(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
+	u, err := s.users.ValidatePassword(ctx, username, password)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid email or password", err)
+		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid username or password", err)
 	}
 
 	if !u.IsActive {

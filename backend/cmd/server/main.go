@@ -188,7 +188,7 @@ func SetupRoutes(r *gin.Engine) {
 
 	authGroup := apiV1.Group("/auth")
 	{
-		authGroup.POST("/login", v1.LoginWithEmail(authSvc))
+		authGroup.POST("/login", v1.LoginWithUsername(authSvc))
 		authGroup.POST("/refresh", v1.RefreshToken(authSvc))
 	}
 

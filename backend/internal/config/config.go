@@ -180,7 +180,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("post_key_length", 16)
 	v.SetDefault("server.host", "127.0.0.1")
 	v.SetDefault("server.port", 7330)
-	v.SetDefault("server.trusted_proxies", []string{"127.0.0.1", "::1", "localhost"})
+	v.SetDefault("server.trusted_proxies", []string{"127.0.0.1", "::1"})
 	v.SetDefault("server.public_url", "")
 	v.SetDefault("db.driver", "sqlite")
 	v.SetDefault("db.dsn", "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL")

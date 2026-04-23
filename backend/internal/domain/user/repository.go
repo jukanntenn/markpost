@@ -16,7 +16,7 @@ type Repository interface {
 	Create(ctx context.Context, email, username, password string) (*User, error)
 	CreateFromGitHub(ctx context.Context, githubUser *GitHubUser) (*User, error)
 	GetOrCreateFromGitHub(ctx context.Context, githubUser *GitHubUser) (*User, error)
-	ValidatePassword(ctx context.Context, email, password string) (*User, error)
+	ValidatePassword(ctx context.Context, username, password string) (*User, error)
 	SetPassword(ctx context.Context, userID int, password string) error
 	SetRole(ctx context.Context, userID int, role Role) error
 	DeleteByID(ctx context.Context, userID int) (int64, error)

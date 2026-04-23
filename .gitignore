@@ -34,6 +34,7 @@ go.work.sum
 *.sqlite3*
 *.db*
 config.toml
+backend/server
 
 # frontend
 node_modules/
@@ -45,3 +46,20 @@ blob-report/
 .trae/documents/
 
 .next/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+.fa/

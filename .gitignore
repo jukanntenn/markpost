@@ -63,3 +63,4 @@ htmlcov/
 .hypothesis/
 
 .fa/
+frontend.log

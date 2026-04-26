@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { authApi } from "@/lib/api/auth";
+import { DeliveryChannelsCard } from "./DeliveryChannelsCard";
 
 async function changePassword(data: { currentPassword: string; newPassword: string }) {
   return authApi.changePassword(data.currentPassword, data.newPassword);
@@ -145,6 +146,8 @@ export function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      <DeliveryChannelsCard />
     </div>
   );
 }

@@ -64,3 +64,5 @@ htmlcov/
 
 .fa/
 frontend.log
+.playwright-cli
+.codex

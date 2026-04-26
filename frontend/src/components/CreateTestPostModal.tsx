@@ -28,18 +28,24 @@ interface CreateTestPostModalProps {
 }
 
 async function createTestPost(postKey: string, data: CreateTestPostRequest): Promise<CreateTestPostResponse> {
-  const response = await fetch("/api/posts", {
+  const response = await fetch(`/${postKey}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Post-Key": postKey,
     },
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to create post");
+    let message = "Failed to create post";
+    try {
+      const text = await response.text();
+      const error = JSON.parse(text);
+      message = error.message || message;
+    } catch {
+      // text wasn't valid JSON, use default message
+    }
+    throw new Error(message);
   }
 
   return response.json();

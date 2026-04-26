@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `http://localhost:${serverPort}/api/:path*`,
       },
+      {
+        source: "/mpk-:postKey",
+        destination: `http://localhost:${serverPort}/mpk-:postKey`,
+      },
     ];
   },
 };

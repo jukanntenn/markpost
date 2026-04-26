@@ -16,6 +16,8 @@ import (
 	"markpost/internal/middleware"
 	"markpost/internal/service/auth"
 	postsvc "markpost/internal/service/post"
+	"markpost/internal/service/admin"
+	deliverysvc "markpost/internal/service/delivery"
 
 	"github.com/didip/tollbooth/v8"
 	"github.com/gin-contrib/cors"
@@ -136,6 +138,11 @@ func serve(configPath string) {
 	postRepo := infra.NewPostRepository(dbInstance.DB())
 	postSvc = postsvc.NewService(postRepo, nil)
 
+	deliveryRepo := infra.NewDeliveryChannelRepository(dbInstance.DB())
+	deliverySvc := deliverysvc.NewService(deliveryRepo)
+
+	adminSvc := admin.NewService(userRepo, postRepo, deliveryRepo)
+
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 
@@ -156,7 +163,7 @@ func serve(configPath string) {
 	UseCors(r)
 
 	log.Printf("Initializing rate limiting...")
-	SetupRoutes(r)
+	SetupRoutes(r, deliverySvc, adminSvc)
 
 	log.Println("Server starting...")
 	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -168,7 +175,7 @@ func serve(configPath string) {
 }
 
 // SetupRoutes configures all API routes for the application.
-func SetupRoutes(r *gin.Engine) {
+func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service) {
 	cfg := config.Get()
 	lmt := tollbooth.NewLimiter(float64(cfg.Ratelimit.PerSecond), nil)
 	lmt.SetBurst(cfg.Ratelimit.Burst)
@@ -199,6 +206,24 @@ func SetupRoutes(r *gin.Engine) {
 		jwtAuth.POST("/auth/logout", v1.Logout(authSvc))
 		jwtAuth.POST("/auth/change-password", v1.ChangePassword(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
+
+		// Delivery channel routes
+		deliveryGroup := jwtAuth.Group("/delivery/channels")
+		{
+			deliveryGroup.GET("", v1.ListDeliveryChannels(deliverySvc))
+			deliveryGroup.POST("", v1.CreateDeliveryChannel(deliverySvc))
+			deliveryGroup.PUT("/:id", v1.UpdateDeliveryChannel(deliverySvc))
+			deliveryGroup.DELETE("/:id", v1.DeleteDeliveryChannel(deliverySvc))
+		}
+
+		// Admin routes
+		adminGroup := jwtAuth.Group("/admin")
+		adminGroup.Use(middleware.RequireAdmin())
+		{
+			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
+			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
+			adminGroup.GET("/channels", v1.AdminListChannels(adminSvc))
+		}
 	}
 
 	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))

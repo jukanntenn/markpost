@@ -7,9 +7,11 @@ describe("checkLoginResponse", () => {
     const validResponse: LoginResponse = {
       access_token: "test_token",
       refresh_token: "test_refresh_token",
+      expires_in: 86400,
       user: {
         id: 1,
         username: "testuser",
+        email: "test@example.com",
       },
     };
 
@@ -24,9 +26,11 @@ describe("checkLoginResponse", () => {
     const response: LoginResponse = {
       access_token: "",
       refresh_token: "test_refresh_token",
+      expires_in: 86400,
       user: {
         id: 1,
         username: "testuser",
+        email: "test@example.com",
       },
     };
 
@@ -37,9 +41,11 @@ describe("checkLoginResponse", () => {
     const response: LoginResponse = {
       access_token: "test_token",
       refresh_token: "",
+      expires_in: 86400,
       user: {
         id: 1,
         username: "testuser",
+        email: "test@example.com",
       },
     };
 
@@ -62,6 +68,7 @@ describe("checkLoginResponse", () => {
       user: {
         id: null,
         username: "testuser",
+        email: "test@example.com",
       },
     } as unknown as LoginResponse;
 
@@ -72,9 +79,11 @@ describe("checkLoginResponse", () => {
     const response: LoginResponse = {
       access_token: "test_token",
       refresh_token: "test_refresh_token",
+      expires_in: 86400,
       user: {
         id: 1,
         username: "",
+        email: "test@example.com",
       },
     };
 

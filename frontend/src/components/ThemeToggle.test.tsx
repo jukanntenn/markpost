@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ThemeToggle from "./ThemeToggle";
-import { ThemeProvider } from "../contexts/ThemeProvider";
-import { renderWithI18n } from "../test/utils";
+import { ThemeProvider } from "../components/theme-provider";
+import { renderWithProviders } from "../test/utils";
 
 function renderWithTheme() {
-  return renderWithI18n(
+  return renderWithProviders(
     <ThemeProvider>
       <ThemeToggle />
     </ThemeProvider>
@@ -103,3 +103,4 @@ describe("ThemeToggle", () => {
     expect(systemItem).toHaveAttribute("data-state", "unchecked");
   });
 });
+    expect(localStorage.getItem("theme")).toBe("light");

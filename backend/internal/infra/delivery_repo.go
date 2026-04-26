@@ -43,6 +43,19 @@ func (r *DeliveryChannelRepository) GetByUserID(ctx context.Context, userID int)
 	return channels, nil
 }
 
+// GetByIDAndUserID retrieves a delivery channel by ID and user ID.
+func (r *DeliveryChannelRepository) GetByIDAndUserID(ctx context.Context, id int, userID int) (*delivery.Channel, error) {
+	var c delivery.Channel
+	err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&c).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, delivery.ErrNotFound
+		}
+		return nil, err
+	}
+	return &c, nil
+}
+
 // Create creates a new delivery channel.
 func (r *DeliveryChannelRepository) Create(ctx context.Context, channel *delivery.Channel) error {
 	return r.db.WithContext(ctx).Create(channel).Error
@@ -63,6 +76,15 @@ func (r *DeliveryChannelRepository) Update(ctx context.Context, channel *deliver
 // DeleteByID deletes a delivery channel by its ID.
 func (r *DeliveryChannelRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
 	tx := r.db.WithContext(ctx).Delete(&delivery.Channel{}, id)
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+	return tx.RowsAffected, nil
+}
+
+// DeleteByIDAndUserID deletes a delivery channel by ID and user ID.
+func (r *DeliveryChannelRepository) DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error) {
+	tx := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&delivery.Channel{})
 	if tx.Error != nil {
 		return 0, tx.Error
 	}

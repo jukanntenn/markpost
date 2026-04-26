@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CreateTestPostModal from "./CreateTestPostModal";
-import { ThemeProvider } from "../contexts/ThemeProvider";
+import { ThemeProvider } from "../components/theme-provider";
 import { setMockAuth, createWrapper } from "../test/utils";
 import { server } from "../mocks/server";
 import { http, HttpResponse } from "msw";
@@ -29,7 +29,8 @@ beforeEach(() => {
   setMockAuth({
     access_token: "test_token",
     refresh_token: "test_refresh",
-    user: { id: 1, username: "testuser" },
+    expires_in: 86400,
+    user: { id: 1, username: "testuser", email: "test@example.com" },
   });
 
   Object.defineProperty(window, "matchMedia", {
@@ -99,7 +100,7 @@ describe("CreateTestPostModal", () => {
       />
     );
 
-    const bodyTextarea = screen.getByPlaceholderText(/content/i);
+    const bodyTextarea = screen.getByPlaceholderText(/body/i);
     await user.type(bodyTextarea, "Test content");
 
     const createButton = screen.getByRole("button", { name: /create/i });
@@ -118,7 +119,7 @@ describe("CreateTestPostModal", () => {
     );
 
     const titleInput = screen.getByPlaceholderText(/title/i);
-    const bodyTextarea = screen.getByPlaceholderText(/content/i);
+    const bodyTextarea = screen.getByPlaceholderText(/body/i);
 
     await user.type(titleInput, "Test Title");
     await user.type(bodyTextarea, "Test content");
@@ -151,7 +152,7 @@ describe("CreateTestPostModal", () => {
   it("handles server error", async () => {
     server.use(
       http.post("/:postKey", () => {
-        return HttpResponse.json({ error: "Server error" }, { status: 500 });
+        return HttpResponse.json({ message: "Server error" }, { status: 500 });
       })
     );
 
@@ -165,7 +166,7 @@ describe("CreateTestPostModal", () => {
       />
     );
 
-    const bodyTextarea = screen.getByPlaceholderText(/content/i);
+    const bodyTextarea = screen.getByPlaceholderText(/body/i);
     await user.type(bodyTextarea, "Test content");
 
     const createButton = screen.getByRole("button", { name: /create/i });

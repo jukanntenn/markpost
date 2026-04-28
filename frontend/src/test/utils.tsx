@@ -28,7 +28,7 @@ export function createMockUser(overrides = {}) {
 
 export function createMockAuth(overrides = {}) {
   return {
-    access_token: "test_token",
+    token: "test_token",
     refresh_token: "test_refresh",
     user: createMockUser(),
     ...overrides,

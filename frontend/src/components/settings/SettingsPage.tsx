@@ -128,7 +128,7 @@ export function SettingsPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.back()}
+                onClick={() => router.push("/dashboard")}
               >
                 Cancel
               </Button>

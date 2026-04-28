@@ -18,7 +18,9 @@ interface Channel {
   id: number;
   name: string;
   type: string;
-  config: Record<string, unknown>;
+  enabled: boolean;
+  user_id: number;
+  webhook_url: string;
   created_at: string;
 }
 
@@ -56,13 +58,14 @@ export function AdminChannelsPage() {
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
+                <TableHead>Enabled</TableHead>
                 <TableHead>Created At</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {channels.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No channels found
                   </TableCell>
                 </TableRow>
@@ -72,6 +75,7 @@ export function AdminChannelsPage() {
                     <TableCell>{channel.id}</TableCell>
                     <TableCell>{channel.name}</TableCell>
                     <TableCell>{channel.type}</TableCell>
+                    <TableCell>{channel.enabled ? "Yes" : "No"}</TableCell>
                     <TableCell>{new Date(channel.created_at).toLocaleString()}</TableCell>
                   </TableRow>
                 ))

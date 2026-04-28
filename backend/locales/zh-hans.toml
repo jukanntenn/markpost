@@ -73,3 +73,11 @@ other = "该字段为必填项"
 ["health.running"]
 hash = "sha1-27c078f52179432f05645f29a49d159612806f97"
 other = "markpost 正在运行"
+
+["error.forbidden"]
+hash = "sha1-2b9e8a24e4bb937692a2c32f9a50a8f19e21e7fe"
+other = "无权限"
+
+["error.user_disabled"]
+hash = "sha1-e48c5d6c824b44e0f19e2e3e2f9ea5c8a9c3bf80"
+other = "用户账户已被禁用"

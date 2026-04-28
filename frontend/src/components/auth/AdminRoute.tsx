@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 import { Loader2Icon } from "lucide-react";
 
 export function AdminRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useMemo(() => !!token && !!user, [token, user]);
+  const isAdmin = useMemo(() => !!token && !!user && user.role === "admin", [token, user]);
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {

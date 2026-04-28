@@ -70,7 +70,7 @@ describe("ThemeToggle", () => {
     const lightOption = screen.getByText(/light/i);
     await user.click(lightOption);
 
-    expect(localStorage.getItem("theme-mode")).toBe("light");
+    expect(localStorage.getItem("theme")).toBe("light");
   });
 
   it("switches to dark theme when dark is clicked", async () => {
@@ -83,12 +83,12 @@ describe("ThemeToggle", () => {
     const darkOption = screen.getByText(/dark/i);
     await user.click(darkOption);
 
-    expect(localStorage.getItem("theme-mode")).toBe("dark");
+    expect(localStorage.getItem("theme")).toBe("dark");
   });
 
   it("marks active theme in dropdown", async () => {
     const user = userEvent.setup();
-    localStorage.setItem("theme-mode", "light");
+    localStorage.setItem("theme", "light");
     renderWithTheme();
 
     const toggle = screen.getByRole("button", { name: /theme/i });
@@ -103,4 +103,4 @@ describe("ThemeToggle", () => {
     expect(systemItem).toHaveAttribute("data-state", "unchecked");
   });
 });
-    expect(localStorage.getItem("theme")).toBe("light");
+

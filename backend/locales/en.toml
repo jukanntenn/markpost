@@ -54,3 +54,9 @@ other = "This field is required"
 
 ["health.running"]
 other = "markpost is running"
+
+["error.forbidden"]
+other = "Forbidden"
+
+["error.user_disabled"]
+other = "User account is disabled"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
@@ -7,7 +8,9 @@ import { Loader2Icon } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useMemo(() => !!token && !!user, [token, user]);
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {

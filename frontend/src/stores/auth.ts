@@ -7,6 +7,7 @@ export interface User {
   username: string;
   name?: string;
   avatar_url?: string | null;
+  role?: string;
 }
 
 export interface AuthState {
@@ -44,7 +45,7 @@ export const useAuthStore = create<AuthState>()(
 
       isAuthenticated: () => !!get().token && !!get().user,
 
-      isAdmin: () => get().user?.id === 1,
+      isAdmin: () => get().user?.role === "admin",
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),

@@ -33,9 +33,12 @@ const (
 	// ErrInvalidPostKey indicates an invalid post key was provided.
 	ErrInvalidPostKey ErrCode = "invalid_post_key"
 	// ErrUserDisabled indicates the user account is disabled.
-	ErrUserDisabled ErrCode = "user_disabled"
+ErrUserDisabled ErrCode = "user_disabled"
 
-	// ErrMissingStateParam indicates a missing state parameter.
+// ErrForbidden indicates the user lacks permission for the requested resource.
+ErrForbidden ErrCode = "forbidden"
+
+// ErrMissingStateParam indicates a missing state parameter.
 	ErrMissingStateParam ErrCode = "missing_state_param"
 	// ErrMissingCode indicates a missing authorization code.
 	ErrMissingCode ErrCode = "missing_code"

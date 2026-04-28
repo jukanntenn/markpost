@@ -119,7 +119,10 @@ func Logout(authSvc AuthService) gin.HandlerFunc {
 		token := c.GetHeader("Authorization")
 		if token != "" && len(token) > 7 {
 			token = token[7:]
-			_ = authSvc.Logout(c.Request.Context(), token)
+			if err := authSvc.Logout(c.Request.Context(), token); err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{
@@ -201,6 +204,7 @@ func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) 
 			"username":   u.Username,
 			"name":       u.Name,
 			"avatar_url": u.AvatarURL,
+		"role":       u.Role,
 		},
 	})
 }

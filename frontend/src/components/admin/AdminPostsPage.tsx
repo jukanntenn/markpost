@@ -1,44 +1,61 @@
 "use client";
 
-import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Loader2Icon, SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
 import { request } from "@/lib/api";
 import { buildPostUrl } from "@/utils/url";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
 
 interface Post {
   id: string;
   qid: string;
   title: string;
   user_id: number;
+  username: string;
   created_at: string;
 }
 
 interface PostsResponse {
   posts: Post[];
+  total: number;
 }
 
 export function AdminPostsPage() {
+  const [search, setSearch] = useState("");
+
   const { data, isLoading, error } = useQuery<PostsResponse>({
-    queryKey: ["admin", "posts"],
-    queryFn: () => request<PostsResponse>("/api/v1/admin/posts"),
+    queryKey: ["admin", "posts", search],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      const query = params.toString();
+      return request<PostsResponse>(`/api/v1/admin/posts${query ? `?${query}` : ""}`);
+    },
   });
 
   const posts = data?.posts || [];
 
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  }, []);
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Posts</h1>
-
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Posts</h1>
+        <div className="relative w-64">
+          <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search posts..."
+            value={search}
+            onChange={handleSearch}
+            className="pl-9"
+          />
+        </div>
+      </div>
       {isLoading ? (
         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
           <Loader2Icon className="size-5 animate-spin" />
@@ -56,7 +73,7 @@ export function AdminPostsPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>User ID</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>Created At</TableHead>
               </TableRow>
             </TableHeader>
@@ -81,7 +98,7 @@ export function AdminPostsPage() {
                         {post.title}
                       </a>
                     </TableCell>
-                    <TableCell>{post.user_id}</TableCell>
+                    <TableCell>{post.username}</TableCell>
                     <TableCell>{new Date(post.created_at).toLocaleString()}</TableCell>
                   </TableRow>
                 ))

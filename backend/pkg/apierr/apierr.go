@@ -124,6 +124,20 @@ var serviceErrorMappings = map[service.ErrCode]serviceErrorMapping{
 			Other: "Invalid post key",
 		},
 	},
+	service.ErrForbidden: {
+		Status: http.StatusForbidden,
+		Message: &i18n.Message{
+			ID:   "error.forbidden",
+			Other: "Forbidden",
+		},
+	},
+	service.ErrUserDisabled: {
+		Status: http.StatusForbidden,
+		Message: &i18n.Message{
+			ID:    "error.user_disabled",
+			Other: "User account is disabled",
+		},
+	},
 }
 
 var validationFieldMessages = map[service.ErrCode]*i18n.Message{

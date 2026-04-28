@@ -4,6 +4,7 @@ export interface User {
   username: string;
   name?: string;
   avatar_url?: string | null;
+  role?: string;
 }
 
 export interface GitHubAuthUrlResponse {
@@ -13,9 +14,9 @@ export interface GitHubAuthUrlResponse {
 
 export interface AuthResponse {
   user: User;
-  access_token: string;
+  token: string;
   refresh_token: string;
-  message: string;
+  expires_in: number;
 }
 
 export interface ErrorResponse {
@@ -25,14 +26,14 @@ export interface ErrorResponse {
 export type ApiResponse<T> = T | ErrorResponse;
 
 export type LoginResponse = {
-  access_token: string;
+  token: string;
   refresh_token: string;
   expires_in: number;
   user: User;
 };
 
 export type RefreshResponse = {
-  access_token: string;
+  token: string;
   refresh_token: string;
   expires_in: number;
 };

@@ -28,6 +28,7 @@
 #   REGISTRY     - Docker registry (default: jukanntenn/markpost). Set to empty string to disable
 #   PLATFORMS    - Target platforms for push (default: linux/amd64,linux/arm64)
 #   PUSH         - Push to registry (default: false). Set to 'true' to enable multi-arch build
+#   PRIVATE_REGISTRY - Private registry for dual-push (default: 192.168.5.50:5000). Set to empty string to disable
 
 set -e
 
@@ -37,6 +38,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 REGISTRY="${REGISTRY:-jukanntenn}"
 PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
 PUSH="${PUSH:-false}"
+PRIVATE_REGISTRY="${PRIVATE_REGISTRY:-192.168.5.50:5000}"
 
 # Detect host platform for local builds
 HOST_ARCH=$(docker version --format '{{.Server.Arch}}' 2>/dev/null || echo "amd64")
@@ -68,6 +70,9 @@ else
 fi
 echo "Registry: $REGISTRY"
 echo "Push: $PUSH"
+if [ "$PUSH" = "true" ] && [ -n "$PRIVATE_REGISTRY" ]; then
+    echo "Private Registry: $PRIVATE_REGISTRY"
+fi
 echo "=========================================="
 
 # Ensure buildx is available
@@ -102,6 +107,14 @@ if [ "$IMAGE_TAG" != "latest" ]; then
     BUILD_ARGS+=(--tag "$FULL_IMAGE_NAME:latest")
 fi
 
+# Add private registry tags (dual-push)
+if [ "$PUSH" = "true" ] && [ -n "$PRIVATE_REGISTRY" ]; then
+    BUILD_ARGS+=(--tag "$PRIVATE_REGISTRY/$IMAGE_NAME:$IMAGE_TAG")
+    if [ "$IMAGE_TAG" != "latest" ]; then
+        BUILD_ARGS+=(--tag "$PRIVATE_REGISTRY/$IMAGE_NAME:latest")
+    fi
+fi
+
 # Add platform and push/load flags
 if [ "$PUSH" = "true" ]; then
     BUILD_ARGS+=(--platform "$PLATFORMS")
@@ -124,6 +137,12 @@ echo "Build completed!"
 echo "Image: $FULL_IMAGE_NAME:$IMAGE_TAG"
 if [ "$IMAGE_TAG" != "latest" ]; then
     echo "Image: $FULL_IMAGE_NAME:latest"
+fi
+if [ "$PUSH" = "true" ] && [ -n "$PRIVATE_REGISTRY" ]; then
+    echo "Image: $PRIVATE_REGISTRY/$IMAGE_NAME:$IMAGE_TAG"
+    if [ "$IMAGE_TAG" != "latest" ]; then
+        echo "Image: $PRIVATE_REGISTRY/$IMAGE_NAME:latest"
+    fi
 fi
 echo "Platforms: $PLATFORMS"
 echo "=========================================="

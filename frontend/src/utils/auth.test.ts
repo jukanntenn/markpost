@@ -5,7 +5,7 @@ import type { LoginResponse } from "../types/auth";
 describe("checkLoginResponse", () => {
   it("should return true when all fields are valid", () => {
     const validResponse: LoginResponse = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "test_refresh_token",
       expires_in: 86400,
       user: {
@@ -22,9 +22,9 @@ describe("checkLoginResponse", () => {
     expect(checkLoginResponse(null)).toBe(false);
   });
 
-  it("should return false when access_token is missing", () => {
+  it("should return false when token is missing", () => {
     const response: LoginResponse = {
-      access_token: "",
+      token: "",
       refresh_token: "test_refresh_token",
       expires_in: 86400,
       user: {
@@ -39,7 +39,7 @@ describe("checkLoginResponse", () => {
 
   it("should return false when refresh_token is missing", () => {
     const response: LoginResponse = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "",
       expires_in: 86400,
       user: {
@@ -54,7 +54,7 @@ describe("checkLoginResponse", () => {
 
   it("should return false when user is missing", () => {
     const response = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "test_refresh_token",
     } as unknown as LoginResponse;
 
@@ -63,7 +63,7 @@ describe("checkLoginResponse", () => {
 
   it("should return false when user id is null", () => {
     const response = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "test_refresh_token",
       user: {
         id: null,
@@ -77,7 +77,7 @@ describe("checkLoginResponse", () => {
 
   it("should return false when user username is empty", () => {
     const response: LoginResponse = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "test_refresh_token",
       expires_in: 86400,
       user: {
@@ -92,7 +92,7 @@ describe("checkLoginResponse", () => {
 
   it("should return false when user username is missing", () => {
     const response = {
-      access_token: "test_token",
+      token: "test_token",
       refresh_token: "test_refresh_token",
       user: {
         id: 1,

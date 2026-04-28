@@ -27,7 +27,7 @@ func RequireAdmin() gin.HandlerFunc {
 		}
 
 		if currentUser.Role != user.RoleAdmin {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrUnauthorized, "admin access required", nil))
+			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrForbidden, "admin access required", nil))
 			c.Abort()
 			return
 		}

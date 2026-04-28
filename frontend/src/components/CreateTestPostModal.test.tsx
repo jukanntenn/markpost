@@ -27,7 +27,7 @@ const mockOnSuccess = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   setMockAuth({
-    access_token: "test_token",
+    token: "test_token",
     refresh_token: "test_refresh",
     expires_in: 86400,
     user: { id: 1, username: "testuser", email: "test@example.com" },

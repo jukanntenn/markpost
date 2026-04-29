@@ -11,7 +11,7 @@ import (
 
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	"markpost/internal/service"
+	postsvc "markpost/internal/service/post"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -45,14 +45,14 @@ func (m *mockPostService) RenderPostHTML(_ context.Context, qid string) (string,
 	if p, ok := m.posts[qid]; ok {
 		return p.Title, "<h1>" + p.Title + "</h1><p>" + p.Body + "</p>", nil
 	}
-	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
+	return "", "", postsvc.NewServiceError(postsvc.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetPostMarkdown(_ context.Context, qid string) (string, string, error) {
 	if p, ok := m.posts[qid]; ok {
 		return p.Title, p.Body, nil
 	}
-	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
+	return "", "", postsvc.NewServiceError(postsvc.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) ([]post.Post, int64, error) {
@@ -119,7 +119,7 @@ func TestRenderPost_Success(t *testing.T) {
 	// Create a post first
 	_, _ = mockSvc.CreatePost(context.Background(), "Test Title", "Test Body", 1)
 
-	router.GET("/posts/:id", RenderPost(mockSvc))
+	router.GET("/posts/:id", RenderPost(mockSvc, nil))
 
 	// Use format=raw to avoid HTML template rendering
 	req := httptest.NewRequest(http.MethodGet, "/posts/test-qid?format=raw", nil)
@@ -142,7 +142,7 @@ func TestRenderPost_NotFound(t *testing.T) {
 	mockSvc := newMockPostService()
 	router := setupPostTestRouter()
 
-	router.GET("/posts/:id", RenderPost(mockSvc))
+	router.GET("/posts/:id", RenderPost(mockSvc, nil))
 
 	// Use format=raw to avoid i18n dependency in tests
 	req := httptest.NewRequest(http.MethodGet, "/posts/nonexistent?format=raw", nil)

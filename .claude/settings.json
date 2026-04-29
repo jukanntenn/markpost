@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR.claude/hooks/format.py"
+            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/format.py"
           },
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR.claude/hooks/lint.py"
+            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/lint.py"
           }
         ]
       }

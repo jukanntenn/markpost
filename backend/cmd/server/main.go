@@ -14,10 +14,10 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/middleware"
-	"markpost/internal/service/auth"
-	postsvc "markpost/internal/service/post"
 	"markpost/internal/service/admin"
+	"markpost/internal/service/auth"
 	deliverysvc "markpost/internal/service/delivery"
+	postsvc "markpost/internal/service/post"
 
 	"github.com/didip/tollbooth/v8"
 	"github.com/gin-contrib/cors"
@@ -228,13 +228,22 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 
 	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))
 
-	r.GET("/:id", v1.RenderPost(postSvc))
+	var proxy gin.HandlerFunc
+	if cfg.Server.FrontendURL != "" {
+		proxy = middleware.NewFrontendProxy(cfg.Server.FrontendURL)
+	}
+
+	r.GET("/:id", v1.RenderPost(postSvc, proxy))
 	r.GET("/health", v1.Health())
 
 	r.Static("/ui/assets", "../dist/assets")
 	r.StaticFile("/ui/markpost.svg", "../dist/markpost.svg")
 
-	r.NoRoute(func(c *gin.Context) {
-		c.String(http.StatusNotFound, "Not Found")
-	})
+	if proxy != nil {
+		r.NoRoute(proxy)
+	} else {
+		r.NoRoute(func(c *gin.Context) {
+			c.String(http.StatusNotFound, "Not Found")
+		})
+	}
 }

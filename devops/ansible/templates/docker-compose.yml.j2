@@ -7,6 +7,8 @@ services:
     volumes:
       - ./config.toml:/app/config.toml
     restart: always
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["HOSTNAME=0.0.0.0 node /app/frontend/server.js & /app/markpost -c /app/config.toml"]
     depends_on:
       - db
 

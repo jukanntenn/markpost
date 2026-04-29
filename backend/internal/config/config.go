@@ -34,6 +34,7 @@ type ServerConfig struct {
 	Port           uint16   `mapstructure:"port" validate:"required"`
 	TrustedProxies []string `mapstructure:"trusted_proxies"`
 	PublicURL      string   `mapstructure:"public_url" validate:"omitempty,url"`
+	FrontendURL    string   `mapstructure:"frontend_url" validate:"omitempty,url"`
 }
 
 // DBConfig holds database-related configuration.
@@ -182,6 +183,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.port", 7330)
 	v.SetDefault("server.trusted_proxies", []string{"127.0.0.1", "::1"})
 	v.SetDefault("server.public_url", "")
+	v.SetDefault("server.frontend_url", "http://127.0.0.1:3000")
 	v.SetDefault("db.driver", "sqlite")
 	v.SetDefault("db.dsn", "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL")
 	v.SetDefault("admin.initial_username", "markpost")

@@ -1,9 +1,9 @@
 ---
 # Usage:
-# ansible-playbook -i ansible/hosts.yml ansible/nas.yml --vault-password-file ~/.ansible-vault/markpost-nas.pwd
+# ansible-playbook -i devops/ansible/hosts.yml devops/ansible/nas_fn.yml --vault-password-file ~/.ansible-vault/markpost-nas.pwd
 
 - name: Deploy markpost
-  hosts: oect
+  hosts: fn
   user: "{{ user }}"
   gather_facts: no
 

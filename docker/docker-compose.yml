@@ -15,3 +15,5 @@ services:
     environment:
       - GIN_MODE=release
     restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["HOSTNAME=0.0.0.0 node /app/frontend/server.js & /app/markpost -c /app/config.toml"]

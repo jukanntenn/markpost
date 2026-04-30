@@ -10,16 +10,15 @@ Usage:
 
 import argparse
 import logging
-import os
 import signal
 import subprocess
 import sys
+import os
 import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-ENV_FILE = SCRIPT_DIR / ".env"
 PID_FILE = SCRIPT_DIR / "frontend.pid"
 LOG_FILE = SCRIPT_DIR / "frontend.log"
 COMPOSE_FILE = SCRIPT_DIR / "docker-compose.yml"
@@ -42,7 +41,9 @@ def setup_logging():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Markpost development environment manager")
+    parser = argparse.ArgumentParser(
+        description="Markpost development environment manager"
+    )
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("start", help="Start all services (default)")
     sub.add_parser("stop", help="Stop all services")
@@ -50,23 +51,6 @@ def parse_args():
     if not args.command:
         args.command = "start"
     return args
-
-
-def load_env():
-    global BACKEND_PORT, FRONTEND_PORT
-    if not ENV_FILE.exists():
-        return
-    for line in ENV_FILE.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        if key == "MARKPOST_SERVER__PORT":
-            BACKEND_PORT = int(value)
-        elif key == "FRONTEND_PORT":
-            FRONTEND_PORT = int(value)
 
 
 def run(name, *args, **kwargs):
@@ -91,7 +75,6 @@ def wait_for(url, name, timeout=120):
 
 
 def start():
-    load_env()
     logger.info("Starting backend (Docker Compose)...")
     run("docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--build")
     logger.info("Docker services started")
@@ -120,7 +103,7 @@ def start():
     logger.info("  Frontend:     http://localhost:%d", FRONTEND_PORT)
     logger.info("  Backend API:  http://localhost:%d/api/v1", BACKEND_PORT)
     logger.info("  Swagger Docs: http://localhost:%d/swagger", BACKEND_PORT)
-    logger.info("  PostgreSQL:   localhost:%s", os.environ.get("POSTGRES_PORT", "5432"))
+    logger.info("  PostgreSQL:   localhost:5432")
     logger.info("Admin:")
     logger.info("  Username:     markpost")
     logger.info("  Password:     markpost")
@@ -128,7 +111,6 @@ def start():
 
 
 def stop():
-    load_env()
     logger.info("Stopping backend...")
     run("docker", "compose", "-f", str(COMPOSE_FILE), "down")
     logger.info("Docker services stopped")

@@ -7,7 +7,11 @@
       "command": "go",
       "args": ["run", "./cmd/server"],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}/backend",
+        "env": {
+          "MARKPOST_JWT__ACCESS_SIGNING_KEY": "dev-access-secret-key-change-in-production",
+          "MARKPOST_JWT__REFRESH_SIGNING_KEY": "dev-refresh-secret-key-change-in-production"
+        }
       },
       "presentation": {
         "reveal": "always",

@@ -46,11 +46,12 @@ database value — never synthesized at routing time.
 ### 2.2 Frontend Rewrites
 
 The frontend configures Next.js `rewrites` to proxy backend-bound requests.
-All rewrites read the backend address from a single environment variable:
+All rewrites read the backend address from a single environment variable with
+a code-level default matching the backend's default port:
 
 ```
-API_PROXY_TARGET=http://backend:7330   # Docker internal
-API_PROXY_TARGET=http://localhost:7330  # Local dev
+API_PROXY_TARGET=http://backend:7330   # Production (Docker internal)
+API_PROXY_TARGET=http://localhost:7330  # Default in code
 ```
 
 Rewrites are unconditional — they apply in both development and production
@@ -60,8 +61,7 @@ General pattern:
 
 ```ts
 async rewrites() {
-  const target = process.env.API_PROXY_TARGET;
-  if (!target) return [];
+  const target = process.env.API_PROXY_TARGET || "http://127.0.0.1:7330";
   return [
     // API routes — always present
     { source: "/api/:path*", destination: `${target}/api/:path*` },
@@ -70,6 +70,11 @@ async rewrites() {
   ];
 }
 ```
+
+The code default (`http://127.0.0.1:<port>`) matches the backend's code-level
+port default. This enables zero-config local development — no `.env` file is
+required. Production deployments override `API_PROXY_TARGET` to point to the
+backend container via Docker internal DNS.
 
 ### 2.3 Frontend Pages
 
@@ -292,8 +297,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   async rewrites() {
-    const target = process.env.API_PROXY_TARGET;
-    if (!target) return [];
+    const target = process.env.API_PROXY_TARGET || "http://127.0.0.1:7330";
     return [
       { source: "/api/:path*", destination: `${target}/api/:path*` },
       // Project-specific value-prefixed routes
@@ -304,8 +308,8 @@ const nextConfig: NextConfig = {
 
 - `output: "standalone"` is **required** for Docker deployment.
 - No `basePath` — frontend routes live at the root.
-- Rewrites are driven entirely by `API_PROXY_TARGET`. If the variable is unset,
-  no rewrites are registered (useful for isolated frontend development).
+- Rewrites use a code default for the proxy target, enabling zero-config local
+  development. Production overrides `API_PROXY_TARGET` via environment variable.
 
 ### 7.2 Health Check Route
 
@@ -411,7 +415,7 @@ No custom deployment logic beyond these steps.
 4. Set up `devops/docker-compose.yml` with backend + database (no frontend
    container — frontend runs locally via `pnpm dev`).
 5. Update `devops/dev.py` to use the new compose file.
-6. Configure `API_PROXY_TARGET` in the dev environment file.
+6. Configure `API_PROXY_TARGET` default in `next.config.ts` rewrites.
 7. Update `next.config.ts` with rewrites driven by `API_PROXY_TARGET`.
 8. Add `/health` API route in Next.js.
 9. Place backend health check under the API prefix.

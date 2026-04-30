@@ -35,6 +35,12 @@
 | [devops-spec.md](./devops-spec.md) | Dev script changes, Docker/Compose config, Ansible playbooks, adding new deployment environments |
 | [service-routing-spec.md](./service-routing-spec.md) | General frontend-backend integration mechanism, environment models, Docker topology, image builds — reusable across projects |
 
+## Configuration
+
+| File | When to Read |
+|------|-------------|
+| [dev-config-spec.md](./dev-config-spec.md) | Adding or changing configuration values, setting up dev environment defaults, reducing env file duplication, IDE task runner env vars |
+
 ## Design
 
 | File | When to Read |
@@ -57,9 +63,10 @@
 - **Writing unit tests** → `backend-quality.md` or `frontend-quality.md`
 - **Writing E2E tests** → `frontend-e2e-testing.md`
 - **Adding a new error code** → `backend-error-handling.md` (3 places to update)
+- **Adding or changing a config value** → `dev-config-spec.md`
 - **Refactoring shared logic** → `thinking-guides.md`
 - **Adding a deployment environment** → `devops-spec.md` + `service-routing-spec.md`
-- **Modifying dev startup script** → `devops-spec.md`
+- **Modifying dev startup script** → `devops-spec.md` + `dev-config-spec.md`
 - **Frontend-backend routing changes** → `routing-design.md` + `service-routing-spec.md`
 - **Docker Compose topology changes** → `service-routing-spec.md`
 - **Adding or changing API routes** → `routing-design.md`

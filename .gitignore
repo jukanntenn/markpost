@@ -17,7 +17,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!devops/.env
 
 # === Backend (Go) ===
 # Binaries
@@ -38,6 +37,7 @@ go.work
 go.work.sum
 # Config
 config.toml
+markpost.toml
 # Database
 *.sqlite3*
 *.db*
@@ -58,6 +58,7 @@ blob-report/
 # === DevOps / Runtime ===
 frontend.log
 devops/frontend.pid
+.codex
 
 # === Python ===
 __pycache__/

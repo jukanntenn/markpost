@@ -41,15 +41,16 @@ files. Logs are written to files, not stdout.
 
 ### 2.4 Constraints
 
-- **No runtime `.env` generation.** Environment files are static and
-  committed to version control.
+- **No runtime `.env` generation.** The script must not create or modify
+  environment files.
 - **No project-internal config generation.** The script must not create files
   inside the application source tree (e.g. `frontend/.env.local`). Application
   code should use sensible defaults instead.
 - **No branch-aware behavior.** No worktree detection, port offset calculation,
   or any logic that changes behavior based on the current git state.
-- **No hardcoded magic numbers.** Ports and other configurable values are read
-  from the static environment file.
+- **Constants, not configuration files.** Ports and other values used by the
+  script are module-level constants matching the application code defaults.
+  No external `.env` file is loaded.
 
 ### 2.5 Stop Behavior
 
@@ -58,19 +59,20 @@ processes, and cleans up PID files. If nothing is running, it exits silently.
 
 ---
 
-## 3. Environment File
+## 3. Configuration
 
-A single static environment file is committed to version control. It contains
-development-safe defaults — no production secrets.
-
-The root `.gitignore` typically excludes `.env` globally, so an explicit
-exclusion must be added for the devops environment file. Runtime artifacts
-(PID files, logs) remain gitignored.
+Development environment configuration uses **inline values**, not external
+files. The dev script and Docker Compose file contain all necessary values
+directly as constants or hardcoded entries.
 
 Rules:
 
-- All variables used by Docker Compose and the dev script must be present.
-- No generation timestamps, branch names, or computed values.
+- The dev script uses module-level constants for ports and URLs, matching
+  the application code defaults.
+- The Docker Compose file hardcodes all environment values inline (see §4).
+- No `.env` file is loaded or required by any development tooling.
+- Application code provides sensible defaults so that manual startup requires
+  minimal configuration (only security-sensitive values via a config file).
 
 ---
 
@@ -79,14 +81,17 @@ Rules:
 The development compose file uses the **project root** as its build context.
 Dockerfile paths and volume mounts are expressed relative to the project root.
 
-All environment variable references use `${VAR:-default}` syntax where defaults
-match the committed environment file.
+All environment values are **hardcoded inline**. No `${VAR:-default}` variable
+substitution or external `.env` file is used. Only values that differ from
+application code defaults are set (e.g. `SERVER_HOST=0.0.0.0` for Docker,
+`DB_DRIVER=postgresql` for the containerized database).
 
 Constraints:
 
 - No dynamic port assignment or offset logic.
 - No runtime file generation or templating.
-- Resource naming uses a fixed project name with a sensible default.
+- No variable substitution — all values are literal.
+- Resource naming uses a fixed project name.
 
 ---
 
@@ -131,7 +136,6 @@ deviate.
 
 ```
 devops/
-├── .env                        # Static environment file (committed)
 ├── docker-compose.yml          # Development Docker Compose file
 ├── backend.Dockerfile          # Dev-stage Dockerfiles
 ├── dev.py                      # Development environment script
@@ -162,8 +166,7 @@ devops/
 python devops/dev.py start
 ```
 
-1. Read `devops/.env` for `BACKEND_PORT` and `FRONTEND_PORT`.
-2. `docker compose -f devops/docker-compose.yml up -d --build`.
+1. `docker compose -f devops/docker-compose.yml up -d --build`.
 3. Poll `http://localhost:<BACKEND_PORT>/health` until 200.
 4. If `frontend/node_modules/` is missing, run `pnpm install`.
 5. Launch `pnpm dev` in a new session group. Write PID to

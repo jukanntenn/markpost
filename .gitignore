@@ -1,54 +1,65 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
+# === OS Generated ===
+.DS_Store
+Thumbs.db
+
+# === Editor / IDE ===
+.idea/
+*.swp
+*.swo
+*~
+
+# === AI Tools ===
+.codex/
+.fa/
+.trae/
+
+# === Environment ===
+.env
+.env.*
+!.env.example
+!devops/.env
+
+# === Backend (Go) ===
+# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
+backend/server
+# Coverage
 coverage.*
 *.coverprofile
 profile.cov
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+# Go workspace
 go.work
 go.work.sum
-
-# env file
-.env
-!devops/.env
-
-# Editor/IDE
-# .idea/
-# .vscode/
-
+# Config
+config.toml
+# Database
 *.sqlite3*
 *.db*
-config.toml
-backend/server
 
-# frontend
+# === Frontend (Node.js / Next.js) ===
 node_modules/
+.next/
 dist/
+*.tsbuildinfo
+.pnpm-approved-builds.json
+# Test artifacts
 playwright-report/
 test-results/
 blob-report/
+.playwright/
+.playwright-cli
 
-.trae/documents/
+# === DevOps / Runtime ===
+frontend.log
+devops/frontend.pid
 
-.next/
-
-# Python
+# === Python ===
 __pycache__/
 *.py[cod]
 *$py.class
@@ -62,9 +73,3 @@ venv/
 .coverage
 htmlcov/
 .hypothesis/
-
-.fa/
-frontend.log
-devops/frontend.pid
-.playwright-cli
-.codex

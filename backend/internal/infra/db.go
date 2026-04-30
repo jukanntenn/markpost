@@ -10,6 +10,7 @@ import (
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/pkg/utils"
+	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -54,6 +55,10 @@ func New(dsn string) (*Database, error) {
 	}
 
 	database := &Database{db: db}
+
+	if err := database.migrateQIDPrefix(); err != nil {
+		return nil, fmt.Errorf("NewDatabase migrate qid prefix: %w", err)
+	}
 
 	username := cfg.Admin.InitialUsername
 	exists, err := database.userExists(username)
@@ -126,4 +131,29 @@ func (d *Database) userExists(username string) (bool, error) {
 
 func (d *Database) createUser(u *user.User) error {
 	return d.db.Create(u).Error
+}
+
+func (d *Database) migrateQIDPrefix() error {
+	result := d.db.Model(&post.Post{}).
+		Where("qid NOT LIKE ?", "p-%").
+		Update("qid", d.db.Statement.DB.Raw("CONCAT('p-', qid)"))
+	if result.Error != nil {
+		if strings.Contains(result.Error.Error(), "CONCAT") {
+			var posts []post.Post
+			if err := d.db.Where("qid NOT LIKE ?", "p-%").Find(&posts).Error; err != nil {
+				return err
+			}
+			for _, p := range posts {
+				if err := d.db.Model(&post.Post{}).Where("id = ?", p.ID).Update("qid", "p-"+p.QID).Error; err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		return result.Error
+	}
+	if result.RowsAffected > 0 {
+		log.Printf("migrated %d post qids with p- prefix", result.RowsAffected)
+	}
+	return nil
 }

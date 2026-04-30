@@ -26,6 +26,7 @@ go.work.sum
 
 # env file
 .env
+!devops/.env
 
 # Editor/IDE
 # .idea/
@@ -64,5 +65,6 @@ htmlcov/
 
 .fa/
 frontend.log
+devops/frontend.pid
 .playwright-cli
 .codex

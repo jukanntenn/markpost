@@ -5,15 +5,20 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   async rewrites() {
-    const serverPort = process.env.MARKPOST_SERVER__PORT || "7330";
+    const target = process.env.API_PROXY_TARGET;
+    if (!target) return [];
     return [
       {
         source: "/api/:path*",
-        destination: `http://localhost:${serverPort}/api/:path*`,
+        destination: `${target}/api/:path*`,
       },
       {
         source: "/mpk-:postKey",
-        destination: `http://localhost:${serverPort}/mpk-:postKey`,
+        destination: `${target}/mpk-:postKey`,
+      },
+      {
+        source: "/p-:qid",
+        destination: `${target}/p-:qid`,
       },
     ];
   },

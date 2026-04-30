@@ -31,7 +31,7 @@ func (r *PostRepository) Create(ctx context.Context, title, body string, userID 
 	}
 
 	p := post.Post{
-		QID:    qid,
+		QID:    "p-" + qid,
 		Title:  title,
 		Body:   body,
 		UserID: userID,

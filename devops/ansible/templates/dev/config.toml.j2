@@ -1,0 +1,18 @@
+post_key_length = 16
+
+[post]
+title_max_length = 500
+body_max_bytes = 1048576
+retention_days = 30
+
+[cors]
+allow_origins = ["{{ public_url }}"]
+allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+[ratelimit]
+per_second = 5
+burst = 50
+
+[delivery]
+body_preview_chars = 200
+request_timeout = "5s"

@@ -1,0 +1,62 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: devops/backend.Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-markpost}-backend
+    environment:
+      - MARKPOST_SERVER__HOST=0.0.0.0
+      - MARKPOST_SERVER__PORT=${MARKPOST_SERVER__PORT:-7330}
+      - MARKPOST_DEBUG=${MARKPOST_DEBUG:-true}
+      - MARKPOST_DB__DRIVER=${MARKPOST_DB__DRIVER:-postgresql}
+      - MARKPOST_DB__DSN=${MARKPOST_DB__DSN:-postgres://markpost:markpost@postgres:5432/markpost?sslmode=disable}
+      - MARKPOST_JWT__ACCESS_SIGNING_KEY=${MARKPOST_JWT__ACCESS_SIGNING_KEY:-dev-access-secret-key-change-in-production}
+      - MARKPOST_JWT__REFRESH_SIGNING_KEY=${MARKPOST_JWT__REFRESH_SIGNING_KEY:-dev-refresh-secret-key-change-in-production}
+      - MARKPOST_ADMIN__INITIAL_USERNAME=${MARKPOST_ADMIN__INITIAL_USERNAME:-markpost}
+      - MARKPOST_ADMIN__INITIAL_PASSWORD=${MARKPOST_ADMIN__INITIAL_PASSWORD:-markpost}
+    ports:
+      - "${MARKPOST_SERVER__PORT:-7330}:${MARKPOST_SERVER__PORT:-7330}"
+    volumes:
+      - ../backend:/app:cached
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null http://127.0.0.1:${MARKPOST_SERVER__PORT:-7330}/api/v1/health || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-markpost}"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-markpost}-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-markpost}
+      - POSTGRES_USER=${POSTGRES_USER:-markpost}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-markpost}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-markpost}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.docker.compose.project=${COMPOSE_PROJECT_NAME:-markpost}"
+
+volumes:
+  pgdata:
+    name: ${COMPOSE_PROJECT_NAME:-markpost}_pgdata
+
+networks:
+  default:
+    name: ${COMPOSE_PROJECT_NAME:-markpost}_default

@@ -28,6 +28,19 @@
 | [frontend-quality.md](./frontend-quality.md) | Writing unit tests, code review, accessibility checks |
 | [frontend-e2e-testing.md](./frontend-e2e-testing.md) | Writing/running E2E tests, Playwright setup, Page Objects |
 
+## DevOps
+
+| File | When to Read |
+|------|-------------|
+| [devops-spec.md](./devops-spec.md) | Dev script changes, Docker/Compose config, Ansible playbooks, adding new deployment environments |
+| [service-routing-spec.md](./service-routing-spec.md) | General frontend-backend integration mechanism, environment models, Docker topology, image builds — reusable across projects |
+
+## Design
+
+| File | When to Read |
+|------|-------------|
+| [routing-design.md](./routing-design.md) | This project's route tables, value-prefix definitions, permission model, rewrite rules |
+
 ## Cross-Cutting
 
 | File | When to Read |
@@ -45,3 +58,9 @@
 - **Writing E2E tests** → `frontend-e2e-testing.md`
 - **Adding a new error code** → `backend-error-handling.md` (3 places to update)
 - **Refactoring shared logic** → `thinking-guides.md`
+- **Adding a deployment environment** → `devops-spec.md` + `service-routing-spec.md`
+- **Modifying dev startup script** → `devops-spec.md`
+- **Frontend-backend routing changes** → `routing-design.md` + `service-routing-spec.md`
+- **Docker Compose topology changes** → `service-routing-spec.md`
+- **Adding or changing API routes** → `routing-design.md`
+- **Permission/auth changes** → `routing-design.md`

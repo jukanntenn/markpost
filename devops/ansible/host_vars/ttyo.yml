@@ -1,3 +1,0 @@
----
-user: "alice"
-home: "/home/{{ user }}"

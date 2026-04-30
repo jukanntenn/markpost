@@ -1,59 +1,220 @@
-debug = false
+# =============================================================================
+# MarkPost Configuration
+# =============================================================================
+#
+# Place this file as "markpost.toml" next to the server binary, or specify a
+# path via the --config / -c flag:
+#     ./markpost-server -c /path/to/markpost.toml
+#
+# Override rules (highest priority wins):
+#     Environment variables  >  TOML file  >  Built-in defaults
+#
+# Environment variables use the MARKPOST_ prefix and __ for nested keys:
+#     debug                 → MARKPOST_DEBUG=true
+#     server.port           → MARKPOST_SERVER__PORT=8080
+#     oauth.github.client_id → MARKPOST_OAUTH__GITHUB__CLIENT_ID=xxx
+#
+# Fields marked [REQUIRED] must be set via TOML or env var.
+# Fields marked [OPTIONAL] have sensible defaults and can be left commented out.
+#
+# =============================================================================
 
-# post_key_length controls the random suffix length of generated post_key values
-# (excluding the "mpk-" prefix). Default is 16, minimum is 12.
-post_key_length = 16
+
+# --- Global --------------------------------------------------------------------
+
+# Enable verbose logging.
+# [OPTIONAL]  Env: MARKPOST_DEBUG  Default: false
+# debug = false
+
+# Length of the random suffix in generated post keys (excludes "mpk-" prefix).
+# Minimum: 12.  Longer values reduce collision probability.
+# [OPTIONAL]  Env: MARKPOST_POST_KEY_LENGTH  Default: 16
+# post_key_length = 16
+
+
+# --- Server --------------------------------------------------------------------
 
 [server]
-host = "0.0.0.0"
-port = 7330
-trusted_proxies = ["127.0.0.1", "::1"]
-# public_url is the public base URL of your MarkPost instance, used for generating clickable links
-# in delivery messages. If empty, MarkPost falls back to http://{server.host}:{server.port}.
-public_url = ""
-frontend_url = "http://127.0.0.1:3000"
+
+# Address the HTTP server binds to.
+# Use "0.0.0.0" for all interfaces, "127.0.0.1" for localhost only.
+# [REQUIRED]  Env: MARKPOST_SERVER__HOST  Default: "127.0.0.1"
+# host = "127.0.0.1"
+
+# Port the HTTP server listens on.
+# [REQUIRED]  Env: MARKPOST_SERVER__PORT  Default: 7330
+# port = 7330
+
+# Trusted reverse-proxy IPs. Used to resolve real client IPs from
+# X-Forwarded-For headers.
+# [OPTIONAL]  Env: MARKPOST_SERVER__TRUSTED_PROXIES
+# Default: ["127.0.0.1", "::1"]
+# trusted_proxies = ["127.0.0.1", "::1"]
+
+# Public-facing base URL of this instance.
+# Used for generating clickable links in delivery messages.
+# If empty, falls back to http://{host}:{port}.
+# ⚠️  When binding to 0.0.0.0 or deploying behind a proxy, you MUST set this
+#     to your actual public URL (e.g. "https://markpost.example.com").
+# [OPTIONAL]  Env: MARKPOST_SERVER__PUBLIC_URL  Default: ""
+# public_url = ""
+
+
+# --- Database ------------------------------------------------------------------
 
 [db]
-driver = "sqlite"
-dsn = "file:../data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+
+# Database driver. Supported: "sqlite", "mysql", "postgresql".
+# [REQUIRED]  Env: MARKPOST_DB__DRIVER  Default: "sqlite"
+# driver = "sqlite"
+
+# Data Source Name (connection string).
+#
+#   SQLite:       "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+#   MySQL:        "user:pass@tcp(127.0.0.1:3306)/markpost?charset=utf8mb4&parseTime=True"
+#   PostgreSQL:   "host=127.0.0.1 user=markpost password=secret dbname=markpost sslmode=disable"
+#
+# [REQUIRED]  Env: MARKPOST_DB__DSN
+# Default: "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+# dsn = "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+
+
+# --- Admin ---------------------------------------------------------------------
 
 [admin]
-initial_username = "markpost"
-initial_password = "markpost"
+
+# Username for the initial admin account created on first startup.
+# Only used once; subsequent startups ignore this value.
+# ⚠️  Change this in production!
+# [REQUIRED]  Env: MARKPOST_ADMIN__INITIAL_USERNAME  Default: "markpost"
+# initial_username = "markpost"
+
+# Password for the initial admin account.
+# ⚠️  Change this in production!
+# [REQUIRED]  Env: MARKPOST_ADMIN__INITIAL_PASSWORD  Default: "markpost"
+# initial_password = "markpost"
+
+
+# --- Post ----------------------------------------------------------------------
 
 [post]
-title_max_length = 150
-body_max_bytes = 32768
-retention_days = 7
+
+# Maximum character length for a post title.  0 = unlimited.
+# [OPTIONAL]  Env: MARKPOST_POST__TITLE_MAX_LENGTH  Default: 150
+# title_max_length = 150
+
+# Maximum body size in bytes.  0 = unlimited.
+# [OPTIONAL]  Env: MARKPOST_POST__BODY_MAX_BYTES  Default: 32768 (32 KiB)
+# body_max_bytes = 32768
+
+# Days before a post expires and becomes eligible for pruning
+# (via the prune_expired_posts command).  0 = never expire.
+# [OPTIONAL]  Env: MARKPOST_POST__RETENTION_DAYS  Default: 7
+# retention_days = 7
+
+
+# --- CORS ----------------------------------------------------------------------
 
 [cors]
-allow_origins = ["*"]
-allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
-expose_headers = [
-    "X-Rate-Limit-Limit",
-    "X-Rate-Limit-Duration",
-    "X-Rate-Limit-Request-Forwarded-For",
-    "X-Rate-Limit-Request-Remote-Addr",
-    "RateLimit-Limit",
-    "RateLimit-Reset",
-    "RateLimit-Remaining",
-]
+
+# Allowed origins for cross-origin requests.
+# Use ["*"] to allow all origins (development only — restrict in production).
+# [OPTIONAL]  Env: MARKPOST_CORS__ALLOW_ORIGINS  Default: ["*"]
+# allow_origins = ["*"]
+
+# Allowed request headers in cross-origin requests.
+# [OPTIONAL]  Env: MARKPOST_CORS__ALLOW_HEADERS
+# Default: ["Content-Type", "Authorization", "X-OAuth-State"]
+# allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+# Response headers visible to the browser in cross-origin requests.
+# Defaults to rate-limit headers so clients can read throttle info.
+# [OPTIONAL]  Env: MARKPOST_CORS__EXPOSE_HEADERS
+# expose_headers = [
+#     "X-Rate-Limit-Limit",
+#     "X-Rate-Limit-Duration",
+#     "X-Rate-Limit-Request-Forwarded-For",
+#     "X-Rate-Limit-Request-Remote-Addr",
+#     "RateLimit-Limit",
+#     "RateLimit-Reset",
+#     "RateLimit-Remaining",
+# ]
+
+
+# --- OAuth (GitHub) ------------------------------------------------------------
+#
+# Leave all fields empty (default) to disable GitHub OAuth.
+# Set all three fields to enable it.
 
 [oauth.github]
-client_id = ""
-client_secret = ""
-redirect_url = ""
+
+# GitHub OAuth App Client ID.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__CLIENT_ID  Default: ""
+# client_id = ""
+
+# GitHub OAuth App Client Secret.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__CLIENT_SECRET  Default: ""
+# client_secret = ""
+
+# URL GitHub redirects to after user authorization.
+# Typically: "{public_url}/api/v1/auth/github/callback"
+# Must be a valid URL if set.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__REDIRECT_URL  Default: ""
+# redirect_url = ""
+
+
+# --- JWT -----------------------------------------------------------------------
+#
+# ⚠️  Both signing keys MUST be set in production. Empty values will cause
+#     the server to fail to start.
 
 [jwt]
-access_signing_key = "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_ACCESS"
-refresh_signing_key = "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_REFRESH"
-access_token_expire = "24h"
-refresh_token_expire = "720h"
+
+# Secret key for signing access tokens (HMAC-SHA256).
+# Use a long random string (≥ 32 characters). Must differ from refresh_signing_key.
+# [REQUIRED]  Env: MARKPOST_JWT__ACCESS_SIGNING_KEY
+access_signing_key = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_ACCESS_KEY"
+
+# Secret key for signing refresh tokens (HMAC-SHA256).
+# Use a different long random string (≥ 32 characters).
+# [REQUIRED]  Env: MARKPOST_JWT__REFRESH_SIGNING_KEY
+refresh_signing_key = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_REFRESH_KEY"
+
+# Duration until access tokens expire.
+# Valid units: "ns", "us" / "µs", "ms", "s", "m", "h".
+# [OPTIONAL]  Env: MARKPOST_JWT__ACCESS_TOKEN_EXPIRE  Default: "24h"
+# access_token_expire = "24h"
+
+# Duration until refresh tokens expire.
+# [OPTIONAL]  Env: MARKPOST_JWT__REFRESH_TOKEN_EXPIRE  Default: "720h" (30 days)
+# refresh_token_expire = "720h"
+
+
+# --- Rate Limit ----------------------------------------------------------------
 
 [ratelimit]
+
+# Max requests per second per client.  Default is unlimited.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PER_SECOND  Default: unlimited
 per_second = 5
+
+# Max burst size.  Must be ≥ per_second for correct behavior.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__BURST  Default: unlimited
 burst = 50
 
+
+# --- Delivery ------------------------------------------------------------------
+
 [delivery]
-body_preview_chars = 200
-request_timeout = "5s"
+
+# Characters from the post body included in delivery messages.  0 = no preview.
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__BODY_PREVIEW_CHARS  Default: 200
+# body_preview_chars = 200
+
+# Timeout for each outgoing delivery HTTP request.
+# [REQUIRED]  Env: MARKPOST_DELIVERY__REQUEST_TIMEOUT  Default: "5s"
+# request_timeout = "5s"
+
+# Number of retry attempts for failed deliveries.  0 = no retries.
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__RETRY_COUNT  Default: 0
+# retry_count = 0

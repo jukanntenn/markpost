@@ -183,9 +183,12 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 
 	r.Use(middleware.RateLimitByIP(lmt))
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	if cfg.Debug {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	apiV1 := r.Group("/api/v1")
+	apiV1.GET("/health", v1.Health())
 
 	oauthGroup := apiV1.Group("/oauth")
 	{
@@ -207,7 +210,6 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 		jwtAuth.POST("/auth/change-password", v1.ChangePassword(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
 
-		// Delivery channel routes
 		deliveryGroup := jwtAuth.Group("/delivery/channels")
 		{
 			deliveryGroup.GET("", v1.ListDeliveryChannels(deliverySvc))
@@ -216,7 +218,6 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			deliveryGroup.DELETE("/:id", v1.DeleteDeliveryChannel(deliverySvc))
 		}
 
-		// Admin routes
 		adminGroup := jwtAuth.Group("/admin")
 		adminGroup.Use(middleware.RequireAdmin())
 		{
@@ -227,23 +228,9 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	}
 
 	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))
+	r.GET("/:id", v1.RenderPost(postSvc))
 
-	var proxy gin.HandlerFunc
-	if cfg.Server.FrontendURL != "" {
-		proxy = middleware.NewFrontendProxy(cfg.Server.FrontendURL)
-	}
-
-	r.GET("/:id", v1.RenderPost(postSvc, proxy))
-	r.GET("/health", v1.Health())
-
-	r.Static("/ui/assets", "../dist/assets")
-	r.StaticFile("/ui/markpost.svg", "../dist/markpost.svg")
-
-	if proxy != nil {
-		r.NoRoute(proxy)
-	} else {
-		r.NoRoute(func(c *gin.Context) {
-			c.String(http.StatusNotFound, "Not Found")
-		})
-	}
+	r.NoRoute(func(c *gin.Context) {
+		c.String(http.StatusNotFound, "Not Found")
+	})
 }

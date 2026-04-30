@@ -70,7 +70,7 @@ func getI18nMessage(c *gin.Context, defaultMsg string) string {
 }
 
 // RenderPost returns a handler for rendering a post.
-func RenderPost(postSvc PostService, fallback gin.HandlerFunc) gin.HandlerFunc {
+func RenderPost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
 
@@ -78,10 +78,6 @@ func RenderPost(postSvc PostService, fallback gin.HandlerFunc) gin.HandlerFunc {
 			title, body, err := postSvc.GetPostMarkdown(c.Request.Context(), id)
 			if err != nil {
 				if se, ok := postsvc.AsServiceError(err); ok && se.Code == postsvc.ErrNotFound {
-					if fallback != nil {
-						fallback(c)
-						return
-					}
 					c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
 				} else {
 					c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
@@ -97,10 +93,6 @@ func RenderPost(postSvc PostService, fallback gin.HandlerFunc) gin.HandlerFunc {
 		title, htmlContent, err := postSvc.RenderPostHTML(c.Request.Context(), id)
 		if err != nil {
 			if se, ok := postsvc.AsServiceError(err); ok && se.Code == postsvc.ErrNotFound {
-				if fallback != nil {
-					fallback(c)
-					return
-				}
 				c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
 			} else {
 				log.Printf("RenderPost error: %v", err)

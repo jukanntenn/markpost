@@ -43,38 +43,54 @@ The key rule: if a route is registered at the root level (single path segment),
 the matched parameter **must** carry a prefix that is part of the stored
 database value — never synthesized at routing time.
 
-### 2.2 Frontend Rewrites
+### 2.2 Frontend Proxy via Middleware
 
-The frontend configures Next.js `rewrites` to proxy backend-bound requests.
-All rewrites read the backend address from a single environment variable with
-a code-level default matching the backend's default port:
+The frontend uses Next.js **middleware** to proxy backend-bound requests.
+Middleware reads the backend address from a single environment variable at
+**runtime**, with a code-level default matching the backend's default port:
 
 ```
 API_PROXY_TARGET=http://backend:7330   # Production (Docker internal)
 API_PROXY_TARGET=http://localhost:7330  # Default in code
 ```
 
-Rewrites are unconditional — they apply in both development and production
-(`NODE_ENV=development` and `NODE_ENV=production`).
+This is required because `next.config.ts` `rewrites()` are evaluated at
+**build time** in standalone mode. Runtime environment variables are not
+re-read by the baked-in rewrite configuration. Middleware executes on every
+matched request and reads `process.env` at runtime, making it the correct
+mechanism for Docker deployments where the proxy target is only known at
+container startup.
 
 General pattern:
 
 ```ts
-async rewrites() {
-  const target = process.env.API_PROXY_TARGET || "http://127.0.0.1:7330";
-  return [
-    // API routes — always present
-    { source: "/api/:path*", destination: `${target}/api/:path*` },
-    // Project-specific value-prefixed routes
-    // { source: "/<prefix>-:param", destination: `${target}/<prefix>-:param` },
-  ];
+// src/middleware.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const PROXY_TARGET = process.env.API_PROXY_TARGET || "http://127.0.0.1:7330";
+
+export function middleware(request: NextRequest) {
+  const targetUrl = new URL(
+    request.nextUrl.pathname + request.nextUrl.search,
+    PROXY_TARGET,
+  );
+  return NextResponse.rewrite(targetUrl);
 }
+
+export const config = {
+  matcher: [
+    "/api/:path*",
+    // Project-specific value-prefixed routes
+    // "/<prefix>-:param",
+  ],
+};
 ```
 
 The code default (`http://127.0.0.1:<port>`) matches the backend's code-level
 port default. This enables zero-config local development — no `.env` file is
-required. Production deployments override `API_PROXY_TARGET` to point to the
-backend container via Docker internal DNS.
+required. Production deployments override `API_PROXY_TARGET` via the
+`environment` section of `docker-compose.yml`.
 
 ### 2.3 Frontend Pages
 
@@ -89,7 +105,7 @@ Both services expose a health check at different paths to avoid collision:
 | Service | Path | Scope |
 |---|---|---|
 | Frontend | `/health` | Root level — handled by Next.js directly |
-| Backend | Under the API prefix (e.g. `/api/v1/health`) | Proxied via frontend rewrite |
+| Backend | Under the API prefix (e.g. `/api/v1/health`) | Proxied via frontend middleware |
 
 Docker health checks use the container-internal address (`127.0.0.1:port`).
 
@@ -101,7 +117,7 @@ Docker health checks use the container-internal address (`127.0.0.1:port`).
 
 Every project defines three environment models. They differ in how services are
 started but share the **same routing architecture** (frontend entry point,
-rewrites to backend).
+middleware proxy to backend).
 
 ### 3.2 Local Development (No Docker)
 
@@ -110,7 +126,7 @@ Used for day-to-day coding with the fastest feedback loop.
 - Backend: run directly (`go run ./cmd/server`).
 - Frontend: run directly (`pnpm dev`).
 - Database: lightweight embedded database (e.g. SQLite).
-- Integration: Next.js rewrites proxy `API_PROXY_TARGET=http://localhost:<port>`.
+- Integration: Next.js middleware proxies `API_PROXY_TARGET=http://localhost:<port>`.
 
 No containers are involved. IDE task runners (VS Code tasks, Make targets) are
 the typical launch mechanism.
@@ -123,7 +139,7 @@ Used when a production-like database or infrastructure is needed locally.
 - Frontend: **runs on the host** (`pnpm dev`) — not containerized — to preserve
   HMR and fast refresh.
 - Database: production-grade database (e.g. PostgreSQL) in a container.
-- Integration: Next.js rewrites proxy `API_PROXY_TARGET=http://localhost:<port>`.
+- Integration: Next.js middleware proxies `API_PROXY_TARGET=http://localhost:<port>`.
 
 The frontend is not containerized in this model because Docker volume mounts
 add latency to file watching, degrading the development experience.
@@ -135,7 +151,7 @@ Used for all remote deployments (staging, production, on-premise).
 - Backend: pre-built Docker image (compiled binary).
 - Frontend: pre-built Docker image (Next.js standalone `node server.js`).
 - Database: production-grade database in a container or managed service.
-- Integration: Next.js rewrites proxy `API_PROXY_TARGET=http://backend:<port>`
+- Integration: Next.js middleware proxies `API_PROXY_TARGET=http://backend:<port>`
   via Docker internal DNS.
 
 All three services run in the same Docker Compose project.
@@ -149,11 +165,11 @@ All three services run in the same Docker Compose project.
 ```yaml
 services:
   frontend:
-    image: <project>-web:<tag>
+    image: <registry>/<project>-web:<tag>
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "<frontend_port>:3000"
     environment:
-      - API_PROXY_TARGET=http://backend:${BACKEND_PORT:-7330}
+      - API_PROXY_TARGET=http://backend:7330
     depends_on:
       backend:
         condition: service_healthy
@@ -164,18 +180,16 @@ services:
       retries: 3
 
   backend:
-    image: <project>:<tag>
+    image: <registry>/<project>:<tag>
     # No ports mapped to the host — internal only
-    environment:
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=${BACKEND_PORT:-7330}
-      - DB_DRIVER=postgresql
-      - DB_DSN=postgres://user:pass@postgres:5432/dbname
+    # No environment variables — config via mounted file
+    volumes:
+      - <config_file>:/app/markpost.toml:ro
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--spider", "http://127.0.0.1:${BACKEND_PORT:-7330}/api/v1/health"]
+      test: ["CMD", "wget", "--spider", "http://127.0.0.1:7330/api/v1/health"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -183,15 +197,15 @@ services:
   postgres:
     image: postgres:17-alpine
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=<db_name>
+      - POSTGRES_USER=<db_user>
+      - POSTGRES_PASSWORD=<db_password>
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U <db_user>"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -214,8 +228,8 @@ volumes:
 postgres (healthy) → backend (healthy) → frontend
 ```
 
-Frontend rewrites will fail gracefully if the backend is unreachable (HTTP 502),
-but correct startup ordering prevents this during a cold start.
+Frontend middleware will fail gracefully if the backend is unreachable
+(HTTP 502), but correct startup ordering prevents this during a cold start.
 
 ---
 
@@ -295,21 +309,26 @@ one-time transformations.
 ```ts
 const nextConfig: NextConfig = {
   output: "standalone",
-
-  async rewrites() {
-    const target = process.env.API_PROXY_TARGET || "http://127.0.0.1:7330";
-    return [
-      { source: "/api/:path*", destination: `${target}/api/:path*` },
-      // Project-specific value-prefixed routes
-    ];
-  },
 };
 ```
 
 - `output: "standalone"` is **required** for Docker deployment.
 - No `basePath` — frontend routes live at the root.
-- Rewrites use a code default for the proxy target, enabling zero-config local
-  development. Production overrides `API_PROXY_TARGET` via environment variable.
+- **Do not use `rewrites()`** in `next.config.ts` for backend proxying. The
+  `rewrites()` function is evaluated at build time in standalone mode and cannot
+  read runtime environment variables. Use middleware instead (see §2.2).
+
+### 7.1.1 Middleware Proxy
+
+The frontend **must** implement a middleware (`src/middleware.ts`) that proxies
+API and value-prefixed routes to the backend. See §2.2 for the full pattern.
+
+The middleware `matcher` must cover all backend-bound routes:
+- `/api/:path*` — all API routes
+- Any value-prefixed routes defined by the project (e.g. `/mpk-:postKey`)
+
+The `/health` route must **not** be in the matcher — it is handled by Next.js
+directly (see §7.2).
 
 ### 7.2 Health Check Route
 
@@ -378,26 +397,38 @@ Traefik) or a `basePath` configuration on the frontend.
 
 ## 9. Ansible Deployment
 
-### 9.1 Unified Templates
+### 9.1 Config File Mount
 
-All environments (dev, staging, production) share the **same** Docker Compose
-and config templates. Environment-specific values come exclusively from:
+The backend receives all configuration via a **mounted config file**, not
+environment variables. Ansible renders `config.toml` from a Jinja2 template,
+populating security-sensitive values (JWT keys, admin passwords, database
+credentials) from the encrypted vault. The compose template mounts this file
+as `/app/markpost.toml:ro` into the backend container.
+
+The compose file sets **no backend environment variables**. All application
+configuration lives in the config file.
+
+### 9.2 Unified Templates
+
+All environments share the **same** Docker Compose and config templates.
+Environment-specific values come exclusively from:
 
 - **Host variables** (`host_vars/<host>.yml`): non-sensitive per-host settings
   (user, home path).
 - **Vault files** (`vars/<env>/vault.yml`): secrets (signing keys, database
   passwords).
+- **Playbook vars**: non-sensitive per-environment settings (ports, public URL).
 
 The templates themselves must not contain environment-specific logic
 (`if env == "staging"`). If environments genuinely diverge, duplicate the
 template files.
 
-### 9.2 Playbook Pattern
+### 9.3 Playbook Pattern
 
 Each environment owns one playbook. The playbook:
 
 1. Creates directories on the target host.
-2. Renders `docker-compose.yml` and application config from templates.
+2. Renders `docker-compose.yml` and `config.toml` from templates.
 3. Stops existing containers.
 4. Pulls images from the registry.
 5. Starts containers.
@@ -415,8 +446,8 @@ No custom deployment logic beyond these steps.
 4. Set up `devops/docker-compose.yml` with backend + database (no frontend
    container — frontend runs locally via `pnpm dev`).
 5. Update `devops/dev.py` to use the new compose file.
-6. Configure `API_PROXY_TARGET` default in `next.config.ts` rewrites.
-7. Update `next.config.ts` with rewrites driven by `API_PROXY_TARGET`.
+6. Configure `API_PROXY_TARGET` default in middleware.
+7. Create `src/middleware.ts` with matcher covering API and value-prefixed routes.
 8. Add `/health` API route in Next.js.
 9. Place backend health check under the API prefix.
 10. Remove all frontend integration code from the backend (proxy middleware,

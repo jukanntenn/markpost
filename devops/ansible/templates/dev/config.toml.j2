@@ -1,18 +1,13 @@
-post_key_length = 16
+[server]
+host = "0.0.0.0"
 
-[post]
-title_max_length = 500
-body_max_bytes = 1048576
-retention_days = 30
+[db]
+driver = "postgresql"
+dsn = "postgres://{{ postgres_user }}:{{ postgres_password }}@postgres:5432/{{ postgres_db }}?sslmode=disable"
 
-[cors]
-allow_origins = ["{{ public_url }}"]
-allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+[jwt]
+access_signing_key = "{{ jwt_access_signing_key }}"
+refresh_signing_key = "{{ jwt_refresh_signing_key }}"
 
-[ratelimit]
-per_second = 5
-burst = 50
-
-[delivery]
-body_preview_chars = 200
-request_timeout = "5s"
+[admin]
+initial_password = "{{ admin_password }}"

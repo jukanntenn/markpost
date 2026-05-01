@@ -1,5 +1,3 @@
 jwt_access_signing_key: CHANGE_ME
 jwt_refresh_signing_key: CHANGE_ME
-postgres_password: CHANGE_ME
-admin_username: markpost
 admin_password: CHANGE_ME

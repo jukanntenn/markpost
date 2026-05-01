@@ -1,3 +1,15 @@
+[server]
+host = "0.0.0.0"
+public_url = "{{ public_url }}"
+trusted_proxies = {{ trusted_proxies }}
+
+[jwt]
+access_signing_key = "{{ jwt_access_signing_key }}"
+refresh_signing_key = "{{ jwt_refresh_signing_key }}"
+
+[admin]
+initial_password = "{{ admin_password }}"
+
 post_key_length = 16
 
 [post]

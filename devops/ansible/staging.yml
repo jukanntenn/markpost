@@ -16,18 +16,10 @@
     compose_file: "{{ app_path }}/docker-compose.yml"
     config_file: "{{ app_path }}/config.toml"
 
-    registry: "192.168.5.50:5000"
-    backend_image: markpost
-    frontend_image: markpost-web
     image_tag: "latest"
-    backend_port: 7330
     frontend_port: 8089
     public_url: ""
     trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
-    debug: "false"
-    postgres_port: 5432
-    postgres_db: markpost
-    postgres_user: markpost
 
   tasks:
     - name: Ensure paths
@@ -37,6 +29,7 @@
       loop:
         - "{{ apps_path }}"
         - "{{ app_path }}"
+        - "{{ app_path }}/data"
 
     - name: Copy docker-compose.yml
       template:

@@ -4,8 +4,8 @@
     {
       "label": "Start Backend",
       "type": "shell",
-      "command": "go",
-      "args": ["run", "./cmd/server"],
+      "command": "~/go/bin/air",
+      "args": [],
       "options": {
         "cwd": "${workspaceFolder}/backend",
         "env": {

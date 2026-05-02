@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
 import { toast } from "sonner";
@@ -17,6 +18,8 @@ import LoginDivider from "./LoginDivider";
 
 export function LoginPage() {
   const router = useRouter();
+  const t = useTranslations("login");
+  const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
   const [loadingGitHub, setLoadingGitHub] = useState(false);
   const [error, setError] = useState("");
@@ -33,8 +36,8 @@ export function LoginPage() {
   };
 
   useEffect(() => {
-    document.title = "Login - Markpost";
-  }, []);
+    document.title = tCommon("pageTitle.login");
+  }, [tCommon]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -85,7 +88,7 @@ export function LoginPage() {
 
       authWindowRef.current = openAuthWindow(url);
       if (!authWindowRef.current) {
-        showErrorToast("Cannot open authentication window");
+        showErrorToast(t("cannotOpenAuthWindow"));
         return;
       }
 
@@ -107,7 +110,7 @@ export function LoginPage() {
               router.push("/dashboard");
             }, 500);
           } else {
-            showErrorToast("Login failed", event.data.message);
+            showErrorToast(t("loginFailed"), event.data.message);
           }
 
           closeAuthWindow();
@@ -118,8 +121,8 @@ export function LoginPage() {
 
       window.addEventListener("message", handleMessage);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      showErrorToast("Login failed", message);
+      const message = err instanceof Error ? err.message : t("unknownError");
+      showErrorToast(t("loginFailed"), message);
       closeAuthWindow();
       setLoadingGitHub(false);
     }
@@ -135,11 +138,11 @@ export function LoginPage() {
       setAuth(data.token, data.user, data.refresh_token);
       router.push("/dashboard");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = err instanceof Error ? err.message : t("unknownError");
       if (err instanceof Error && err.message) {
         setError(message);
       } else {
-        showErrorToast("Login failed", message);
+        showErrorToast(t("loginFailed"), message);
       }
     } finally {
       setLoading(false);
@@ -154,8 +157,8 @@ export function LoginPage() {
   }, [closeAuthWindow]);
 
   const gitHubButtonText = loadingGitHub
-    ? "Processing GitHub login..."
-    : "Login with GitHub";
+    ? t("processingGitHubLogin")
+    : t("githubLogin");
 
   return (
     <div className="flex min-h-svh items-center justify-center p-4">
@@ -173,14 +176,14 @@ export function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-username">Username</Label>
+                <Label htmlFor="login-username">{t("username")}</Label>
                 <Input
                   id="login-username"
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder="Enter your username"
+                  placeholder={t("usernamePlaceholder")}
                   required
                   disabled={loading}
                   autoComplete="username"
@@ -188,14 +191,14 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
+                <Label htmlFor="login-password">{t("password")}</Label>
                 <Input
                   id="login-password"
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder="Enter your password"
+                  placeholder={t("passwordPlaceholder")}
                   required
                   disabled={loading}
                   autoComplete="current-password"
@@ -210,10 +213,10 @@ export function LoginPage() {
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2Icon className="size-4 animate-spin" />
-                    Signing in...
+                    {t("signingIn")}
                   </span>
                 ) : (
-                  "Sign in"
+                  t("loginButton")
                 )}
               </Button>
             </form>
@@ -235,7 +238,7 @@ export function LoginPage() {
               ) : (
                 <span className="inline-flex items-center gap-2">
                   <GithubIcon className="size-4" />
-                  Login with GitHub
+                  {t("githubLogin")}
                 </span>
               )}
             </Button>

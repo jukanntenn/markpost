@@ -276,6 +276,25 @@
             }
         }
 
+        .post-footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .post-footer a {
+            font-size: 0.85rem;
+            color: var(--muted);
+            opacity: 0.6;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .post-footer a:hover {
+            opacity: 1;
+        }
+
         @media print {
             body {
                 background: #ffffff;
@@ -306,6 +325,10 @@
             .content pre code {
                 color: #000000;
             }
+
+            .post-footer {
+                display: none;
+            }
         }
         </style>
     </head>
@@ -316,6 +339,9 @@
                     <h1 class="post-title">{{.Title}}</h1>
                 </header>
                 <div class="content">{{.Body}}</div>
+                <footer class="post-footer">
+                    <a href="/dashboard">Powered by MarkPost</a>
+                </footer>
             </article>
         </main>
     </body>

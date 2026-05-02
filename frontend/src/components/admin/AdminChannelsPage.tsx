@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -29,6 +30,8 @@ interface ChannelsResponse {
 }
 
 export function AdminChannelsPage() {
+  const t = useTranslations("admin");
+
   const { data, isLoading, error } = useQuery<ChannelsResponse>({
     queryKey: ["admin", "channels"],
     queryFn: () => request<ChannelsResponse>("/api/v1/admin/channels"),
@@ -38,35 +41,35 @@ export function AdminChannelsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Channels</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("channels.title")}</h1>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
           <Loader2Icon className="size-5 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading channels...</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
         </div>
       ) : error ? (
         <Alert variant="destructive">
           <TriangleAlertIcon />
-          <AlertDescription>Error loading channels</AlertDescription>
+          <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Enabled</TableHead>
-                <TableHead>Created At</TableHead>
+                <TableHead>{t("channels.id")}</TableHead>
+                <TableHead>{t("channels.name")}</TableHead>
+                <TableHead>{t("channels.kind")}</TableHead>
+                <TableHead>{t("channels.enabled")}</TableHead>
+                <TableHead>{t("createdAt")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {channels.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No channels found
+                    {t("channels.empty")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -75,7 +78,7 @@ export function AdminChannelsPage() {
                     <TableCell>{channel.id}</TableCell>
                     <TableCell>{channel.name}</TableCell>
                     <TableCell>{channel.type}</TableCell>
-                    <TableCell>{channel.enabled ? "Yes" : "No"}</TableCell>
+                    <TableCell>{channel.enabled ? t("channels.enabled") : "-"}</TableCell>
                     <TableCell>{new Date(channel.created_at).toLocaleString()}</TableCell>
                   </TableRow>
                 ))

@@ -2,16 +2,17 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
 import { Loader2Icon } from "lucide-react";
 
-const LoginSpinner = () => {
+const LoginSpinner = ({ text }: { text: string }) => {
   return (
     <div className="flex justify-center pt-10">
       <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
         <Loader2Icon className="size-5 animate-spin" />
-        <div>Processing authentication...</div>
+        <div>{text}</div>
       </div>
     </div>
   );
@@ -19,6 +20,7 @@ const LoginSpinner = () => {
 
 const LoginCallbackPage: React.FC = () => {
   const searchParams = useSearchParams();
+  const t = useTranslations("loginCallback");
   const [loading, setLoading] = useState(true);
   const processing = useRef(false);
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -40,20 +42,20 @@ const LoginCallbackPage: React.FC = () => {
 
       setAuth(data.token, data.user, data.refresh_token);
     } catch (err: unknown) {
-      message = err instanceof Error ? err.message : "Unknown error";
+      message = err instanceof Error ? err.message : t("unknownError");
     } finally {
       if (window.opener && !window.opener.closed) {
         window.opener.postMessage({ type: "oauth_result", message }, "*");
       }
       setLoading(false);
     }
-  }, [searchParams, setAuth]);
+  }, [searchParams, setAuth, t]);
 
   useEffect(() => {
     handleCallback();
   }, [handleCallback]);
 
-  return loading ? <LoginSpinner /> : null;
+  return loading ? <LoginSpinner text={t("loading")} /> : null;
 };
 
 export default LoginCallbackPage;

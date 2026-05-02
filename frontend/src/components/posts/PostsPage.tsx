@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -31,6 +32,7 @@ export function PostsPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
+  const t = useTranslations("posts");
   const { data, isLoading, error } = usePosts(page, limit);
 
   const posts = data?.posts || [];
@@ -39,28 +41,28 @@ export function PostsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Posts</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
       </div>
 
       <Card>
         <CardHeader className="flex-row items-center gap-2">
           <FileTextIcon className="size-4" />
-          <CardTitle className="text-base">All Posts</CardTitle>
+          <CardTitle className="text-base">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
               <Loader2Icon className="size-5 animate-spin" />
-              <p className="text-sm text-muted-foreground">Loading posts...</p>
+              <p className="text-sm text-muted-foreground">{t("loading")}</p>
             </div>
           ) : error ? (
             <Alert variant="destructive">
               <TriangleAlertIcon />
-              <AlertDescription>Error loading posts</AlertDescription>
+              <AlertDescription>{t("error")}</AlertDescription>
             </Alert>
           ) : posts.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              No posts yet
+              {t("empty")}
             </p>
           ) : (
             <>
@@ -93,10 +95,10 @@ export function PostsPage() {
                     disabled={page === 1}
                   >
                     <ChevronLeftIcon className="mr-1 size-4" />
-                    Previous
+                    {t("pagination.prev")}
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {page} of {pagination.total_pages}
+                    {page} / {pagination.total_pages}
                   </span>
                   <Button
                     variant="outline"
@@ -106,7 +108,7 @@ export function PostsPage() {
                     }
                     disabled={page === pagination.total_pages}
                   >
-                    Next
+                    {t("pagination.next")}
                     <ChevronRightIcon className="ml-1 size-4" />
                   </Button>
                 </div>

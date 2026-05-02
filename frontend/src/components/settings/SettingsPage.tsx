@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { authApi } from "@/lib/api/auth";
+import { AppSettingsCard } from "./AppSettingsCard";
 import { DeliveryChannelsCard } from "./DeliveryChannelsCard";
 
 async function changePassword(data: { currentPassword: string; newPassword: string }) {
@@ -26,6 +28,8 @@ async function changePassword(data: { currentPassword: string; newPassword: stri
 
 export function SettingsPage() {
   const router = useRouter();
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,7 +39,7 @@ export function SettingsPage() {
   const { mutate, isPending } = useMutation({
     mutationFn: changePassword,
     onSuccess: () => {
-      setSuccess("Password changed successfully");
+      setSuccess(t("passwordChangeSuccess"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -52,12 +56,12 @@ export function SettingsPage() {
     setSuccess("");
 
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match");
+      setError(t("passwordsNotMatch"));
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("passwordMinLength"));
       return;
     }
 
@@ -66,13 +70,15 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
+      <h1 className="mb-6 text-2xl font-semibold">{t("changePassword")}</h1>
+
+      <AppSettingsCard />
 
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
+          <CardTitle>{t("changePassword")}</CardTitle>
           <CardDescription>
-            Update your password to keep your account secure
+            {t("currentPasswordHelp")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -90,12 +96,13 @@ export function SettingsPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
+              <Label htmlFor="current-password">{t("currentPassword")}</Label>
               <Input
                 id="current-password"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder={t("currentPasswordPlaceholder")}
                 required
               />
             </div>
@@ -103,23 +110,25 @@ export function SettingsPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">{t("newPassword")}</Label>
               <Input
                 id="new-password"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                placeholder={t("newPasswordPlaceholder")}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Label htmlFor="confirm-password">{t("confirmPassword")}</Label>
               <Input
                 id="confirm-password"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder={t("confirmPasswordPlaceholder")}
                 required
               />
             </div>
@@ -130,16 +139,16 @@ export function SettingsPage() {
                 variant="outline"
                 onClick={() => router.push("/dashboard")}
               >
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? (
                   <span className="inline-flex items-center gap-2">
                     <Loader2Icon className="size-4 animate-spin" />
-                    Saving...
+                    {t("changingPassword")}
                   </span>
                 ) : (
-                  "Save Changes"
+                  tCommon("save")
                 )}
               </Button>
             </div>

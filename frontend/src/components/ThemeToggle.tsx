@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import {
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const t = useTranslations("theme");
 
   const handleSelect = (mode: "light" | "dark" | "system") => {
     setTheme(mode);
@@ -37,8 +39,8 @@ export function ThemeToggle() {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Toggle theme"
-          title="Toggle theme"
+          aria-label={t("toggleTheme")}
+          title={t("toggleTheme")}
         >
           {getThemeIcon()}
         </Button>
@@ -50,15 +52,15 @@ export function ThemeToggle() {
         >
           <DropdownMenuRadioItem value="light">
             <SunIcon className="size-4" />
-            Light
+            {t("light")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark">
             <MoonIcon className="size-4" />
-            Dark
+            {t("dark")}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system">
             <MonitorIcon className="size-4" />
-            System
+            {t("system")}
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

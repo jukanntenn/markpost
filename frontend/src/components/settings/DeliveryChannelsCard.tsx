@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2Icon, PlusIcon, Trash2Icon, TriangleAlertIcon, PencilIcon } from "lucide-react";
@@ -75,6 +76,8 @@ async function deleteChannel(id: number): Promise<void> {
 
 export function DeliveryChannelsCard() {
   const queryClient = useQueryClient();
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
@@ -98,10 +101,10 @@ export function DeliveryChannelsCard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
       resetForm();
-      toast.success("Channel created successfully");
+      toast.success(t("deliveryChannelCreated"));
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to create channel");
+      toast.error(err.message || t("deliveryChannelCreateFailed"));
     },
   });
 
@@ -111,10 +114,10 @@ export function DeliveryChannelsCard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
       resetForm();
-      toast.success("Channel updated successfully");
+      toast.success(t("deliveryChannelUpdated"));
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to update channel");
+      toast.error(err.message || t("deliveryChannelUpdateFailed"));
     },
   });
 
@@ -123,10 +126,10 @@ export function DeliveryChannelsCard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
       setDeleteConfirmId(null);
-      toast.success("Channel deleted successfully");
+      toast.success(t("deliveryChannelDeleted"));
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to delete channel");
+      toast.error(err.message || t("deliveryChannelDeleteFailed"));
     },
   });
 
@@ -175,9 +178,9 @@ export function DeliveryChannelsCard() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Delivery Channels</CardTitle>
+            <CardTitle>{t("deliveryChannels")}</CardTitle>
             <CardDescription>
-              Manage your notification delivery channels
+              {t("deliveryChannelsList")}
             </CardDescription>
           </div>
           {!showForm && (
@@ -189,7 +192,7 @@ export function DeliveryChannelsCard() {
               }}
             >
               <PlusIcon className="mr-1 size-4" />
-              Add Channel
+              {t("deliveryChannelAdd")}
             </Button>
           )}
         </div>
@@ -198,18 +201,18 @@ export function DeliveryChannelsCard() {
         {isLoading ? (
           <div className="flex items-center justify-center gap-2 py-4">
             <Loader2Icon className="size-4 animate-spin" />
-            <span className="text-sm text-muted-foreground">Loading channels...</span>
+            <span className="text-sm text-muted-foreground">{t("deliveryChannelsLoading")}</span>
           </div>
         ) : error ? (
           <Alert variant="destructive">
             <TriangleAlertIcon />
-            <AlertDescription>Error loading channels</AlertDescription>
+            <AlertDescription>{t("deliveryChannelsLoadFailed")}</AlertDescription>
           </Alert>
         ) : (
           <>
             {channels && channels.length === 0 && !showForm && (
               <p className="py-4 text-center text-sm text-muted-foreground">
-                No delivery channels configured. Add one to get started.
+                {t("deliveryChannelsEmpty")}
               </p>
             )}
 
@@ -232,7 +235,7 @@ export function DeliveryChannelsCard() {
                         }
                       />
                       <div>
-                        <p className="text-sm font-medium">{channel.name}</p>
+                        <p className="text-sm font-medium">{channel.name || t("deliveryChannelUnnamed")}</p>
                         <p className="text-xs text-muted-foreground">
                           {channel.kind} · {channel.webhook_url.slice(0, 40)}...
                         </p>
@@ -257,7 +260,7 @@ export function DeliveryChannelsCard() {
                             {deleteMutation.isPending ? (
                               <Loader2Icon className="size-4 animate-spin" />
                             ) : (
-                              "Confirm"
+                              tCommon("confirm")
                             )}
                           </Button>
                           <Button
@@ -265,7 +268,7 @@ export function DeliveryChannelsCard() {
                             size="sm"
                             onClick={() => setDeleteConfirmId(null)}
                           >
-                            Cancel
+                            {tCommon("cancel")}
                           </Button>
                         </div>
                       ) : (
@@ -288,36 +291,36 @@ export function DeliveryChannelsCard() {
                 <Separator />
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor="channel-name">Channel Name</Label>
+                    <Label htmlFor="channel-name">{t("deliveryChannelName")}</Label>
                     <Input
                       id="channel-name"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
-                      placeholder="My Feishu Channel"
+                      placeholder={t("deliveryChannelNamePlaceholder")}
                       required
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="channel-webhook">Feishu Webhook URL</Label>
+                    <Label htmlFor="channel-webhook">{t("deliveryChannelWebhookURL")}</Label>
                     <Input
                       id="channel-webhook"
                       value={formWebhookUrl}
                       onChange={(e) => setFormWebhookUrl(e.target.value)}
-                      placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/..."
+                      placeholder={t("deliveryChannelWebhookPlaceholder")}
                       required
                       disabled={isSubmitting}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="channel-keywords">Keywords (optional)</Label>
+                    <Label htmlFor="channel-keywords">{t("deliveryChannelKeywords")}</Label>
                     <Input
                       id="channel-keywords"
                       value={formKeywords}
                       onChange={(e) => setFormKeywords(e.target.value)}
-                      placeholder="Comma-separated keywords"
+                      placeholder={t("deliveryChannelKeywordsPlaceholder")}
                       disabled={isSubmitting}
                     />
                   </div>
@@ -327,12 +330,12 @@ export function DeliveryChannelsCard() {
                       {isSubmitting ? (
                         <span className="inline-flex items-center gap-2">
                           <Loader2Icon className="size-4 animate-spin" />
-                          Saving...
+                          {t("deliveryChannelSaving")}
                         </span>
                       ) : editingId ? (
-                        "Update Channel"
+                        t("deliveryChannelSave")
                       ) : (
-                        "Create Channel"
+                        t("deliveryChannelCreate")
                       )}
                     </Button>
                     <Button
@@ -341,7 +344,7 @@ export function DeliveryChannelsCard() {
                       onClick={resetForm}
                       disabled={isSubmitting}
                     >
-                      Cancel
+                      {t("deliveryChannelCancel")}
                     </Button>
                   </div>
                 </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2Icon, TriangleAlertIcon, UserPlusIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -28,6 +29,8 @@ interface UsersResponse {
 }
 
 export function AdminUsersPage() {
+  const t = useTranslations("admin");
+
   const { data, isLoading, error } = useQuery<UsersResponse>({
     queryKey: ["admin", "users"],
     queryFn: () => request<UsersResponse>("/api/v1/admin/users"),
@@ -38,39 +41,39 @@ export function AdminUsersPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Users</h1>
+        <h1 className="text-2xl font-semibold">{t("users.title")}</h1>
         <Button>
           <UserPlusIcon className="mr-2 size-4" />
-          Add User
+          {t("users.addUser")}
         </Button>
       </div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
           <Loader2Icon className="size-5 animate-spin" />
-          <p className="text-sm text-muted-foreground">Loading users...</p>
+          <p className="text-sm text-muted-foreground">{t("loading")}</p>
         </div>
       ) : error ? (
         <Alert variant="destructive">
           <TriangleAlertIcon />
-          <AlertDescription>Error loading users</AlertDescription>
+          <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
       ) : (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Created At</TableHead>
+                <TableHead>{t("id")}</TableHead>
+                <TableHead>{t("username")}</TableHead>
+                <TableHead>{t("role")}</TableHead>
+                <TableHead>{t("createdAt")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    No users found
+                    {t("noUsers")}
                   </TableCell>
                 </TableRow>
               ) : (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   BookIcon,
   CopyIcon,
@@ -43,6 +44,11 @@ export function DashboardPage() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const t = useTranslations("dashboard");
+  const tPostKey = useTranslations("dashboard.postKey");
+  const tRecentPosts = useTranslations("dashboard.recentPosts");
+  const tDocs = useTranslations("dashboard.documentation");
+
   const { data: postKeyData, isLoading: keyLoading, error: keyError } = usePostKey();
   const { data: postsData, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = usePosts(1, 10);
 
@@ -70,7 +76,7 @@ export function DashboardPage() {
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div className="flex items-center gap-2">
                 <KeyIcon className="size-4" />
-                <CardTitle className="text-base">Post Key</CardTitle>
+                <CardTitle className="text-base">{tPostKey("title")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -78,14 +84,14 @@ export function DashboardPage() {
                 <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/40 p-6 text-center">
                   <Loader2Icon className="size-5 animate-spin" />
                   <p className="text-sm text-muted-foreground">
-                    Loading post key...
+                    {tPostKey("loadingKey")}
                   </p>
                 </div>
               ) : keyError ? (
                 <Alert variant="destructive">
                   <TriangleAlertIcon />
                   <AlertDescription>
-                    Error loading post key
+                    {tPostKey("errorLoadingKey")}
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -95,10 +101,10 @@ export function DashboardPage() {
                       {showKey ? postKey : "•".repeat(postKey.length)}
                     </div>
                     {copySuccess && (
-                      <Badge variant="secondary">Copied!</Badge>
+                      <Badge variant="secondary">{tPostKey("copied")}</Badge>
                     )}
                     <div className="text-xs text-muted-foreground">
-                      Created at: {formatToLocalTime(createdAt)}
+                      {tPostKey("createdAt")}: {formatToLocalTime(createdAt)}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
@@ -107,7 +113,7 @@ export function DashboardPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setShowKey(!showKey)}
-                      title={showKey ? "Hide key" : "Show key"}
+                      title={showKey ? tPostKey("hideKey") : tPostKey("showKey")}
                     >
                       {showKey ? (
                         <EyeOffIcon className="size-4" />
@@ -120,7 +126,7 @@ export function DashboardPage() {
                       variant="ghost"
                       size="icon"
                       onClick={handleCopyKey}
-                      title="Copy key"
+                      title={tPostKey("copyKey")}
                     >
                       <CopyIcon className="size-4" />
                     </Button>
@@ -129,7 +135,7 @@ export function DashboardPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setShowCreateModal(true)}
-                      title="Create test post"
+                      title={tPostKey("createTestPost")}
                     >
                       <FilePlusIcon className="size-4" />
                     </Button>
@@ -144,22 +150,22 @@ export function DashboardPage() {
               <div className="flex items-center gap-2">
                 <BookIcon className="size-4" />
                 <CardTitle className="text-base">
-                  Documentation
+                  {tDocs("title")}
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Check out the{" "}
+                {tDocs("content")}{" "}
                 <a
                   href="https://github.com/jukanntenn/markpost?tab=readme-ov-file#apis"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-foreground underline underline-offset-4"
                 >
-                  API documentation
+                  {tDocs("apiLink")}
                 </a>{" "}
-                for more information.
+                {tDocs("content2")}
               </p>
             </CardContent>
           </Card>
@@ -169,7 +175,7 @@ export function DashboardPage() {
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div className="flex items-center gap-2">
               <FileTextIcon className="size-4" />
-              <CardTitle className="text-base">Recent Posts</CardTitle>
+              <CardTitle className="text-base">{tRecentPosts("title")}</CardTitle>
             </div>
             <Button
               type="button"
@@ -177,7 +183,7 @@ export function DashboardPage() {
               className="h-auto p-0"
               asChild
             >
-              <Link href="/posts">View all</Link>
+              <Link href="/posts">{tRecentPosts("viewAll")}</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -185,17 +191,17 @@ export function DashboardPage() {
               <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
                 <Loader2Icon className="size-5 animate-spin" />
                 <p className="text-sm text-muted-foreground">
-                  Loading posts...
+                  {tRecentPosts("loading")}
                 </p>
               </div>
             ) : postsError ? (
               <Alert variant="destructive">
                 <TriangleAlertIcon />
-                <AlertDescription>Error loading posts</AlertDescription>
+                <AlertDescription>{tRecentPosts("error")}</AlertDescription>
               </Alert>
             ) : recentPosts.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No posts yet
+                {tRecentPosts("empty")}
               </p>
             ) : (
               <ul className="-mx-2 divide-y">

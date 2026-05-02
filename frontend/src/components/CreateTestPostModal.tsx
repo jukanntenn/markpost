@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
@@ -43,7 +44,6 @@ async function createTestPost(postKey: string, data: CreateTestPostRequest): Pro
       const error = JSON.parse(text);
       message = error.message || message;
     } catch {
-      // text wasn't valid JSON, use default message
     }
     throw new Error(message);
   }
@@ -52,6 +52,7 @@ async function createTestPost(postKey: string, data: CreateTestPostRequest): Pro
 }
 
 function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPostModalProps) {
+  const t = useTranslations("createTestPost");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>("");
@@ -60,8 +61,8 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   const { mutate, isPending, reset } = useMutation({
     mutationFn: (data: CreateTestPostRequest) => createTestPost(postKey, data),
     onSuccess: () => {
-      toast.success("Success", {
-        description: "Post created successfully",
+      toast.success(t("successHeader"), {
+        description: t("successBody"),
       });
       onSuccess();
       reset();
@@ -85,7 +86,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!body.trim()) {
-      setError("Body cannot be empty");
+      setError(t("errorEmptyBody"));
       return;
     }
     mutate({ title: title.trim(), body });
@@ -96,9 +97,9 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>Create Test Post</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription className="sr-only">
-              Create a test post
+              {t("title")}
             </DialogDescription>
           </DialogHeader>
 
@@ -110,25 +111,25 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="test-post-title">Title</Label>
+            <Label htmlFor="test-post-title">{t("titleLabel")}</Label>
             <Input
               id="test-post-title"
               ref={titleRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter post title"
+              placeholder={t("titlePlaceholder")}
               disabled={isPending}
               autoComplete="off"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="test-post-body">Body</Label>
+            <Label htmlFor="test-post-body">{t("bodyLabel")}</Label>
             <Textarea
               id="test-post-body"
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Enter post body"
+              placeholder={t("bodyPlaceholder")}
               disabled={isPending}
               rows={8}
             />
@@ -136,16 +137,16 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onHide} disabled={isPending}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button type="submit" disabled={isPending || !body.trim()}>
               {isPending ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2Icon className="size-4 animate-spin" />
-                  Creating...
+                  {t("creating")}
                 </span>
               ) : (
-                "Create"
+                t("create")
               )}
             </Button>
           </DialogFooter>

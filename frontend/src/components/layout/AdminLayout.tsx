@@ -2,17 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { UsersIcon, FileTextIcon, RadioIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const adminNavItems = [
-  { href: "/admin/users", label: "Users", icon: UsersIcon },
-  { href: "/admin/posts", label: "Posts", icon: FileTextIcon },
-  { href: "/admin/channels", label: "Channels", icon: RadioIcon },
+interface AdminNavItem {
+  href: string;
+  labelKey: string;
+  icon: LucideIcon;
+}
+
+const adminNavItems: AdminNavItem[] = [
+  { href: "/admin/users", labelKey: "nav.users", icon: UsersIcon },
+  { href: "/admin/posts", labelKey: "nav.posts", icon: FileTextIcon },
+  { href: "/admin/channels", labelKey: "nav.channels", icon: RadioIcon },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations("admin");
 
   return (
     <div className="flex gap-6">
@@ -33,7 +42,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <Icon className="size-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}

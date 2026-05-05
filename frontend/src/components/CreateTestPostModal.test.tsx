@@ -2,13 +2,15 @@ import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
+import en from "../i18n/locales/en.json";
 import CreateTestPostModal from "./CreateTestPostModal";
 import { ThemeProvider } from "../components/theme-provider";
 import { setMockAuth, createWrapper } from "../test/utils";
 import { server } from "../mocks/server";
 import { http, HttpResponse } from "msw";
 
-vi.mock("sonner", () => ({
+vi.mock("@/stores/toast", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -18,7 +20,11 @@ vi.mock("sonner", () => ({
 
 function renderWithProviders(ui: React.ReactElement) {
   const wrapper = createWrapper();
-  return render(<ThemeProvider>{wrapper({ children: ui })}</ThemeProvider>);
+  return render(
+    <NextIntlClientProvider locale="en" messages={en}>
+      <ThemeProvider>{wrapper({ children: ui })}</ThemeProvider>
+    </NextIntlClientProvider>
+  );
 }
 
 const mockOnHide = vi.fn();
@@ -100,7 +106,7 @@ describe("CreateTestPostModal", () => {
       />
     );
 
-    const bodyTextarea = screen.getByPlaceholderText(/body/i);
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
     await user.type(bodyTextarea, "Test content");
 
     const createButton = screen.getByRole("button", { name: /create/i });
@@ -119,7 +125,7 @@ describe("CreateTestPostModal", () => {
     );
 
     const titleInput = screen.getByPlaceholderText(/title/i);
-    const bodyTextarea = screen.getByPlaceholderText(/body/i);
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
 
     await user.type(titleInput, "Test Title");
     await user.type(bodyTextarea, "Test content");
@@ -166,7 +172,7 @@ describe("CreateTestPostModal", () => {
       />
     );
 
-    const bodyTextarea = screen.getByPlaceholderText(/body/i);
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
     await user.type(bodyTextarea, "Test content");
 
     const createButton = screen.getByRole("button", { name: /create/i });

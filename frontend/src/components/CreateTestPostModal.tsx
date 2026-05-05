@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/stores/toast";
 import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -89,7 +89,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       setError(t("errorEmptyBody"));
       return;
     }
-    mutate({ title: title.trim(), body });
+    mutate({ title: title.trim() || "Untitled", body });
   };
 
   return (

@@ -7,14 +7,7 @@ import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Menu } from "@/components/ui/menu";
 import {
   ChevronDownIcon,
   LogOutIcon,
@@ -60,38 +53,42 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {isAuthenticated && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="ghost" className="gap-2">
-                    <UserIcon className="size-4" />
-                    <span className="hidden sm:inline">
-                      {user?.username || tCommon("user")}
-                    </span>
-                    <ChevronDownIcon className="size-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
+              <Menu.Root>
+                <Menu.Trigger
+                  render={
+                    <Button type="button" variant="ghost" className="gap-2" />
+                  }
+                >
+                  <UserIcon className="size-4" />
+                  <span className="hidden sm:inline">
                     {user?.username || tCommon("user")}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                  </span>
+                  <ChevronDownIcon className="size-4 text-muted-foreground" />
+                </Menu.Trigger>
+                <Menu.Popup>
+                  <Menu.Group>
+                    <Menu.Label>
+                      {user?.username || tCommon("user")}
+                    </Menu.Label>
+                  </Menu.Group>
+                  <Menu.Separator />
                   {isAdmin && (
-                    <DropdownMenuItem onClick={() => router.push("/admin")}>
+                    <Menu.Item onClick={() => router.push("/admin")}>
                       <ShieldIcon className="size-4" />
                       {t("userMenu.admin")}
-                    </DropdownMenuItem>
+                    </Menu.Item>
                   )}
-                  <DropdownMenuItem onClick={() => router.push("/settings")}>
+                  <Menu.Item onClick={() => router.push("/settings")}>
                     <SettingsIcon className="size-4" />
                     {t("userMenu.settings")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem variant="destructive" onClick={handleLogout}>
+                  </Menu.Item>
+                  <Menu.Separator />
+                  <Menu.Item variant="destructive" onClick={handleLogout}>
                     <LogOutIcon className="size-4" />
                     {t("userMenu.logout")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </Menu.Item>
+                </Menu.Popup>
+              </Menu.Root>
             )}
           </div>
         </div>

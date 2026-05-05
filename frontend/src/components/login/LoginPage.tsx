@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { authApi } from "@/lib/api/auth";
-import { toast } from "sonner";
+import { toast } from "@/stores/toast";
 import { GithubIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";

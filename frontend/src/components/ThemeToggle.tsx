@@ -3,21 +3,15 @@
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Menu } from "@/components/ui/menu";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const t = useTranslations("theme");
 
-  const handleSelect = (mode: "light" | "dark" | "system") => {
-    setTheme(mode);
+  const handleSelect = (mode: string) => {
+    setTheme(mode as "light" | "dark" | "system");
   };
 
   const getThemeIcon = () => {
@@ -33,38 +27,37 @@ export function ThemeToggle() {
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={t("toggleTheme")}
-          title={t("toggleTheme")}
-        >
-          {getThemeIcon()}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup
-          value={theme}
-          onValueChange={(v) => handleSelect(v as "light" | "dark" | "system")}
-        >
-          <DropdownMenuRadioItem value="light">
+    <Menu.Root>
+      <Menu.Trigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={t("toggleTheme")}
+            title={t("toggleTheme")}
+          />
+        }
+      >
+        {getThemeIcon()}
+      </Menu.Trigger>
+      <Menu.Popup>
+        <Menu.RadioGroup value={theme} onValueChange={handleSelect}>
+          <Menu.RadioItem value="light">
             <SunIcon className="size-4" />
             {t("light")}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">
+          </Menu.RadioItem>
+          <Menu.RadioItem value="dark">
             <MoonIcon className="size-4" />
             {t("dark")}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">
+          </Menu.RadioItem>
+          <Menu.RadioItem value="system">
             <MonitorIcon className="size-4" />
             {t("system")}
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </Menu.RadioItem>
+        </Menu.RadioGroup>
+      </Menu.Popup>
+    </Menu.Root>
   );
 }
 

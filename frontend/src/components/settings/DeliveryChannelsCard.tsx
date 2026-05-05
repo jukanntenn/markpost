@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { toast } from "@/stores/toast";
 import { Loader2Icon, PlusIcon, Trash2Icon, TriangleAlertIcon, PencilIcon } from "lucide-react";
 
 import { request } from "@/lib/api";

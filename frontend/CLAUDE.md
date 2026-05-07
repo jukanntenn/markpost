@@ -4,11 +4,11 @@
 
 MUST FOLLOW THESE RULES, NO EXCEPTIONS
 
-- Stack: React, TypeScript, Vite, React Router, Axios, i18next, next-themes, shadcn/ui, Tailwind CSS v4, Radix primitives
+- Stack: React, TypeScript, Next.js, Zustand, TanStack Query, next-intl, next-themes, shadcn/ui, Tailwind CSS v4, @base-ui/react
 - Patterns: ALWAYS use Function components + Hooks, NEVER use Class components
 - Types: Keep types alongside code; prefer `interface` for object shapes
 - Styling: Use shadcn/ui primitives + Tailwind utilities; prefer design tokens (`bg-background`, `text-foreground`, `border-border`)
-- CSS: Global styles and theme tokens live in `src/index.css`; avoid adding additional CSS files unless required
+- CSS: Global styles and theme tokens live in `src/app/globals.css`; avoid adding additional CSS files unless required
 - Accessibility: Ensure focus-visible states, labels for form fields, and keyboard navigation for menus/dialogs
 - Responsive: Implement responsive layouts for mobile/tablet/desktop
 
@@ -20,19 +20,23 @@ EXAMPLES are there to illustrate the structure, not to be implemented as-is.
 
 ```text
 src/
+├── app/                    # Next.js App Router pages ((auth), (dashboard))
 ├── components/             # Reusable UI + feature components
 │   ├── ui/                 # shadcn/ui primitives
-│   └── login/              # Login page-specific components
-├── contexts/               # React context-based state
+│   ├── auth/               # Auth-related components
+│   ├── layout/             # Layout components
+│   ├── login/              # Login page-specific components
+│   ├── dashboard/          # Dashboard components
+│   ├── admin/              # Admin components
+│   └── posts/              # Post-related components
 ├── hooks/                  # Custom React hooks
-├── i18n/                   # Frontend i18n configuration
-├── lib/                    # Shared library helpers (e.g. cn)
+├── i18n/                   # next-intl configuration and locale files (en, zh)
+├── lib/                    # Shared library helpers (e.g. cn, api fetchers)
 ├── mocks/                  # MSW handlers and test mocks
-├── pages/                  # Route-level pages
-├── utils/                  # Utility helpers (api, storage, etc.)
-├── App.tsx                 # Root React component
-├── index.css               # Tailwind v4 + shadcn theme tokens
-└── main.tsx                # Frontend entry file
+├── stores/                 # Zustand state management
+├── test/                   # Test setup and utilities
+├── types/                  # TypeScript type definitions
+└── utils/                  # Utility helpers (api, storage, etc.)
 ```
 
 ## Research & Documentation

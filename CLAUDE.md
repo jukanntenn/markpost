@@ -30,7 +30,7 @@ You are a senior pair-programming partner specializing in React/TypeScript front
 
 ## Technology Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, shadcn/ui
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react, shadcn/ui
 - **Backend**: Go 1.26, Gin, GORM, JWT, Swagger, Viper
 - **Database**: PostgreSQL, SQLite
 - **Testing**: Vitest, Playwright, MSW, Testing Library

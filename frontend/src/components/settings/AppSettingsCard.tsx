@@ -33,7 +33,7 @@ export function AppSettingsCard() {
             id="locale-select"
             value={locale}
             onChange={(e) => setLocale(e.target.value as typeof locale)}
-            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="h-10 rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground transition-[box-shadow] focus-visible:border-primary focus-visible:ring-ring focus-visible:ring-[3px] focus-visible:outline-none"
           >
             {availableLocales.map((l) => (
               <option key={l} value={l}>

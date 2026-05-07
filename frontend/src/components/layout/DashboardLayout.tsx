@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -26,6 +27,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = useAuthStore((state) => state.isAdmin());
   const logout = useAuthStore((state) => state.logout);
 
+  const [scrolled, setScrolled] = useState(false);
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 0);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleLogout = async () => {
     try {
       await authApi.logout();
@@ -38,8 +51,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
+      <header
+        className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur transition-[border-color] duration-150 ${scrolled ? "border-b" : ""}`}
+      >
+        <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
           <Button
             type="button"
             variant="ghost"
@@ -93,7 +108,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl px-4 py-6">
+      <main ref={mainRef} className="mx-auto w-full max-w-[1200px] px-6 py-6 md:py-8 lg:py-12">
         {children}
       </main>
     </>

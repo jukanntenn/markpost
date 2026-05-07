@@ -25,7 +25,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex gap-6">
-      <aside className="w-48 shrink-0">
+      <aside className="w-64 shrink-0">
         <nav className="space-y-1">
           {adminNavItems.map((item) => {
             const Icon = item.icon;
@@ -37,7 +37,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary text-primary-foreground"
+                    ? "border-l-[3px] border-l-primary bg-muted text-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >

@@ -70,8 +70,8 @@ export function DashboardPage() {
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-2">
-        <div className="flex flex-col gap-4">
+      <div className="grid gap-4 xl:grid-cols-2 xl:gap-6">
+        <div className="flex flex-col gap-4 xl:gap-6">
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div className="flex items-center gap-2">
@@ -101,7 +101,7 @@ export function DashboardPage() {
                       {showKey ? postKey : "•".repeat(postKey.length)}
                     </div>
                     {copySuccess && (
-                      <Badge variant="secondary">{tPostKey("copied")}</Badge>
+                      <Badge variant="accent">{tPostKey("copied")}</Badge>
                     )}
                     <div className="text-xs text-muted-foreground">
                       {tPostKey("createdAt")}: {formatToLocalTime(createdAt)}
@@ -161,7 +161,7 @@ export function DashboardPage() {
                   href="https://github.com/jukanntenn/markpost?tab=readme-ov-file#apis"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-foreground underline underline-offset-4"
+                  className="text-primary underline underline-offset-4"
                 >
                   {tDocs("apiLink")}
                 </a>{" "}
@@ -212,7 +212,7 @@ export function DashboardPage() {
                         href={buildPostUrl(p.qid)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate text-sm font-medium underline-offset-4 hover:underline"
+                        className="truncate text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
                         {p.title}
                       </a>

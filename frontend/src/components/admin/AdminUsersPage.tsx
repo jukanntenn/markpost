@@ -40,8 +40,8 @@ export function AdminUsersPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("users.title")}</h1>
+      <div className="mb-6 flex items-center justify-between md:mb-8 lg:mb-12">
+        <h1 className="font-display text-[28px] font-bold tracking-tight">{t("users.title")}</h1>
         <Button>
           <UserPlusIcon className="mr-2 size-4" />
           {t("users.addUser")}
@@ -59,7 +59,7 @@ export function AdminUsersPage() {
           <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

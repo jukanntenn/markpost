@@ -41,7 +41,7 @@ export function AdminChannelsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">{t("channels.title")}</h1>
+      <h1 className="mb-6 font-display text-[28px] font-bold tracking-tight md:mb-8 lg:mb-12">{t("channels.title")}</h1>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
@@ -54,7 +54,7 @@ export function AdminChannelsPage() {
           <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

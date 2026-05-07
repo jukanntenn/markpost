@@ -46,8 +46,8 @@ export function AdminPostsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("posts.title")}</h1>
+      <div className="mb-6 flex items-center justify-between md:mb-8 lg:mb-12">
+        <h1 className="font-display text-[28px] font-bold tracking-tight">{t("posts.title")}</h1>
         <div className="relative w-64">
           <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -69,7 +69,7 @@ export function AdminPostsPage() {
           <AlertDescription>{t("error")}</AlertDescription>
         </Alert>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

@@ -40,8 +40,8 @@ export function PostsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+      <div className="mb-6 flex items-center justify-between md:mb-8 lg:mb-12">
+        <h1 className="font-display text-[28px] font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       <Card>
@@ -74,7 +74,7 @@ export function PostsPage() {
                         href={buildPostUrl(p.qid)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate text-sm font-medium underline-offset-4 hover:underline"
+                        className="truncate text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
                         {p.title}
                       </a>

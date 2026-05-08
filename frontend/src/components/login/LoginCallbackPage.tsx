@@ -29,7 +29,6 @@ const LoginCallbackPage: React.FC = () => {
     if (processing.current) return;
     processing.current = true;
 
-    let message = "";
     try {
       const code = searchParams.get("code");
       const state = searchParams.get("state");
@@ -41,15 +40,11 @@ const LoginCallbackPage: React.FC = () => {
       const data = await authApi.loginWithGitHub(code, state);
 
       setAuth(data.token, data.user, data.refresh_token);
-    } catch (err: unknown) {
-      message = err instanceof Error ? err.message : t("unknownError");
-    } finally {
-      if (window.opener && !window.opener.closed) {
-        window.opener.postMessage({ type: "oauth_result", message }, "*");
-      }
+      window.close();
+    } catch {
       setLoading(false);
     }
-  }, [searchParams, setAuth, t]);
+  }, [searchParams, setAuth]);
 
   useEffect(() => {
     handleCallback();

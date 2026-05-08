@@ -46,14 +46,9 @@ type AuthService interface {
 // LoginGitHub returns a handler for GitHub OAuth login.
 func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var query struct {
-			State string `form:"state" binding:"required"`
-		}
-		if !bindQuery(c, &query) {
-			return
-		}
 		var body struct {
-			Code string `json:"code" binding:"required"`
+			Code  string `json:"code" binding:"required"`
+			State string `json:"state" binding:"required"`
 		}
 		if !bindJSON(c, &body) {
 			return
@@ -204,7 +199,7 @@ func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) 
 			"username":   u.Username,
 			"name":       u.Name,
 			"avatar_url": u.AvatarURL,
-		"role":       u.Role,
+			"role":       u.Role,
 		},
 	})
 }

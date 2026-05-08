@@ -93,33 +93,25 @@ export function LoginPage() {
       }
 
       checkAuthWindowIntervalRef.current = setInterval(() => {
+        const stored = localStorage.getItem("markpost_auth");
+        if (stored) {
+          try {
+            const { state } = JSON.parse(stored);
+            if (state?.token) {
+              clearCheckAuthWindowInterval();
+              closeAuthWindow();
+              setAuth(state.token, state.user, state.refreshToken);
+              router.push("/dashboard");
+              setLoadingGitHub(false);
+              return;
+            }
+          } catch {}
+        }
         if (authWindowClosed()) {
           clearCheckAuthWindowInterval();
           setLoadingGitHub(false);
         }
       }, 500);
-
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.data?.type === "oauth_result") {
-          if (checkAuthWindowIntervalRef.current) {
-            clearCheckAuthWindowInterval();
-          }
-
-          if (event.data.message == "") {
-            setTimeout(() => {
-              router.push("/dashboard");
-            }, 500);
-          } else {
-            showErrorToast(t("loginFailed"), event.data.message);
-          }
-
-          closeAuthWindow();
-          window.removeEventListener("message", handleMessage);
-          setLoadingGitHub(false);
-        }
-      };
-
-      window.addEventListener("message", handleMessage);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t("unknownError");
       showErrorToast(t("loginFailed"), message);

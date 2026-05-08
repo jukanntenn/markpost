@@ -28,6 +28,7 @@ Thumbs.db
 *.test
 *.out
 backend/server
+backend/tmp/
 # Coverage
 coverage.*
 *.coverprofile

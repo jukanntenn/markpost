@@ -13,6 +13,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 
 IMAGE_NAME = "markpost"
 IMAGE_NAME_WEB = "markpost-web"
@@ -41,12 +42,32 @@ def setup_logging():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build multi-architecture Docker images")
-    parser.add_argument("--push", action="store_true", help="Push images to registry (default: load locally)")
-    parser.add_argument("--registry", default=DEFAULT_REGISTRY, help=f"Container registry (default: {DEFAULT_REGISTRY})")
-    parser.add_argument("--tags", nargs="+", action="extend", default=[], help="Additional image tags (dev tag is always applied)")
-    parser.add_argument("--backend-only", action="store_true", help="Build only the backend image")
-    parser.add_argument("--frontend-only", action="store_true", help="Build only the frontend image")
+    parser = argparse.ArgumentParser(
+        description="Build multi-architecture Docker images"
+    )
+    parser.add_argument(
+        "--push",
+        action="store_true",
+        help="Push images to registry (default: load locally)",
+    )
+    parser.add_argument(
+        "--registry",
+        default=DEFAULT_REGISTRY,
+        help=f"Container registry (default: {DEFAULT_REGISTRY})",
+    )
+    parser.add_argument(
+        "--tags",
+        nargs="+",
+        action="extend",
+        default=[],
+        help="Additional image tags (dev tag is always applied)",
+    )
+    parser.add_argument(
+        "--backend-only", action="store_true", help="Build only the backend image"
+    )
+    parser.add_argument(
+        "--frontend-only", action="store_true", help="Build only the frontend image"
+    )
     return parser.parse_args()
 
 
@@ -74,21 +95,44 @@ def ensure_qemu(foreign_platforms):
         return
 
     arch_list = ", ".join(missing_archs)
-    logger.info("QEMU binfmt not registered for: %s. Registering via tonistiigi/binfmt...", arch_list)
+    logger.info(
+        "QEMU binfmt not registered for: %s. Registering via tonistiigi/binfmt...",
+        arch_list,
+    )
 
     try:
         subprocess.run(
-            ["docker", "run", "--rm", "--privileged", "tonistiigi/binfmt", "--install", arch_list],
+            [
+                "docker",
+                "run",
+                "--rm",
+                "--privileged",
+                "tonistiigi/binfmt",
+                "--install",
+                arch_list,
+            ],
             check=True,
         )
     except subprocess.CalledProcessError as e:
         logger.error("Failed to register QEMU binfmt (exit code %d).", e.returncode)
-        logger.error("Try running manually: docker run --rm --privileged tonistiigi/binfmt --install %s", arch_list)
+        logger.error(
+            "Try running manually: docker run --rm --privileged tonistiigi/binfmt --install %s",
+            arch_list,
+        )
         sys.exit(1)
 
     for arch in missing_archs:
-        if not is_qemu_registered(arch):
-            logger.error("QEMU registration for %s did not take effect.", arch)
+        registered = False
+        for attempt in range(5):
+            if is_qemu_registered(arch):
+                registered = True
+                break
+            time.sleep(1)
+        if not registered:
+            logger.error(
+                "QEMU registration for %s did not take effect after retries.",
+                arch,
+            )
             sys.exit(1)
 
     logger.info("QEMU binfmt registered successfully for: %s", arch_list)
@@ -106,7 +150,9 @@ def parse_builder_info(inspect_output):
         elif stripped.startswith("Driver:"):
             driver = stripped.split(":", 1)[1].strip()
         elif stripped.startswith("Platforms:"):
-            builder_platforms = [p.strip() for p in stripped.split(":", 1)[1].split(",")]
+            builder_platforms = [
+                p.strip() for p in stripped.split(":", 1)[1].split(",")
+            ]
 
     return builder_name, driver, builder_platforms
 
@@ -120,7 +166,9 @@ def check_buildx(target_platforms):
             stderr=subprocess.DEVNULL,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.error("Docker buildx is not available. Ensure Docker is installed and buildx plugin is enabled.")
+        logger.error(
+            "Docker buildx is not available. Ensure Docker is installed and buildx plugin is enabled."
+        )
         sys.exit(1)
 
     result = subprocess.run(
@@ -129,7 +177,9 @@ def check_buildx(target_platforms):
         text=True,
     )
     if result.returncode != 0:
-        logger.error("Failed to inspect active buildx builder: %s", result.stderr.strip())
+        logger.error(
+            "Failed to inspect active buildx builder: %s", result.stderr.strip()
+        )
         sys.exit(1)
 
     builder_name, driver, builder_platforms = parse_builder_info(result.stdout)
@@ -149,7 +199,9 @@ def check_buildx(target_platforms):
                 text=True,
             )
             if bootstrap.returncode != 0:
-                logger.error("Failed to bootstrap builder: %s", bootstrap.stderr.strip())
+                logger.error(
+                    "Failed to bootstrap builder: %s", bootstrap.stderr.strip()
+                )
                 sys.exit(1)
 
             result = subprocess.run(

@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"markpost/internal/domain/post"
-	"markpost/internal/domain/user"
-	postsvc "markpost/internal/service/post"
+	"markpost/internal/service"
+	"markpost/internal/testutil"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -26,6 +25,19 @@ func newMockPostService() *mockPostService {
 	return &mockPostService{
 		posts: make(map[string]*post.Post),
 	}
+}
+
+func newPostTestEngine() *gin.Engine {
+	return testutil.NewTestEngine(testutil.TestEngineConfig{
+		Validators: []testutil.ValidatorRegistration{
+			{Tag: "titlesize", Fn: func(fl validator.FieldLevel) bool {
+				return len(fl.Field().String()) <= 255
+			}},
+			{Tag: "bodysize", Fn: func(fl validator.FieldLevel) bool {
+				return len(fl.Field().String()) <= 100000
+			}},
+		},
+	})
 }
 
 func (m *mockPostService) CreatePost(_ context.Context, title, body string, userID int) (string, error) {
@@ -45,14 +57,14 @@ func (m *mockPostService) RenderPostHTML(_ context.Context, qid string) (string,
 	if p, ok := m.posts[qid]; ok {
 		return p.Title, "<h1>" + p.Title + "</h1><p>" + p.Body + "</p>", nil
 	}
-	return "", "", postsvc.NewServiceError(postsvc.ErrNotFound, "post not found")
+	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetPostMarkdown(_ context.Context, qid string) (string, string, error) {
 	if p, ok := m.posts[qid]; ok {
 		return p.Title, p.Body, nil
 	}
-	return "", "", postsvc.NewServiceError(postsvc.ErrNotFound, "post not found")
+	return "", "", service.NewServiceError(service.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) ([]post.Post, int64, error) {
@@ -65,29 +77,11 @@ func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) 
 	return result, int64(len(result)), nil
 }
 
-func setupPostTestRouter() *gin.Engine {
-	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	// Register validators for testing
-	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
-		_ = v.RegisterValidation("titlesize", func(fl validator.FieldLevel) bool {
-			return len(fl.Field().String()) <= 255
-		})
-		_ = v.RegisterValidation("bodysize", func(fl validator.FieldLevel) bool {
-			return len(fl.Field().String()) <= 100000
-		})
-	}
-	return r
-}
-
 func TestCreatePost_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupPostTestRouter()
+	router := newPostTestEngine()
 
-	router.POST("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser"})
-		c.Next()
-	}, CreatePost(mockSvc))
+	router.POST("/posts", withUser(1), CreatePost(mockSvc))
 
 	body := PostRequest{Title: "Test Title", Body: "Test Body"}
 	jsonBody, _ := json.Marshal(body)
@@ -114,12 +108,12 @@ func TestCreatePost_Success(t *testing.T) {
 
 func TestRenderPost_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupPostTestRouter()
+	router := newPostTestEngine()
 
 	// Create a post first
 	_, _ = mockSvc.CreatePost(context.Background(), "Test Title", "Test Body", 1)
 
-	router.GET("/posts/:id", RenderPost(mockSvc, nil))
+	router.GET("/posts/:id", RenderPost(mockSvc))
 
 	// Use format=raw to avoid HTML template rendering
 	req := httptest.NewRequest(http.MethodGet, "/posts/test-qid?format=raw", nil)
@@ -140,9 +134,9 @@ func TestRenderPost_Success(t *testing.T) {
 
 func TestRenderPost_NotFound(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupPostTestRouter()
+	router := newPostTestEngine()
 
-	router.GET("/posts/:id", RenderPost(mockSvc, nil))
+	router.GET("/posts/:id", RenderPost(mockSvc))
 
 	// Use format=raw to avoid i18n dependency in tests
 	req := httptest.NewRequest(http.MethodGet, "/posts/nonexistent?format=raw", nil)
@@ -157,15 +151,12 @@ func TestRenderPost_NotFound(t *testing.T) {
 
 func TestPostsList_Success(t *testing.T) {
 	mockSvc := newMockPostService()
-	router := setupPostTestRouter()
+	router := newPostTestEngine()
 
 	// Create a post first
 	_, _ = mockSvc.CreatePost(context.Background(), "Test Title", "Test Body", 1)
 
-	router.GET("/posts", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Email: "test@example.com", Username: "testuser"})
-		c.Next()
-	}, PostsList(mockSvc))
+	router.GET("/posts", withUser(1), PostsList(mockSvc))
 
 	req := httptest.NewRequest(http.MethodGet, "/posts", nil)
 	w := httptest.NewRecorder()

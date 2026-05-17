@@ -22,6 +22,21 @@ type Repository interface {
 	CountAll(ctx context.Context) (int64, error)
 }
 
+type CreateChannelParams struct {
+	Kind       string
+	Name       string
+	WebhookURL string
+	Keywords   string
+}
+
+type UpdateChannelParams struct {
+	Kind       string
+	Name       string
+	WebhookURL string
+	Keywords   string
+	Enabled    *bool
+}
+
 // Service provides delivery channel business logic.
 type Service struct {
 	repo Repository
@@ -66,19 +81,18 @@ func (s *Service) ListByUserID(ctx context.Context, userID int) ([]delivery.Chan
 }
 
 // Create creates a new delivery channel for a user.
-func (s *Service) Create(ctx context.Context, userID int, kind string, name string, webhookURL string, keywords string) (*delivery.Channel, error) {
-	if err := validateChannel(kind, webhookURL, name); err != nil {
+func (s *Service) Create(ctx context.Context, userID int, params CreateChannelParams) (*delivery.Channel, error) {
+	if err := validateChannel(params.Kind, params.WebhookURL, params.Name); err != nil {
 		return nil, err
 	}
 
-	enabled := true
 	ch := &delivery.Channel{
 		UserID:     userID,
-		Kind:       delivery.ChannelKind(strings.ToLower(strings.TrimSpace(kind))),
-		Name:       strings.TrimSpace(name),
-		Enabled:    enabled,
-		WebhookURL: strings.TrimSpace(webhookURL),
-		Keywords:   strings.TrimSpace(keywords),
+		Kind:       delivery.ChannelKind(strings.ToLower(strings.TrimSpace(params.Kind))),
+		Name:       strings.TrimSpace(params.Name),
+		Enabled:    true,
+		WebhookURL: strings.TrimSpace(params.WebhookURL),
+		Keywords:   strings.TrimSpace(params.Keywords),
 	}
 
 	if err := s.repo.Create(ctx, ch); err != nil {
@@ -89,7 +103,7 @@ func (s *Service) Create(ctx context.Context, userID int, kind string, name stri
 }
 
 // Update updates an existing delivery channel.
-func (s *Service) Update(ctx context.Context, userID int, id int, kind string, name string, webhookURL string, keywords string, enabled *bool) (*delivery.Channel, error) {
+func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateChannelParams) (*delivery.Channel, error) {
 	ch, err := s.repo.GetByIDAndUserID(ctx, userID, id)
 	if err != nil {
 		if errors.Is(err, delivery.ErrNotFound) {
@@ -98,38 +112,20 @@ func (s *Service) Update(ctx context.Context, userID int, id int, kind string, n
 		return nil, service.NewServiceErrorWrap(service.ErrInternal, "get channel failed", err)
 	}
 
-	if kind != "" || name != "" || webhookURL != "" {
-		checkKind := kind
-		if checkKind == "" {
-			checkKind = string(ch.Kind)
-		}
-		checkName := name
-		if checkName == "" {
-			checkName = ch.Name
-		}
-		checkWebhookURL := webhookURL
-		if checkWebhookURL == "" {
-			checkWebhookURL = ch.WebhookURL
-		}
-		if err := validateChannel(checkKind, checkWebhookURL, checkName); err != nil {
-			return nil, err
-		}
+	if params.Kind != "" {
+		ch.Kind = delivery.ChannelKind(strings.ToLower(strings.TrimSpace(params.Kind)))
+	}
+	applyIfNonEmpty(&ch.Name, params.Name)
+	applyIfNonEmpty(&ch.WebhookURL, params.WebhookURL)
+	applyIfNonEmpty(&ch.Keywords, params.Keywords)
+	if params.Enabled != nil {
+		ch.Enabled = *params.Enabled
 	}
 
-	if kind != "" {
-		ch.Kind = delivery.ChannelKind(strings.ToLower(strings.TrimSpace(kind)))
-	}
-	if name != "" {
-		ch.Name = strings.TrimSpace(name)
-	}
-	if webhookURL != "" {
-		ch.WebhookURL = strings.TrimSpace(webhookURL)
-	}
-	if keywords != "" {
-		ch.Keywords = strings.TrimSpace(keywords)
-	}
-	if enabled != nil {
-		ch.Enabled = *enabled
+	if params.Kind != "" || params.Name != "" || params.WebhookURL != "" {
+		if err := validateChannel(string(ch.Kind), ch.WebhookURL, ch.Name); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.repo.Update(ctx, ch); err != nil {
@@ -166,4 +162,10 @@ func (s *Service) ListAll(ctx context.Context, offset, limit int) ([]delivery.Ch
 	}
 
 	return channels, total, nil
+}
+
+func applyIfNonEmpty(target *string, value string) {
+	if value != "" {
+		*target = strings.TrimSpace(value)
+	}
 }

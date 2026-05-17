@@ -45,16 +45,7 @@ func NewService(userRepo UserRepository, postRepo PostRepository, deliveryRepo D
 }
 
 // ListAllUsers retrieves all users with pagination.
-func (s *Service) ListAllUsers(ctx context.Context, page, limit int) ([]user.User, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	offset := (page - 1) * limit
-
+func (s *Service) ListAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error) {
 	users, err := s.userRepo.GetAll(ctx, offset, limit)
 	if err != nil {
 		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "get users failed", err)
@@ -69,16 +60,7 @@ func (s *Service) ListAllUsers(ctx context.Context, page, limit int) ([]user.Use
 }
 
 // ListAllPosts retrieves all posts with optional search and pagination.
-func (s *Service) ListAllPosts(ctx context.Context, search string, page, limit int) ([]post.Post, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	offset := (page - 1) * limit
-
+func (s *Service) ListAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error) {
 	posts, err := s.postRepo.ListAll(ctx, search, offset, limit)
 	if err != nil {
 		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "get posts failed", err)
@@ -93,16 +75,7 @@ func (s *Service) ListAllPosts(ctx context.Context, search string, page, limit i
 }
 
 // ListAllDeliveryChannels retrieves all delivery channels with pagination.
-func (s *Service) ListAllDeliveryChannels(ctx context.Context, page, limit int) ([]delivery.Channel, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	offset := (page - 1) * limit
-
+func (s *Service) ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error) {
 	channels, err := s.deliveryRepo.ListAll(ctx, offset, limit)
 	if err != nil {
 		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "get channels failed", err)

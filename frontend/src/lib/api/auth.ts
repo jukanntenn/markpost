@@ -1,5 +1,6 @@
 import { request } from "./base";
 import type { User } from "@/stores/auth";
+import type { PostKeyResponse } from "@/types/posts";
 
 export interface LoginResponse {
   token: string;
@@ -64,5 +65,5 @@ export const authApi = {
     }),
 
   queryPostKey: () =>
-    request<{ post_key: string; created_at: string }>("/api/v1/post_key"),
+    request<PostKeyResponse>("/api/v1/post_key"),
 };

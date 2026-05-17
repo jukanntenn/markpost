@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-import { request } from "@/lib/api";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { adminApi } from "@/lib/api";
+import { formatToLocalTime } from "@/lib/utils";
+import { QueryState } from "@/components/ui/query-state";
 import {
   Table,
   TableBody,
@@ -15,26 +15,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface Channel {
-  id: number;
-  name: string;
-  type: string;
-  enabled: boolean;
-  user_id: number;
-  webhook_url: string;
-  created_at: string;
-}
-
-interface ChannelsResponse {
-  channels: Channel[];
-}
-
 export function AdminChannelsPage() {
   const t = useTranslations("admin");
 
-  const { data, isLoading, error } = useQuery<ChannelsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin", "channels"],
-    queryFn: () => request<ChannelsResponse>("/api/v1/admin/channels"),
+    queryFn: () => adminApi.listChannels(),
   });
 
   const channels = data?.channels || [];
@@ -43,17 +29,7 @@ export function AdminChannelsPage() {
     <div>
       <h1 className="mb-6 font-display text-[28px] font-bold tracking-tight md:mb-8 lg:mb-12">{t("channels.title")}</h1>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-          <Loader2Icon className="size-5 animate-spin" />
-          <p className="text-sm text-muted-foreground">{t("loading")}</p>
-        </div>
-      ) : error ? (
-        <Alert variant="destructive">
-          <TriangleAlertIcon />
-          <AlertDescription>{t("error")}</AlertDescription>
-        </Alert>
-      ) : (
+      <QueryState isLoading={isLoading} error={error} loadingText={t("loading")} errorText={t("error")}>
         <div className="rounded-lg border">
           <Table>
             <TableHeader>
@@ -77,16 +53,16 @@ export function AdminChannelsPage() {
                   <TableRow key={channel.id}>
                     <TableCell>{channel.id}</TableCell>
                     <TableCell>{channel.name}</TableCell>
-                    <TableCell>{channel.type}</TableCell>
+                    <TableCell>{channel.kind}</TableCell>
                     <TableCell>{channel.enabled ? t("channels.enabled") : "-"}</TableCell>
-                    <TableCell>{new Date(channel.created_at).toLocaleString()}</TableCell>
+                    <TableCell>{formatToLocalTime(channel.created_at)}</TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
-      )}
+      </QueryState>
     </div>
   );
 }

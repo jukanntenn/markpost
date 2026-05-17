@@ -11,33 +11,20 @@ import {
   FilePlusIcon,
   FileTextIcon,
   KeyIcon,
-  Loader2Icon,
-  TriangleAlertIcon,
+  Link2Icon,
 } from "lucide-react";
 
 import { buildPostUrl } from "@/utils/url";
+import { formatToLocalTime } from "@/lib/utils";
 import CreateTestPostModal from "@/components/CreateTestPostModal";
+import { PostListItemRow } from "@/components/posts/PostListItemRow";
 import { usePostKey } from "@/hooks/usePostKey";
 import { usePosts } from "@/hooks/usePosts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const formatToLocalTime = (utcString: string): string => {
-  if (!utcString) return "";
-
-  const date = new Date(utcString);
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
+import { Menu } from "@/components/ui/menu";
+import { QueryState } from "@/components/ui/query-state";
 
 export function DashboardPage() {
   const [showKey, setShowKey] = useState(false);
@@ -56,15 +43,13 @@ export function DashboardPage() {
   const createdAt = postKeyData?.created_at || "";
   const recentPosts = postsData?.posts || [];
 
-  const handleCopyKey = async () => {
-    if (postKey) {
-      try {
-        await navigator.clipboard.writeText(postKey);
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      } catch (err) {
-        console.error("Failed to copy text: ", err);
-      }
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy: ", err);
     }
   };
 
@@ -80,21 +65,13 @@ export function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {keyLoading ? (
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/40 p-6 text-center">
-                  <Loader2Icon className="size-5 animate-spin" />
-                  <p className="text-sm text-muted-foreground">
-                    {tPostKey("loadingKey")}
-                  </p>
-                </div>
-              ) : keyError ? (
-                <Alert variant="destructive">
-                  <TriangleAlertIcon />
-                  <AlertDescription>
-                    {tPostKey("errorLoadingKey")}
-                  </AlertDescription>
-                </Alert>
-              ) : (
+              <QueryState
+                isLoading={keyLoading}
+                error={keyError}
+                loadingText={tPostKey("loadingKey")}
+                errorText={tPostKey("errorLoadingKey")}
+                loadingClassName="flex flex-col items-center justify-center gap-2 rounded-lg border bg-muted/40 p-6 text-center"
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="font-mono text-base">
@@ -121,15 +98,27 @@ export function DashboardPage() {
                         <EyeIcon className="size-4" />
                       )}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleCopyKey}
-                      title={tPostKey("copyKey")}
-                    >
-                      <CopyIcon className="size-4" />
-                    </Button>
+                    <Menu>
+                      <Menu.Trigger
+                        render={
+                          <Button type="button" variant="ghost" size="icon" title={tPostKey("copyKey")} />
+                        }
+                      >
+                        <CopyIcon className="size-4" />
+                      </Menu.Trigger>
+                      <Menu.Popup>
+                        <Menu.Item onClick={() => postKey && handleCopy(postKey)}>
+                          <KeyIcon className="size-4" />
+                          {tPostKey("copyPostKey")}
+                        </Menu.Item>
+                        <Menu.Item
+                          onClick={() => postKey && handleCopy(`${window.location.origin}${buildPostUrl(postKey)}`)}
+                        >
+                          <Link2Icon className="size-4" />
+                          {tPostKey("copyPostUrl")}
+                        </Menu.Item>
+                      </Menu.Popup>
+                    </Menu>
                     <Button
                       type="button"
                       variant="ghost"
@@ -141,7 +130,7 @@ export function DashboardPage() {
                     </Button>
                   </div>
                 </div>
-              )}
+              </QueryState>
             </CardContent>
           </Card>
 
@@ -187,43 +176,19 @@ export function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {postsLoading ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-                <Loader2Icon className="size-5 animate-spin" />
-                <p className="text-sm text-muted-foreground">
-                  {tRecentPosts("loading")}
+            <QueryState isLoading={postsLoading} error={postsError} loadingText={tRecentPosts("loading")} errorText={tRecentPosts("error")}>
+              {recentPosts.length === 0 ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {tRecentPosts("empty")}
                 </p>
-              </div>
-            ) : postsError ? (
-              <Alert variant="destructive">
-                <TriangleAlertIcon />
-                <AlertDescription>{tRecentPosts("error")}</AlertDescription>
-              </Alert>
-            ) : recentPosts.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                {tRecentPosts("empty")}
-              </p>
-            ) : (
-              <ul className="-mx-2 divide-y">
-                {recentPosts.map((p) => (
-                  <li key={p.id} className="px-2 py-3">
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                      <a
-                        href={buildPostUrl(p.qid)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-sm font-medium text-primary underline-offset-4 hover:underline"
-                      >
-                        {p.title}
-                      </a>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatToLocalTime(p.created_at)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+              ) : (
+                <ul className="-mx-2 divide-y">
+                  {recentPosts.map((p) => (
+                    <PostListItemRow key={p.id} post={p} className="px-2 py-3" />
+                  ))}
+                </ul>
+              )}
+            </QueryState>
           </CardContent>
         </Card>
       </div>

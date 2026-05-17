@@ -15,6 +15,10 @@ type JWTTokenPair struct {
 	ExpiresAt    time.Time
 }
 
+func (t *JWTTokenPair) ExpiresInSeconds() int64 {
+	return int64(time.Until(t.ExpiresAt).Seconds())
+}
+
 // AccessClaims contains the claims embedded in access tokens.
 type AccessClaims struct {
 	UserID   int    `json:"user_id"`
@@ -136,14 +140,4 @@ func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error)
 	}
 
 	return nil, jwt.ErrSignatureInvalid
-}
-
-// UserIDInt returns the user ID as an int from AccessClaims.
-func (c *AccessClaims) UserIDInt() int {
-	return c.UserID
-}
-
-// UserIDInt returns the user ID as an int from RefreshClaims.
-func (c *RefreshClaims) UserIDInt() int {
-	return c.UserID
 }

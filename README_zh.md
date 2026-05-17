@@ -1,148 +1,144 @@
-# markpost
+# MarkPost
 
-简体中文 | [English](README.md)
+**轻量级 Markdown 转 HTML 发布服务。** 通过 API 上传 Markdown，即可获得渲染后的 HTML 页面。简单、自托管、快速。
 
-一个简单的 Go Web 项目，提供上传 Markdown 内容和查询转换后 HTML 的 API 接口。
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
-## 部署
+[English](README.md) | 简体中文
 
-### Docker 命令
+---
 
-```bash
-docker run -d \
-  --name markpost \
-  -p 7330:7330 \
-  -v ./data:/app/data \
-  # -v ./config.toml:/app/config.toml:ro \
-  --restart unless-stopped \
-  jukanntenn/markpost:latest
-```
+## 功能特性
 
-### Docker Compose
+- **API 优先** — 只需一个 `POST` 请求即可上传 Markdown，获得唯一 URL
+- **Web 控制台** — 管理文章、查看统计、配置推送通道
+- **自托管** — 可在 Docker、裸机或云平台上运行
+- **多数据库** — SQLite 简单易用，PostgreSQL 支持规模化扩展
+- **推送通道** — 将文章转发至 Webhook（飞书、Slack、自定义），支持关键词过滤
+- **OAuth 支持** — 支持 GitHub 登录或用户名/密码登录
 
-1. 创建 `docker-compose.yml` 文件，内容如下：
+## 快速开始
 
-   ```yaml
-   services:
-     markpost:
-       image: jukanntenn/markpost:latest
-       container_name: markpost
-       ports:
-         - "7330:7330"
-       volumes:
-         - ./data:/app/data
-         # - ./config.toml:/app/config.toml:ro
-       restart: unless-stopped
-   ```
+### Docker Compose（推荐）
 
-2. 启动服务：
-
-   ```bash
-   docker-compose up -d
-   ```
-
-### Go 编译
-
-1. 环境要求：Go 1.24.0 或更高版本
-
-2. 克隆仓库并进入项目目录
-
-3. 构建前端静态资源（Web UI `/ui` 需要）：
-
-   ```bash
-   cd frontend
-   pnpm install
-   pnpm build
-   ```
-
-4. 编译后端：
-
-   ```bash
-   cd ../backend
-   go mod download
-   go build -o markpost .
-   ```
-
-5. 启动服务：
-
-   ```bash
-   ./markpost serve -c ./config.toml
-   ```
-
-## 配置
-
-项目会读取 `config.toml` 配置文件，详情请参考 [config.example.toml](backend/config.example.toml)。
-
-默认会在进程工作目录下查找 `./config.toml`，也可以通过 `-c/--config` 指定路径。配置支持通过环境变量覆盖，前缀为 `MARKPOST`（例如：`MARKPOST_JWT__ACCESS_SIGNING_KEY`）。
-
-使用 Docker 时，可挂载配置文件：
-
-```bash
-docker run -d \
-  --name markpost \
-  -p 7330:7330 \
-  -v ./data:/app/data \
-  -v ./config.toml:/app/config.toml:ro \
-  --restart unless-stopped \
-  jukanntenn/markpost:latest
-```
-
-使用 Docker Compose 时，在 `docker-compose.yml` 中添加配置文件挂载：
+创建 `docker-compose.yml`：
 
 ```yaml
-volumes:
-  - ./data:/app/data
-  - ./config.toml:/app/config.toml:ro
+services:
+  frontend:
+    image: jukanntenn/markpost-web:latest
+    container_name: markpost-frontend
+    ports:
+      - "7330:3000"
+    environment:
+      - API_PROXY_TARGET=http://backend:7330
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend:
+    image: jukanntenn/markpost:latest
+    container_name: markpost-backend
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:7330/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
 ```
 
-### 获取 post_key
+```bash
+docker compose up -d
+```
 
-您可以通过登录 Web 管理控制台获取 post_key：
+打开 `http://localhost:7330`，使用以下凭据登录：
+- **用户名：** `markpost`（默认）
+- **密码：** `markpost`（生产环境请务必修改！）
 
-1. 访问 Web 界面：`http://127.0.0.1:7330`
-2. 使用初始凭据：
-   - **用户名**：可通过 `admin.initial_username` 或环境变量 `MARKPOST_ADMIN__INITIAL_USERNAME` 指定（默认 `markpost`）
-   - **密码**：可通过 `admin.initial_password` 或环境变量 `MARKPOST_ADMIN__INITIAL_PASSWORD` 指定（默认 `markpost`）
-3. 成功登录后，您的 post_key 将显示在仪表板上
+登录后，**Post 密钥** 将显示在控制台首页。
 
-## API 接口
+### 仅后端（无头 / 纯 API 模式）
 
-### 上传内容
+如果不需要 Web 控制台，可以单独运行后端：
 
-**POST** `/:post_key`
+```bash
+docker run -d \
+  --name markpost \
+  -p 7330:7330 \
+  -v ./data:/app/data \
+  --restart unless-stopped \
+  jukanntenn/markpost:latest
+```
 
-使用有效的 post_key 上传 markdown 内容。系统会在首次启动时为初始管理员用户生成 post_key，可在登录 Web 管理控制台后获取。
+此模式提供 API 端点和文章渲染（`GET /:id`），但不包含 Web 界面。
 
-请求体：
+## API 参考
 
-```json
-{
-  "title": "文章标题", // 可选
-  "body": "markdown内容"
-}
+### 创建文章
+
+```bash
+curl -X POST http://localhost:7330/YOUR_POST_KEY \
+  -H "Content-Type: application/json" \
+  -d '{"title": "My Post", "body": "# Hello World\nThis is **Markdown**."}'
 ```
 
 响应：
-
 ```json
-{
-  "id": "生成的-nanoid"
-}
+{ "id": "p-abc123" }
 ```
 
-错误响应：
+### 查看文章
 
-```json
-{
-  "error": "错误信息"
-}
+访问 `http://localhost:7330/p-abc123` — 将渲染为带样式的 HTML 页面。
+
+## 配置
+
+MarkPost 使用 TOML 配置文件或环境变量。
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `MARKPOST_SERVER__HOST` | 绑定地址 | `127.0.0.1` |
+| `MARKPOST_SERVER__PORT` | HTTP 端口 | `7330` |
+| `MARKPOST_DB__DRIVER` | 数据库驱动 | `sqlite` |
+| `MARKPOST_DB__DSN` | 连接字符串 | `file:./data/markpost.db` |
+| `MARKPOST_JWT__ACCESS_SIGNING_KEY` | **必填。** JWT 签名密钥 | — |
+
+完整配置参考请查看 [config.example.toml](backend/config.example.toml)。
+
+## 开发
+
+环境要求：Go 1.26+、Node.js 24+、pnpm、Docker
+
+```bash
+# 启动开发环境（PostgreSQL、后端热重载）
+python3 devops/dev.py start
+
+# 前端开发服务器
+cd frontend && pnpm install && pnpm dev
+
+# 运行后端测试
+cd backend && go test ./...
+
+# 运行前端测试
+cd frontend && pnpm test
 ```
 
-### 获取内容
+详细说明请参阅[开发指南](docs/development.md)。
 
-**GET** `/:id`
+## 部署
 
-通过 ID 获取已上传的内容，返回渲染后的 HTML 页面（非 JSON 格式）。
+请参阅[部署指南](docs/deployment.md)，了解：
+- 生产环境 Docker 配置
+- Ansible 自动化
+- 反向代理配置
+- PostgreSQL 配置
 
-- 成功：返回完整的 HTML 页面，包含转换后的 markdown 内容
-- 失败：返回错误页面
+## 许可证
+
+[MIT](LICENSE)

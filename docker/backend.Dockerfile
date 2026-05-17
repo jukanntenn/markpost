@@ -21,6 +21,8 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
+RUN mkdir -p /app/data
+
 COPY --from=builder /app/markpost /app/markpost
 COPY --from=builder /app/templates /app/templates
 COPY --from=builder /app/locales /app/locales

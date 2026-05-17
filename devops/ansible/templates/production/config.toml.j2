@@ -1,0 +1,34 @@
+[server]
+host = "0.0.0.0"
+public_url = "{{ public_url }}"
+trusted_proxies = {{ trusted_proxies }}
+
+[db]
+driver = "sqlite"
+dsn = "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+
+[jwt]
+access_signing_key = "{{ jwt_access_signing_key }}"
+refresh_signing_key = "{{ jwt_refresh_signing_key }}"
+
+[admin]
+initial_password = "{{ admin_password }}"
+
+post_key_length = 16
+
+[post]
+title_max_length = 500
+body_max_bytes = 1048576
+retention_days = 30
+
+[cors]
+allow_origins = ["{{ public_url }}"]
+allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+[ratelimit]
+per_second = 5
+burst = 50
+
+[delivery]
+body_preview_chars = 200
+request_timeout = "5s"

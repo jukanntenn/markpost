@@ -7,14 +7,54 @@ import (
 	"time"
 
 	"markpost/internal/domain/user"
-	"markpost/internal/service"
+	"markpost/internal/middleware"
 	"markpost/internal/service/auth"
 	"markpost/pkg/apierr"
 
-	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
+
+func newUserInfo(u user.User) UserInfo {
+	return UserInfo{
+		ID:        u.ID,
+		Email:     u.Email,
+		Username:  u.Username,
+		Name:      u.Name,
+		AvatarURL: u.AvatarURL,
+		Role:      string(u.Role),
+	}
+}
+
+// AuthResponse represents an authentication response.
+type AuthResponse struct {
+	User         UserInfo `json:"user"`
+	Token        string   `json:"token"`
+	RefreshToken string   `json:"refresh_token"`
+	ExpiresIn    int64    `json:"expires_in"`
+}
+
+// RefreshTokenResponse represents a token refresh response.
+type RefreshTokenResponse struct {
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int64  `json:"expires_in"`
+}
+
+// UserInfo represents user information in responses.
+type UserInfo struct {
+	ID        int     `json:"id"`
+	Email     string  `json:"email"`
+	Username  string  `json:"username"`
+	Name      string  `json:"name"`
+	AvatarURL *string `json:"avatar_url"`
+	Role      string  `json:"role"`
+}
+
+// PostKeyResponse represents a post key response.
+type PostKeyResponse struct {
+	PostKey   string    `json:"post_key"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 // GitHubAuthURLGenerator generates GitHub OAuth authorization URLs.
 type GitHubAuthURLGenerator interface {
@@ -43,18 +83,21 @@ type AuthService interface {
 	QueryPostKey(ctx context.Context, userID int) (string, time.Time, error)
 }
 
+// GitHubLoginRequest represents a GitHub OAuth login request.
+type GitHubLoginRequest struct {
+	Code  string `json:"code" binding:"required"`
+	State string `json:"state" binding:"required"`
+}
+
 // LoginGitHub returns a handler for GitHub OAuth login.
 func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body struct {
-			Code  string `json:"code" binding:"required"`
-			State string `json:"state" binding:"required"`
-		}
-		if !bindJSON(c, &body) {
+		var req GitHubLoginRequest
+		if !bindJSON(c, &req) {
 			return
 		}
 
-		u, tokens, err := authSvc.LoginWithGitHub(c.Request.Context(), body.Code)
+		u, tokens, err := authSvc.LoginWithGitHub(c.Request.Context(), req.Code)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
@@ -111,22 +154,15 @@ func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 // Logout returns a handler for user logout.
 func Logout(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token != "" && len(token) > 7 {
-			token = token[7:]
+		if token, ok := middleware.ExtractAccessToken(c); ok {
 			if err := authSvc.Logout(c.Request.Context(), token); err != nil {
 				apierr.RespondError(c, err)
 				return
 			}
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-				DefaultMessage: &i18n.Message{
-					ID:    "auth.logout_success",
-					Other: "Logged out successfully",
-				},
-			}),
+		c.JSON(http.StatusOK, MessageResponse{
+			Message: getI18nMessage(c, "Logged out successfully", "auth.logout_success"),
 		})
 	}
 }
@@ -140,10 +176,8 @@ type PasswordChangeRequest struct {
 // ChangePassword returns a handler for changing user password.
 func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
@@ -157,13 +191,8 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-				DefaultMessage: &i18n.Message{
-					ID:    "error.password_changed_success",
-					Other: "Password changed successfully",
-				},
-			}),
+		c.JSON(http.StatusOK, MessageResponse{
+			Message: getI18nMessage(c, "Password changed successfully", "error.password_changed_success"),
 		})
 	}
 }
@@ -171,10 +200,8 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 // QueryPostKey returns a handler for querying user's post key.
 func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
@@ -184,30 +211,23 @@ func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"post_key": postKey, "created_at": createdAt})
+		c.JSON(http.StatusOK, PostKeyResponse{PostKey: postKey, CreatedAt: createdAt})
 	}
 }
 
 func writeAuthResponse(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair) {
-	c.JSON(http.StatusOK, gin.H{
-		"token":         tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
-		"expires_in":    int64(time.Until(tokens.ExpiresAt).Seconds()),
-		"user": gin.H{
-			"id":         u.ID,
-			"email":      u.Email,
-			"username":   u.Username,
-			"name":       u.Name,
-			"avatar_url": u.AvatarURL,
-			"role":       u.Role,
-		},
+	c.JSON(http.StatusOK, AuthResponse{
+		Token:        tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    tokens.ExpiresInSeconds(),
+		User:         newUserInfo(*u),
 	})
 }
 
 func writeRefreshResponse(c *gin.Context, _ *user.User, tokens *auth.JWTTokenPair) {
-	c.JSON(http.StatusOK, gin.H{
-		"token":         tokens.AccessToken,
-		"refresh_token": tokens.RefreshToken,
-		"expires_in":    int64(time.Until(tokens.ExpiresAt).Seconds()),
+	c.JSON(http.StatusOK, RefreshTokenResponse{
+		Token:        tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    tokens.ExpiresInSeconds(),
 	})
 }

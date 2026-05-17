@@ -1,12 +1,10 @@
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
-import en from "../i18n/locales/en.json";
 import CreateTestPostModal from "./CreateTestPostModal";
 import { ThemeProvider } from "../components/theme-provider";
-import { setMockAuth, createWrapper } from "../test/utils";
+import { setMockAuth, renderWithProviders, mockMatchMedia } from "../test/utils";
 import { server } from "../mocks/server";
 import { http, HttpResponse } from "msw";
 
@@ -17,15 +15,6 @@ vi.mock("@/stores/toast", () => ({
     info: vi.fn(),
   },
 }));
-
-function renderWithProviders(ui: React.ReactElement) {
-  const wrapper = createWrapper();
-  return render(
-    <NextIntlClientProvider locale="en" messages={en}>
-      <ThemeProvider>{wrapper({ children: ui })}</ThemeProvider>
-    </NextIntlClientProvider>
-  );
-}
 
 const mockOnHide = vi.fn();
 const mockOnSuccess = vi.fn();
@@ -38,20 +27,7 @@ beforeEach(() => {
     expires_in: 86400,
     user: { id: 1, username: "testuser", email: "test@example.com" },
   });
-
-  Object.defineProperty(window, "matchMedia", {
-    writable: true,
-    value: vi.fn().mockImplementation((query) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
+  mockMatchMedia();
 });
 
 describe("CreateTestPostModal", () => {
@@ -62,7 +38,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     expect(screen.getByRole("dialog")).toBeVisible();
@@ -75,7 +52,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -88,7 +66,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     const createButton = screen.getByRole("button", { name: /create/i });
@@ -103,7 +82,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
@@ -121,7 +101,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     const titleInput = screen.getByPlaceholderText(/title/i);
@@ -146,7 +127,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     const cancelButton = screen.getByRole("button", { name: /cancel/i });
@@ -169,7 +151,8 @@ describe("CreateTestPostModal", () => {
         postKey="test_key"
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
-      />
+      />,
+      { wrapper: ThemeProvider }
     );
 
     const bodyTextarea = screen.getByPlaceholderText(/markdown/i);

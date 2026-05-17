@@ -4,8 +4,6 @@ package auth
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +11,7 @@ import (
 	"time"
 
 	"markpost/internal/domain/user"
+	"markpost/internal/service"
 	"markpost/pkg/utils"
 
 	"golang.org/x/oauth2"
@@ -20,10 +19,7 @@ import (
 
 // Error definitions for authentication operations
 var (
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrRefreshExpired      = errors.New("refresh token expired")
-	ErrTokenRevoked        = errors.New("token has been revoked")
-	ErrTokenExpired        = errors.New("token has expired")
+	ErrTokenExpired = errors.New("token has expired")
 )
 
 // Service handles authentication operations including OAuth, JWT token management,
@@ -51,7 +47,7 @@ func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth
 func (s *Service) GenerateGitHubAuthURL(_ context.Context) (string, error) {
 	state, err := utils.GenerateState()
 	if err != nil {
-		return "", NewServiceErrorWrap(ErrInternal, "failed to generate state", err)
+		return "", service.NewServiceErrorWrap(service.ErrInternal, "failed to generate state", err)
 	}
 
 	return s.oauth.AuthCodeURL(state), nil
@@ -61,7 +57,7 @@ func (s *Service) GenerateGitHubAuthURL(_ context.Context) (string, error) {
 func (s *Service) LoginWithGitHub(ctx context.Context, code string) (*user.User, *JWTTokenPair, error) {
 	token, err := s.oauth.Exchange(ctx, code)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrUnauthorized, "oauth exchange failed", err)
+		return nil, nil, service.NewServiceErrorWrap(service.ErrUnauthorized, "oauth exchange failed", err)
 	}
 
 	githubUser, err := s.getGitHubUser(ctx, token)
@@ -71,39 +67,27 @@ func (s *Service) LoginWithGitHub(ctx context.Context, code string) (*user.User,
 
 	u, err := s.users.GetOrCreateFromGitHub(ctx, githubUser)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInternal, "create user failed", err)
+		return nil, nil, service.NewServiceErrorWrap(service.ErrInternal, "create user failed", err)
 	}
 
-	if !u.IsActive {
-		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
-	}
-
-	pair, err := s.generateTokenPairWithStore(ctx, u)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	now := time.Now()
-	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
-
-	return u, pair, nil
+	return s.completeLogin(ctx, u)
 }
 
 func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user.GitHubUser, error) {
 	client := s.oauth.Client(ctx, token)
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
-		return nil, NewServiceErrorWrap(ErrInternal, "failed to get GitHub user", err)
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	var githubUser user.GitHubUser
 	if err := json.NewDecoder(resp.Body).Decode(&githubUser); err != nil {
-		return nil, NewServiceErrorWrap(ErrInternal, "failed to decode GitHub user data", err)
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to decode GitHub user data", err)
 	}
 
 	if githubUser.ID == 0 || githubUser.Login == "" {
-		return nil, NewServiceErrorWrap(ErrInternal, "invalid GitHub user data", fmt.Errorf("ID=%d, Login='%s'", githubUser.ID, githubUser.Login))
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "invalid GitHub user data", fmt.Errorf("ID=%d, Login='%s'", githubUser.ID, githubUser.Login))
 	}
 
 	emails, err := s.getGitHubUserEmails(client)
@@ -120,7 +104,7 @@ func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user
 func (s *Service) getGitHubUserEmails(client *http.Client) ([]string, error) {
 	resp, err := client.Get("https://api.github.com/user/emails")
 	if err != nil {
-		return nil, nil
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user emails", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -130,7 +114,7 @@ func (s *Service) getGitHubUserEmails(client *http.Client) ([]string, error) {
 		Verified bool   `json:"verified"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		return nil, nil
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to decode GitHub user emails", err)
 	}
 
 	var result []string
@@ -146,22 +130,10 @@ func (s *Service) getGitHubUserEmails(client *http.Client) ([]string, error) {
 func (s *Service) LoginWithEmail(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
 	u, err := s.users.ValidatePassword(ctx, username, password)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrInvalidCredentials, "invalid username or password", err)
+		return nil, nil, service.NewServiceErrorWrap(service.ErrInvalidCredentials, "invalid username or password", err)
 	}
 
-	if !u.IsActive {
-		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
-	}
-
-	pair, err := s.generateTokenPairWithStore(ctx, u)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	now := time.Now()
-	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
-
-	return u, pair, nil
+	return s.completeLogin(ctx, u)
 }
 
 // RefreshToken validates a refresh token and issues a new token pair for the user.
@@ -173,11 +145,11 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 
 	u, err := s.users.GetByID(ctx, tokenData.UserID)
 	if err != nil {
-		return nil, nil, NewServiceErrorWrap(ErrUnauthorized, "user not found", err)
+		return nil, nil, service.NewServiceErrorWrap(service.ErrUnauthorized, "user not found", err)
 	}
 
 	if !u.IsActive {
-		return nil, nil, NewServiceErrorWrap(ErrUserDisabled, "user account is disabled", nil)
+		return nil, nil, service.NewServiceError(service.ErrUserDisabled, "user account is disabled")
 	}
 
 	// Attempt to revoke the old refresh token; ignore errors as the new token
@@ -213,7 +185,7 @@ func (s *Service) Logout(ctx context.Context, accessToken string) error {
 		ttl = 24 * time.Hour
 	}
 
-	tokenHash := hashToken(accessToken)
+	tokenHash := utils.HashToken(accessToken)
 	expiresAt := time.Now().Add(ttl)
 	if err := s.tokens.StoreBlacklistedToken(ctx, tokenHash, expiresAt); err != nil {
 		return err
@@ -230,72 +202,91 @@ func (s *Service) RevokeAllUserTokens(ctx context.Context, userID int) error {
 func (s *Service) generateTokenPairWithStore(ctx context.Context, u *user.User) (*JWTTokenPair, error) {
 	pair, err := s.jwt.GenerateTokenPair(u.ID, u.Email, u.Username, string(u.Role))
 	if err != nil {
-		return nil, NewServiceErrorWrap(ErrInternal, "generate token pair failed", err)
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "generate token pair failed", err)
 	}
 
-	tokenHash := hashToken(pair.RefreshToken)
+	tokenHash := utils.HashToken(pair.RefreshToken)
 	expiresAt := time.Now().Add(s.jwt.refreshTokenExpire)
 	if err := s.tokens.StoreRefreshToken(ctx, u.ID, tokenHash, expiresAt); err != nil {
-		return nil, NewServiceErrorWrap(ErrInternal, "store refresh token failed", err)
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "store refresh token failed", err)
 	}
 
 	return pair, nil
 }
 
+func (s *Service) completeLogin(ctx context.Context, u *user.User) (*user.User, *JWTTokenPair, error) {
+	if !u.IsActive {
+		return nil, nil, service.NewServiceError(service.ErrUserDisabled, "user account is disabled")
+	}
+
+	pair, err := s.generateTokenPairWithStore(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	now := time.Now()
+	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
+
+	return u, pair, nil
+}
+
 func (s *Service) validateRefreshToken(ctx context.Context, refreshToken string) (*user.RefreshToken, error) {
-	tokenHash := hashToken(refreshToken)
+	tokenHash := utils.HashToken(refreshToken)
 
 	tokenData, err := s.tokens.GetRefreshToken(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, user.ErrNotFound) {
-			return nil, ErrInvalidRefreshToken
+			return nil, service.NewServiceError(service.ErrInvalidToken, "invalid refresh token")
 		}
-		return nil, NewServiceErrorWrap(ErrInternal, "failed to validate refresh token", err)
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to validate refresh token", err)
 	}
 
 	if time.Now().After(tokenData.ExpiresAt) {
 		_ = s.tokens.DeleteRefreshToken(ctx, tokenHash)
-		return nil, ErrRefreshExpired
+		return nil, service.NewServiceError(service.ErrInvalidToken, "refresh token expired")
 	}
 
 	return tokenData, nil
 }
 
+func (s *Service) getUserByID(ctx context.Context, userID int) (*user.User, error) {
+	u, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		return nil, service.NewServiceErrorWrap(service.ErrNotFound, fmt.Sprintf("can not find user with ID %d", userID), err)
+	}
+	return u, nil
+}
+
 func (s *Service) revokeRefreshToken(ctx context.Context, refreshToken string) error {
-	tokenHash := hashToken(refreshToken)
+	tokenHash := utils.HashToken(refreshToken)
 	return s.tokens.DeleteRefreshToken(ctx, tokenHash)
 }
 
 // IsTokenBlacklisted checks if a token has been blacklisted.
 func (s *Service) IsTokenBlacklisted(ctx context.Context, token string) (bool, error) {
-	tokenHash := hashToken(token)
+	tokenHash := utils.HashToken(token)
 	return s.tokens.IsTokenBlacklisted(ctx, tokenHash)
-}
-
-func hashToken(token string) string {
-	hash := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(hash[:])
 }
 
 // ChangePassword updates a user's password after validating the current password.
 func (s *Service) ChangePassword(ctx context.Context, userID int, current, newPassword string) error {
-	u, err := s.users.GetByID(ctx, userID)
+	u, err := s.getUserByID(ctx, userID)
 	if err != nil {
-		return NewServiceErrorWrap(ErrNotFound, fmt.Sprintf("can not find user with ID %d", userID), err)
+		return err
 	}
 
 	if u.Password != "" {
 		ok, err := utils.CheckPassword(current, u.Password)
 		if err != nil {
-			return NewServiceErrorWrap(ErrInternal, fmt.Sprintf("validate current password with user ID %d failed", userID), err)
+			return service.NewServiceErrorWrap(service.ErrInternal, fmt.Sprintf("validate current password with user ID %d failed", userID), err)
 		}
 		if !ok {
-			return NewServiceErrorWrap(ErrInvalidPassword, "invalid current password", err)
+			return service.NewServiceError(service.ErrInvalidPassword, "invalid current password")
 		}
 	}
 
 	if err := s.users.SetPassword(ctx, userID, newPassword); err != nil {
-		return NewServiceErrorWrap(ErrInternal, fmt.Sprintf("set password with user ID %d failed", userID), err)
+		return service.NewServiceErrorWrap(service.ErrInternal, fmt.Sprintf("set password with user ID %d failed", userID), err)
 	}
 
 	return nil
@@ -303,32 +294,23 @@ func (s *Service) ChangePassword(ctx context.Context, userID int, current, newPa
 
 // QueryPostKey retrieves the post key and creation time for a user.
 func (s *Service) QueryPostKey(ctx context.Context, userID int) (string, time.Time, error) {
-	u, err := s.users.GetByID(ctx, userID)
+	u, err := s.getUserByID(ctx, userID)
 	if err != nil {
-		return "", time.Time{}, NewServiceErrorWrap(ErrNotFound, fmt.Sprintf("can not find user with ID %d", userID), err)
+		return "", time.Time{}, err
 	}
 	return u.PostKey, u.CreatedAt, nil
 }
 
 // GetAllUsers retrieves a paginated list of users with total count.
-func (s *Service) GetAllUsers(ctx context.Context, page, limit int) ([]user.User, int64, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
-
-	offset := (page - 1) * limit
-
+func (s *Service) GetAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error) {
 	users, err := s.users.GetAll(ctx, offset, limit)
 	if err != nil {
-		return nil, 0, NewServiceErrorWrap(ErrInternal, "failed to get users", err)
+		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "failed to get users", err)
 	}
 
 	total, err := s.users.Count(ctx)
 	if err != nil {
-		return nil, 0, NewServiceErrorWrap(ErrInternal, "failed to count users", err)
+		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "failed to count users", err)
 	}
 
 	return users, total, nil
@@ -338,7 +320,7 @@ func (s *Service) GetAllUsers(ctx context.Context, page, limit int) ([]user.User
 func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername string) error {
 	u, err := s.users.GetByUsername(ctx, initialUsername)
 	if err != nil {
-		return NewServiceError(ErrNotFound, fmt.Sprintf("initial admin user '%s' not found", initialUsername))
+		return service.NewServiceError(service.ErrNotFound, fmt.Sprintf("initial admin user '%s' not found", initialUsername))
 	}
 
 	if u.Role == user.RoleAdmin {
@@ -346,7 +328,7 @@ func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername stri
 	}
 
 	if err := s.users.SetRole(ctx, u.ID, user.RoleAdmin); err != nil {
-		return NewServiceErrorWrap(ErrInternal, fmt.Sprintf("failed to promote user '%s' to admin", initialUsername), err)
+		return service.NewServiceErrorWrap(service.ErrInternal, fmt.Sprintf("failed to promote user '%s' to admin", initialUsername), err)
 	}
 
 	return nil

@@ -24,69 +24,37 @@ func NewUserRepository(db *gorm.DB) user.Repository {
 	return &UserRepository{db: db}
 }
 
+func (r *UserRepository) findBy(ctx context.Context, name, field string, value any) (*user.User, error) {
+	u, err := findFirst[user.User](ctx, r.db.Where(field+" = ?", value), user.ErrNotFound)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
+	}
+	return u, nil
+}
+
 // GetByPostKey retrieves a user by their post key.
 func (r *UserRepository) GetByPostKey(ctx context.Context, postKey string) (*user.User, error) {
-	var u user.User
-	err := r.db.WithContext(ctx).Where("post_key = ?", postKey).First(&u).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
-		return nil, fmt.Errorf("GetByPostKey: %w", err)
-	}
-	return &u, nil
+	return r.findBy(ctx, "GetByPostKey", "post_key", postKey)
 }
 
 // GetByID retrieves a user by their ID.
 func (r *UserRepository) GetByID(ctx context.Context, id int) (*user.User, error) {
-	var u user.User
-	err := r.db.WithContext(ctx).First(&u, id).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
-		return nil, fmt.Errorf("GetByID: %w", err)
-	}
-	return &u, nil
+	return r.findBy(ctx, "GetByID", "id", id)
 }
 
 // GetByGitHubID retrieves a user by their GitHub ID.
 func (r *UserRepository) GetByGitHubID(ctx context.Context, githubID int64) (*user.User, error) {
-	var u user.User
-	err := r.db.WithContext(ctx).Where("github_id = ?", githubID).First(&u).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
-		return nil, fmt.Errorf("GetByGitHubID: %w", err)
-	}
-	return &u, nil
+	return r.findBy(ctx, "GetByGitHubID", "github_id", githubID)
 }
 
 // GetByUsername retrieves a user by their username.
 func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*user.User, error) {
-	var u user.User
-	err := r.db.WithContext(ctx).Where("username = ?", username).First(&u).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
-		return nil, fmt.Errorf("GetByUsername: %w", err)
-	}
-	return &u, nil
+	return r.findBy(ctx, "GetByUsername", "username", username)
 }
 
 // GetByEmail retrieves a user by their email address.
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.User, error) {
-	var u user.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
-		return nil, fmt.Errorf("GetByEmail: %w", err)
-	}
-	return &u, nil
+	return r.findBy(ctx, "GetByEmail", "email", email)
 }
 
 // Create creates a new user with the provided credentials.
@@ -172,30 +140,17 @@ func (r *UserRepository) SetRole(ctx context.Context, userID int, role user.Role
 
 // DeleteByID deletes a user by their ID.
 func (r *UserRepository) DeleteByID(ctx context.Context, userID int) (int64, error) {
-	tx := r.db.WithContext(ctx).Delete(&user.User{}, userID)
-	if tx.Error != nil {
-		return 0, tx.Error
-	}
-	return tx.RowsAffected, nil
+	return deleteWhere[user.User](ctx, r.db.Where("id = ?", userID))
 }
 
 // GetAll retrieves all users with pagination.
 func (r *UserRepository) GetAll(ctx context.Context, offset, limit int) ([]user.User, error) {
-	var users []user.User
-	err := r.db.WithContext(ctx).Order("id asc").Offset(offset).Limit(limit).Find(&users).Error
-	if err != nil {
-		return nil, fmt.Errorf("GetAll: %w", err)
-	}
-	return users, nil
+	return findMany[user.User](ctx, r.db.Order("id asc"), offset, limit, "GetAll")
 }
 
 // Count returns the total number of users.
 func (r *UserRepository) Count(ctx context.Context) (int64, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&user.User{}).Count(&count).Error; err != nil {
-		return 0, fmt.Errorf("Count: %w", err)
-	}
-	return count, nil
+	return countQuery(ctx, r.db.Model(&user.User{}), "Count")
 }
 
 // UpdateLastLoginAt updates the last login timestamp for a user.
@@ -204,27 +159,15 @@ func (r *UserRepository) UpdateLastLoginAt(ctx context.Context, userID int, last
 }
 
 func (r *UserRepository) existsByEmail(ctx context.Context, email string) (bool, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("email = ?", email).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("existsByEmail: %w", err)
-	}
-	return count > 0, nil
+	return existsBy[user.User](ctx, r.db, "email", email, "existsByEmail")
 }
 
 func (r *UserRepository) existsByUsername(ctx context.Context, username string) (bool, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("username = ?", username).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("existsByUsername: %w", err)
-	}
-	return count > 0, nil
+	return existsBy[user.User](ctx, r.db, "username", username, "existsByUsername")
 }
 
 func (r *UserRepository) existsByPostKey(ctx context.Context, postKey string) (bool, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&user.User{}).Where("post_key = ?", postKey).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("existsByPostKey: %w", err)
-	}
-	return count > 0, nil
+	return existsBy[user.User](ctx, r.db, "post_key", postKey, "existsByPostKey")
 }
 
 func (r *UserRepository) createWithUniquePostKey(ctx context.Context, email, username, password string, githubID *int64, avatarURL *string) (*user.User, error) {

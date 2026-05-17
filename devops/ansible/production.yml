@@ -1,0 +1,60 @@
+---
+# Usage:
+# ansible-playbook -i devops/ansible/hosts.yml devops/ansible/production.yml --vault-password-file ~/.ansible-vault/markpost-production.pwd
+
+- name: Deploy markpost (production)
+  hosts: oect
+  user: "{{ user }}"
+  gather_facts: no
+  vars_files:
+    - vars/production/vault.yml
+
+  vars:
+    app_name: markpost
+    apps_path: "{{ home }}/docker"
+    app_path: "{{ apps_path }}/{{ app_name }}"
+    compose_file: "{{ app_path }}/docker-compose.yml"
+    config_file: "{{ app_path }}/config.toml"
+
+    image_tag: "latest"
+    frontend_port: 7330
+    public_url: ""
+    trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
+
+  tasks:
+    - name: Ensure paths
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ apps_path }}"
+        - "{{ app_path }}"
+        - "{{ app_path }}/data"
+
+    - name: Copy docker-compose.yml
+      template:
+        src: production/docker-compose.yml.j2
+        dest: "{{ compose_file }}"
+        mode: "0644"
+
+    - name: Copy config.toml
+      template:
+        src: production/config.toml.j2
+        dest: "{{ config_file }}"
+        mode: "0600"
+
+    - name: Stop containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        state: absent
+
+    - name: Pull images
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        pull: always
+        state: present
+
+    - name: Start containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        state: present

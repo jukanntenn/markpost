@@ -5,9 +5,11 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"markpost/internal/domain/delivery"
 	"markpost/internal/service"
+	delivery_svc "markpost/internal/service/delivery"
 	"markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
@@ -16,18 +18,49 @@ import (
 // DeliveryService provides delivery channel operations.
 type DeliveryService interface {
 	ListByUserID(ctx context.Context, userID int) ([]delivery.Channel, error)
-	Create(ctx context.Context, userID int, kind string, name string, webhookURL string, keywords string) (*delivery.Channel, error)
-	Update(ctx context.Context, userID int, id int, kind string, name string, webhookURL string, keywords string, enabled *bool) (*delivery.Channel, error)
+	Create(ctx context.Context, userID int, params delivery_svc.CreateChannelParams) (*delivery.Channel, error)
+	Update(ctx context.Context, userID int, id int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
 	Delete(ctx context.Context, userID int, id int) error
+}
+
+// ChannelResponse is the typed JSON response for a delivery channel.
+type ChannelResponse struct {
+	ID         int                  `json:"id"`
+	Kind       delivery.ChannelKind `json:"kind"`
+	Name       string               `json:"name"`
+	Enabled    bool                 `json:"enabled"`
+	WebhookURL string               `json:"webhook_url"`
+	Keywords   string               `json:"keywords"`
+	CreatedAt  time.Time            `json:"created_at"`
+	UpdatedAt  time.Time            `json:"updated_at"`
+}
+
+func newChannelResponse(ch delivery.Channel) ChannelResponse {
+	return ChannelResponse{
+		ID:         ch.ID,
+		Kind:       ch.Kind,
+		Name:       ch.Name,
+		Enabled:    ch.Enabled,
+		WebhookURL: ch.WebhookURL,
+		Keywords:   ch.Keywords,
+		CreatedAt:  ch.CreatedAt,
+		UpdatedAt:  ch.UpdatedAt,
+	}
+}
+
+type ChannelsListResponse struct {
+	Channels []ChannelResponse `json:"channels"`
+}
+
+type SingleChannelResponse struct {
+	Channel ChannelResponse `json:"channel"`
 }
 
 // ListDeliveryChannels returns a handler for listing user's delivery channels.
 func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
@@ -37,12 +70,9 @@ func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 			return
 		}
 
-		items := make([]gin.H, 0, len(channels))
-		for _, ch := range channels {
-			items = append(items, channelToJSON(ch))
-		}
+		items := mapSlice(channels, newChannelResponse)
 
-		c.JSON(http.StatusOK, gin.H{"channels": items})
+		c.JSON(http.StatusOK, ChannelsListResponse{Channels: items})
 	}
 }
 
@@ -57,10 +87,8 @@ type CreateDeliveryChannelRequest struct {
 // CreateDeliveryChannel returns a handler for creating a delivery channel.
 func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
@@ -69,13 +97,18 @@ func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 			return
 		}
 
-		ch, err := deliverySvc.Create(c.Request.Context(), u.ID, req.Kind, req.Name, req.WebhookURL, req.Keywords)
+		ch, err := deliverySvc.Create(c.Request.Context(), u.ID, delivery_svc.CreateChannelParams{
+			Kind:       req.Kind,
+			Name:       req.Name,
+			WebhookURL: req.WebhookURL,
+			Keywords:   req.Keywords,
+		})
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"channel": channelToJSON(*ch)})
+		c.JSON(http.StatusCreated, SingleChannelResponse{Channel: newChannelResponse(*ch)})
 	}
 }
 
@@ -91,16 +124,13 @@ type UpdateDeliveryChannelRequest struct {
 // UpdateDeliveryChannel returns a handler for updating a delivery channel.
 func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			apierr.RespondError(c, service.NewServiceError(service.ErrValidation, "invalid channel ID"))
+		id, ok := parsePathID(c)
+		if !ok {
 			return
 		}
 
@@ -109,43 +139,32 @@ func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 			return
 		}
 
-		var kind, name, webhookURL, keywords string
-		if req.Kind != nil {
-			kind = *req.Kind
-		}
-		if req.Name != nil {
-			name = *req.Name
-		}
-		if req.WebhookURL != nil {
-			webhookURL = *req.WebhookURL
-		}
-		if req.Keywords != nil {
-			keywords = *req.Keywords
-		}
-
-		ch, err := deliverySvc.Update(c.Request.Context(), u.ID, id, kind, name, webhookURL, keywords, req.Enabled)
+		ch, err := deliverySvc.Update(c.Request.Context(), u.ID, id, delivery_svc.UpdateChannelParams{
+			Kind:       deref(req.Kind),
+			Name:       deref(req.Name),
+			WebhookURL: deref(req.WebhookURL),
+			Keywords:   deref(req.Keywords),
+			Enabled:    req.Enabled,
+		})
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"channel": channelToJSON(*ch)})
+		c.JSON(http.StatusOK, SingleChannelResponse{Channel: newChannelResponse(*ch)})
 	}
 }
 
 // DeleteDeliveryChannel returns a handler for deleting a delivery channel.
 func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
-		id, err := strconv.Atoi(c.Param("id"))
-		if err != nil {
-			apierr.RespondError(c, service.NewServiceError(service.ErrValidation, "invalid channel ID"))
+		id, ok := parsePathID(c)
+		if !ok {
 			return
 		}
 
@@ -154,19 +173,17 @@ func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "Channel deleted successfully"})
+		c.JSON(http.StatusOK, MessageResponse{
+			Message: getI18nMessage(c, "Channel deleted successfully", "delivery.channel_deleted"),
+		})
 	}
 }
 
-func channelToJSON(ch delivery.Channel) gin.H {
-	return gin.H{
-		"id":         ch.ID,
-		"kind":       ch.Kind,
-		"name":       ch.Name,
-		"enabled":    ch.Enabled,
-		"webhook_url": ch.WebhookURL,
-		"keywords":   ch.Keywords,
-		"created_at": ch.CreatedAt,
-		"updated_at": ch.UpdatedAt,
+func parsePathID(c *gin.Context) (int, bool) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		apierr.RespondError(c, service.NewServiceError(service.ErrValidation, "invalid ID"))
+		return 0, false
 	}
+	return id, true
 }

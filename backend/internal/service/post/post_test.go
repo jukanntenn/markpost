@@ -2,6 +2,7 @@ package post
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"markpost/internal/domain/post"
@@ -24,7 +25,7 @@ func newMockPostRepository() *mockPostRepository {
 func (m *mockPostRepository) Create(_ context.Context, title, body string, userID int) (*post.Post, error) {
 	p := &post.Post{
 		ID:     m.nextID,
-		QID:    "test-qid-" + string(rune(m.nextID+'0')),
+		QID:    "test-qid-" + strconv.Itoa(m.nextID),
 		Title:  title,
 		Body:   body,
 		UserID: userID,
@@ -203,7 +204,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	_, _ = mockRepo.Create(ctx, "Title 3", "Body 3", 2)
 
 	t.Run("returns posts for user", func(t *testing.T) {
-		posts, total, err := svc.GetUserPosts(ctx, 1, 1, 10)
+		posts, total, err := svc.GetUserPosts(ctx, 1, 0, 10)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -216,7 +217,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	})
 
 	t.Run("returns empty for user with no posts", func(t *testing.T) {
-		posts, total, err := svc.GetUserPosts(ctx, 999, 1, 10)
+		posts, total, err := svc.GetUserPosts(ctx, 999, 0, 10)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -233,7 +234,7 @@ func TestService_GetUserPosts(t *testing.T) {
 		_, _ = mockRepo.Create(ctx, "Title 5", "Body 5", 3)
 		_, _ = mockRepo.Create(ctx, "Title 6", "Body 6", 3)
 
-		posts, total, err := svc.GetUserPosts(ctx, 3, 1, 2)
+		posts, total, err := svc.GetUserPosts(ctx, 3, 0, 2)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}

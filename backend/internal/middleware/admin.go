@@ -9,26 +9,31 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func abortWithError(c *gin.Context, err error) {
+	apierr.RespondError(c, err)
+	c.Abort()
+}
+
+// ExtractUser extracts the authenticated user from the gin context.
+func ExtractUser(c *gin.Context) (*user.User, bool) {
+	u, ok := c.Get("user")
+	if !ok {
+		return nil, false
+	}
+	return u.(*user.User), true
+}
+
 // RequireAdmin returns a middleware that requires admin role.
 func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := c.Get("user")
+		u, ok := ExtractUser(c)
 		if !ok {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrUnauthorized, "user not found in context", nil))
-			c.Abort()
+			abortWithError(c, service.NewServiceError(service.ErrUnauthorized, "user not found in context"))
 			return
 		}
 
-		currentUser, ok := u.(*user.User)
-		if !ok {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrUnauthorized, "invalid user type in context", nil))
-			c.Abort()
-			return
-		}
-
-		if currentUser.Role != user.RoleAdmin {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrForbidden, "admin access required", nil))
-			c.Abort()
+		if u.Role != user.RoleAdmin {
+			abortWithError(c, service.NewServiceError(service.ErrForbidden, "admin access required"))
 			return
 		}
 

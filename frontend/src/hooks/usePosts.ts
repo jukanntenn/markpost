@@ -1,17 +1,16 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { request } from "@/lib/api";
-import type { PostsPaginatedResponse } from "@/types/posts";
+import { postsApi } from "@/lib/api";
 
 interface UsePostsOptions {
   refetchInterval?: number;
 }
 
 export function usePosts(page: number, limit: number = 20, options?: UsePostsOptions) {
-  return useQuery<PostsPaginatedResponse>({
+  return useQuery({
     queryKey: ["posts", page, limit],
-    queryFn: () => request<PostsPaginatedResponse>(`/api/v1/posts?page=${page}&limit=${limit}`),
+    queryFn: () => postsApi.list(page, limit),
     refetchInterval: options?.refetchInterval,
     refetchOnWindowFocus: false,
   });

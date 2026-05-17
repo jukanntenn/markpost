@@ -4,11 +4,11 @@ package v1
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	"markpost/internal/service"
 	"markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
@@ -16,136 +16,162 @@ import (
 
 // AdminService provides admin operations.
 type AdminService interface {
-	ListAllUsers(ctx context.Context, page, limit int) ([]user.User, int64, error)
-	ListAllPosts(ctx context.Context, search string, page, limit int) ([]post.Post, int64, error)
-	ListAllDeliveryChannels(ctx context.Context, page, limit int) ([]delivery.Channel, int64, error)
+	ListAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error)
+	ListAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
+	ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
+}
+
+type AdminUserItem struct {
+	ID        int       `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func newAdminUserItem(u user.User) AdminUserItem {
+	return AdminUserItem{
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		Role:      string(u.Role),
+		IsActive:  u.IsActive,
+		CreatedAt: u.CreatedAt,
+	}
+}
+
+type AdminPostItem struct {
+	ID        string    `json:"id"`
+	QID       string    `json:"qid"`
+	Title     string    `json:"title"`
+	UserID    int       `json:"user_id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func newAdminPostItem(p post.Post) AdminPostItem {
+	username := ""
+	if p.User.ID != 0 {
+		username = p.User.Username
+	}
+	return AdminPostItem{
+		ID:        p.QID,
+		QID:       p.QID,
+		Title:     p.Title,
+		UserID:    p.UserID,
+		Username:  username,
+		CreatedAt: p.CreatedAt,
+	}
+}
+
+type AdminChannelItem struct {
+	ID         int       `json:"id"`
+	Name       string    `json:"name"`
+	Kind       string    `json:"kind"`
+	Enabled    bool      `json:"enabled"`
+	UserID     int       `json:"user_id"`
+	WebhookURL string    `json:"webhook_url"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
+	return AdminChannelItem{
+		ID:         ch.ID,
+		Name:       ch.Name,
+		Kind:       string(ch.Kind),
+		Enabled:    ch.Enabled,
+		UserID:     ch.UserID,
+		WebhookURL: ch.WebhookURL,
+		CreatedAt:  ch.CreatedAt,
+	}
+}
+
+type AdminUsersResponse struct {
+	Users      []AdminUserItem `json:"users"`
+	Pagination Pagination      `json:"pagination"`
+}
+
+type AdminPostsResponse struct {
+	Posts      []AdminPostItem `json:"posts"`
+	Pagination Pagination      `json:"pagination"`
+}
+
+type AdminChannelsResponse struct {
+	Channels   []AdminChannelItem `json:"channels"`
+	Pagination Pagination         `json:"pagination"`
+}
+
+type AdminPostsQuery struct {
+	PaginationQuery
+	Search string `form:"search"`
 }
 
 // AdminListUsers returns a handler for listing all users.
 func AdminListUsers(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		type queryParams struct {
-			Page  int `form:"page" binding:"omitempty,min=1"`
-			Limit int `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if !bindQuery(c, &query) {
+		query, ok := bindPaginationQuery(c)
+		if !ok {
 			return
 		}
 
-		query.Page = defaultInt(query.Page, 1)
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			apierr.RespondError(c, service.NewServiceError(service.ErrInvalidRequest, "invalid limit"))
-			return
-		}
-
-		users, total, err := adminSvc.ListAllUsers(c.Request.Context(), query.Page, query.Limit)
+		users, total, err := adminSvc.ListAllUsers(c.Request.Context(), query.Offset, query.Limit)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		items := make([]gin.H, 0, len(users))
-		for _, u := range users {
-			items = append(items, gin.H{
-				"id":         u.ID,
-				"username":   u.Username,
-				"email":      u.Email,
-				"role":       u.Role,
-				"is_active":  u.IsActive,
-				"created_at": u.CreatedAt,
-			})
-		}
+		items := mapSlice(users, newAdminUserItem)
 
-		c.JSON(http.StatusOK, gin.H{"users": items, "total": total})
+		c.JSON(http.StatusOK, AdminUsersResponse{
+			Users:      items,
+			Pagination: query.ToPagination(total),
+		})
 	}
 }
 
 // AdminListPosts returns a handler for listing all posts.
 func AdminListPosts(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		type queryParams struct {
-			Search string `form:"search"`
-			Page   int    `form:"page" binding:"omitempty,min=1"`
-			Limit  int    `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if !bindQuery(c, &query) {
+		var query AdminPostsQuery
+		if !bindQuery(c, &query) || !validatePaginationQuery(c, &query.PaginationQuery) {
 			return
 		}
 
-		query.Page = defaultInt(query.Page, 1)
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			apierr.RespondError(c, service.NewServiceError(service.ErrInvalidRequest, "invalid limit"))
-			return
-		}
-
-		posts, total, err := adminSvc.ListAllPosts(c.Request.Context(), query.Search, query.Page, query.Limit)
+		posts, total, err := adminSvc.ListAllPosts(c.Request.Context(), query.Search, query.Offset, query.Limit)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		items := make([]gin.H, 0, len(posts))
-		for _, p := range posts {
-			username := ""
-			if p.User.ID != 0 {
-				username = p.User.Username
-			}
-			items = append(items, gin.H{
-				"id":         p.QID,
-				"qid":        p.QID,
-				"title":      p.Title,
-				"user_id":    p.UserID,
-				"username":   username,
-				"created_at": p.CreatedAt,
-			})
-		}
+		items := mapSlice(posts, newAdminPostItem)
 
-		c.JSON(http.StatusOK, gin.H{"posts": items, "total": total})
+		c.JSON(http.StatusOK, AdminPostsResponse{
+			Posts:      items,
+			Pagination: query.PaginationQuery.ToPagination(total),
+		})
 	}
 }
 
 // AdminListChannels returns a handler for listing all delivery channels.
 func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		type queryParams struct {
-			Page  int `form:"page" binding:"omitempty,min=1"`
-			Limit int `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if !bindQuery(c, &query) {
+		query, ok := bindPaginationQuery(c)
+		if !ok {
 			return
 		}
 
-		query.Page = defaultInt(query.Page, 1)
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			apierr.RespondError(c, service.NewServiceError(service.ErrInvalidRequest, "invalid limit"))
-			return
-		}
-
-		channels, total, err := adminSvc.ListAllDeliveryChannels(c.Request.Context(), query.Page, query.Limit)
+		channels, total, err := adminSvc.ListAllDeliveryChannels(c.Request.Context(), query.Offset, query.Limit)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		items := make([]gin.H, 0, len(channels))
-		for _, ch := range channels {
-			items = append(items, gin.H{
-				"id":         ch.ID,
-				"name":       ch.Name,
-				"type":       string(ch.Kind),
-				"enabled":    ch.Enabled,
-				"user_id":    ch.UserID,
-				"webhook_url": ch.WebhookURL,
-				"created_at": ch.CreatedAt,
-			})
-		}
+		items := mapSlice(channels, newAdminChannelItem)
 
-		c.JSON(http.StatusOK, gin.H{"channels": items, "total": total})
+		c.JSON(http.StatusOK, AdminChannelsResponse{
+			Channels:   items,
+			Pagination: query.ToPagination(total),
+		})
 	}
 }

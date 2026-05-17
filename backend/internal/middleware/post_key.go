@@ -3,7 +3,6 @@ package middleware
 import (
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
-	"markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,19 +12,17 @@ func PostKey(users user.Repository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		postKey := c.Param("post_key")
 		if postKey == "" {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrInvalidPostKey, "post key is required", nil))
-			c.Abort()
+			abortWithError(c, service.NewServiceError(service.ErrInvalidPostKey, "post key is required"))
 			return
 		}
 
 		u, err := users.GetByPostKey(c.Request.Context(), postKey)
 		if err != nil {
-			apierr.RespondError(c, service.NewServiceErrorWrap(service.ErrInvalidPostKey, "invalid post key", err))
-			c.Abort()
+			abortWithError(c, service.NewServiceErrorWrap(service.ErrInvalidPostKey, "invalid post key", err))
 			return
 		}
 
-		c.Set("user", u)
+		setUserFields(c, u)
 		c.Next()
 	}
 }

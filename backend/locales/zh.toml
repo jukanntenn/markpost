@@ -73,3 +73,7 @@ other = "该字段为必填项"
 ["health.running"]
 hash = "sha1-27c078f52179432f05645f29a49d159612806f97"
 other = "markpost 正在运行"
+
+["delivery.channel_deleted"]
+hash = "sha1-4a762c9e8d5f16b9c6e82e54d69e1c6b7ef45c79"
+other = "渠道已成功删除"

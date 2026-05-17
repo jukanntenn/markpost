@@ -1,47 +1,27 @@
 import { http, HttpResponse } from "msw";
+import type { PostsPaginatedResponse, PostKeyResponse } from "@/types/posts";
 
-export interface MockPost {
-  id: string;
-  title: string;
-  created_at: string;
-}
-
-export interface MockPostsResponse {
-  posts: MockPost[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
-  };
-}
-
-export interface MockPostKeyResponse {
-  post_key: string;
-  created_at: string;
-}
-
-export const mockPostKey: MockPostKeyResponse = {
+export const mockPostKey: PostKeyResponse = {
   post_key: "test_key_abc123",
   created_at: "2024-01-01T00:00:00Z",
 };
 
-export const mockEmptyPosts: MockPostsResponse = {
+export const mockEmptyPosts: PostsPaginatedResponse = {
   posts: [],
   pagination: { page: 1, limit: 20, total: 0, total_pages: 0 },
 };
 
-export const mockPosts: MockPostsResponse = {
+export const mockPosts: PostsPaginatedResponse = {
   posts: [
-    { id: "p1", title: "Test Post 1", created_at: "2024-01-01T12:00:00Z" },
-    { id: "p2", title: "Test Post 2", created_at: "2024-01-02T13:00:00Z" },
+    { id: 1, qid: "p-qid-1", title: "Test Post 1", created_at: "2024-01-01T12:00:00Z" },
+    { id: 2, qid: "p-qid-2", title: "Test Post 2", created_at: "2024-01-02T13:00:00Z" },
   ],
   pagination: { page: 1, limit: 20, total: 2, total_pages: 1 },
 };
 
 export const handlers = [
   http.get("/api/v1/post_key", () => {
-    return HttpResponse.json<MockPostKeyResponse>(mockPostKey);
+    return HttpResponse.json<PostKeyResponse>(mockPostKey);
   }),
 
   http.get("/api/v1/posts", ({ request }) => {
@@ -49,17 +29,17 @@ export const handlers = [
     const page = url.searchParams.get("page");
 
     if (page === "2") {
-      return HttpResponse.json<MockPostsResponse>({
+      return HttpResponse.json<PostsPaginatedResponse>({
         posts: [],
         pagination: { page: 2, limit: 20, total: 2, total_pages: 1 },
       });
     }
 
-    return HttpResponse.json<MockPostsResponse>(mockPosts);
+    return HttpResponse.json<PostsPaginatedResponse>(mockPosts);
   }),
 
   http.post("/api/v1/post_key", async () => {
-    return HttpResponse.json<MockPostKeyResponse>({
+    return HttpResponse.json<PostKeyResponse>({
       post_key: "new_key_abc123",
       created_at: "2024-01-01T00:00:00Z",
     });

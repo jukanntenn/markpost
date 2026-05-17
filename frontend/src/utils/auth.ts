@@ -1,4 +1,4 @@
-import type { LoginResponse } from "../types/auth";
+import type { LoginResponse } from "@/lib/api/auth";
 
 export const checkLoginResponse = (data: LoginResponse | null) => {
   return (

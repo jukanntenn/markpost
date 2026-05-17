@@ -68,7 +68,9 @@
       "createdAt": "Created at",
       "copied": "copied to clipboard!",
       "createTestPost": "Create Test Post",
-      "createTestPostTip": "Quickly create a sample Markdown post"
+      "createTestPostTip": "Quickly create a sample Markdown post",
+      "copyPostKey": "Copy Post Key",
+      "copyPostUrl": "Copy Full Post URL"
     },
     "recentPosts": {
       "title": "Latest Posts",

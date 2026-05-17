@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkLoginResponse } from "./auth";
-import type { LoginResponse } from "../types/auth";
+import type { LoginResponse } from "@/lib/api/auth";
 
 describe("checkLoginResponse", () => {
   it("should return true when all fields are valid", () => {

@@ -60,3 +60,6 @@ other = "Forbidden"
 
 ["error.user_disabled"]
 other = "User account is disabled"
+
+["delivery.channel_deleted"]
+other = "Channel deleted successfully"

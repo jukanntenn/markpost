@@ -3,7 +3,6 @@ package infra
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -63,126 +62,77 @@ func (r *PostRepository) CreateBatch(ctx context.Context, posts []post.Post) (in
 
 // GetByQID retrieves a post by its QID.
 func (r *PostRepository) GetByQID(ctx context.Context, qid string) (*post.Post, error) {
-	var p post.Post
-	err := r.db.WithContext(ctx).Where("qid = ?", qid).First(&p).Error
+	p, err := findFirst[post.Post](ctx, r.db.Where("qid = ?", qid), post.ErrNotFound)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, post.ErrNotFound
-		}
 		return nil, fmt.Errorf("GetByQID: %w", err)
 	}
-	return &p, nil
+	return p, nil
 }
 
 // GetByID retrieves a post by its ID.
 func (r *PostRepository) GetByID(ctx context.Context, id int) (*post.Post, error) {
-	var p post.Post
-	err := r.db.WithContext(ctx).First(&p, id).Error
+	p, err := findFirst[post.Post](ctx, r.db.Where("id = ?", id), post.ErrNotFound)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, post.ErrNotFound
-		}
 		return nil, fmt.Errorf("GetByID: %w", err)
 	}
-	return &p, nil
+	return p, nil
 }
 
 // CountByUserID counts posts for a specific user.
 func (r *PostRepository) CountByUserID(ctx context.Context, userID int) (int64, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&post.Post{}).Where("user_id = ?", userID).Count(&count).Error
-	if err != nil {
-		return 0, fmt.Errorf("CountByUserID: %w", err)
-	}
-	return count, nil
+	return countQuery(ctx, r.db.Model(&post.Post{}).Where("user_id = ?", userID), "CountByUserID")
 }
 
 // GetByUserID retrieves posts for a specific user with pagination.
 func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]post.Post, error) {
-	var posts []post.Post
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Offset(offset).Limit(limit).Find(&posts).Error
-	if err != nil {
-		return nil, fmt.Errorf("GetByUserID: %w", err)
-	}
-	return posts, nil
+	return findMany[post.Post](ctx, r.db.Where("user_id = ?", userID).Order("created_at DESC"), offset, limit, "GetByUserID")
 }
 
 // ListAll retrieves all posts with optional search and pagination.
 func (r *PostRepository) ListAll(ctx context.Context, search string, offset int, limit int) ([]post.Post, error) {
-	var posts []post.Post
-	query := r.db.WithContext(ctx).Model(&post.Post{}).Preload("User").Order("created_at DESC").Offset(offset).Limit(limit)
-	if search != "" {
-		query = query.Where("title LIKE ?", "%"+search+"%")
-	}
-
-	if err := query.Find(&posts).Error; err != nil {
-		return nil, err
-	}
-
-	return posts, nil
+	query := r.applySearch(r.db.Model(&post.Post{}), search).Preload("User").Order("created_at DESC")
+	return findMany[post.Post](ctx, query, offset, limit, "ListAll")
 }
 
 // CountAll counts all posts with optional search filter.
 func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, error) {
-	query := r.db.WithContext(ctx).Model(&post.Post{})
-	if search != "" {
-		query = query.Where("title LIKE ?", "%"+search+"%")
-	}
-
-	var count int64
-	if err := query.Count(&count).Error; err != nil {
-		return 0, err
-	}
-
-	return count, nil
+	query := r.applySearch(r.db.Model(&post.Post{}), search)
+	return countQuery(ctx, query, "CountAll")
 }
 
 // UpdateByID updates a post by its ID.
 func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, body string) (*post.Post, error) {
-	_, err := r.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
 	updates := map[string]any{
 		"title": title,
 		"body":  body,
 	}
-	if err := r.db.WithContext(ctx).Model(&post.Post{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+	result := r.db.WithContext(ctx).Model(&post.Post{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return nil, fmt.Errorf("UpdateByID: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("UpdateByID: %w", post.ErrNotFound)
+	}
+
+	p, err := findFirst[post.Post](ctx, r.db.Preload("User").Where("id = ?", id), post.ErrNotFound)
+	if err != nil {
 		return nil, err
 	}
 
-	var p post.Post
-	if err := r.db.WithContext(ctx).Preload("User").First(&p, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, post.ErrNotFound
-		}
-		return nil, err
-	}
-
-	return &p, nil
+	return p, nil
 }
 
 // DeleteByID deletes a post by its ID.
 func (r *PostRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
-	tx := r.db.WithContext(ctx).Delete(&post.Post{}, id)
-	if tx.Error != nil {
-		return 0, tx.Error
+	n, err := deleteWhere[post.Post](ctx, r.db.Where("id = ?", id))
+	if err != nil {
+		return 0, fmt.Errorf("DeleteByID: %w", err)
 	}
-
-	return tx.RowsAffected, nil
+	return n, nil
 }
 
 // PruneExpired deletes expired posts based on retention days.
 func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, batchSize int) error {
-	if retentionDays <= 0 {
-		return fmt.Errorf("retention days must be positive, got: %d", retentionDays)
-	}
-
-	if batchSize <= 0 {
-		batchSize = 99
-	}
-
 	expiredBefore := time.Now().AddDate(0, 0, -retentionDays)
 
 	for {
@@ -210,17 +160,8 @@ func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, ba
 
 // CountExpired counts expired posts based on retention days.
 func (r *PostRepository) CountExpired(ctx context.Context, retentionDays int) (int64, error) {
-	if retentionDays <= 0 {
-		return 0, fmt.Errorf("retention days must be positive, got: %d", retentionDays)
-	}
-
 	expiredBefore := time.Now().AddDate(0, 0, -retentionDays)
-	var count int64
-	err := r.db.WithContext(ctx).Model(&post.Post{}).Where("created_at < ?", expiredBefore).Count(&count).Error
-	if err != nil {
-		return 0, fmt.Errorf("CountExpired: %w", err)
-	}
-	return count, nil
+	return countQuery(ctx, r.db.Model(&post.Post{}).Where("created_at < ?", expiredBefore), "CountExpired")
 }
 
 func (r *PostRepository) getIDsBefore(ctx context.Context, before time.Time, limit int) ([]int, error) {
@@ -245,4 +186,11 @@ func (r *PostRepository) deleteByIDs(ctx context.Context, ids []int) (int64, err
 	}
 
 	return tx.RowsAffected, nil
+}
+
+func (r *PostRepository) applySearch(query *gorm.DB, search string) *gorm.DB {
+	if search != "" {
+		return query.Where("title LIKE ?", likeContains(search))
+	}
+	return query
 }

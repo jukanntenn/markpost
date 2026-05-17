@@ -6,16 +6,33 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"markpost/internal/domain/post"
 	"markpost/internal/service"
-	postsvc "markpost/internal/service/post"
 	"markpost/pkg/apierr"
 
-	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
-	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
+
+// CreatePostResponse represents a post creation response.
+type CreatePostResponse struct {
+	ID string `json:"id"`
+}
+
+// PostListItem represents a post in list responses.
+type PostListItem struct {
+	ID        int       `json:"id"`
+	QID       string    `json:"qid"`
+	Title     string    `json:"title"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// PostsListResponse represents a list of posts response.
+type PostsListResponse struct {
+	Posts      []PostListItem `json:"posts"`
+	Pagination Pagination     `json:"pagination"`
+}
 
 // PostRequest represents a post creation request.
 type PostRequest struct {
@@ -28,16 +45,14 @@ type PostService interface {
 	CreatePost(ctx context.Context, title, body string, userID int) (string, error)
 	RenderPostHTML(ctx context.Context, qid string) (string, string, error)
 	GetPostMarkdown(ctx context.Context, qid string) (string, string, error)
-	GetUserPosts(ctx context.Context, userID int, page, limit int) ([]post.Post, int64, error)
+	GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error)
 }
 
 // CreatePost returns a handler for creating a new post.
 func CreatePost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
@@ -52,21 +67,17 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, gin.H{"id": id})
+		c.JSON(http.StatusCreated, CreatePostResponse{ID: id})
 	}
 }
 
-// getI18nMessage gets an i18n message or returns a default value if i18n is not available.
-func getI18nMessage(c *gin.Context, defaultMsg string) string {
-	if _, exists := c.Get("i18n"); exists {
-		return ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-			DefaultMessage: &i18n.Message{
-				ID:    defaultMsg,
-				Other: defaultMsg,
-			},
-		})
+func respondPostError(c *gin.Context, err error) {
+	if se, ok := service.AsServiceError(err); ok && se.Code == service.ErrNotFound {
+		c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
+		return
 	}
-	return defaultMsg
+	log.Printf("RenderPost error: %v", err)
+	c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
 }
 
 // RenderPost returns a handler for rendering a post.
@@ -77,11 +88,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 		if c.Query("format") == "raw" {
 			title, body, err := postSvc.GetPostMarkdown(c.Request.Context(), id)
 			if err != nil {
-				if se, ok := postsvc.AsServiceError(err); ok && se.Code == postsvc.ErrNotFound {
-					c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
-				} else {
-					c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
-				}
+				respondPostError(c, err)
 				return
 			}
 
@@ -92,70 +99,46 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 
 		title, htmlContent, err := postSvc.RenderPostHTML(c.Request.Context(), id)
 		if err != nil {
-			if se, ok := postsvc.AsServiceError(err); ok && se.Code == postsvc.ErrNotFound {
-				c.String(http.StatusNotFound, getI18nMessage(c, "Not Found"))
-			} else {
-				log.Printf("RenderPost error: %v", err)
-				c.String(http.StatusInternalServerError, getI18nMessage(c, "Failed to render post"))
-			}
+			respondPostError(c, err)
 			return
 		}
 		c.HTML(http.StatusOK, "post.html", gin.H{"Title": title, "Body": template.HTML(htmlContent)})
 	}
 }
 
+func newPostListItem(p post.Post) PostListItem {
+	return PostListItem{
+		ID:        p.ID,
+		QID:       p.QID,
+		Title:     p.Title,
+		CreatedAt: p.CreatedAt,
+	}
+}
+
 // PostsList returns a handler for listing user's posts.
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		u, ok := ExtractUser(c)
+		u, ok := requireUser(c)
 		if !ok {
-			err := service.NewServiceErrorWrap(service.ErrFailedGetUser, "failed to get user from context", nil)
-			apierr.RespondError(c, err)
 			return
 		}
 
-		type queryParams struct {
-			Page  int `form:"page" binding:"omitempty,min=1"`
-			Limit int `form:"limit" binding:"omitempty,min=1"`
-		}
-		var query queryParams
-		if !bindQuery(c, &query) {
+		query, valid := bindPaginationQuery(c)
+		if !valid {
 			return
 		}
 
-		query.Page = defaultInt(query.Page, 1)
-		query.Limit = defaultInt(query.Limit, 20)
-		if query.Limit > 100 {
-			err := service.NewServiceErrorWrap(service.ErrInvalidRequest, "invalid limit", nil)
-			apierr.RespondError(c, err)
-			return
-		}
-
-		posts, total, err := postSvc.GetUserPosts(c.Request.Context(), u.ID, query.Page, query.Limit)
+		posts, total, err := postSvc.GetUserPosts(c.Request.Context(), u.ID, query.Offset, query.Limit)
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
 
-		items := make([]gin.H, 0, len(posts))
-		for _, p := range posts {
-			items = append(items, gin.H{
-				"id":         p.ID,
-				"qid":        p.QID,
-				"title":      p.Title,
-				"created_at": p.CreatedAt,
-			})
-		}
-		totalPages := (total + int64(query.Limit) - 1) / int64(query.Limit)
+		items := mapSlice(posts, newPostListItem)
 
-		c.JSON(http.StatusOK, gin.H{
-			"posts": items,
-			"pagination": gin.H{
-				"page":        query.Page,
-				"limit":       query.Limit,
-				"total":       total,
-				"total_pages": totalPages,
-			},
+		c.JSON(http.StatusOK, PostsListResponse{
+			Posts:      items,
+			Pagination: query.ToPagination(total),
 		})
 	}
 }

@@ -81,3 +81,7 @@ other = "无权限"
 ["error.user_disabled"]
 hash = "sha1-e48c5d6c824b44e0f19e2e3e2f9ea5c8a9c3bf80"
 other = "用户账户已被禁用"
+
+["delivery.channel_deleted"]
+hash = "sha1-4a762c9e8d5f16b9c6e82e54d69e1c6b7ef45c79"
+other = "渠道已成功删除"

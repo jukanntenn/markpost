@@ -3,7 +3,7 @@ package infra
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"markpost/internal/domain/delivery"
 
@@ -22,43 +22,33 @@ func NewDeliveryChannelRepository(db *gorm.DB) delivery.Repository {
 
 // GetByID retrieves a delivery channel by its ID.
 func (r *DeliveryChannelRepository) GetByID(ctx context.Context, id int) (*delivery.Channel, error) {
-	var c delivery.Channel
-	err := r.db.WithContext(ctx).First(&c, id).Error
+	ch, err := findFirst[delivery.Channel](ctx, r.db.Where("id = ?", id), delivery.ErrNotFound)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, delivery.ErrNotFound
-		}
-		return nil, err
+		return nil, fmt.Errorf("GetByID: %w", err)
 	}
-	return &c, nil
+	return ch, nil
 }
 
 // GetByUserID retrieves all delivery channels for a user.
 func (r *DeliveryChannelRepository) GetByUserID(ctx context.Context, userID int) ([]delivery.Channel, error) {
-	var channels []delivery.Channel
-	err := r.db.WithContext(ctx).Where("user_id = ?", userID).Order("id asc").Find(&channels).Error
-	if err != nil {
-		return nil, err
-	}
-	return channels, nil
+	return findMany[delivery.Channel](ctx, r.db.Where("user_id = ?", userID).Order("id asc"), 0, 0, "GetByUserID")
 }
 
 // GetByIDAndUserID retrieves a delivery channel by ID and user ID.
 func (r *DeliveryChannelRepository) GetByIDAndUserID(ctx context.Context, id int, userID int) (*delivery.Channel, error) {
-	var c delivery.Channel
-	err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&c).Error
+	ch, err := findFirst[delivery.Channel](ctx, r.db.Where("id = ? AND user_id = ?", id, userID), delivery.ErrNotFound)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, delivery.ErrNotFound
-		}
-		return nil, err
+		return nil, fmt.Errorf("GetByIDAndUserID: %w", err)
 	}
-	return &c, nil
+	return ch, nil
 }
 
 // Create creates a new delivery channel.
 func (r *DeliveryChannelRepository) Create(ctx context.Context, channel *delivery.Channel) error {
-	return r.db.WithContext(ctx).Create(channel).Error
+	if err := r.db.WithContext(ctx).Create(channel).Error; err != nil {
+		return fmt.Errorf("Create: %w", err)
+	}
+	return nil
 }
 
 // Update updates an existing delivery channel.
@@ -70,52 +60,45 @@ func (r *DeliveryChannelRepository) Update(ctx context.Context, channel *deliver
 		"webhook_url": channel.WebhookURL,
 		"keywords":    channel.Keywords,
 	}
-	return r.db.WithContext(ctx).Model(channel).Updates(updates).Error
+	if err := r.db.WithContext(ctx).Model(channel).Updates(updates).Error; err != nil {
+		return fmt.Errorf("Update: %w", err)
+	}
+	return nil
 }
 
 // DeleteByID deletes a delivery channel by its ID.
 func (r *DeliveryChannelRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
-	tx := r.db.WithContext(ctx).Delete(&delivery.Channel{}, id)
-	if tx.Error != nil {
-		return 0, tx.Error
+	n, err := deleteWhere[delivery.Channel](ctx, r.db.Where("id = ?", id))
+	if err != nil {
+		return 0, fmt.Errorf("DeleteByID: %w", err)
 	}
-	return tx.RowsAffected, nil
+	return n, nil
 }
 
 // DeleteByIDAndUserID deletes a delivery channel by ID and user ID.
 func (r *DeliveryChannelRepository) DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error) {
-	tx := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&delivery.Channel{})
-	if tx.Error != nil {
-		return 0, tx.Error
+	n, err := deleteWhere[delivery.Channel](ctx, r.db.Where("id = ? AND user_id = ?", id, userID))
+	if err != nil {
+		return 0, fmt.Errorf("DeleteByIDAndUserID: %w", err)
 	}
-	return tx.RowsAffected, nil
+	return n, nil
 }
 
 // DeleteByUserID deletes all delivery channels for a user.
 func (r *DeliveryChannelRepository) DeleteByUserID(ctx context.Context, userID int) (int64, error) {
-	tx := r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&delivery.Channel{})
-	if tx.Error != nil {
-		return 0, tx.Error
+	n, err := deleteWhere[delivery.Channel](ctx, r.db.Where("user_id = ?", userID))
+	if err != nil {
+		return 0, fmt.Errorf("DeleteByUserID: %w", err)
 	}
-	return tx.RowsAffected, nil
+	return n, nil
 }
 
 // ListAll retrieves all delivery channels with pagination.
 func (r *DeliveryChannelRepository) ListAll(ctx context.Context, offset, limit int) ([]delivery.Channel, error) {
-	var channels []delivery.Channel
-	err := r.db.WithContext(ctx).Order("id asc").Offset(offset).Limit(limit).Find(&channels).Error
-	if err != nil {
-		return nil, err
-	}
-	return channels, nil
+	return findMany[delivery.Channel](ctx, r.db.Order("id asc"), offset, limit, "ListAll")
 }
 
 // CountAll returns the total number of delivery channels.
 func (r *DeliveryChannelRepository) CountAll(ctx context.Context) (int64, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&delivery.Channel{}).Count(&count).Error
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
+	return countQuery(ctx, r.db.Model(&delivery.Channel{}), "CountAll")
 }

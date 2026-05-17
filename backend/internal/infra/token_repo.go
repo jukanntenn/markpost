@@ -3,7 +3,6 @@ package infra
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -34,15 +33,11 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, userID int, tok
 
 // GetRefreshToken retrieves a refresh token by its hash.
 func (r *TokenRepository) GetRefreshToken(ctx context.Context, tokenHash string) (*user.RefreshToken, error) {
-	var token user.RefreshToken
-	err := r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).First(&token).Error
+	t, err := findFirst[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash), user.ErrNotFound)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, user.ErrNotFound
-		}
 		return nil, fmt.Errorf("GetRefreshToken: %w", err)
 	}
-	return &token, nil
+	return t, nil
 }
 
 // DeleteRefreshToken deletes a refresh token by its hash.

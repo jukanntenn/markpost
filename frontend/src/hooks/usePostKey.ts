@@ -1,12 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { request } from "@/lib/api";
-import type { PostKeyResponse } from "@/types/posts";
+import { authApi } from "@/lib/api";
 
 export function usePostKey() {
-  return useQuery<PostKeyResponse>({
+  return useQuery({
     queryKey: ["postKey"],
-    queryFn: () => request<PostKeyResponse>("/api/v1/post_key"),
+    queryFn: () => authApi.queryPostKey(),
   });
 }

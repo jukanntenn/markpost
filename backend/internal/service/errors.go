@@ -2,7 +2,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 )
 
@@ -33,12 +32,12 @@ const (
 	// ErrInvalidPostKey indicates an invalid post key was provided.
 	ErrInvalidPostKey ErrCode = "invalid_post_key"
 	// ErrUserDisabled indicates the user account is disabled.
-ErrUserDisabled ErrCode = "user_disabled"
+	ErrUserDisabled ErrCode = "user_disabled"
 
-// ErrForbidden indicates the user lacks permission for the requested resource.
-ErrForbidden ErrCode = "forbidden"
+	// ErrForbidden indicates the user lacks permission for the requested resource.
+	ErrForbidden ErrCode = "forbidden"
 
-// ErrMissingStateParam indicates a missing state parameter.
+	// ErrMissingStateParam indicates a missing state parameter.
 	ErrMissingStateParam ErrCode = "missing_state_param"
 	// ErrMissingCode indicates a missing authorization code.
 	ErrMissingCode ErrCode = "missing_code"
@@ -50,7 +49,7 @@ ErrForbidden ErrCode = "forbidden"
 	// ErrMinLength indicates a value does not meet minimum length requirements.
 	ErrMinLength ErrCode = "min_length"
 	// ErrFieldViolation indicates a field validation violation.
-	ErrFieldViolation ErrCode = "validation"
+	ErrFieldViolation ErrCode = "field_violation"
 )
 
 // Error represents a structured service error with code and description.
@@ -110,33 +109,4 @@ func NewServiceErrorWithDetails(code ErrCode, description string, details []Erro
 		Description: description,
 		Details:     details,
 	}
-}
-
-// JWTTokenPair contains an access token and refresh token pair.
-type JWTTokenPair struct {
-	AccessToken  string
-	RefreshToken string
-}
-
-// GitHubAuthURLGenerator generates GitHub OAuth authorization URLs.
-type GitHubAuthURLGenerator interface {
-	GenerateGitHubAuthURL(ctx context.Context) (string, error)
-}
-
-// AuthService provides authentication operations.
-type AuthService interface {
-	GitHubAuthURLGenerator
-	LoginWithGitHub(ctx context.Context, code string) (interface{}, *JWTTokenPair, error)
-	LoginWithPassword(ctx context.Context, username, password string) (interface{}, *JWTTokenPair, error)
-	RefreshToken(ctx context.Context, refreshToken string) (interface{}, *JWTTokenPair, error)
-	ChangePassword(ctx context.Context, userID int, current, newPassword string) error
-	QueryPostKey(ctx context.Context, userID int) (string, interface{}, error)
-}
-
-// PostService provides post management operations.
-type PostService interface {
-	CreatePost(ctx context.Context, title, body string, userID int) (string, error)
-	RenderPostHTML(ctx context.Context, qid string) (string, string, error)
-	GetPostMarkdown(ctx context.Context, qid string) (string, string, error)
-	GetUserPosts(ctx context.Context, userID int, page, limit int) (interface{}, int64, error)
 }

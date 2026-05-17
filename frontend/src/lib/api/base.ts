@@ -2,11 +2,35 @@ import { useAuthStore } from "@/stores/auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
-interface RequestOptions extends RequestInit {
-  skipAuthRefresh?: boolean;
+interface FieldError {
+  field?: string;
+  code: string;
+  message: string;
 }
 
-let isRefreshing = false;
+interface ApiErrorResponse {
+  code?: string;
+  message?: string;
+  errors?: FieldError[];
+}
+
+export class ApiError extends Error {
+  readonly code?: string;
+  readonly fieldErrors?: FieldError[];
+
+  constructor(response: ApiErrorResponse) {
+    super(response.message || "Request failed");
+    this.name = "ApiError";
+    this.code = response.code;
+    this.fieldErrors = response.errors;
+  }
+}
+
+interface RequestOptions extends RequestInit {
+  skipAuthRefresh?: boolean;
+  params?: Record<string, string | number>;
+}
+
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
@@ -39,68 +63,86 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 export async function handleTokenRefresh(): Promise<boolean> {
-  if (isRefreshing && refreshPromise) {
+  if (refreshPromise) {
     return refreshPromise;
   }
 
-  isRefreshing = true;
   refreshPromise = refreshAccessToken().finally(() => {
-    isRefreshing = false;
     refreshPromise = null;
   });
 
   return refreshPromise;
 }
 
+export function buildUrl(base: string, path: string, params?: Record<string, string | number>): string {
+  if (!params || Object.keys(params).length === 0) {
+    return `${base}${path}`;
+  }
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    searchParams.set(key, String(value));
+  }
+  return `${base}${path}?${searchParams}`;
+}
+
+async function throwApiError(response: Response): Promise<never> {
+  let body: ApiErrorResponse;
+  try {
+    body = await response.json();
+  } catch {
+    body = {
+      message: response.statusText || `Request failed with status ${response.status}`,
+    };
+  }
+  throw new ApiError(body);
+}
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    await throwApiError(response);
+  }
+  return response.json();
+}
+
+async function attemptRetry<T>(
+  response: Response,
+  skipRefresh: boolean,
+  retry: () => Promise<Response>,
+): Promise<T | undefined> {
+  if (response.status !== 401 || skipRefresh) return undefined;
+  const refreshed = await handleTokenRefresh();
+  if (!refreshed) throw new Error("Session expired");
+  return parseResponse<T>(await retry());
+}
+
 export async function request<T>(
   url: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { token, logout } = useAuthStore.getState();
-  const { skipAuthRefresh = false, ...fetchOptions } = options;
+  const { token } = useAuthStore.getState();
+  const { skipAuthRefresh = false, params, headers: optHeaders, ...fetchOptions } = options;
+
+  const fullUrl = buildUrl(API_BASE_URL, url, params);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> || {}),
+    ...(optHeaders as Record<string, string> || {}),
   };
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${url}`, {
+  const response = await fetch(fullUrl, {
     ...fetchOptions,
     headers,
   });
 
-  if (response.status === 401 && !skipAuthRefresh) {
-    const refreshed = await handleTokenRefresh();
+  const retried = await attemptRetry<T>(response, skipAuthRefresh, () => {
+    headers["Authorization"] = `Bearer ${useAuthStore.getState().token}`;
+    return fetch(fullUrl, { ...fetchOptions, headers });
+  });
+  if (retried !== undefined) return retried;
 
-    if (refreshed) {
-      const newToken = useAuthStore.getState().token;
-      headers["Authorization"] = `Bearer ${newToken}`;
-
-      const retryResponse = await fetch(`${API_BASE_URL}${url}`, {
-        ...fetchOptions,
-        headers,
-      });
-
-      if (!retryResponse.ok) {
-        const error = await retryResponse.json();
-        throw new Error(error.message || "Request failed");
-      }
-
-      return retryResponse.json();
-    } else {
-      logout();
-      throw new Error("Session expired");
-    }
-  }
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Request failed");
-  }
-
-  return response.json();
+  return parseResponse<T>(response);
 }

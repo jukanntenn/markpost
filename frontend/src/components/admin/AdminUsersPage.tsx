@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Loader2Icon, TriangleAlertIcon, UserPlusIcon } from "lucide-react";
+import { UserPlusIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { formatToLocalTime } from "@/lib/utils";
 
-import { request } from "@/lib/api";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { adminApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { QueryState } from "@/components/ui/query-state";
 import {
   Table,
   TableBody,
@@ -17,23 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface User {
-  id: number;
-  username: string;
-  role: string;
-  created_at: string;
-}
-
-interface UsersResponse {
-  users: User[];
-}
-
 export function AdminUsersPage() {
   const t = useTranslations("admin");
 
-  const { data, isLoading, error } = useQuery<UsersResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["admin", "users"],
-    queryFn: () => request<UsersResponse>("/api/v1/admin/users"),
+    queryFn: () => adminApi.listUsers(),
   });
 
   const users = data?.users || [];
@@ -48,17 +37,7 @@ export function AdminUsersPage() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
-          <Loader2Icon className="size-5 animate-spin" />
-          <p className="text-sm text-muted-foreground">{t("loading")}</p>
-        </div>
-      ) : error ? (
-        <Alert variant="destructive">
-          <TriangleAlertIcon />
-          <AlertDescription>{t("error")}</AlertDescription>
-        </Alert>
-      ) : (
+      <QueryState isLoading={isLoading} error={error} loadingText={t("loading")} errorText={t("error")}>
         <div className="rounded-lg border">
           <Table>
             <TableHeader>
@@ -82,14 +61,14 @@ export function AdminUsersPage() {
                     <TableCell>{user.id}</TableCell>
                     <TableCell>{user.username}</TableCell>
                     <TableCell>{user.role}</TableCell>
-                    <TableCell>{new Date(user.created_at).toLocaleString()}</TableCell>
+                    <TableCell>{formatToLocalTime(user.created_at)}</TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
-      )}
+      </QueryState>
     </div>
   );
 }

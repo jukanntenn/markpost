@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import type { LoginResponse } from "../types/auth";
+import type { LoginResponse } from "@/lib/api/auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import en from "../i18n/locales/en.json";
@@ -12,14 +12,36 @@ const queryClient = new QueryClient({
   },
 });
 
-export function renderWithProviders(ui: React.ReactElement) {
+type WrapperComponent = React.ComponentType<{ children: React.ReactNode }>;
+
+export function renderWithProviders(
+  ui: React.ReactElement,
+  options?: { wrapper?: WrapperComponent }
+) {
+  const Wrapper = options?.wrapper ?? (({ children }) => <>{children}</>);
   return render(
     <QueryClientProvider client={queryClient}>
       <NextIntlClientProvider locale="en" messages={en}>
-        {ui}
+        <Wrapper>{ui}</Wrapper>
       </NextIntlClientProvider>
     </QueryClientProvider>
   );
+}
+
+export function mockMatchMedia() {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
 }
 
 export function createMockUser(overrides = {}) {

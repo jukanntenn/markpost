@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth";
 
 export function PublicRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const token = useAuthStore((state) => state.token);
-  const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useMemo(() => !!token && !!user, [token, user]);
+  const isAuthenticated = useAuthStore((state) => !!state.token && !!state.user);
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   useEffect(() => {

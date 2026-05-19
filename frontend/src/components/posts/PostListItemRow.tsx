@@ -1,7 +1,7 @@
 "use client";
 
 import { buildPostUrl } from "@/utils/url";
-import { formatToLocalTime } from "@/lib/utils";
+import { formatToLocalTime } from "@/utils/time";
 import type { PostListItem } from "@/types/posts";
 
 interface PostListItemRowProps {
@@ -23,7 +23,7 @@ export function PostListItemRow({ post, className, showSeconds = true }: PostLis
           {post.title}
         </a>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {formatToLocalTime(post.created_at, showSeconds)}
+          {formatToLocalTime(post.created_at, { includeSeconds: showSeconds })}
         </span>
       </div>
     </li>

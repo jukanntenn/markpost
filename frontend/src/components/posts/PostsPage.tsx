@@ -3,33 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  FileTextIcon,
-} from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 
 import { usePosts } from "@/hooks/usePosts";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { PostListItemRow } from "./PostListItemRow";
-import { Button } from "@/components/ui/button";
+import { PostListEmptyState } from "./PostListEmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PageHeading } from "@/components/ui/page-heading";
 import { QueryState } from "@/components/ui/query-state";
 
 export function PostsPage() {
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const limit = DEFAULT_PAGE_SIZE;
 
   const t = useTranslations("posts");
-  const { data, isLoading, error } = usePosts(page, limit);
-
-  const posts = data?.posts || [];
-  const pagination = data?.pagination;
+  const { posts, pagination, isLoading, error } = usePosts(page, limit);
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between md:mb-8 lg:mb-12">
-        <h1 className="font-display text-[28px] font-bold tracking-tight">{t("title")}</h1>
-      </div>
+      <PageHeading>{t("title")}</PageHeading>
 
       <Card>
         <CardHeader className="flex-row items-center gap-2">
@@ -39,9 +33,7 @@ export function PostsPage() {
         <CardContent>
           <QueryState isLoading={isLoading} error={error} loadingText={t("loading")} errorText={t("error")}>
             {posts.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                {t("empty")}
-              </p>
+              <PostListEmptyState message={t("empty")} />
             ) : (
               <>
                 <ul className="divide-y">
@@ -50,32 +42,14 @@ export function PostsPage() {
                   ))}
                 </ul>
 
-                {pagination && pagination.total_pages > 1 && (
-                  <div className="mt-4 flex items-center justify-between border-t pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeftIcon className="mr-1 size-4" />
-                      {t("pagination.prev")}
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {page} / {pagination.total_pages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setPage((p) => Math.min(pagination.total_pages, p + 1))
-                      }
-                      disabled={page === pagination.total_pages}
-                    >
-                      {t("pagination.next")}
-                      <ChevronRightIcon className="ml-1 size-4" />
-                    </Button>
-                  </div>
+                {pagination && (
+                  <PaginationControls
+                    page={page}
+                    totalPages={pagination.total_pages}
+                    onPageChange={setPage}
+                    prevLabel={t("pagination.prev")}
+                    nextLabel={t("pagination.next")}
+                  />
                 )}
               </>
             )}

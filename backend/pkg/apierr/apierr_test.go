@@ -51,14 +51,13 @@ func TestRespondError_MappedCodes(t *testing.T) {
 		{"failed_get_user", service.NewServiceError(service.ErrFailedGetUser, ""), http.StatusInternalServerError, "failed_get_user"},
 		{"internal", service.NewServiceError(service.ErrInternal, ""), http.StatusInternalServerError, "internal"},
 		{"validation", service.NewServiceError(service.ErrValidation, ""), http.StatusBadRequest, "validation"},
-		{"missing_state_param", service.NewServiceError(service.ErrMissingStateParam, ""), http.StatusBadRequest, "missing_state_param"},
-		{"missing_code", service.NewServiceError(service.ErrMissingCode, ""), http.StatusBadRequest, "missing_code"},
 		{"invalid_request", service.NewServiceError(service.ErrInvalidRequest, ""), http.StatusBadRequest, "invalid_request"},
 		{"missing_auth_header", service.NewServiceError(service.ErrMissingAuthorizationHeader, ""), http.StatusUnauthorized, "missing_authorization_header"},
 		{"invalid_token", service.NewServiceError(service.ErrInvalidToken, ""), http.StatusUnauthorized, "invalid_token"},
 		{"invalid_post_key", service.NewServiceError(service.ErrInvalidPostKey, ""), http.StatusForbidden, "invalid_post_key"},
 		{"forbidden", service.NewServiceError(service.ErrForbidden, ""), http.StatusForbidden, "forbidden"},
 		{"user_disabled", service.NewServiceError(service.ErrUserDisabled, ""), http.StatusForbidden, "user_disabled"},
+		{"rate_limited", service.NewServiceError(service.ErrRateLimited, ""), http.StatusTooManyRequests, "rate_limited"},
 	}
 
 	for _, tt := range tests {
@@ -84,8 +83,8 @@ func TestRespondError_UnknownCode(t *testing.T) {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusInternalServerError)
 	}
 	resp := decodeErrorResponse(t, w.Body)
-	if resp.Code != "internal" {
-		t.Errorf("code = %q, want %q", resp.Code, "internal")
+	if resp.Code != "nonexistent_code" {
+		t.Errorf("code = %q, want %q", resp.Code, "nonexistent_code")
 	}
 	if resp.Message == "" {
 		t.Error("message is empty")
@@ -104,7 +103,7 @@ func TestRespondError_NonServiceError(t *testing.T) {
 }
 
 func TestRespondError_ValidationWithDetails(t *testing.T) {
-	err := service.NewServiceErrorWithDetails(service.ErrValidation, "", []service.Error{
+	err := service.NewServiceErrorDetails(service.ErrValidation, "", []service.FieldDetail{
 		{Code: service.ErrRequired, Description: "email"},
 		{Code: service.ErrMinLength, Description: "password"},
 	})
@@ -151,5 +150,32 @@ func TestRespondError_ValidationEmptyDetails(t *testing.T) {
 	resp := decodeErrorResponse(t, w.Body)
 	if len(resp.Errors) != 0 {
 		t.Errorf("errors = %v, want empty", resp.Errors)
+	}
+}
+
+func TestRespondError_ValidationUnknownFieldCode(t *testing.T) {
+	unknownCode := service.ErrCode("nonexistent_field_code")
+	err := service.NewServiceErrorDetails(service.ErrValidation, "", []service.FieldDetail{
+		{Code: unknownCode, Description: "custom_field"},
+	})
+
+	w := callRespondError(t, err)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+
+	resp := decodeErrorResponse(t, w.Body)
+	if len(resp.Errors) != 1 {
+		t.Fatalf("errors count = %d, want 1", len(resp.Errors))
+	}
+
+	if resp.Errors[0].Code != "nonexistent_field_code" {
+		t.Errorf("errors[0].code = %q, want %q", resp.Errors[0].Code, "nonexistent_field_code")
+	}
+	if resp.Errors[0].Field != "custom_field" {
+		t.Errorf("errors[0].field = %q, want %q", resp.Errors[0].Field, "custom_field")
+	}
+	if resp.Errors[0].Message == "" {
+		t.Error("errors[0].message is empty")
 	}
 }

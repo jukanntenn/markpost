@@ -3,64 +3,79 @@ package service
 
 import (
 	"errors"
+
+	"markpost/internal/domain"
 )
 
-// ErrCode represents an error code for service errors.
 type ErrCode string
 
 const (
-	// ErrInvalidCredentials indicates invalid login credentials.
 	ErrInvalidCredentials ErrCode = "invalid_credentials"
-	// ErrInvalidPassword indicates an invalid password was provided.
-	ErrInvalidPassword ErrCode = "invalid_password"
-	// ErrUnauthorized indicates the user is not authorized.
-	ErrUnauthorized ErrCode = "unauthorized"
-	// ErrInternal indicates an internal server error.
-	ErrInternal ErrCode = "internal"
-	// ErrValidation indicates a validation error.
-	ErrValidation ErrCode = "validation"
-	// ErrNotFound indicates a resource was not found.
-	ErrNotFound ErrCode = "not_found"
+	ErrInvalidPassword    ErrCode = "invalid_password"
+	ErrUnauthorized       ErrCode = "unauthorized"
+	ErrInternal           ErrCode = "internal"
+	ErrValidation         ErrCode = "validation"
+	ErrNotFound           ErrCode = "not_found"
 
-	// ErrFailedGetUser indicates a failure to retrieve user data.
 	ErrFailedGetUser ErrCode = "failed_get_user"
 
-	// ErrMissingAuthorizationHeader indicates a missing authorization header.
 	ErrMissingAuthorizationHeader ErrCode = "missing_authorization_header"
-	// ErrInvalidToken indicates an invalid token was provided.
-	ErrInvalidToken ErrCode = "invalid_token"
-	// ErrInvalidPostKey indicates an invalid post key was provided.
-	ErrInvalidPostKey ErrCode = "invalid_post_key"
-	// ErrUserDisabled indicates the user account is disabled.
-	ErrUserDisabled ErrCode = "user_disabled"
+	ErrInvalidToken               ErrCode = "invalid_token"
+	ErrInvalidPostKey             ErrCode = "invalid_post_key"
+	ErrUserDisabled               ErrCode = "user_disabled"
 
-	// ErrForbidden indicates the user lacks permission for the requested resource.
 	ErrForbidden ErrCode = "forbidden"
 
-	// ErrMissingStateParam indicates a missing state parameter.
-	ErrMissingStateParam ErrCode = "missing_state_param"
-	// ErrMissingCode indicates a missing authorization code.
-	ErrMissingCode ErrCode = "missing_code"
-	// ErrInvalidRequest indicates an invalid request.
+	ErrRateLimited    ErrCode = "rate_limited"
 	ErrInvalidRequest ErrCode = "invalid_request"
 
-	// ErrRequired indicates a required field is missing.
-	ErrRequired ErrCode = "required"
-	// ErrMinLength indicates a value does not meet minimum length requirements.
-	ErrMinLength ErrCode = "min_length"
-	// ErrFieldViolation indicates a field validation violation.
+	ErrRequired       ErrCode = "required"
+	ErrMinLength      ErrCode = "min_length"
 	ErrFieldViolation ErrCode = "field_violation"
 )
 
-// Error represents a structured service error with code and description.
-type Error struct {
+var httpStatuses = map[ErrCode]int{
+	ErrInvalidCredentials:         401,
+	ErrInvalidPassword:            400,
+	ErrNotFound:                   404,
+	ErrUnauthorized:               401,
+	ErrFailedGetUser:              500,
+	ErrInternal:                   500,
+	ErrValidation:                 400,
+	ErrInvalidRequest:             400,
+	ErrMissingAuthorizationHeader: 401,
+	ErrInvalidToken:               401,
+	ErrInvalidPostKey:             403,
+	ErrForbidden:                  403,
+	ErrRateLimited:                429,
+	ErrUserDisabled:               403,
+	ErrRequired:                   400,
+	ErrMinLength:                  400,
+	ErrFieldViolation:             400,
+}
+
+func (c ErrCode) String() string { return string(c) }
+
+func (e *ServiceError) HTTPStatus() int {
+	if status, ok := httpStatuses[e.Code]; ok {
+		return status
+	}
+	return 500
+}
+
+type FieldDetail struct {
+	Code        ErrCode
+	Description string
+}
+
+type ServiceError struct {
 	Code        ErrCode
 	Description string
 	Err         error
-	Details     []Error
+	Details     []FieldDetail
 }
 
-func (e *Error) Error() string {
+func (e *ServiceError) Error() string {
 	if e.Description != "" {
 		return e.Description
 	}
@@ -69,42 +84,56 @@ func (e *Error) Error() string {
 		return e.Err.Error()
 	}
 
-	return string(e.Code)
+	return e.Code.String()
 }
 
-func (e *Error) Unwrap() error {
+func (e *ServiceError) Unwrap() error {
 	return e.Err
 }
 
-// AsServiceError attempts to convert an error to an Error.
-func AsServiceError(err error) (*Error, bool) {
-	var se *Error
+func AsServiceError(err error) (*ServiceError, bool) {
+	var se *ServiceError
 	if errors.As(err, &se) {
 		return se, true
 	}
 	return nil, false
 }
 
-// NewServiceError creates a new Error with the given code and description.
-func NewServiceError(code ErrCode, description string) *Error {
-	return &Error{
+func NewServiceError(code ErrCode, description string) *ServiceError {
+	return &ServiceError{
 		Code:        code,
 		Description: description,
 	}
 }
 
-// NewServiceErrorWrap creates a new Error that wraps another error.
-func NewServiceErrorWrap(code ErrCode, description string, err error) *Error {
-	return &Error{
+func NewServiceErrorWrap(code ErrCode, description string, err error) *ServiceError {
+	return &ServiceError{
 		Code:        code,
 		Description: description,
 		Err:         err,
 	}
 }
 
-// NewServiceErrorWithDetails creates a new Error with additional error details.
-func NewServiceErrorWithDetails(code ErrCode, description string, details []Error) *Error {
-	return &Error{
+func WrapNotFoundOrInternal(err error, notFoundMsg, internalMsg string) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, domain.ErrNotFound) {
+		return NewServiceErrorWrap(ErrNotFound, notFoundMsg, err)
+	}
+	return NewServiceErrorWrap(ErrInternal, internalMsg, err)
+}
+
+func NewBindingError(details []FieldDetail) *ServiceError {
+	return &ServiceError{
+		Code:        ErrValidation,
+		Description: "request validation failed",
+		Details:     details,
+	}
+}
+
+func NewServiceErrorDetails(code ErrCode, description string, details []FieldDetail) *ServiceError {
+	return &ServiceError{
 		Code:        code,
 		Description: description,
 		Details:     details,

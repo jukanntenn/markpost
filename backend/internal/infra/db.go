@@ -12,7 +12,6 @@ import (
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	"markpost/pkg/utils"
 	"strings"
 
 	"gorm.io/driver/postgres"
@@ -122,6 +121,14 @@ func (d *Database) DB() *gorm.DB {
 	return d.db
 }
 
+func (d *Database) Close() error {
+	sqlDB, err := d.db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}
+
 func (d *Database) userExists(username string) (bool, error) {
 	return existsBy[user.User](context.Background(), d.db, "username", username, "userExists")
 }
@@ -167,24 +174,13 @@ func (d *Database) seedAdminUser() error {
 		return nil
 	}
 
-	password, err := utils.HashPassword(cfg.Admin.InitialPassword)
+	u, err := makeUser(username, username, cfg.Admin.InitialPassword, nil, nil, cfg.PostKeyLength)
 	if err != nil {
 		return err
 	}
+	u.Email = username + "@localhost"
 
-	postKey, err := utils.GeneratePostKey(cfg.PostKeyLength)
-	if err != nil {
-		return err
-	}
-
-	u := user.User{
-		Email:    username + "@localhost",
-		Username: username,
-		Password: password,
-		PostKey:  postKey,
-		IsActive: true,
-	}
-	if err = d.createUser(&u); err != nil {
+	if err = d.createUser(u); err != nil {
 		return err
 	}
 	log.Printf("initialized user: %s", username)

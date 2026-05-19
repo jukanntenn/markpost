@@ -16,6 +16,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func newTestChannel(overrides ...func(*delivery.Channel)) *delivery.Channel {
+	ch := &delivery.Channel{
+		ID:         1,
+		UserID:     1,
+		Kind:       delivery.ChannelKindFeishu,
+		Name:       "Test Channel",
+		WebhookURL: "https://example.com/webhook",
+		Enabled:    true,
+		CreatedAt:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		UpdatedAt:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+	for _, o := range overrides {
+		o(ch)
+	}
+	return ch
+}
+
 type mockDeliveryService struct {
 	channels map[int]*delivery.Channel
 	nextID   int
@@ -42,7 +59,7 @@ func (m *mockDeliveryService) ListByUserID(_ context.Context, userID int) ([]del
 	return result, nil
 }
 
-func (m *mockDeliveryService) Create(_ context.Context, userID int, params delivery_svc.CreateChannelParams) (*delivery.Channel, error) {
+func (m *mockDeliveryService) Create(_ context.Context, userID int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -156,15 +173,10 @@ func TestParsePathID(t *testing.T) {
 
 func TestListDeliveryChannels_Success(t *testing.T) {
 	mockSvc := newMockDeliveryService()
-	ch := &delivery.Channel{
-		ID: 1, UserID: 1, Kind: delivery.ChannelKindFeishu,
-		Name: "Test Channel", WebhookURL: "https://example.com/webhook",
-		Enabled: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
-	}
-	mockSvc.channels[1] = ch
+	mockSvc.channels[1] = newTestChannel()
 
 	router := newTestEngine()
-	router.GET("/channels", withUser(1), ListDeliveryChannels(mockSvc))
+	router.GET("/channels", withTestUser(1), ListDeliveryChannels(mockSvc))
 
 	req := httptest.NewRequest(http.MethodGet, "/channels", nil)
 	w := httptest.NewRecorder()
@@ -205,7 +217,7 @@ func TestListDeliveryChannels_ServiceError(t *testing.T) {
 	mockSvc.err = service.NewServiceError(service.ErrInternal, "db error")
 
 	router := newTestEngine()
-	router.GET("/channels", withUser(1), ListDeliveryChannels(mockSvc))
+	router.GET("/channels", withTestUser(1), ListDeliveryChannels(mockSvc))
 
 	req := httptest.NewRequest(http.MethodGet, "/channels", nil)
 	w := httptest.NewRecorder()
@@ -219,7 +231,7 @@ func TestListDeliveryChannels_ServiceError(t *testing.T) {
 func TestCreateDeliveryChannel_Success(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 	router := newTestEngine()
-	router.POST("/channels", withUser(1), CreateDeliveryChannel(mockSvc))
+	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
 
 	body := CreateDeliveryChannelRequest{
 		Kind:       "feishu",
@@ -273,7 +285,7 @@ func TestCreateDeliveryChannel_NoUser(t *testing.T) {
 func TestCreateDeliveryChannel_MissingRequiredFields(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 	router := newTestEngine()
-	router.POST("/channels", withUser(1), CreateDeliveryChannel(mockSvc))
+	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
 
 	body := map[string]string{"name": "only name"}
 	jsonBody, _ := json.Marshal(body)
@@ -301,7 +313,7 @@ func TestCreateDeliveryChannel_ServiceError(t *testing.T) {
 	mockSvc.err = service.NewServiceError(service.ErrValidation, "unsupported channel kind")
 
 	router := newTestEngine()
-	router.POST("/channels", withUser(1), CreateDeliveryChannel(mockSvc))
+	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
 
 	body := CreateDeliveryChannelRequest{
 		Kind: "feishu", Name: "Test", WebhookURL: "https://example.com",
@@ -320,14 +332,10 @@ func TestCreateDeliveryChannel_ServiceError(t *testing.T) {
 
 func TestUpdateDeliveryChannel_Success(t *testing.T) {
 	mockSvc := newMockDeliveryService()
-	mockSvc.channels[1] = &delivery.Channel{
-		ID: 1, UserID: 1, Kind: delivery.ChannelKindFeishu,
-		Name: "Old Name", WebhookURL: "https://example.com/webhook",
-		Enabled: true, CreatedAt: time.Now(), UpdatedAt: time.Now(),
-	}
+	mockSvc.channels[1] = newTestChannel(func(ch *delivery.Channel) { ch.Name = "Old Name" })
 
 	router := newTestEngine()
-	router.PUT("/channels/:id", withUser(1), UpdateDeliveryChannel(mockSvc))
+	router.PUT("/channels/:id", withTestUser(1), UpdateDeliveryChannel(mockSvc))
 
 	newName := "New Name"
 	body := UpdateDeliveryChannelRequest{Name: &newName}
@@ -354,7 +362,7 @@ func TestUpdateDeliveryChannel_Success(t *testing.T) {
 func TestUpdateDeliveryChannel_InvalidID(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 	router := newTestEngine()
-	router.PUT("/channels/:id", withUser(1), UpdateDeliveryChannel(mockSvc))
+	router.PUT("/channels/:id", withTestUser(1), UpdateDeliveryChannel(mockSvc))
 
 	body := UpdateDeliveryChannelRequest{}
 	jsonBody, _ := json.Marshal(body)
@@ -373,7 +381,7 @@ func TestUpdateDeliveryChannel_NotFound(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 
 	router := newTestEngine()
-	router.PUT("/channels/:id", withUser(1), UpdateDeliveryChannel(mockSvc))
+	router.PUT("/channels/:id", withTestUser(1), UpdateDeliveryChannel(mockSvc))
 
 	newName := "New Name"
 	body := UpdateDeliveryChannelRequest{Name: &newName}
@@ -409,12 +417,10 @@ func TestUpdateDeliveryChannel_NoUser(t *testing.T) {
 
 func TestDeleteDeliveryChannel_Success(t *testing.T) {
 	mockSvc := newMockDeliveryService()
-	mockSvc.channels[1] = &delivery.Channel{
-		ID: 1, UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Channel",
-	}
+	mockSvc.channels[1] = newTestChannel(func(ch *delivery.Channel) { ch.Name = "Channel" })
 
 	router := newTestEngine()
-	router.DELETE("/channels/:id", withUser(1), DeleteDeliveryChannel(mockSvc))
+	router.DELETE("/channels/:id", withTestUser(1), DeleteDeliveryChannel(mockSvc))
 
 	req := httptest.NewRequest(http.MethodDelete, "/channels/1", nil)
 	w := httptest.NewRecorder()
@@ -436,7 +442,7 @@ func TestDeleteDeliveryChannel_Success(t *testing.T) {
 func TestDeleteDeliveryChannel_InvalidID(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 	router := newTestEngine()
-	router.DELETE("/channels/:id", withUser(1), DeleteDeliveryChannel(mockSvc))
+	router.DELETE("/channels/:id", withTestUser(1), DeleteDeliveryChannel(mockSvc))
 
 	req := httptest.NewRequest(http.MethodDelete, "/channels/abc", nil)
 	w := httptest.NewRecorder()
@@ -450,7 +456,7 @@ func TestDeleteDeliveryChannel_InvalidID(t *testing.T) {
 func TestDeleteDeliveryChannel_NotFound(t *testing.T) {
 	mockSvc := newMockDeliveryService()
 	router := newTestEngine()
-	router.DELETE("/channels/:id", withUser(1), DeleteDeliveryChannel(mockSvc))
+	router.DELETE("/channels/:id", withTestUser(1), DeleteDeliveryChannel(mockSvc))
 
 	req := httptest.NewRequest(http.MethodDelete, "/channels/999", nil)
 	w := httptest.NewRecorder()

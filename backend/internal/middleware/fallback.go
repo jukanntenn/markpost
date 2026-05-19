@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"log"
-	"markpost/internal/service"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
+
+	"markpost/internal/service"
 )
 
 // Fallback returns a middleware that recovers from panics.
@@ -12,7 +13,7 @@ func Fallback() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("panic recovered: %v", r)
+				slog.Error("panic recovered", "error", r, "path", c.Request.URL.Path)
 				abortWithError(c, service.NewServiceError(service.ErrInternal, "internal server error"))
 			}
 		}()

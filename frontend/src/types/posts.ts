@@ -1,4 +1,4 @@
-import type { Pagination } from "./pagination";
+import type { Paginated } from "./pagination";
 
 export interface PostListItem {
   id: number;
@@ -7,10 +7,7 @@ export interface PostListItem {
   created_at: string;
 }
 
-export interface PostsPaginatedResponse {
-  posts: PostListItem[];
-  pagination: Pagination;
-}
+export type PostsPaginatedResponse = Paginated<PostListItem, "posts">;
 
 export interface CreateTestPostRequest {
   title: string;
@@ -21,13 +18,7 @@ export interface CreateTestPostResponse {
   id: string;
 }
 
-export interface PostKeyResponse {
-  post_key: string;
-  created_at: string;
-}
-
 export interface AdminPost {
-  id: string;
   qid: string;
   title: string;
   user_id: number;
@@ -35,7 +26,4 @@ export interface AdminPost {
   created_at: string;
 }
 
-export interface AdminPostsResponse {
-  posts: AdminPost[];
-  pagination: Pagination;
-}
+export type AdminPostsResponse = Paginated<AdminPost, "posts">;

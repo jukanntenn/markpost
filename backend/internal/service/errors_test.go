@@ -5,25 +5,38 @@ import (
 	"testing"
 )
 
+func TestErrCode_String(t *testing.T) {
+	t.Run("returns underlying string", func(t *testing.T) {
+		if got := ErrValidation.String(); got != "validation" {
+			t.Errorf("ErrValidation.String() = %q, want %q", got, "validation")
+		}
+	})
+}
+
 func TestServiceError_Error(t *testing.T) {
 	tests := []struct {
 		name     string
-		err      Error
+		err      ServiceError
 		expected string
 	}{
 		{
 			name:     "returns description when set",
-			err:      Error{Description: "something"},
+			err:      ServiceError{Description: "something"},
 			expected: "something",
 		},
 		{
 			name:     "returns wrapped error message when description is empty",
-			err:      Error{Err: errors.New("wrapped")},
+			err:      ServiceError{Err: errors.New("wrapped")},
 			expected: "wrapped",
 		},
 		{
+			name:     "returns description when both description and err are set",
+			err:      ServiceError{Description: "desc", Err: errors.New("wrapped")},
+			expected: "desc",
+		},
+		{
 			name:     "returns code string when both empty",
-			err:      Error{Code: ErrValidation},
+			err:      ServiceError{Code: ErrValidation},
 			expected: "validation",
 		},
 	}
@@ -41,7 +54,7 @@ func TestServiceError_Error(t *testing.T) {
 func TestServiceError_Unwrap(t *testing.T) {
 	t.Run("returns wrapped error", func(t *testing.T) {
 		inner := errors.New("inner")
-		e := Error{Err: inner}
+		e := ServiceError{Err: inner}
 		if got := e.Unwrap(); got == nil {
 			t.Fatal("Unwrap() returned nil, want non-nil")
 		} else if got.Error() != "inner" {
@@ -50,7 +63,7 @@ func TestServiceError_Unwrap(t *testing.T) {
 	})
 
 	t.Run("returns nil when no wrapped error", func(t *testing.T) {
-		var e Error
+		var e ServiceError
 		if got := e.Unwrap(); got != nil {
 			t.Errorf("Unwrap() = %v, want nil", got)
 		}
@@ -59,7 +72,7 @@ func TestServiceError_Unwrap(t *testing.T) {
 
 func TestAsServiceError(t *testing.T) {
 	t.Run("returns true for service error pointer", func(t *testing.T) {
-		original := &Error{Code: ErrInternal}
+		original := &ServiceError{Code: ErrInternal}
 		se, ok := AsServiceError(original)
 		if !ok {
 			t.Fatal("AsServiceError() returned false, want true")
@@ -113,9 +126,71 @@ func TestNewServiceErrorWrap(t *testing.T) {
 	}
 }
 
-func TestNewServiceErrorWithDetails(t *testing.T) {
-	details := []Error{{Code: ErrRequired}}
-	e := NewServiceErrorWithDetails(ErrValidation, "bad", details)
+func TestError_HTTPStatus(t *testing.T) {
+	tests := []struct {
+		name     string
+		code     ErrCode
+		expected int
+	}{
+		{"invalid_credentials returns 401", ErrInvalidCredentials, 401},
+		{"invalid_password returns 400", ErrInvalidPassword, 400},
+		{"not_found returns 404", ErrNotFound, 404},
+		{"unauthorized returns 401", ErrUnauthorized, 401},
+		{"internal returns 500", ErrInternal, 500},
+		{"validation returns 400", ErrValidation, 400},
+		{"forbidden returns 403", ErrForbidden, 403},
+		{"rate_limited returns 429", ErrRateLimited, 429},
+		{"required returns 400", ErrRequired, 400},
+		{"min_length returns 400", ErrMinLength, 400},
+		{"field_violation returns 400", ErrFieldViolation, 400},
+		{"unknown code defaults to 500", ErrCode("nonexistent"), 500},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := &ServiceError{Code: tt.code}
+			if got := e.HTTPStatus(); got != tt.expected {
+				t.Errorf("HTTPStatus() = %d, want %d", got, tt.expected)
+			}
+		})
+	}
+}
+
+var allErrCodes = []ErrCode{
+	ErrInvalidCredentials,
+	ErrInvalidPassword,
+	ErrUnauthorized,
+	ErrInternal,
+	ErrValidation,
+	ErrNotFound,
+	ErrFailedGetUser,
+	ErrMissingAuthorizationHeader,
+	ErrInvalidToken,
+	ErrInvalidPostKey,
+	ErrUserDisabled,
+	ErrForbidden,
+	ErrRateLimited,
+	ErrInvalidRequest,
+	ErrRequired,
+	ErrMinLength,
+	ErrFieldViolation,
+}
+
+func TestHTTPStatusesCompleteness(t *testing.T) {
+	for _, code := range allErrCodes {
+		_, ok := httpStatuses[code]
+		if !ok {
+			t.Errorf("ErrCode %q missing from httpStatuses", code)
+		}
+	}
+	if len(allErrCodes) != len(httpStatuses) {
+		t.Errorf("httpStatuses has %d entries, expected %d (allErrCodes)", len(httpStatuses), len(allErrCodes))
+	}
+}
+
+func TestNewServiceErrorDetails(t *testing.T) {
+	details := []FieldDetail{{Code: ErrRequired}}
+	e := NewServiceErrorDetails(ErrValidation, "bad", details)
 	if e.Code != ErrValidation {
 		t.Errorf("Code = %q, want %q", e.Code, ErrValidation)
 	}

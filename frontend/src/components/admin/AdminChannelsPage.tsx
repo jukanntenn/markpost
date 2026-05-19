@@ -1,69 +1,48 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
-
-import { adminApi } from "@/lib/api";
-import { formatToLocalTime } from "@/lib/utils";
-import { QueryState } from "@/components/ui/query-state";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { adminApi, adminKeys } from "@/lib/api";
+import { useAdminTablePage } from "@/hooks/useAdminTablePage";
+import { formatToLocalTime } from "@/utils/time";
+import { TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { AdminTablePage } from "@/components/admin/AdminTablePage";
 
 export function AdminChannelsPage() {
   const t = useTranslations("admin");
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["admin", "channels"],
+  const { items: channels, ...queryState } = useAdminTablePage({
+    queryKey: adminKeys.channels.all(),
     queryFn: () => adminApi.listChannels(),
+    itemKey: "channels",
+    t,
   });
 
-  const channels = data?.channels || [];
-
   return (
-    <div>
-      <h1 className="mb-6 font-display text-[28px] font-bold tracking-tight md:mb-8 lg:mb-12">{t("channels.title")}</h1>
-
-      <QueryState isLoading={isLoading} error={error} loadingText={t("loading")} errorText={t("error")}>
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("channels.id")}</TableHead>
-                <TableHead>{t("channels.name")}</TableHead>
-                <TableHead>{t("channels.kind")}</TableHead>
-                <TableHead>{t("channels.enabled")}</TableHead>
-                <TableHead>{t("createdAt")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {channels.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    {t("channels.empty")}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                channels.map((channel) => (
-                  <TableRow key={channel.id}>
-                    <TableCell>{channel.id}</TableCell>
-                    <TableCell>{channel.name}</TableCell>
-                    <TableCell>{channel.kind}</TableCell>
-                    <TableCell>{channel.enabled ? t("channels.enabled") : "-"}</TableCell>
-                    <TableCell>{formatToLocalTime(channel.created_at)}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </QueryState>
-    </div>
+    <AdminTablePage
+      title={t("channels.title")}
+      {...queryState}
+      emptyText={t("channels.empty")}
+      headers={
+        <>
+          <TableHead>{t("channels.id")}</TableHead>
+          <TableHead>{t("channels.name")}</TableHead>
+          <TableHead>{t("channels.kind")}</TableHead>
+          <TableHead>{t("channels.enabled")}</TableHead>
+          <TableHead>{t("createdAt")}</TableHead>
+        </>
+      }
+      colSpan={5}
+      items={channels}
+      renderRow={(channel) => (
+        <TableRow key={channel.id}>
+          <TableCell>{channel.id}</TableCell>
+          <TableCell>{channel.name}</TableCell>
+          <TableCell>{channel.kind}</TableCell>
+          <TableCell>{channel.enabled ? t("channels.enabled") : "-"}</TableCell>
+          <TableCell>{formatToLocalTime(channel.created_at)}</TableCell>
+        </TableRow>
+      )}
+    />
   );
 }
 

@@ -1,9 +1,7 @@
-import { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 import PostsPage from "@/components/posts/PostsPage";
 
-export const metadata: Metadata = {
-  title: "Posts - Markpost",
-};
+export const generateMetadata = buildPageMetadata("allPosts");
 
 export default function Posts() {
   return <PostsPage />;

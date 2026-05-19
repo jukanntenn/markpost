@@ -1,5 +1,4 @@
-// Package auth provides authentication services including OAuth, JWT token management,
-// and user session handling.
+// JWT token generation and validation.
 package auth
 
 import (
@@ -55,13 +54,13 @@ func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire
 
 // GenerateTokenPair generates a new access and refresh token pair for the user.
 func (s *JWTService) GenerateTokenPair(userID int, email, username, role string) (*JWTTokenPair, error) {
-	expiresAt := time.Now().Add(s.accessTokenExpire)
-	accessToken, err := s.GenerateAccessToken(userID, email, username, role)
+	now := time.Now()
+	accessToken, err := s.GenerateAccessToken(now, userID, email, username, role)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.GenerateRefreshToken(userID, role)
+	refreshToken, err := s.GenerateRefreshToken(now, userID, role)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +68,12 @@ func (s *JWTService) GenerateTokenPair(userID int, email, username, role string)
 	return &JWTTokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		ExpiresAt:    expiresAt,
+		ExpiresAt:    now.Add(s.accessTokenExpire),
 	}, nil
 }
 
 // GenerateAccessToken generates a new access token for the user.
-func (s *JWTService) GenerateAccessToken(userID int, email, username, role string) (string, error) {
-	now := time.Now()
+func (s *JWTService) GenerateAccessToken(now time.Time, userID int, email, username, role string) (string, error) {
 	expiresAt := now.Add(s.accessTokenExpire)
 	claims := AccessClaims{
 		UserID:   userID,
@@ -94,13 +92,13 @@ func (s *JWTService) GenerateAccessToken(userID int, email, username, role strin
 }
 
 // GenerateRefreshToken generates a new refresh token for the user.
-func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, error) {
+func (s *JWTService) GenerateRefreshToken(now time.Time, userID int, role string) (string, error) {
 	claims := RefreshClaims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshTokenExpire)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.refreshTokenExpire)),
+			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 
@@ -110,34 +108,36 @@ func (s *JWTService) GenerateRefreshToken(userID int, role string) (string, erro
 
 // ValidateAccess validates an access token and returns its claims.
 func (s *JWTService) ValidateAccess(tokenString string) (*AccessClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &AccessClaims{}, func(_ *jwt.Token) (interface{}, error) {
-		return s.accessSigningKey, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := token.Claims.(*AccessClaims); ok && token.Valid {
-		return claims, nil
-	}
-
-	return nil, jwt.ErrSignatureInvalid
+	return validateTokenClaims(tokenString, s.accessSigningKey, func() *AccessClaims { return &AccessClaims{} })
 }
 
 // ValidateRefresh validates a refresh token and returns its claims.
 func (s *JWTService) ValidateRefresh(tokenString string) (*RefreshClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &RefreshClaims{}, func(_ *jwt.Token) (interface{}, error) {
-		return s.refreshSigningKey, nil
-	})
+	return validateTokenClaims(tokenString, s.refreshSigningKey, func() *RefreshClaims { return &RefreshClaims{} })
+}
 
+func validateTokenClaims[T jwt.Claims](tokenString string, key []byte, newClaims func() T) (T, error) {
+	var zero T
+	claims, err := validateToken(tokenString, key, func() jwt.Claims { return newClaims() })
+	if err != nil {
+		return zero, err
+	}
+	typed, ok := claims.(T)
+	if !ok {
+		return zero, jwt.ErrSignatureInvalid
+	}
+	return typed, nil
+}
+
+func validateToken(tokenString string, key []byte, newClaims func() jwt.Claims) (jwt.Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, newClaims(), func(_ *jwt.Token) (interface{}, error) {
+		return key, nil
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if claims, ok := token.Claims.(*RefreshClaims); ok && token.Valid {
-		return claims, nil
+	if token.Valid {
+		return token.Claims, nil
 	}
-
 	return nil, jwt.ErrSignatureInvalid
 }

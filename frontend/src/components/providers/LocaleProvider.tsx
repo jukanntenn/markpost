@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
 import { availableLocales, type Locale } from "@/i18n/constants";
 import { getDefaultLocale, loadMessages, persistLocale } from "@/utils/i18n";
+import { setDefaultLocale } from "@/utils/time";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -41,6 +42,10 @@ export function LocaleProvider({
       : "en",
   );
   const [messages, setMessages] = useState(serverMessages);
+
+  useEffect(() => {
+    setDefaultLocale(locale);
+  }, [locale]);
 
   useEffect(() => {
     const stored = getDefaultLocale();

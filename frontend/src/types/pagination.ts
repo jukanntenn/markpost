@@ -4,3 +4,7 @@ export interface Pagination {
   total: number;
   total_pages: number;
 }
+
+export type Paginated<T, TKey extends string> = Record<TKey, T[]> & {
+  pagination: Pagination;
+};

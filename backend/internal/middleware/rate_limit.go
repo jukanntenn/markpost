@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"markpost/internal/service"
+
 	"github.com/didip/tollbooth/v8"
 	"github.com/didip/tollbooth/v8/limiter"
 	"github.com/gin-gonic/gin"
@@ -15,11 +17,7 @@ func RateLimitByIP(lmt *limiter.Limiter) gin.HandlerFunc {
 		}
 
 		if httpErr := tollbooth.LimitByKeys(lmt, []string{ip}); httpErr != nil {
-			c.AbortWithStatusJSON(httpErr.StatusCode, gin.H{
-				"error":  httpErr.Message,
-				"code":   "rate_limit_exceeded",
-				"detail": "Too many requests",
-			})
+			abortWithError(c, service.NewServiceError(service.ErrRateLimited, "rate limit exceeded"))
 			return
 		}
 

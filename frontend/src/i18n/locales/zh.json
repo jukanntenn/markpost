@@ -13,7 +13,10 @@
       "login": "登录 | Markpost",
       "dashboard": "仪表盘 | Markpost",
       "settings": "设置 | Markpost",
-      "allPosts": "全部 Posts | Markpost"
+      "allPosts": "全部 Posts | Markpost",
+      "adminUsers": "用户 - 管理后台 | Markpost",
+      "adminPosts": "Posts - 管理后台 | Markpost",
+      "adminChannels": "渠道 - 管理后台 | Markpost"
     }
   },
   "language": {
@@ -116,6 +119,7 @@
     }
   },
   "settings": {
+    "title": "设置",
     "applicationSettings": "应用设置",
     "language": "语言",
     "languageDescription": "选择您偏好的语言",

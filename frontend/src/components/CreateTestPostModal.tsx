@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/stores/toast";
-import { Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import { request } from "@/lib/api";
+import { setErrorOnError } from "@/lib/mutation-helpers";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
   DialogContent,
@@ -29,26 +31,11 @@ interface CreateTestPostModalProps {
 }
 
 async function createTestPost(postKey: string, data: CreateTestPostRequest): Promise<CreateTestPostResponse> {
-  const response = await fetch(`/${postKey}`, {
+  return request<CreateTestPostResponse>(`/${postKey}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+    json: data,
+    skipAuthRefresh: true,
   });
-
-  if (!response.ok) {
-    let message = "Failed to create post";
-    try {
-      const text = await response.text();
-      const error = JSON.parse(text);
-      message = error.message || message;
-    } catch {
-    }
-    throw new Error(message);
-  }
-
-  return response.json();
 }
 
 function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPostModalProps) {
@@ -67,9 +54,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       onSuccess();
       reset();
     },
-    onError: (err: Error) => {
-      setError(err.message);
-    },
+    onError: setErrorOnError(setError),
   });
 
   useEffect(() => {
@@ -103,12 +88,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
             </DialogDescription>
           </DialogHeader>
 
-          {error && (
-            <Alert variant="destructive">
-              <TriangleAlertIcon />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <FormAlert message={error} />
 
           <div className="space-y-2">
             <Label htmlFor="test-post-title">{t("titleLabel")}</Label>
@@ -139,16 +119,9 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
             <Button type="button" variant="outline" onClick={onHide} disabled={isPending}>
               {t("cancel")}
             </Button>
-            <Button type="submit" disabled={isPending || !body.trim()}>
-              {isPending ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2Icon className="size-4 animate-spin" />
-                  {t("creating")}
-                </span>
-              ) : (
-                t("create")
-              )}
-            </Button>
+            <LoadingButton type="submit" disabled={isPending || !body.trim()} loading={isPending} loadingText={t("creating")}>
+              {t("create")}
+            </LoadingButton>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,4 +1,3 @@
-// Package infra provides infrastructure layer implementations.
 package infra
 
 import (
@@ -6,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/post"
 
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -62,20 +62,12 @@ func (r *PostRepository) CreateBatch(ctx context.Context, posts []post.Post) (in
 
 // GetByQID retrieves a post by its QID.
 func (r *PostRepository) GetByQID(ctx context.Context, qid string) (*post.Post, error) {
-	p, err := findFirst[post.Post](ctx, r.db.Where("qid = ?", qid), post.ErrNotFound)
-	if err != nil {
-		return nil, fmt.Errorf("GetByQID: %w", err)
-	}
-	return p, nil
+	return findFirst[post.Post](ctx, r.db.Where("qid = ?", qid), domain.ErrNotFound)
 }
 
 // GetByID retrieves a post by its ID.
 func (r *PostRepository) GetByID(ctx context.Context, id int) (*post.Post, error) {
-	p, err := findFirst[post.Post](ctx, r.db.Where("id = ?", id), post.ErrNotFound)
-	if err != nil {
-		return nil, fmt.Errorf("GetByID: %w", err)
-	}
-	return p, nil
+	return findFirst[post.Post](ctx, r.db.Where("id = ?", id), domain.ErrNotFound)
 }
 
 // CountByUserID counts posts for a specific user.
@@ -88,47 +80,29 @@ func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int
 	return findMany[post.Post](ctx, r.db.Where("user_id = ?", userID).Order("created_at DESC"), offset, limit, "GetByUserID")
 }
 
+func (r *PostRepository) searchQuery(search string) *gorm.DB {
+	return applySearch(r.db.Model(&post.Post{}), search, "title", "body")
+}
+
 // ListAll retrieves all posts with optional search and pagination.
 func (r *PostRepository) ListAll(ctx context.Context, search string, offset int, limit int) ([]post.Post, error) {
-	query := r.applySearch(r.db.Model(&post.Post{}), search).Preload("User").Order("created_at DESC")
+	query := r.searchQuery(search).Preload("User").Order("created_at DESC")
 	return findMany[post.Post](ctx, query, offset, limit, "ListAll")
 }
 
 // CountAll counts all posts with optional search filter.
 func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, error) {
-	query := r.applySearch(r.db.Model(&post.Post{}), search)
-	return countQuery(ctx, query, "CountAll")
+	return countQuery(ctx, r.searchQuery(search), "CountAll")
 }
 
 // UpdateByID updates a post by its ID.
-func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, body string) (*post.Post, error) {
-	updates := map[string]any{
-		"title": title,
-		"body":  body,
-	}
-	result := r.db.WithContext(ctx).Model(&post.Post{}).Where("id = ?", id).Updates(updates)
-	if result.Error != nil {
-		return nil, fmt.Errorf("UpdateByID: %w", result.Error)
-	}
-	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("UpdateByID: %w", post.ErrNotFound)
-	}
-
-	p, err := findFirst[post.Post](ctx, r.db.Preload("User").Where("id = ?", id), post.ErrNotFound)
-	if err != nil {
-		return nil, err
-	}
-
-	return p, nil
+func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, body string) error {
+	return updateByID[post.Post](ctx, r.db, id, map[string]any{"title": title, "body": body}, "UpdateByID")
 }
 
 // DeleteByID deletes a post by its ID.
 func (r *PostRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
-	n, err := deleteWhere[post.Post](ctx, r.db.Where("id = ?", id))
-	if err != nil {
-		return 0, fmt.Errorf("DeleteByID: %w", err)
-	}
-	return n, nil
+	return deleteWhere[post.Post](ctx, r.db.Where("id = ?", id))
 }
 
 // PruneExpired deletes expired posts based on retention days.
@@ -186,11 +160,4 @@ func (r *PostRepository) deleteByIDs(ctx context.Context, ids []int) (int64, err
 	}
 
 	return tx.RowsAffected, nil
-}
-
-func (r *PostRepository) applySearch(query *gorm.DB, search string) *gorm.DB {
-	if search != "" {
-		return query.Where("title LIKE ?", likeContains(search))
-	}
-	return query
 }

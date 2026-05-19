@@ -1,10 +1,3 @@
-import { Metadata } from "next";
-import AdminChannelsPage from "@/components/admin/AdminChannelsPage";
-
-export const metadata: Metadata = {
-  title: "Channels - Admin - Markpost",
-};
-
-export default function AdminChannels() {
-  return <AdminChannelsPage />;
-}
+import { buildPageMetadata } from "@/lib/metadata";
+export const generateMetadata = buildPageMetadata("adminChannels");
+export { default } from "@/components/admin/AdminChannelsPage";

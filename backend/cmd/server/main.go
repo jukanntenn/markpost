@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strconv"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/gin-contrib/cors"
 	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
 	"github.com/pelletier/go-toml/v2"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -39,10 +37,6 @@ var jwtSvc *auth.JWTService
 
 var userRepo user.Repository
 var tokenRepo user.TokenRepository
-
-func init() {
-	_ = validator.New()
-}
 
 // UseCors configures CORS middleware for the gin router.
 func UseCors(r *gin.Engine) {
@@ -97,14 +91,9 @@ func serve(configPath string) {
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
-	defer func() {
-		sqlDB, err := dbInstance.DB().DB()
-		if err == nil && sqlDB != nil {
-			_ = sqlDB.Close()
-		}
-	}()
+	defer dbInstance.Close()
 
-	userRepo = infra.NewUserRepository(dbInstance.DB())
+	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
 
 	RegisterValidators()
@@ -141,7 +130,7 @@ func serve(configPath string) {
 	deliveryRepo := infra.NewDeliveryChannelRepository(dbInstance.DB())
 	deliverySvc := deliverysvc.NewService(deliveryRepo)
 
-	adminSvc := admin.NewService(userRepo, postRepo, deliveryRepo)
+	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
@@ -230,7 +219,5 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))
 	r.GET("/:id", v1.RenderPost(postSvc))
 
-	r.NoRoute(func(c *gin.Context) {
-		c.String(http.StatusNotFound, "Not Found")
-	})
+	r.NoRoute(v1.NotFound())
 }

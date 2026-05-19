@@ -1,4 +1,3 @@
-// Package infra provides infrastructure layer implementations.
 package infra
 
 import (
@@ -7,25 +6,37 @@ import (
 	"fmt"
 	"time"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/user"
 	"markpost/pkg/utils"
 
-	gonanoid "github.com/matoous/go-nanoid/v2"
 	"gorm.io/gorm"
 )
 
 // UserRepository provides user data access operations.
 type UserRepository struct {
-	db *gorm.DB
+	db            *gorm.DB
+	postKeyLength int
 }
 
 // NewUserRepository creates a new UserRepository instance.
-func NewUserRepository(db *gorm.DB) user.Repository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *gorm.DB, postKeyLength int) user.Repository {
+	return &UserRepository{db: db, postKeyLength: postKeyLength}
+}
+
+func (r *UserRepository) ensureEmailUnique(ctx context.Context, email string) error {
+	exists, err := r.existsByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("%s: %w", "Create", domain.ErrEmailTaken)
+	}
+	return nil
 }
 
 func (r *UserRepository) findBy(ctx context.Context, name, field string, value any) (*user.User, error) {
-	u, err := findFirst[user.User](ctx, r.db.Where(field+" = ?", value), user.ErrNotFound)
+	u, err := findFirst[user.User](ctx, r.db.Where(field+" = ?", value), domain.ErrNotFound)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -59,23 +70,19 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*user.Us
 
 // Create creates a new user with the provided credentials.
 func (r *UserRepository) Create(ctx context.Context, email, username, password string) (*user.User, error) {
-	exists, err := r.existsByEmail(ctx, email)
+	if err := r.ensureEmailUnique(ctx, email); err != nil {
+		return nil, err
+	}
+
+	exists, err := r.existsByUsername(ctx, username)
 	if err != nil {
 		return nil, err
 	}
 	if exists {
-		return nil, fmt.Errorf("email is already taken")
+		return nil, fmt.Errorf("%s: %w", "Create", domain.ErrUsernameTaken)
 	}
 
-	exists, err = r.existsByUsername(ctx, username)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		return nil, fmt.Errorf("username is already taken")
-	}
-
-	return r.createWithUniquePostKey(ctx, email, username, password, nil, nil)
+	return r.createWithUniquePostKey(ctx, email, username, password, nil, nil, r.postKeyLength)
 }
 
 // CreateFromGitHub creates a new user from GitHub user data.
@@ -84,7 +91,12 @@ func (r *UserRepository) CreateFromGitHub(ctx context.Context, githubUser *user.
 	if email == "" {
 		email = fmt.Sprintf("%d@github.local", githubUser.ID)
 	}
-	return r.createWithUniquePostKey(ctx, email, githubUser.Login, "", &githubUser.ID, &githubUser.AvatarURL)
+
+	if err := r.ensureEmailUnique(ctx, email); err != nil {
+		return nil, err
+	}
+
+	return r.createWithUniquePostKey(ctx, email, githubUser.Login, "", &githubUser.ID, &githubUser.AvatarURL, r.postKeyLength)
 }
 
 // GetOrCreateFromGitHub retrieves or creates a user from GitHub user data.
@@ -94,7 +106,7 @@ func (r *UserRepository) GetOrCreateFromGitHub(ctx context.Context, githubUser *
 		return u, nil
 	}
 
-	if !errors.Is(err, user.ErrNotFound) {
+	if !errors.Is(err, domain.ErrNotFound) {
 		return nil, err
 	}
 
@@ -109,7 +121,7 @@ func (r *UserRepository) ValidatePassword(ctx context.Context, username, passwor
 	}
 
 	if u.Password == "" {
-		return nil, fmt.Errorf("user has no password set")
+		return nil, fmt.Errorf("%s: %w", "ValidatePassword", domain.ErrNoPassword)
 	}
 
 	ok, err := utils.CheckPassword(password, u.Password)
@@ -117,7 +129,7 @@ func (r *UserRepository) ValidatePassword(ctx context.Context, username, passwor
 		return nil, fmt.Errorf("validate user %s password: %w", username, err)
 	}
 	if !ok {
-		return nil, fmt.Errorf("invalid password")
+		return nil, fmt.Errorf("%s: %w", "ValidatePassword", domain.ErrBadPassword)
 	}
 
 	return u, nil
@@ -129,13 +141,12 @@ func (r *UserRepository) SetPassword(ctx context.Context, userID int, password s
 	if err != nil {
 		return err
 	}
-
-	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("password_hash", hashed).Error
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"password_hash": hashed}, "SetPassword")
 }
 
 // SetRole updates a user's role.
 func (r *UserRepository) SetRole(ctx context.Context, userID int, role user.Role) error {
-	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("role", role).Error
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"role": role}, "SetRole")
 }
 
 // DeleteByID deletes a user by their ID.
@@ -155,7 +166,7 @@ func (r *UserRepository) Count(ctx context.Context) (int64, error) {
 
 // UpdateLastLoginAt updates the last login timestamp for a user.
 func (r *UserRepository) UpdateLastLoginAt(ctx context.Context, userID int, lastLoginAt time.Time) error {
-	return r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Update("last_login_at", lastLoginAt).Error
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"last_login_at": lastLoginAt}, "UpdateLastLoginAt")
 }
 
 func (r *UserRepository) existsByEmail(ctx context.Context, email string) (bool, error) {
@@ -170,9 +181,11 @@ func (r *UserRepository) existsByPostKey(ctx context.Context, postKey string) (b
 	return existsBy[user.User](ctx, r.db, "post_key", postKey, "existsByPostKey")
 }
 
-func (r *UserRepository) createWithUniquePostKey(ctx context.Context, email, username, password string, githubID *int64, avatarURL *string) (*user.User, error) {
-	for {
-		u, err := r.makeUser(email, username, password, githubID, avatarURL)
+func (r *UserRepository) createWithUniquePostKey(ctx context.Context, email, username, password string, githubID *int64, avatarURL *string, postKeyLength int) (*user.User, error) {
+	const maxRetries = 10
+
+	for range maxRetries {
+		u, err := makeUser(email, username, password, githubID, avatarURL, postKeyLength)
 		if err != nil {
 			return nil, err
 		}
@@ -191,10 +204,11 @@ func (r *UserRepository) createWithUniquePostKey(ctx context.Context, email, use
 
 		return nil, err
 	}
+	return nil, fmt.Errorf("createWithUniquePostKey: failed to generate unique post key after %d attempts", maxRetries)
 }
 
-func (r *UserRepository) makeUser(email, username, password string, githubID *int64, avatarURL *string) (*user.User, error) {
-	postKey, err := gonanoid.New()
+func makeUser(email, username, password string, githubID *int64, avatarURL *string, postKeyLength int) (*user.User, error) {
+	postKey, err := utils.GeneratePostKey(postKeyLength)
 	if err != nil {
 		return nil, err
 	}

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"context"
 	"strings"
 
 	"markpost/internal/domain/user"
@@ -11,11 +10,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
-// TokenBlacklistChecker defines the interface for checking blacklisted tokens.
-type TokenBlacklistChecker interface {
-	IsTokenBlacklisted(ctx context.Context, token string) (bool, error)
-}
 
 func getBearerToken(c *gin.Context) (string, bool) {
 	authHeader := c.GetHeader("Authorization")
@@ -50,11 +44,6 @@ func setUserFields(c *gin.Context, u *user.User) {
 	c.Set("role", string(u.Role))
 }
 
-func setUserContext(c *gin.Context, u *user.User, claims *auth.AccessClaims) {
-	setUserFields(c, u)
-	c.Set("claims", claims)
-}
-
 func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTService, users user.Repository) (*user.User, *auth.AccessClaims, error) {
 	claims, err := jwtSvc.ValidateAccess(tokenString)
 	if err != nil {
@@ -63,7 +52,7 @@ func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTSer
 
 	u, err := users.GetByID(c.Request.Context(), claims.UserID)
 	if err != nil {
-		return nil, nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get user information", err)
+		return nil, nil, service.WrapNotFoundOrInternal(err, "user not found", "failed to get user information")
 	}
 
 	if !u.IsActive {
@@ -73,56 +62,51 @@ func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTSer
 	return u, claims, nil
 }
 
-func authenticateUser(c *gin.Context, tokenString string, jwtSvc *auth.JWTService, users user.Repository) bool {
+func tryAuthenticate(c *gin.Context, tokenString string, jwtSvc *auth.JWTService, users user.Repository) (*user.User, *auth.AccessClaims, error) {
 	u, claims, err := validateBearerToken(c, tokenString, jwtSvc, users)
 	if err != nil {
-		abortWithError(c, err)
-		return false
+		return nil, nil, err
 	}
 
-	setUserContext(c, u, claims)
+	setUserFields(c, u)
+	c.Set("claims", claims)
 	c.Set("access_token", tokenString)
-	return true
+	return u, claims, nil
 }
 
-// Auth returns an authentication middleware.
+func requireAuth(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.TokenRepository) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString, ok := extractBearerToken(c)
+		if !ok {
+			return
+		}
+
+		if tokenRepo != nil {
+			blacklisted, err := tokenRepo.IsTokenBlacklisted(c.Request.Context(), utils.HashToken(tokenString))
+			if err != nil {
+				abortWithError(c, service.NewServiceErrorWrap(service.ErrInternal, "failed to check token blacklist", err))
+				return
+			}
+			if blacklisted {
+				abortWithError(c, service.NewServiceError(service.ErrInvalidToken, "token has been revoked"))
+				return
+			}
+		}
+
+		if _, _, err := tryAuthenticate(c, tokenString, jwtSvc, users); err != nil {
+			abortWithError(c, err)
+			return
+		}
+		c.Next()
+	}
+}
+
 func Auth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString, ok := extractBearerToken(c)
-		if !ok {
-			return
-		}
-
-		if !authenticateUser(c, tokenString, jwtSvc, users) {
-			return
-		}
-		c.Next()
-	}
+	return requireAuth(jwtSvc, users, nil)
 }
 
-// AuthWithBlacklist returns an authentication middleware with token blacklist checking.
 func AuthWithBlacklist(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.TokenRepository) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString, ok := extractBearerToken(c)
-		if !ok {
-			return
-		}
-
-		blacklisted, err := tokenRepo.IsTokenBlacklisted(c.Request.Context(), utils.HashToken(tokenString))
-		if err != nil {
-			abortWithError(c, service.NewServiceErrorWrap(service.ErrInternal, "failed to check token blacklist", err))
-			return
-		}
-		if blacklisted {
-			abortWithError(c, service.NewServiceError(service.ErrInvalidToken, "token has been revoked"))
-			return
-		}
-
-		if !authenticateUser(c, tokenString, jwtSvc, users) {
-			return
-		}
-		c.Next()
-	}
+	return requireAuth(jwtSvc, users, tokenRepo)
 }
 
 // OptionalAuth returns an optional authentication middleware.
@@ -134,13 +118,7 @@ func OptionalAuth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFun
 			return
 		}
 
-		u, claims, err := validateBearerToken(c, tokenString, jwtSvc, users)
-		if err != nil {
-			c.Next()
-			return
-		}
-
-		setUserContext(c, u, claims)
+		tryAuthenticate(c, tokenString, jwtSvc, users)
 		c.Next()
 	}
 }

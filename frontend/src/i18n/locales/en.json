@@ -13,7 +13,10 @@
       "login": "Login | Markpost",
       "dashboard": "Dashboard | Markpost",
       "settings": "Settings | Markpost",
-      "allPosts": "All Posts | Markpost"
+      "allPosts": "All Posts | Markpost",
+      "adminUsers": "Users - Admin | Markpost",
+      "adminPosts": "Posts - Admin | Markpost",
+      "adminChannels": "Channels - Admin | Markpost"
     }
   },
   "language": {
@@ -116,6 +119,7 @@
     }
   },
   "settings": {
+    "title": "Settings",
     "applicationSettings": "Application Settings",
     "language": "Language",
     "languageDescription": "Select your preferred language",

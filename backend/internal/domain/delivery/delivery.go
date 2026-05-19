@@ -2,7 +2,6 @@
 package delivery
 
 import (
-	"errors"
 	"time"
 
 	"markpost/internal/domain/user"
@@ -16,6 +15,14 @@ const (
 	ChannelKindFeishu ChannelKind = "feishu"
 )
 
+var validChannelKinds = map[ChannelKind]bool{
+	ChannelKindFeishu: true,
+}
+
+func (k ChannelKind) IsValid() bool {
+	return validChannelKinds[k]
+}
+
 // Channel represents a delivery channel configuration.
 type Channel struct {
 	ID         int         `json:"id" gorm:"primaryKey;autoIncrement"`
@@ -28,12 +35,4 @@ type Channel struct {
 	Keywords   string      `json:"keywords" gorm:"not null;type:text;default:''"`
 	CreatedAt  time.Time   `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt  time.Time   `json:"updated_at" gorm:"autoUpdateTime"`
-}
-
-// ErrNotFound is returned when a record is not found.
-var ErrNotFound = errors.New("record not found")
-
-// IsNotFound checks if an error is ErrNotFound.
-func IsNotFound(err error) bool {
-	return errors.Is(err, ErrNotFound)
 }

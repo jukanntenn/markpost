@@ -1,9 +1,7 @@
-import { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 
-export const metadata: Metadata = {
-  title: "Dashboard - Markpost",
-};
+export const generateMetadata = buildPageMetadata("dashboard");
 
 export default function Dashboard() {
   return <DashboardPage />;

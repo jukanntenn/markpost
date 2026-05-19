@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/post"
 
 	"gorm.io/driver/sqlite"
@@ -111,7 +112,7 @@ func TestFindFirst(t *testing.T) {
 	db := setupTestDB(t)
 
 	t.Run("found", func(t *testing.T) {
-		result, err := findFirst[post.Post](context.Background(), db.Where("qid = ?", "p-1"), post.ErrNotFound)
+		result, err := findFirst[post.Post](context.Background(), db.Where("qid = ?", "p-1"), domain.ErrNotFound)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -121,17 +122,17 @@ func TestFindFirst(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		_, err := findFirst[post.Post](context.Background(), db.Where("qid = ?", "nonexistent"), post.ErrNotFound)
+		_, err := findFirst[post.Post](context.Background(), db.Where("qid = ?", "nonexistent"), domain.ErrNotFound)
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		if !errors.Is(err, post.ErrNotFound) {
-			t.Errorf("error = %v, want wrapping of post.ErrNotFound", err)
+		if !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("error = %v, want wrapping of domain.ErrNotFound", err)
 		}
 	})
 
 	t.Run("error wrapping", func(t *testing.T) {
-		_, err := findFirst[post.Post](context.Background(), db.Table("nonexistent"), post.ErrNotFound)
+		_, err := findFirst[post.Post](context.Background(), db.Table("nonexistent"), domain.ErrNotFound)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -163,6 +164,42 @@ func TestExistsBy(t *testing.T) {
 
 	t.Run("error wrapping", func(t *testing.T) {
 		_, err := existsBy[post.Post](context.Background(), db.Table("nonexistent"), "qid", "val", "MyLabel")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !strings.Contains(err.Error(), "MyLabel") {
+			t.Errorf("error %q should contain label %q", err.Error(), "MyLabel")
+		}
+	})
+}
+
+func TestUpdateByID(t *testing.T) {
+	db := setupTestDB(t)
+
+	t.Run("updates existing row", func(t *testing.T) {
+		err := updateByID[post.Post](context.Background(), db, 1, map[string]any{"title": "updated"}, "label")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		var p post.Post
+		db.First(&p, 1)
+		if p.Title != "updated" {
+			t.Errorf("title = %q, want %q", p.Title, "updated")
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		err := updateByID[post.Post](context.Background(), db, 999, map[string]any{"title": "x"}, "label")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("error = %v, want wrapping of domain.ErrNotFound", err)
+		}
+	})
+
+	t.Run("error wrapping", func(t *testing.T) {
+		err := updateByID[post.Post](context.Background(), db.Table("nonexistent"), 1, map[string]any{"title": "x"}, "MyLabel")
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -228,6 +265,99 @@ func TestLikeContains(t *testing.T) {
 			got := likeContains(tt.in)
 			if got != tt.want {
 				t.Errorf("likeContains(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBuildSearchCondition(t *testing.T) {
+	t.Run("empty search", func(t *testing.T) {
+		cond, args := buildSearchCondition("", "title")
+		if cond != "" {
+			t.Errorf("cond = %q, want empty", cond)
+		}
+		if args != nil {
+			t.Errorf("args = %v, want nil", args)
+		}
+	})
+
+	t.Run("empty fields", func(t *testing.T) {
+		cond, args := buildSearchCondition("hello")
+		if cond != "" {
+			t.Errorf("cond = %q, want empty", cond)
+		}
+		if args != nil {
+			t.Errorf("args = %v, want nil", args)
+		}
+	})
+
+	t.Run("single field", func(t *testing.T) {
+		cond, args := buildSearchCondition("test", "title")
+		want := "title LIKE ?"
+		if cond != want {
+			t.Errorf("cond = %q, want %q", cond, want)
+		}
+		if len(args) != 1 || args[0] != likeContains("test") {
+			t.Errorf("args = %v, want [%q]", args, likeContains("test"))
+		}
+	})
+
+	t.Run("multiple fields", func(t *testing.T) {
+		cond, args := buildSearchCondition("test", "title", "body")
+		want := "title LIKE ? OR body LIKE ?"
+		if cond != want {
+			t.Errorf("cond = %q, want %q", cond, want)
+		}
+		if len(args) != 2 {
+			t.Fatalf("len(args) = %d, want 2", len(args))
+		}
+		for i, a := range args {
+			if a != likeContains("test") {
+				t.Errorf("args[%d] = %v, want %q", i, a, likeContains("test"))
+			}
+		}
+	})
+
+	t.Run("special characters escaped", func(t *testing.T) {
+		cond, args := buildSearchCondition("50%", "field")
+		if cond != "field LIKE ?" {
+			t.Errorf("cond = %q, want %q", cond, "field LIKE ?")
+		}
+		if len(args) != 1 {
+			t.Fatalf("len(args) = %d, want 1", len(args))
+		}
+		if args[0] != likeContains("50%") {
+			t.Errorf("args[0] = %v, want %q", args[0], likeContains("50%"))
+		}
+	})
+}
+
+func TestApplySearch(t *testing.T) {
+	db := setupTestDB(t)
+
+	tests := []struct {
+		name   string
+		search string
+		fields []string
+		want   int
+	}{
+		{name: "empty search", search: "", fields: []string{"title"}, want: 3},
+		{name: "single field match", search: "a", fields: []string{"title"}, want: 1},
+		{name: "single field no match", search: "z", fields: []string{"title"}, want: 0},
+		{name: "multi field - match title", search: "a", fields: []string{"title", "body"}, want: 1},
+		{name: "multi field - match body", search: "body", fields: []string{"title", "body"}, want: 3},
+		{name: "no fields", search: "a", fields: []string{}, want: 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			query := applySearch(db.Model(&post.Post{}), tt.search, tt.fields...)
+			results, err := findMany[post.Post](context.Background(), query, 0, 100, "test")
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(results) != tt.want {
+				t.Errorf("got %d results, want %d", len(results), tt.want)
 			}
 		})
 	}

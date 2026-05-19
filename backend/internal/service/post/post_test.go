@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/post"
 )
 
@@ -39,7 +40,7 @@ func (m *mockPostRepository) Create(_ context.Context, title, body string, userI
 func (m *mockPostRepository) GetByQID(_ context.Context, qid string) (*post.Post, error) {
 	p, ok := m.posts[qid]
 	if !ok {
-		return nil, post.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return p, nil
 }
@@ -82,7 +83,7 @@ func (m *mockPostRepository) CreateBatch(_ context.Context, posts []post.Post) (
 func (m *mockPostRepository) GetByID(_ context.Context, id int) (*post.Post, error) {
 	p, ok := m.idPosts[id]
 	if !ok {
-		return nil, post.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return p, nil
 }
@@ -91,8 +92,8 @@ func (m *mockPostRepository) ListAll(_ context.Context, _ string, _, _ int) ([]p
 	return nil, nil
 }
 
-func (m *mockPostRepository) UpdateByID(_ context.Context, _ int, _, _ string) (*post.Post, error) {
-	return nil, nil
+func (m *mockPostRepository) UpdateByID(_ context.Context, _ int, _, _ string) error {
+	return nil
 }
 
 func (m *mockPostRepository) DeleteByID(_ context.Context, _ int) (int64, error) {

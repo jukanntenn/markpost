@@ -1,24 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api/auth";
-import { Loader2Icon } from "lucide-react";
+import { authApi } from "@/lib/api";
+import { Spinner } from "@/components/ui/spinner";
 
-const LoginSpinner = ({ text }: { text: string }) => {
-  return (
-    <div className="flex justify-center pt-10">
-      <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
-        <Loader2Icon className="size-5 animate-spin" />
-        <div>{text}</div>
-      </div>
-    </div>
-  );
-};
-
-const LoginCallbackPage: React.FC = () => {
+export default function LoginCallbackPage() {
   const searchParams = useSearchParams();
   const t = useTranslations("loginCallback");
   const [loading, setLoading] = useState(true);
@@ -50,7 +39,13 @@ const LoginCallbackPage: React.FC = () => {
     handleCallback();
   }, [handleCallback]);
 
-  return loading ? <LoginSpinner text={t("loading")} /> : null;
-};
-
-export default LoginCallbackPage;
+  if (!loading) return null;
+  return (
+    <div className="flex justify-center pt-10">
+      <div className="flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
+        <Spinner className="size-5" />
+        <div>{t("loading")}</div>
+      </div>
+    </div>
+  );
+}

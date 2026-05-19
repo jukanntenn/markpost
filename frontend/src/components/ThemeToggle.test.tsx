@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import ThemeToggle from "./ThemeToggle";
+import { ThemeToggle } from "./ThemeToggle";
 import { ThemeProvider } from "../components/theme-provider";
 import { useTheme } from "next-themes";
 import { renderWithProviders, mockMatchMedia } from "../test/utils";

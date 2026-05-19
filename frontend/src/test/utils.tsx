@@ -1,16 +1,8 @@
 import { render } from "@testing-library/react";
-import type { LoginResponse } from "@/lib/api/auth";
+import type { LoginResponse } from "@/types/auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import en from "../i18n/locales/en.json";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
-});
 
 type WrapperComponent = React.ComponentType<{ children: React.ReactNode }>;
 
@@ -19,8 +11,11 @@ export function renderWithProviders(
   options?: { wrapper?: WrapperComponent }
 ) {
   const Wrapper = options?.wrapper ?? (({ children }) => <>{children}</>);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return render(
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="en" messages={en}>
         <Wrapper>{ui}</Wrapper>
       </NextIntlClientProvider>
@@ -69,10 +64,11 @@ export function clearMockAuth() {
   localStorage.removeItem("markpost_dev_login");
 }
 
-export function createWrapper() {
+export function createQueryWrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
 }

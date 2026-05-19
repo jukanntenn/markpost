@@ -37,13 +37,6 @@ const buttonVariants = cva(
   }
 );
 
-function Slot({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) {
-  if (React.isValidElement(children)) {
-    return React.cloneElement(children, { ...props, ...(children.props as Record<string, unknown>) });
-  }
-  return null;
-}
-
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> &

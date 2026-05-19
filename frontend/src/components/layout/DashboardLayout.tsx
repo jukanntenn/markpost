@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api/auth";
+import { useAuthReady } from "@/hooks/useAuthReady";
+import { authApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Menu } from "@/components/ui/menu";
@@ -23,8 +24,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("navigation");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
-  const isAdmin = useAuthStore((state) => state.isAdmin());
+  const { isAuthenticated, isAdmin } = useAuthReady();
   const logout = useAuthStore((state) => state.logout);
 
   const [scrolled, setScrolled] = useState(false);

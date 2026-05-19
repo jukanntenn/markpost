@@ -1,4 +1,4 @@
-import type { Pagination } from "./pagination";
+import type { Paginated } from "./pagination";
 
 export interface DeliveryChannel {
   id: number;
@@ -29,7 +29,18 @@ export interface AdminChannel {
   created_at: string;
 }
 
-export interface AdminChannelsResponse {
-  channels: AdminChannel[];
-  pagination: Pagination;
+export type AdminChannelsResponse = Paginated<AdminChannel, "channels">;
+
+export interface CreateChannelPayload {
+  kind: string;
+  name: string;
+  webhook_url: string;
+  keywords?: string;
+}
+
+export interface UpdateChannelPayload {
+  name?: string;
+  webhook_url?: string;
+  keywords?: string;
+  enabled?: boolean;
 }

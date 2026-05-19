@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
+
+	"markpost/internal/domain"
 
 	"gorm.io/gorm"
 )
@@ -41,6 +42,10 @@ func findMany[T any](ctx context.Context, query *gorm.DB, offset, limit int, lab
 	return results, nil
 }
 
+func findAll[T any](ctx context.Context, query *gorm.DB, label string) ([]T, error) {
+	return findMany[T](ctx, query, 0, 0, label)
+}
+
 func countQuery(ctx context.Context, query *gorm.DB, label string) (int64, error) {
 	var count int64
 	if err := query.WithContext(ctx).Count(&count).Error; err != nil {
@@ -49,20 +54,21 @@ func countQuery(ctx context.Context, query *gorm.DB, label string) (int64, error
 	return count, nil
 }
 
+func updateByID[T any](ctx context.Context, db *gorm.DB, id int, updates map[string]any, label string) error {
+	result := db.WithContext(ctx).Model(new(T)).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return fmt.Errorf("%s: %w", label, result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("%s: %w", label, domain.ErrNotFound)
+	}
+	return nil
+}
+
 func deleteWhere[T any](ctx context.Context, query *gorm.DB) (int64, error) {
 	tx := query.WithContext(ctx).Delete(new(T))
 	if tx.Error != nil {
 		return 0, tx.Error
 	}
 	return tx.RowsAffected, nil
-}
-
-var likeEscaper = strings.NewReplacer(
-	`\`, `\\`,
-	`%`, `\%`,
-	`_`, `\_`,
-)
-
-func likeContains(s string) string {
-	return "%" + likeEscaper.Replace(s) + "%"
 }

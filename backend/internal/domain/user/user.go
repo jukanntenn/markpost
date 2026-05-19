@@ -1,7 +1,7 @@
+// Package user defines the user domain model and repository interface.
 package user
 
 import (
-	"errors"
 	"time"
 )
 
@@ -42,15 +42,7 @@ type User struct {
 	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
-// IsAdmin checks if the user has admin role.
-func (u *User) IsAdmin() bool {
+// IsAdmin returns true if the user has the admin role.
+func (u User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
-
-// IsRegularUser checks if the user has regular user role.
-func (u *User) IsRegularUser() bool {
-	return u.Role == RoleUser
-}
-
-// ErrNotFound is returned when a user is not found.
-var ErrNotFound = errors.New("record not found")

@@ -4,7 +4,6 @@ package post
 import (
 	"bytes"
 	"context"
-	"errors"
 
 	"markpost/internal/domain/post"
 	"markpost/internal/service"
@@ -51,10 +50,7 @@ func NewService(postRepo post.Repository, delivery DeliveryEnqueuer) *Service {
 func (s *Service) getPostByQID(ctx context.Context, qid string) (*post.Post, error) {
 	p, err := s.postRepo.GetByQID(ctx, qid)
 	if err != nil {
-		if errors.Is(err, post.ErrNotFound) {
-			return nil, service.NewServiceErrorWrap(service.ErrNotFound, "post not found", err)
-		}
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "get post failed", err)
+		return nil, service.WrapNotFoundOrInternal(err, "post not found", "get post failed")
 	}
 	return p, nil
 }
@@ -105,55 +101,31 @@ func (s *Service) GetPostMarkdown(ctx context.Context, qid string) (string, stri
 
 // GetUserPosts retrieves posts for a specific user with pagination.
 func (s *Service) GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error) {
-	posts, err := s.postRepo.GetByUserID(ctx, userID, offset, limit)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "get user posts failed", err)
-	}
-
-	total, err := s.postRepo.CountByUserID(ctx, userID)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "count user posts failed", err)
-	}
-
-	return posts, total, nil
+	return service.Paginate(
+		func() ([]post.Post, error) { return s.postRepo.GetByUserID(ctx, userID, offset, limit) },
+		func() (int64, error) { return s.postRepo.CountByUserID(ctx, userID) },
+		"user posts",
+	)
 }
 
 // GetAllPosts retrieves all posts with optional search and pagination.
 func (s *Service) GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error) {
-	posts, err := s.postRepo.ListAll(ctx, search, offset, limit)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "get all posts failed", err)
-	}
-
-	total, err := s.postRepo.CountAll(ctx, search)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "count all posts failed", err)
-	}
-
-	return posts, total, nil
+	return service.Paginate(
+		func() ([]post.Post, error) { return s.postRepo.ListAll(ctx, search, offset, limit) },
+		func() (int64, error) { return s.postRepo.CountAll(ctx, search) },
+		"all posts",
+	)
 }
 
 // UpdatePost updates a post's title and body.
 func (s *Service) UpdatePost(ctx context.Context, id int, title, body string) error {
-	_, err := s.postRepo.UpdateByID(ctx, id, title, body)
-	if err != nil {
-		if errors.Is(err, post.ErrNotFound) {
-			return service.NewServiceErrorWrap(service.ErrNotFound, "post not found", err)
-		}
-		return service.NewServiceErrorWrap(service.ErrInternal, "update post failed", err)
-	}
-
-	return nil
+	return service.WrapNotFoundOrInternal(s.postRepo.UpdateByID(ctx, id, title, body), "post not found", "update post failed")
 }
 
 // DeletePost deletes a post by its ID.
 func (s *Service) DeletePost(ctx context.Context, id int) error {
 	_, err := s.postRepo.DeleteByID(ctx, id)
-	if err != nil {
-		return service.NewServiceErrorWrap(service.ErrInternal, "delete post failed", err)
-	}
-
-	return nil
+	return service.WrapNotFoundOrInternal(err, "post not found", "delete post failed")
 }
 
 // PruneExpired deletes expired posts based on retention days.

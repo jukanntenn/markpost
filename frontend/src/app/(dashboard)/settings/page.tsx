@@ -1,9 +1,7 @@
-import { Metadata } from "next";
+import { buildPageMetadata } from "@/lib/metadata";
 import SettingsPage from "@/components/settings/SettingsPage";
 
-export const metadata: Metadata = {
-  title: "Settings - Markpost",
-};
+export const generateMetadata = buildPageMetadata("settings");
 
 export default function Settings() {
   return <SettingsPage />;

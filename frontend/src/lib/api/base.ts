@@ -1,18 +1,6 @@
+import { authApi } from "./auth";
 import { useAuthStore } from "@/stores/auth";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-interface FieldError {
-  field?: string;
-  code: string;
-  message: string;
-}
-
-interface ApiErrorResponse {
-  code?: string;
-  message?: string;
-  errors?: FieldError[];
-}
+import type { FieldError, ApiErrorResponse } from "@/types/api";
 
 export class ApiError extends Error {
   readonly code?: string;
@@ -26,9 +14,11 @@ export class ApiError extends Error {
   }
 }
 
-interface RequestOptions extends RequestInit {
+interface RequestOptions extends Omit<RequestInit, "headers"> {
   skipAuthRefresh?: boolean;
   params?: Record<string, string | number>;
+  json?: unknown;
+  headers?: Record<string, string>;
 }
 
 let refreshPromise: Promise<boolean> | null = null;
@@ -42,18 +32,7 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      logout();
-      return false;
-    }
-
-    const data = await response.json();
+    const data = await authApi.refreshToken(refreshToken);
     setTokens(data.token, data.refresh_token);
     return true;
   } catch {
@@ -62,7 +41,7 @@ async function refreshAccessToken(): Promise<boolean> {
   }
 }
 
-export async function handleTokenRefresh(): Promise<boolean> {
+async function handleTokenRefresh(): Promise<boolean> {
   if (refreshPromise) {
     return refreshPromise;
   }
@@ -74,15 +53,22 @@ export async function handleTokenRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
+export function paginationParams(page?: number, limit?: number): Record<string, string | number> {
+  return Object.fromEntries(
+    Object.entries({ page, limit }).filter(([, v]) => v != null),
+  );
+}
+
 export function buildUrl(base: string, path: string, params?: Record<string, string | number>): string {
+  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base;
   if (!params || Object.keys(params).length === 0) {
-    return `${base}${path}`;
+    return `${normalizedBase}${path}`;
   }
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     searchParams.set(key, String(value));
   }
-  return `${base}${path}?${searchParams}`;
+  return `${normalizedBase}${path}?${searchParams}`;
 }
 
 async function throwApiError(response: Response): Promise<never> {
@@ -120,14 +106,16 @@ export async function request<T>(
   options: RequestOptions = {}
 ): Promise<T> {
   const { token } = useAuthStore.getState();
-  const { skipAuthRefresh = false, params, headers: optHeaders, ...fetchOptions } = options;
+  const { skipAuthRefresh = false, params, json, headers: optHeaders, ...fetchOptions } = options;
 
-  const fullUrl = buildUrl(API_BASE_URL, url, params);
+  const fullUrl = buildUrl(process.env.NEXT_PUBLIC_API_URL || "", url, params);
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(optHeaders as Record<string, string> || {}),
-  };
+  const headers: Record<string, string> = { ...optHeaders };
+
+  if (json !== undefined) {
+    fetchOptions.body = JSON.stringify(json);
+    headers["Content-Type"] = "application/json";
+  }
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;

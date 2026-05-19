@@ -1,4 +1,3 @@
-// Package infra provides infrastructure layer implementations.
 package infra
 
 import (
@@ -6,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/user"
 
 	"gorm.io/gorm"
@@ -28,12 +28,15 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, userID int, tok
 		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 	}
-	return r.db.WithContext(ctx).Create(&token).Error
+	if err := r.db.WithContext(ctx).Create(&token).Error; err != nil {
+		return fmt.Errorf("StoreRefreshToken: %w", err)
+	}
+	return nil
 }
 
 // GetRefreshToken retrieves a refresh token by its hash.
 func (r *TokenRepository) GetRefreshToken(ctx context.Context, tokenHash string) (*user.RefreshToken, error) {
-	t, err := findFirst[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash), user.ErrNotFound)
+	t, err := findFirst[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash), domain.ErrNotFound)
 	if err != nil {
 		return nil, fmt.Errorf("GetRefreshToken: %w", err)
 	}
@@ -42,12 +45,14 @@ func (r *TokenRepository) GetRefreshToken(ctx context.Context, tokenHash string)
 
 // DeleteRefreshToken deletes a refresh token by its hash.
 func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
-	return r.db.WithContext(ctx).Where("token_hash = ?", tokenHash).Delete(&user.RefreshToken{}).Error
+	_, err := deleteWhere[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash))
+	return err
 }
 
 // DeleteRefreshTokensByUserID deletes all refresh tokens for a user.
 func (r *TokenRepository) DeleteRefreshTokensByUserID(ctx context.Context, userID int) error {
-	return r.db.WithContext(ctx).Where("user_id = ?", userID).Delete(&user.RefreshToken{}).Error
+	_, err := deleteWhere[user.RefreshToken](ctx, r.db.Where("user_id = ?", userID))
+	return err
 }
 
 // StoreBlacklistedToken adds a token to the blacklist.
@@ -56,17 +61,21 @@ func (r *TokenRepository) StoreBlacklistedToken(ctx context.Context, tokenHash s
 		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 	}
-	return r.db.WithContext(ctx).Create(&blacklist).Error
+	if err := r.db.WithContext(ctx).Create(&blacklist).Error; err != nil {
+		return fmt.Errorf("StoreBlacklistedToken: %w", err)
+	}
+	return nil
 }
 
 // IsTokenBlacklisted checks if a token is blacklisted.
 func (r *TokenRepository) IsTokenBlacklisted(ctx context.Context, tokenHash string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&user.TokenBlacklist{}).
-		Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()).
-		Count(&count).Error
+	count, err := countQuery(ctx,
+		r.db.Model(&user.TokenBlacklist{}).
+			Where("token_hash = ? AND expires_at > ?", tokenHash, time.Now()),
+		"IsTokenBlacklisted",
+	)
 	if err != nil {
-		return false, fmt.Errorf("IsTokenBlacklisted: %w", err)
+		return false, err
 	}
 	return count > 0, nil
 }
@@ -74,8 +83,13 @@ func (r *TokenRepository) IsTokenBlacklisted(ctx context.Context, tokenHash stri
 // CleanupExpiredTokens removes expired tokens from the database.
 func (r *TokenRepository) CleanupExpiredTokens(ctx context.Context) error {
 	now := time.Now()
-	if err := r.db.WithContext(ctx).Where("expires_at < ?", now).Delete(&user.RefreshToken{}).Error; err != nil {
-		return err
-	}
-	return r.db.WithContext(ctx).Where("expires_at < ?", now).Delete(&user.TokenBlacklist{}).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("expires_at < ?", now).Delete(&user.RefreshToken{}).Error; err != nil {
+			return fmt.Errorf("CleanupExpiredTokens/refresh: %w", err)
+		}
+		if err := tx.Where("expires_at < ?", now).Delete(&user.TokenBlacklist{}).Error; err != nil {
+			return fmt.Errorf("CleanupExpiredTokens/blacklist: %w", err)
+		}
+		return nil
+	})
 }

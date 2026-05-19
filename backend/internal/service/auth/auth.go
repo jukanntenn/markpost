@@ -4,22 +4,20 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
+	"markpost/pkg/httputil"
 	"markpost/pkg/utils"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
-)
-
-// Error definitions for authentication operations
-var (
-	ErrTokenExpired = errors.New("token has expired")
 )
 
 // Service handles authentication operations including OAuth, JWT token management,
@@ -75,55 +73,53 @@ func (s *Service) LoginWithGitHub(ctx context.Context, code string) (*user.User,
 
 func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user.GitHubUser, error) {
 	client := s.oauth.Client(ctx, token)
-	resp, err := client.Get("https://api.github.com/user")
-	if err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
 
 	var githubUser user.GitHubUser
-	if err := json.NewDecoder(resp.Body).Decode(&githubUser); err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to decode GitHub user data", err)
+	if err := httputil.FetchAndDecodeJSON(client, "https://api.github.com/user", &githubUser); err != nil {
+		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user", err)
 	}
 
 	if githubUser.ID == 0 || githubUser.Login == "" {
 		return nil, service.NewServiceErrorWrap(service.ErrInternal, "invalid GitHub user data", fmt.Errorf("ID=%d, Login='%s'", githubUser.ID, githubUser.Login))
 	}
 
-	emails, err := s.getGitHubUserEmails(client)
+	email, err := s.getGitHubUserEmails(client)
 	if err != nil {
 		return nil, err
 	}
-	if len(emails) > 0 {
-		githubUser.Email = emails[0]
+	if email != "" {
+		githubUser.Email = email
 	}
 
 	return &githubUser, nil
 }
 
-func (s *Service) getGitHubUserEmails(client *http.Client) ([]string, error) {
-	resp, err := client.Get("https://api.github.com/user/emails")
-	if err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user emails", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
+func (s *Service) getGitHubUserEmails(client *http.Client) (string, error) {
 	var emails []struct {
 		Email    string `json:"email"`
 		Primary  bool   `json:"primary"`
 		Verified bool   `json:"verified"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to decode GitHub user emails", err)
+	if err := httputil.FetchAndDecodeJSON(client, "https://api.github.com/user/emails", &emails); err != nil {
+		return "", service.NewServiceErrorWrap(service.ErrInternal, "failed to get GitHub user emails", err)
 	}
 
-	var result []string
+	var primary string
+	var fallback string
 	for _, e := range emails {
 		if e.Verified {
-			result = append(result, e.Email)
+			if fallback == "" {
+				fallback = e.Email
+			}
+			if e.Primary {
+				primary = e.Email
+			}
 		}
 	}
-	return result, nil
+	if primary != "" {
+		return primary, nil
+	}
+	return fallback, nil
 }
 
 // LoginWithEmail authenticates a user with email and password, returning user info with JWT tokens.
@@ -143,35 +139,26 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 		return nil, nil, err
 	}
 
-	u, err := s.users.GetByID(ctx, tokenData.UserID)
-	if err != nil {
-		return nil, nil, service.NewServiceErrorWrap(service.ErrUnauthorized, "user not found", err)
-	}
-
-	if !u.IsActive {
-		return nil, nil, service.NewServiceError(service.ErrUserDisabled, "user account is disabled")
-	}
-
-	// Attempt to revoke the old refresh token; ignore errors as the new token
-	// pair will still be generated and valid
-	_ = s.revokeRefreshToken(ctx, refreshToken)
-
-	pair, err := s.generateTokenPairWithStore(ctx, u)
+	u, err := s.getUserByID(ctx, tokenData.UserID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return u, pair, nil
+	_ = s.revokeRefreshToken(ctx, refreshToken)
+
+	return s.completeLogin(ctx, u)
 }
 
 // Logout invalidates the provided access token by adding it to the blacklist.
 func (s *Service) Logout(ctx context.Context, accessToken string) error {
 	if accessToken == "" {
+		slog.Debug("logout called with empty token")
 		return nil
 	}
 
 	claims, err := s.jwt.ValidateAccess(accessToken)
-	if err != nil && !errors.Is(err, ErrTokenExpired) {
+	if err != nil && !errors.Is(err, jwt.ErrTokenExpired) {
+		slog.Debug("logout token validation failed", "error", err)
 		return nil
 	}
 
@@ -179,6 +166,7 @@ func (s *Service) Logout(ctx context.Context, accessToken string) error {
 	if claims != nil && claims.ExpiresAt != nil {
 		ttl = time.Until(claims.ExpiresAt.Time)
 		if ttl <= 0 {
+			slog.Debug("logout token already expired")
 			return nil
 		}
 	} else {
@@ -194,12 +182,7 @@ func (s *Service) Logout(ctx context.Context, accessToken string) error {
 	return nil
 }
 
-// RevokeAllUserTokens revokes all refresh tokens for a given user ID.
-func (s *Service) RevokeAllUserTokens(ctx context.Context, userID int) error {
-	return s.tokens.DeleteRefreshTokensByUserID(ctx, userID)
-}
-
-func (s *Service) generateTokenPairWithStore(ctx context.Context, u *user.User) (*JWTTokenPair, error) {
+func (s *Service) generateAndPersistTokenPair(ctx context.Context, u *user.User) (*JWTTokenPair, error) {
 	pair, err := s.jwt.GenerateTokenPair(u.ID, u.Email, u.Username, string(u.Role))
 	if err != nil {
 		return nil, service.NewServiceErrorWrap(service.ErrInternal, "generate token pair failed", err)
@@ -219,13 +202,15 @@ func (s *Service) completeLogin(ctx context.Context, u *user.User) (*user.User, 
 		return nil, nil, service.NewServiceError(service.ErrUserDisabled, "user account is disabled")
 	}
 
-	pair, err := s.generateTokenPairWithStore(ctx, u)
+	pair, err := s.generateAndPersistTokenPair(ctx, u)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	now := time.Now()
-	_ = s.users.UpdateLastLoginAt(ctx, u.ID, now)
+	if err := s.users.UpdateLastLoginAt(ctx, u.ID, now); err != nil {
+		slog.Error("update last login at failed", "error", err, "user_id", u.ID)
+	}
 
 	return u, pair, nil
 }
@@ -235,14 +220,14 @@ func (s *Service) validateRefreshToken(ctx context.Context, refreshToken string)
 
 	tokenData, err := s.tokens.GetRefreshToken(ctx, tokenHash)
 	if err != nil {
-		if errors.Is(err, user.ErrNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			return nil, service.NewServiceError(service.ErrInvalidToken, "invalid refresh token")
 		}
 		return nil, service.NewServiceErrorWrap(service.ErrInternal, "failed to validate refresh token", err)
 	}
 
-	if time.Now().After(tokenData.ExpiresAt) {
-		_ = s.tokens.DeleteRefreshToken(ctx, tokenHash)
+	if tokenData.IsExpired() {
+		_ = s.revokeRefreshToken(ctx, refreshToken)
 		return nil, service.NewServiceError(service.ErrInvalidToken, "refresh token expired")
 	}
 
@@ -252,7 +237,7 @@ func (s *Service) validateRefreshToken(ctx context.Context, refreshToken string)
 func (s *Service) getUserByID(ctx context.Context, userID int) (*user.User, error) {
 	u, err := s.users.GetByID(ctx, userID)
 	if err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrNotFound, fmt.Sprintf("can not find user with ID %d", userID), err)
+		return nil, service.WrapNotFoundOrInternal(err, fmt.Sprintf("user %d not found", userID), fmt.Sprintf("get user %d failed", userID))
 	}
 	return u, nil
 }
@@ -262,10 +247,18 @@ func (s *Service) revokeRefreshToken(ctx context.Context, refreshToken string) e
 	return s.tokens.DeleteRefreshToken(ctx, tokenHash)
 }
 
-// IsTokenBlacklisted checks if a token has been blacklisted.
-func (s *Service) IsTokenBlacklisted(ctx context.Context, token string) (bool, error) {
-	tokenHash := utils.HashToken(token)
-	return s.tokens.IsTokenBlacklisted(ctx, tokenHash)
+func (s *Service) verifyCurrentPassword(u *user.User, current string) error {
+	if u.Password == "" {
+		return nil
+	}
+	ok, err := utils.CheckPassword(current, u.Password)
+	if err != nil {
+		return service.NewServiceErrorWrap(service.ErrInternal, "validate current password failed", err)
+	}
+	if !ok {
+		return service.NewServiceError(service.ErrInvalidPassword, "invalid current password")
+	}
+	return nil
 }
 
 // ChangePassword updates a user's password after validating the current password.
@@ -275,18 +268,12 @@ func (s *Service) ChangePassword(ctx context.Context, userID int, current, newPa
 		return err
 	}
 
-	if u.Password != "" {
-		ok, err := utils.CheckPassword(current, u.Password)
-		if err != nil {
-			return service.NewServiceErrorWrap(service.ErrInternal, fmt.Sprintf("validate current password with user ID %d failed", userID), err)
-		}
-		if !ok {
-			return service.NewServiceError(service.ErrInvalidPassword, "invalid current password")
-		}
+	if err := s.verifyCurrentPassword(u, current); err != nil {
+		return err
 	}
 
 	if err := s.users.SetPassword(ctx, userID, newPassword); err != nil {
-		return service.NewServiceErrorWrap(service.ErrInternal, fmt.Sprintf("set password with user ID %d failed", userID), err)
+		return service.NewServiceErrorWrap(service.ErrInternal, "set password failed", err)
 	}
 
 	return nil
@@ -301,21 +288,6 @@ func (s *Service) QueryPostKey(ctx context.Context, userID int) (string, time.Ti
 	return u.PostKey, u.CreatedAt, nil
 }
 
-// GetAllUsers retrieves a paginated list of users with total count.
-func (s *Service) GetAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error) {
-	users, err := s.users.GetAll(ctx, offset, limit)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "failed to get users", err)
-	}
-
-	total, err := s.users.Count(ctx)
-	if err != nil {
-		return nil, 0, service.NewServiceErrorWrap(service.ErrInternal, "failed to count users", err)
-	}
-
-	return users, total, nil
-}
-
 // InitializeFirstAdmin promotes the specified user to admin role if not already an admin.
 func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername string) error {
 	u, err := s.users.GetByUsername(ctx, initialUsername)
@@ -323,7 +295,7 @@ func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername stri
 		return service.NewServiceError(service.ErrNotFound, fmt.Sprintf("initial admin user '%s' not found", initialUsername))
 	}
 
-	if u.Role == user.RoleAdmin {
+	if u.IsAdmin() {
 		return nil
 	}
 

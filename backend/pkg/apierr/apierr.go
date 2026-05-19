@@ -1,4 +1,3 @@
-// Package apierr provides API error handling utilities.
 package apierr
 
 import (
@@ -12,131 +11,74 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-// FieldError represents a validation field error.
 type FieldError struct {
 	Field   string `json:"field,omitempty"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
-// ErrorResponse represents an API error response.
 type ErrorResponse struct {
 	Code    string       `json:"code"`
 	Message string       `json:"message"`
 	Errors  []FieldError `json:"errors,omitempty"`
 }
 
-// ServiceErrorMapping maps service error codes to HTTP status and i18n messages.
-type serviceErrorMapping struct {
-	Status  int
-	Message *i18n.Message
-}
-
-var serviceErrorMappings = map[service.ErrCode]serviceErrorMapping{
+var errorCodeMessages = map[service.ErrCode]*i18n.Message{
 	service.ErrInvalidCredentials: {
-		Status: http.StatusUnauthorized,
-		Message: &i18n.Message{
-			ID:    "error.invalid_credentials",
-			Other: "Invalid username or password",
-		},
+		ID:    "error.invalid_credentials",
+		Other: "Invalid username or password",
 	},
 	service.ErrInvalidPassword: {
-		Status: http.StatusBadRequest,
-		Message: &i18n.Message{
-			ID:    "error.invalid_current_password",
-			Other: "Current password is incorrect",
-		},
+		ID:    "error.invalid_password",
+		Other: "Current password is incorrect",
 	},
 	service.ErrNotFound: {
-		Status: http.StatusNotFound,
-		Message: &i18n.Message{
-			ID:    "error.not_found",
-			Other: "Not Found",
-		},
+		ID:    "error.not_found",
+		Other: "Not Found",
 	},
 	service.ErrUnauthorized: {
-		Status: http.StatusUnauthorized,
-		Message: &i18n.Message{
-			ID:    "error.unauthorized",
-			Other: "Unauthorized",
-		},
+		ID:    "error.unauthorized",
+		Other: "Unauthorized",
 	},
 	service.ErrFailedGetUser: {
-		Status: http.StatusInternalServerError,
-		Message: &i18n.Message{
-			ID:    "error.failed_get_user",
-			Other: "Failed to get user information",
-		},
+		ID:    "error.failed_get_user",
+		Other: "Failed to get user information",
 	},
 	service.ErrInternal: {
-		Status: http.StatusInternalServerError,
-		Message: &i18n.Message{
-			ID:    "error.internal",
-			Other: "Internal server error",
-		},
+		ID:    "error.internal",
+		Other: "Internal server error",
 	},
 	service.ErrValidation: {
-		Status: http.StatusBadRequest,
-		Message: &i18n.Message{
-			ID:    "error.validation_failed",
-			Other: "Request validation failed",
-		},
-	},
-	service.ErrMissingStateParam: {
-		Status: http.StatusBadRequest,
-		Message: &i18n.Message{
-			ID:    "error.missing_state_param",
-			Other: "Missing state query parameter",
-		},
-	},
-	service.ErrMissingCode: {
-		Status: http.StatusBadRequest,
-		Message: &i18n.Message{
-			ID:    "error.missing_code",
-			Other: "Missing code field",
-		},
+		ID:    "error.validation_failed",
+		Other: "Request validation failed",
 	},
 	service.ErrInvalidRequest: {
-		Status: http.StatusBadRequest,
-		Message: &i18n.Message{
-			ID:    "error.invalid_request",
-			Other: "Invalid request format",
-		},
+		ID:    "error.invalid_request",
+		Other: "Invalid request format",
 	},
 	service.ErrMissingAuthorizationHeader: {
-		Status: http.StatusUnauthorized,
-		Message: &i18n.Message{
-			ID:    "error.missing_authorization_header",
-			Other: "Missing Authorization header",
-		},
+		ID:    "error.missing_authorization_header",
+		Other: "Missing Authorization header",
 	},
 	service.ErrInvalidToken: {
-		Status: http.StatusUnauthorized,
-		Message: &i18n.Message{
-			ID:    "error.invalid_token",
-			Other: "Invalid token",
-		},
+		ID:    "error.invalid_token",
+		Other: "Invalid token",
 	},
 	service.ErrInvalidPostKey: {
-		Status: http.StatusForbidden,
-		Message: &i18n.Message{
-			ID:    "error.invalid_post_key",
-			Other: "Invalid post key",
-		},
+		ID:    "error.invalid_post_key",
+		Other: "Invalid post key",
 	},
 	service.ErrForbidden: {
-		Status: http.StatusForbidden,
-		Message: &i18n.Message{
-			ID:   "error.forbidden",
-			Other: "Forbidden",
-		},
+		ID:    "error.forbidden",
+		Other: "Forbidden",
+	},
+	service.ErrRateLimited: {
+		ID:    "error.rate_limited",
+		Other: "Too many requests",
 	},
 	service.ErrUserDisabled: {
-		Status: http.StatusForbidden,
-		Message: &i18n.Message{
-			ID:    "error.user_disabled",
-			Other: "User account is disabled",
-		},
+		ID:    "error.user_disabled",
+		Other: "User account is disabled",
 	},
 }
 
@@ -155,7 +97,6 @@ var validationFieldMessages = map[service.ErrCode]*i18n.Message{
 	},
 }
 
-// RespondError writes an error response to the gin context.
 func RespondError(c *gin.Context, err error) {
 	se, ok := service.AsServiceError(err)
 	if !ok {
@@ -164,30 +105,31 @@ func RespondError(c *gin.Context, err error) {
 		return
 	}
 
-	mapping, ok := serviceErrorMappings[se.Code]
-	if !ok {
-		log.Printf("unknown service error code: %s detail=%s err=%v", se.Code, se.Description, se.Err)
-		writeInternalError(c)
-		return
-	}
-
-	message := ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-		DefaultMessage: mapping.Message,
-	})
+	message := resolveErrorMessage(c, se.Code)
 
 	var fieldErrors []FieldError
 	if se.Code == service.ErrValidation {
 		fieldErrors = buildFieldErrors(c, se.Details)
 	}
 
-	c.JSON(mapping.Status, ErrorResponse{
+	c.JSON(se.HTTPStatus(), ErrorResponse{
 		Code:    string(se.Code),
 		Message: message,
 		Errors:  fieldErrors,
 	})
 }
 
-func buildFieldErrors(c *gin.Context, causes []service.Error) []FieldError {
+func resolveErrorMessage(c *gin.Context, code service.ErrCode) string {
+	msg, ok := errorCodeMessages[code]
+	if !ok {
+		msg = errorCodeMessages[service.ErrInternal]
+	}
+	return ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
+		DefaultMessage: msg,
+	})
+}
+
+func buildFieldErrors(c *gin.Context, causes []service.FieldDetail) []FieldError {
 	if len(causes) == 0 {
 		return nil
 	}
@@ -214,10 +156,7 @@ func buildFieldErrors(c *gin.Context, causes []service.Error) []FieldError {
 }
 
 func writeInternalError(c *gin.Context) {
-	message := ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-		DefaultMessage: serviceErrorMappings[service.ErrInternal].Message,
-	})
-
+	message := resolveErrorMessage(c, service.ErrInternal)
 	c.JSON(http.StatusInternalServerError, ErrorResponse{
 		Code:    string(service.ErrInternal),
 		Message: message,

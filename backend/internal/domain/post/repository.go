@@ -12,7 +12,7 @@ type Repository interface {
 	GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]Post, error)
 	ListAll(ctx context.Context, search string, offset int, limit int) ([]Post, error)
 	CountAll(ctx context.Context, search string) (int64, error)
-	UpdateByID(ctx context.Context, id int, title string, body string) (*Post, error)
+	UpdateByID(ctx context.Context, id int, title string, body string) error
 	DeleteByID(ctx context.Context, id int) (int64, error)
 	PruneExpired(ctx context.Context, retentionDays int, batchSize int) error
 	CountExpired(ctx context.Context, retentionDays int) (int64, error)

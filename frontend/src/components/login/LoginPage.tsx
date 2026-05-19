@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api/auth";
-import { toast } from "@/stores/toast";
-import { GithubIcon, Loader2Icon, TriangleAlertIcon } from "lucide-react";
+import type { User } from "@/types/auth";
+import { authApi } from "@/lib/api";
+import { useGitHubOAuth } from "@/hooks/useGitHubOAuth";
+import { GithubIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormAlert } from "@/components/ui/form-alert";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,19 +24,23 @@ export function LoginPage() {
   const t = useTranslations("login");
   const tCommon = useTranslations("common");
   const [loading, setLoading] = useState(false);
-  const [loadingGitHub, setLoadingGitHub] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
-  const authWindowRef = useRef<Window | null>(null);
-  const checkAuthWindowIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const showErrorToast = (header: string, body?: string) => {
-    toast.error(header, body ? { description: body } : undefined);
+  const onOAuthSuccess = (token: string, user: User, refreshToken: string) => {
+    setAuth(token, user, refreshToken);
+    router.push("/dashboard");
   };
+
+  const { startOAuth: handleGitHubLogin, loading: loadingGitHub } = useGitHubOAuth(onOAuthSuccess);
+
+  function handleLoginError(err: unknown) {
+    setError(err instanceof Error ? err.message : String(err));
+  }
 
   useEffect(() => {
     document.title = tCommon("pageTitle.login");
@@ -49,77 +56,6 @@ export function LoginPage() {
     setError("");
   };
 
-  const authWindowClosed = () => {
-    return !authWindowRef.current || authWindowRef.current.closed;
-  };
-
-  const openAuthWindow = (url: string) => {
-    const width = 600;
-    const height = 700;
-    const left = (window.innerWidth - width) / 2 + window.screenX;
-    const top = (window.innerHeight - height) / 2 + window.screenY;
-
-    return window.open(
-      url,
-      "github_oauth",
-      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes,status=yes`
-    );
-  };
-
-  const closeAuthWindow = useCallback(() => {
-    if (!authWindowClosed()) {
-      authWindowRef.current!.close();
-    }
-  }, []);
-
-  const clearCheckAuthWindowInterval = () => {
-    if (checkAuthWindowIntervalRef.current) {
-      clearInterval(checkAuthWindowIntervalRef.current);
-      checkAuthWindowIntervalRef.current = null;
-    }
-  };
-
-  async function handleGitHubLogin() {
-    setLoadingGitHub(true);
-
-    try {
-      const data = await authApi.getOAuthUrl();
-      const url = data.url;
-
-      authWindowRef.current = openAuthWindow(url);
-      if (!authWindowRef.current) {
-        showErrorToast(t("cannotOpenAuthWindow"));
-        return;
-      }
-
-      checkAuthWindowIntervalRef.current = setInterval(() => {
-        const stored = localStorage.getItem("markpost_auth");
-        if (stored) {
-          try {
-            const { state } = JSON.parse(stored);
-            if (state?.token) {
-              clearCheckAuthWindowInterval();
-              closeAuthWindow();
-              setAuth(state.token, state.user, state.refreshToken);
-              router.push("/dashboard");
-              setLoadingGitHub(false);
-              return;
-            }
-          } catch {}
-        }
-        if (authWindowClosed()) {
-          clearCheckAuthWindowInterval();
-          setLoadingGitHub(false);
-        }
-      }, 500);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("unknownError");
-      showErrorToast(t("loginFailed"), message);
-      closeAuthWindow();
-      setLoadingGitHub(false);
-    }
-  }
-
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -130,23 +66,11 @@ export function LoginPage() {
       setAuth(data.token, data.user, data.refresh_token);
       router.push("/dashboard");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t("unknownError");
-      if (err instanceof Error && err.message) {
-        setError(message);
-      } else {
-        showErrorToast(t("loginFailed"), message);
-      }
+      handleLoginError(err);
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    return () => {
-      clearCheckAuthWindowInterval();
-      closeAuthWindow();
-    };
-  }, [closeAuthWindow]);
 
   const gitHubButtonText = loadingGitHub
     ? t("processingGitHubLogin")
@@ -159,12 +83,7 @@ export function LoginPage() {
 
         <Card className="shadow-sm">
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <TriangleAlertIcon />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <FormAlert message={error} />
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -197,20 +116,15 @@ export function LoginPage() {
                 />
               </div>
 
-              <Button
+              <LoadingButton
                 type="submit"
                 className="w-full"
-                disabled={loading || !formData.username || !formData.password}
+                disabled={!formData.username || !formData.password}
+                loading={loading}
+                loadingText={t("signingIn")}
               >
-                {loading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <Loader2Icon className="size-4 animate-spin" />
-                    {t("signingIn")}
-                  </span>
-                ) : (
-                  t("loginButton")
-                )}
-              </Button>
+                {t("loginButton")}
+              </LoadingButton>
             </form>
 
             <LoginDivider />
@@ -219,12 +133,18 @@ export function LoginPage() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={handleGitHubLogin}
+              onClick={async () => {
+                try {
+                  await handleGitHubLogin();
+                } catch (err: unknown) {
+                  handleLoginError(err);
+                }
+              }}
               disabled={loadingGitHub}
             >
               {loadingGitHub ? (
                 <span className="inline-flex items-center gap-2">
-                  <Loader2Icon className="size-4 animate-spin" />
+                  <Spinner className="size-4" />
                   {gitHubButtonText}
                 </span>
               ) : (

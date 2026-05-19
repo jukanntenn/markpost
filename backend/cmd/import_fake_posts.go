@@ -34,14 +34,9 @@ func RunImportFakePosts(configPath, filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer func() {
-		sqlDB, err := dbInstance.DB().DB()
-		if err == nil && sqlDB != nil {
-			_ = sqlDB.Close()
-		}
-	}()
+	defer dbInstance.Close()
 
-	userRepo := infra.NewUserRepository(dbInstance.DB())
+	userRepo := infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	u, err := userRepo.GetByUsername(context.Background(), "markpost")
 	if err != nil {
 		return fmt.Errorf("user 'markpost' not found: %w", err)

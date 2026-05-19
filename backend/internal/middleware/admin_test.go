@@ -47,20 +47,20 @@ func TestExtractUser(t *testing.T) {
 		}
 	})
 
-	t.Run("panics when wrong type", func(t *testing.T) {
+	t.Run("returns false when wrong type", func(t *testing.T) {
 		gin.SetMode(gin.TestMode)
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
 		c.Set("user", "not a user struct")
 
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("expected panic on wrong type")
-			}
-		}()
-
-		ExtractUser(c)
+		u, ok := ExtractUser(c)
+		if ok {
+			t.Fatal("expected ok to be false")
+		}
+		if u != nil {
+			t.Error("expected nil user")
+		}
 	})
 }
 

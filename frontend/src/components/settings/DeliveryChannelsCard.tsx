@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/stores/toast";
-import { Loader2Icon, PlusIcon, Trash2Icon, PencilIcon } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { PlusIcon, Trash2Icon, PencilIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 import { deliveryApi } from "@/lib/api";
-import type { DeliveryChannel } from "@/types/delivery";
+import { useDeliveryChannels } from "@/hooks/useDeliveryChannels";
+import { toast } from "@/stores/toast";
+import { mutationOptions } from "@/lib/mutation-helpers";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,110 +18,63 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { QueryState } from "@/components/ui/query-state";
+import { DeliveryChannelForm } from "./DeliveryChannelForm";
+import { useChannelForm, type UpdateChannelMutationVars } from "@/hooks/useChannelForm";
+import { truncate } from "@/lib/utils";
 
 export function DeliveryChannelsCard() {
-  const queryClient = useQueryClient();
+  const { channels, invalidate, isLoading, error } = useDeliveryChannels();
   const t = useTranslations("settings");
-  const tCommon = useTranslations("common");
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const tCommon = useTranslations("common");
 
-  // Form state
-  const [formName, setFormName] = useState("");
-  const [formWebhookUrl, setFormWebhookUrl] = useState("");
-  const [formKeywords, setFormKeywords] = useState("");
+  const createMutation = useMutation(
+    mutationOptions({
+      mutationFn: deliveryApi.create,
+      onSuccess: () => {
+        invalidate();
+        resetForm();
+        toast.success(t("deliveryChannelCreated"));
+      },
+    }),
+  );
+
+  const updateMutation = useMutation(
+    mutationOptions({
+      mutationFn: ({ id, data }: UpdateChannelMutationVars) =>
+        deliveryApi.update(id, data),
+      onSuccess: () => {
+        invalidate();
+        resetForm();
+        toast.success(t("deliveryChannelUpdated"));
+      },
+    }),
+  );
+
+  const deleteMutation = useMutation(
+    mutationOptions({
+      mutationFn: deliveryApi.delete,
+      onSuccess: () => {
+        invalidate();
+        setDeleteConfirmId(null);
+        toast.success(t("deliveryChannelDeleted"));
+      },
+    }),
+  );
 
   const {
-    data: channels,
-    isLoading,
-    error,
-  } = useQuery<DeliveryChannel[]>({
-    queryKey: ["delivery", "channels"],
-    queryFn: deliveryApi.list,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: deliveryApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
-      resetForm();
-      toast.success(t("deliveryChannelCreated"));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t("deliveryChannelCreateFailed"));
-    },
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof deliveryApi.update>[1] }) =>
-      deliveryApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
-      resetForm();
-      toast.success(t("deliveryChannelUpdated"));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t("deliveryChannelUpdateFailed"));
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deliveryApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["delivery", "channels"] });
-      setDeleteConfirmId(null);
-      toast.success(t("deliveryChannelDeleted"));
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || t("deliveryChannelDeleteFailed"));
-    },
-  });
-
-  function resetForm() {
-    setShowForm(false);
-    setEditingId(null);
-    setFormName("");
-    setFormWebhookUrl("");
-    setFormKeywords("");
-  }
-
-  function startEdit(channel: DeliveryChannel) {
-    setEditingId(channel.id);
-    setFormName(channel.name);
-    setFormWebhookUrl(channel.webhook_url);
-    setFormKeywords(channel.keywords);
-    setShowForm(true);
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (editingId) {
-      updateMutation.mutate({
-        id: editingId,
-        data: {
-          name: formName,
-          webhook_url: formWebhookUrl,
-          keywords: formKeywords,
-        },
-      });
-    } else {
-      createMutation.mutate({
-        kind: "feishu",
-        name: formName,
-        webhook_url: formWebhookUrl,
-        keywords: formKeywords,
-      });
-    }
-  }
-
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+    form,
+    setForm,
+    showForm,
+    editingId,
+    isSubmitting,
+    resetForm,
+    startEdit,
+    handleSubmit,
+    openNewForm,
+  } = useChannelForm({ createMutation, updateMutation });
 
   return (
     <Card>
@@ -132,13 +87,7 @@ export function DeliveryChannelsCard() {
             </CardDescription>
           </div>
           {!showForm && (
-            <Button
-              size="sm"
-              onClick={() => {
-                resetForm();
-                setShowForm(true);
-              }}
-            >
+            <Button size="sm" onClick={openNewForm}>
               <PlusIcon className="mr-1 size-4" />
               {t("deliveryChannelAdd")}
             </Button>
@@ -153,13 +102,13 @@ export function DeliveryChannelsCard() {
           errorText={t("deliveryChannelsLoadFailed")}
           loadingClassName="flex items-center justify-center gap-2 py-4"
         >
-          {channels && channels.length === 0 && !showForm && (
+          {channels.length === 0 && !showForm && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               {t("deliveryChannelsEmpty")}
             </p>
           )}
 
-          {channels && channels.length > 0 && (
+          {channels.length > 0 && (
             <div className="space-y-3">
               {channels.map((channel) => (
                 <div
@@ -180,7 +129,7 @@ export function DeliveryChannelsCard() {
                     <div>
                       <p className="text-sm font-medium">{channel.name || t("deliveryChannelUnnamed")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {channel.kind} · {channel.webhook_url.slice(0, 40)}...
+                        {channel.kind} · {truncate(channel.webhook_url, 40)}
                       </p>
                     </div>
                   </div>
@@ -201,7 +150,7 @@ export function DeliveryChannelsCard() {
                           disabled={deleteMutation.isPending}
                         >
                           {deleteMutation.isPending ? (
-                            <Loader2Icon className="size-4 animate-spin" />
+                            <Spinner className="size-4" />
                           ) : (
                             tCommon("confirm")
                           )}
@@ -230,73 +179,17 @@ export function DeliveryChannelsCard() {
           )}
 
           {showForm && (
-            <>
-              <Separator />
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="channel-name">{t("deliveryChannelName")}</Label>
-                  <Input
-                    id="channel-name"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder={t("deliveryChannelNamePlaceholder")}
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="channel-webhook">{t("deliveryChannelWebhookURL")}</Label>
-                  <Input
-                    id="channel-webhook"
-                    value={formWebhookUrl}
-                    onChange={(e) => setFormWebhookUrl(e.target.value)}
-                    placeholder={t("deliveryChannelWebhookPlaceholder")}
-                    required
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="channel-keywords">{t("deliveryChannelKeywords")}</Label>
-                  <Input
-                    id="channel-keywords"
-                    value={formKeywords}
-                    onChange={(e) => setFormKeywords(e.target.value)}
-                    placeholder={t("deliveryChannelKeywordsPlaceholder")}
-                    disabled={isSubmitting}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Loader2Icon className="size-4 animate-spin" />
-                        {t("deliveryChannelSaving")}
-                      </span>
-                    ) : editingId ? (
-                      t("deliveryChannelSave")
-                    ) : (
-                      t("deliveryChannelCreate")
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetForm}
-                    disabled={isSubmitting}
-                  >
-                    {t("deliveryChannelCancel")}
-                  </Button>
-                </div>
-              </form>
-            </>
+            <DeliveryChannelForm
+              form={form}
+              onFormChange={(updated) => setForm(updated)}
+              onSubmit={handleSubmit}
+              onCancel={resetForm}
+              isSubmitting={isSubmitting}
+              isEditing={!!editingId}
+            />
           )}
         </QueryState>
       </CardContent>
     </Card>
   );
 }
-
-export default DeliveryChannelsCard;

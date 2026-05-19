@@ -4,11 +4,11 @@ import { Toast } from "@base-ui/react/toast";
 import {
   CircleCheckIcon,
   InfoIcon,
-  Loader2Icon,
   OctagonXIcon,
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toastManager } from "@/stores/toast";
 
@@ -17,7 +17,7 @@ const iconMap: Record<string, React.ReactNode> = {
   error: <OctagonXIcon className="size-4 text-destructive" />,
   warning: <TriangleAlertIcon className="size-4 text-warning" />,
   info: <InfoIcon className="size-4 text-accent" />,
-  loading: <Loader2Icon className="size-4 animate-spin text-muted-foreground" />,
+  loading: <Spinner className="size-4 text-muted-foreground" />,
 };
 
 function ToastList() {

@@ -1,14 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export interface User {
-  id: number;
-  email: string;
-  username: string;
-  name?: string;
-  avatar_url?: string | null;
-  role?: string;
-}
+import type { User } from "@/types/auth";
 
 export interface AuthState {
   token: string | null;
@@ -19,12 +12,10 @@ export interface AuthState {
   setAuth: (token: string, user: User, refreshToken?: string) => void;
   setTokens: (token: string, refreshToken: string) => void;
   logout: () => void;
-  isAuthenticated: () => boolean;
-  isAdmin: () => boolean;
   setHasHydrated: (state: boolean) => void;
 }
 
-const storagePrefix = "markpost_";
+const AUTH_STORAGE_KEY = "markpost_auth";
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -43,19 +34,11 @@ export const useAuthStore = create<AuthState>()(
       logout: () =>
         set({ token: null, refreshToken: null, user: null }),
 
-      isAuthenticated: () => !!get().token && !!get().user,
-
-      isAdmin: () => get().user?.role === "admin",
-
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
-      name: `${storagePrefix}auth`,
-      partialize: (state) => ({
-        token: state.token,
-        refreshToken: state.refreshToken,
-        user: state.user,
-      }),
+      name: AUTH_STORAGE_KEY,
+      partialize: ({ token, refreshToken, user }) => ({ token, refreshToken, user }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

@@ -1,27 +1,10 @@
-// Package middleware provides HTTP middleware functions for the application.
 package middleware
 
 import (
-	"markpost/internal/domain/user"
 	"markpost/internal/service"
-	"markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
 )
-
-func abortWithError(c *gin.Context, err error) {
-	apierr.RespondError(c, err)
-	c.Abort()
-}
-
-// ExtractUser extracts the authenticated user from the gin context.
-func ExtractUser(c *gin.Context) (*user.User, bool) {
-	u, ok := c.Get("user")
-	if !ok {
-		return nil, false
-	}
-	return u.(*user.User), true
-}
 
 // RequireAdmin returns a middleware that requires admin role.
 func RequireAdmin() gin.HandlerFunc {
@@ -32,7 +15,7 @@ func RequireAdmin() gin.HandlerFunc {
 			return
 		}
 
-		if u.Role != user.RoleAdmin {
+		if !u.IsAdmin() {
 			abortWithError(c, service.NewServiceError(service.ErrForbidden, "admin access required"))
 			return
 		}

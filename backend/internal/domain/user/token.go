@@ -1,3 +1,4 @@
+// Package user defines the user domain model and repository interface.
 package user
 
 import "time"
@@ -14,6 +15,11 @@ type RefreshToken struct {
 // TableName returns the table name for RefreshToken.
 func (RefreshToken) TableName() string {
 	return "refresh_tokens"
+}
+
+// IsExpired reports whether the refresh token has passed its expiration time.
+func (t RefreshToken) IsExpired() bool {
+	return time.Now().After(t.ExpiresAt)
 }
 
 // TokenBlacklist represents a blacklisted token entity.

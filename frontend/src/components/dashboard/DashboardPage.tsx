@@ -14,10 +14,12 @@ import {
   Link2Icon,
 } from "lucide-react";
 
-import { buildPostUrl } from "@/utils/url";
-import { formatToLocalTime } from "@/lib/utils";
+import { buildFullPostUrl } from "@/utils/url";
+import { formatToLocalTime } from "@/utils/time";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import CreateTestPostModal from "@/components/CreateTestPostModal";
 import { PostListItemRow } from "@/components/posts/PostListItemRow";
+import { PostListEmptyState } from "@/components/posts/PostListEmptyState";
 import { usePostKey } from "@/hooks/usePostKey";
 import { usePosts } from "@/hooks/usePosts";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +30,9 @@ import { QueryState } from "@/components/ui/query-state";
 
 export function DashboardPage() {
   const [showKey, setShowKey] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const { copied, copy } = useCopyToClipboard();
 
   const t = useTranslations("dashboard");
   const tPostKey = useTranslations("dashboard.postKey");
@@ -37,21 +40,10 @@ export function DashboardPage() {
   const tDocs = useTranslations("dashboard.documentation");
 
   const { data: postKeyData, isLoading: keyLoading, error: keyError } = usePostKey();
-  const { data: postsData, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = usePosts(1, 10);
+  const { posts: recentPosts, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = usePosts(1);
 
   const postKey = postKeyData?.post_key || "";
   const createdAt = postKeyData?.created_at || "";
-  const recentPosts = postsData?.posts || [];
-
-  const handleCopy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy: ", err);
-    }
-  };
 
   return (
     <>
@@ -77,7 +69,7 @@ export function DashboardPage() {
                     <div className="font-mono text-base">
                       {showKey ? postKey : "•".repeat(postKey.length)}
                     </div>
-                    {copySuccess && (
+                    {copied && (
                       <Badge variant="accent">{tPostKey("copied")}</Badge>
                     )}
                     <div className="text-xs text-muted-foreground">
@@ -107,12 +99,12 @@ export function DashboardPage() {
                         <CopyIcon className="size-4" />
                       </Menu.Trigger>
                       <Menu.Popup>
-                        <Menu.Item onClick={() => postKey && handleCopy(postKey)}>
+                        <Menu.Item onClick={() => postKey && copy(postKey)}>
                           <KeyIcon className="size-4" />
                           {tPostKey("copyPostKey")}
                         </Menu.Item>
                         <Menu.Item
-                          onClick={() => postKey && handleCopy(`${window.location.origin}${buildPostUrl(postKey)}`)}
+                          onClick={() => postKey && copy(buildFullPostUrl(postKey))}
                         >
                           <Link2Icon className="size-4" />
                           {tPostKey("copyPostUrl")}
@@ -178,9 +170,7 @@ export function DashboardPage() {
           <CardContent>
             <QueryState isLoading={postsLoading} error={postsError} loadingText={tRecentPosts("loading")} errorText={tRecentPosts("error")}>
               {recentPosts.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  {tRecentPosts("empty")}
-                </p>
+                <PostListEmptyState message={tRecentPosts("empty")} />
               ) : (
                 <ul className="-mx-2 divide-y">
                   {recentPosts.map((p) => (

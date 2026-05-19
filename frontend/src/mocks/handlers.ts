@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
-import type { PostsPaginatedResponse, PostKeyResponse } from "@/types/posts";
+import type { PostsPaginatedResponse } from "@/types/posts";
+import type { PostKeyResponse } from "@/types/auth";
 
 export const mockPostKey: PostKeyResponse = {
   post_key: "test_key_abc123",

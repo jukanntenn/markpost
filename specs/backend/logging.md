@@ -2,7 +2,7 @@
 
 ## Approach
 
-The backend uses Go's standard library `log` package. No structured logging framework is used. All logging goes to stdout/stderr.
+The backend uses Go's standard library `log/slog` package for structured logging. All logging goes to stdout/stderr.
 
 ## When to Log
 
@@ -17,7 +17,7 @@ Log at startup for significant lifecycle events:
 
 Log on unexpected errors that bubble up without causing a crash:
 
-- Render post errors (`log.Printf("RenderPost error: %v", err)`)
+- Render post errors (`slog.Error("render post failed", "error", err, "path", path)`)
 - Unexpected error types in `apierr.RespondError` (`log.Printf("unexpected error: %v", err)`)
 - Unknown service error codes (`log.Printf("unknown service error code: %s ...", ...)`)
 

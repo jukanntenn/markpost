@@ -33,7 +33,7 @@ func TestValidatePagination(t *testing.T) {
 				}
 				se, ok := AsServiceError(err)
 				if !ok {
-					t.Fatalf("expected *service.Error, got %T", err)
+					t.Fatalf("expected *service.ServiceError, got %T", err)
 				}
 				if se.Code != ErrInvalidRequest {
 					t.Fatalf("expected code %s, got %s", ErrInvalidRequest, se.Code)

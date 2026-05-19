@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"markpost/internal/domain"
 	"markpost/internal/domain/user"
 )
 
@@ -26,7 +27,7 @@ func newMockUserRepository() *mockUserRepository {
 func (m *mockUserRepository) GetByID(_ context.Context, id int) (*user.User, error) {
 	u, ok := m.users[id]
 	if !ok {
-		return nil, user.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return u, nil
 }
@@ -34,7 +35,7 @@ func (m *mockUserRepository) GetByID(_ context.Context, id int) (*user.User, err
 func (m *mockUserRepository) GetByPostKey(_ context.Context, postKey string) (*user.User, error) {
 	u, ok := m.postKeyMap[postKey]
 	if !ok {
-		return nil, user.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return u, nil
 }
@@ -45,7 +46,7 @@ func (m *mockUserRepository) GetByUsername(_ context.Context, username string) (
 			return u, nil
 		}
 	}
-	return nil, user.ErrNotFound
+	return nil, domain.ErrNotFound
 }
 
 func (m *mockUserRepository) GetByEmail(_ context.Context, email string) (*user.User, error) {
@@ -54,7 +55,7 @@ func (m *mockUserRepository) GetByEmail(_ context.Context, email string) (*user.
 			return u, nil
 		}
 	}
-	return nil, user.ErrNotFound
+	return nil, domain.ErrNotFound
 }
 
 func (m *mockUserRepository) Create(_ context.Context, email, username, password string) (*user.User, error) {
@@ -91,7 +92,7 @@ func (m *mockUserRepository) ValidatePassword(_ context.Context, username, passw
 func (m *mockUserRepository) SetPassword(_ context.Context, userID int, password string) error {
 	u, ok := m.users[userID]
 	if !ok {
-		return user.ErrNotFound
+		return domain.ErrNotFound
 	}
 	u.Password = password
 	return nil
@@ -100,14 +101,14 @@ func (m *mockUserRepository) SetPassword(_ context.Context, userID int, password
 func (m *mockUserRepository) SetRole(_ context.Context, userID int, role user.Role) error {
 	u, ok := m.users[userID]
 	if !ok {
-		return user.ErrNotFound
+		return domain.ErrNotFound
 	}
 	u.Role = role
 	return nil
 }
 
 func (m *mockUserRepository) GetByGitHubID(_ context.Context, _ int64) (*user.User, error) {
-	return nil, user.ErrNotFound
+	return nil, domain.ErrNotFound
 }
 
 func (m *mockUserRepository) GetOrCreateFromGitHub(_ context.Context, _ *user.GitHubUser) (*user.User, error) {
@@ -170,7 +171,7 @@ func (m *mockTokenRepository) StoreRefreshToken(_ context.Context, userID int, t
 func (m *mockTokenRepository) GetRefreshToken(_ context.Context, tokenHash string) (*user.RefreshToken, error) {
 	token, ok := m.refreshTokens[tokenHash]
 	if !ok {
-		return nil, user.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 	return token, nil
 }

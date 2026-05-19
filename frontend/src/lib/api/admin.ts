@@ -1,17 +1,21 @@
-import { request } from "./base";
+import { request, paginationParams } from "./base";
 import type { AdminUsersResponse } from "@/types/users";
 import type { AdminPostsResponse } from "@/types/posts";
 import type { AdminChannelsResponse } from "@/types/delivery";
 
 export const adminApi = {
-  listUsers: () =>
-    request<AdminUsersResponse>("/api/v1/admin/users"),
-
-  listPosts: (search?: string) =>
-    request<AdminPostsResponse>("/api/v1/admin/posts", {
-      params: search ? { search } : undefined,
+  listUsers: (page?: number, limit?: number) =>
+    request<AdminUsersResponse>("/api/v1/admin/users", {
+      params: paginationParams(page, limit),
     }),
 
-  listChannels: () =>
-    request<AdminChannelsResponse>("/api/v1/admin/channels"),
+  listPosts: (search?: string, page?: number, limit?: number) =>
+    request<AdminPostsResponse>("/api/v1/admin/posts", {
+      params: { ...(search && { search }), ...paginationParams(page, limit) },
+    }),
+
+  listChannels: (page?: number, limit?: number) =>
+    request<AdminChannelsResponse>("/api/v1/admin/channels", {
+      params: paginationParams(page, limit),
+    }),
 };

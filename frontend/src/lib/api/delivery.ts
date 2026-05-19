@@ -1,35 +1,20 @@
 import { request } from "./base";
-import type { DeliveryChannelsResponse, DeliveryChannelResponse } from "@/types/delivery";
+import type { DeliveryChannelsResponse, DeliveryChannelResponse, CreateChannelPayload, UpdateChannelPayload } from "@/types/delivery";
 
 export const deliveryApi = {
   list: () =>
-    request<DeliveryChannelsResponse>("/api/v1/delivery/channels").then(
-      (data) => data.channels
-    ),
+    request<DeliveryChannelsResponse>("/api/v1/delivery/channels"),
 
-  create: (data: {
-    kind: string;
-    name: string;
-    webhook_url: string;
-    keywords?: string;
-  }) =>
+  create: (data: CreateChannelPayload) =>
     request<DeliveryChannelResponse>("/api/v1/delivery/channels", {
       method: "POST",
-      body: JSON.stringify(data),
+      json: data,
     }),
 
-  update: (
-    id: number,
-    data: {
-      name?: string;
-      webhook_url?: string;
-      keywords?: string;
-      enabled?: boolean;
-    }
-  ) =>
+  update: (id: number, data: UpdateChannelPayload) =>
     request<DeliveryChannelResponse>(`/api/v1/delivery/channels/${id}`, {
       method: "PUT",
-      body: JSON.stringify(data),
+      json: data,
     }),
 
   delete: (id: number) =>

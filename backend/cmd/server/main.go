@@ -125,10 +125,15 @@ func serve(configPath string) {
 	}
 
 	postRepo := infra.NewPostRepository(dbInstance.DB())
-	postSvc = postsvc.NewService(postRepo, nil)
 
 	deliveryRepo := infra.NewDeliveryChannelRepository(dbInstance.DB())
 	deliverySvc := deliverysvc.NewService(deliveryRepo)
+
+	postDeliverySvc := deliverysvc.NewPostDeliveryService(deliveryRepo)
+	deliveryDispatcher := deliverysvc.NewDeliveryDispatcher(postDeliverySvc, 0)
+	deliveryDispatcher.Start(context.Background())
+
+	postSvc = postsvc.NewService(postRepo, deliveryDispatcher)
 
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc)
 

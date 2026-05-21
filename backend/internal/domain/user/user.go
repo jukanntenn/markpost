@@ -27,7 +27,7 @@ type GitHubUser struct {
 // User represents a user entity.
 type User struct {
 	ID              int        `json:"id" gorm:"primaryKey;autoIncrement"`
-	Email           string     `json:"email" gorm:"unique;not null"`
+	Email           string     `json:"email" gorm:"unique;not null;default:''"`
 	Username        string     `json:"username" gorm:"unique;not null"`
 	Name            string     `json:"name"`
 	Password        string     `json:"-" gorm:"column:password_hash"`

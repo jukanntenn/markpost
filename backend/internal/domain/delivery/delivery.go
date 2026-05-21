@@ -19,6 +19,9 @@ var validChannelKinds = map[ChannelKind]bool{
 	ChannelKindFeishu: true,
 }
 
+// TableName returns the table name for Channel.
+func (Channel) TableName() string { return "delivery_channels" }
+
 func (k ChannelKind) IsValid() bool {
 	return validChannelKinds[k]
 }

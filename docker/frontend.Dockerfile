@@ -11,6 +11,8 @@ RUN pnpm install
 
 COPY . .
 
+ENV NEXT_PUBLIC_API_URL=
+
 RUN pnpm build
 
 RUN cp -r .next/standalone /app/dist && \

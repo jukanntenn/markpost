@@ -18,6 +18,11 @@ data/
 # Binaries
 markpost
 
+# Environment files (build-time secrets must not leak into images)
+.env
+.env.*
+!.env.example
+
 # Development files
 .vscode/
 .idea/

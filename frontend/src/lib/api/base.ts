@@ -54,9 +54,10 @@ async function handleTokenRefresh(): Promise<boolean> {
 }
 
 export function paginationParams(page?: number, limit?: number): Record<string, string | number> {
-  return Object.fromEntries(
-    Object.entries({ page, limit }).filter(([, v]) => v != null),
-  );
+  const params: Record<string, string | number> = {};
+  if (page != null) params.page = page;
+  if (limit != null) params.limit = limit;
+  return params;
 }
 
 export function buildUrl(base: string, path: string, params?: Record<string, string | number>): string {

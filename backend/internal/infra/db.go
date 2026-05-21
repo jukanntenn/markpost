@@ -81,14 +81,34 @@ func New(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.DB.Driver)
 	}
 
+	if cfg.DB.Driver == "sqlite" {
+		if sqlDB, err2 := db.DB(); err2 == nil {
+			sqlDB.SetMaxOpenConns(1)
+			defer sqlDB.SetMaxOpenConns(0)
+			db.Exec("PRAGMA foreign_keys = OFF")
+		}
+	}
+
 	if err = db.AutoMigrate(allModels...); err != nil {
 		return nil, fmt.Errorf("NewDatabase auto migrate: %w", err)
 	}
 
+	if cfg.DB.Driver == "sqlite" {
+		db.Exec("PRAGMA foreign_keys = ON")
+	}
+
 	database := &Database{db: db}
+
+	if err := database.migratePasswordColumn(); err != nil {
+		return nil, fmt.Errorf("NewDatabase migrate password column: %w", err)
+	}
 
 	if err := database.migrateQIDPrefix(); err != nil {
 		return nil, fmt.Errorf("NewDatabase migrate qid prefix: %w", err)
+	}
+
+	if err := database.dropStaleChannelsTable(); err != nil {
+		return nil, fmt.Errorf("NewDatabase drop stale channels table: %w", err)
 	}
 
 	if err := database.seedAdminUser(); err != nil {
@@ -137,10 +157,27 @@ func (d *Database) createUser(u *user.User) error {
 	return d.db.Create(u).Error
 }
 
+func (d *Database) migratePasswordColumn() error {
+	if !d.db.Migrator().HasColumn(&user.User{}, "password") {
+		return nil
+	}
+
+	result := d.db.Exec("UPDATE users SET password_hash = password WHERE password IS NOT NULL AND (password_hash IS NULL OR password_hash = '')")
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected > 0 {
+		log.Printf("migrated %d user passwords from legacy 'password' column", result.RowsAffected)
+	}
+
+	return nil
+}
+
 func (d *Database) migrateQIDPrefix() error {
 	result := d.db.Model(&post.Post{}).
 		Where("qid NOT LIKE ?", "p-%").
 		Update("qid", d.db.Statement.DB.Raw("CONCAT('p-', qid)"))
+	log.Printf("migrateQIDPrefix: rowsAffected=%d, error=%v", result.RowsAffected, result.Error)
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "CONCAT") {
 			var posts []post.Post
@@ -158,6 +195,16 @@ func (d *Database) migrateQIDPrefix() error {
 	}
 	if result.RowsAffected > 0 {
 		log.Printf("migrated %d post qids with p- prefix", result.RowsAffected)
+	}
+	return nil
+}
+
+func (d *Database) dropStaleChannelsTable() error {
+	if d.db.Migrator().HasTable("channels") {
+		if err := d.db.Exec("DROP TABLE channels").Error; err != nil {
+			return err
+		}
+		log.Print("dropped stale channels table")
 	}
 	return nil
 }

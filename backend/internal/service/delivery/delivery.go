@@ -93,7 +93,7 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 
 // Update updates an existing delivery channel.
 func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateChannelParams) (*delivery.Channel, error) {
-	ch, err := s.repo.GetByIDAndUserID(ctx, userID, id)
+	ch, err := s.repo.GetByIDAndUserID(ctx, id, userID)
 	if err != nil {
 		return nil, service.WrapNotFoundOrInternal(err, "channel not found", "get channel failed")
 	}
@@ -127,7 +127,7 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 
 // Delete deletes a delivery channel by ID and user ID.
 func (s *Service) Delete(ctx context.Context, userID int, id int) error {
-	affected, err := s.repo.DeleteByIDAndUserID(ctx, userID, id)
+	affected, err := s.repo.DeleteByIDAndUserID(ctx, id, userID)
 	if err != nil {
 		return service.NewServiceErrorWrap(service.ErrInternal, "delete channel failed", err)
 	}

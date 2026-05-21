@@ -43,7 +43,11 @@ func findMany[T any](ctx context.Context, query *gorm.DB, offset, limit int, lab
 }
 
 func findAll[T any](ctx context.Context, query *gorm.DB, label string) ([]T, error) {
-	return findMany[T](ctx, query, 0, 0, label)
+	var results []T
+	if err := query.WithContext(ctx).Find(&results).Error; err != nil {
+		return nil, fmt.Errorf("%s: %w", label, err)
+	}
+	return results, nil
 }
 
 func countQuery(ctx context.Context, query *gorm.DB, label string) (int64, error) {

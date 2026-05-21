@@ -16,9 +16,8 @@
     compose_file: "{{ app_path }}/docker-compose.yml"
     config_file: "{{ app_path }}/config.toml"
 
-    image_tag: "latest"
-    frontend_port: 8089
-    public_url: ""
+    image_tag: "dev"
+    public_url: "https://markpost.bytehome.fun"
     trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
 
   tasks:

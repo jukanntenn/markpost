@@ -1,9 +1,9 @@
 services:
   frontend:
     image: 192.168.5.50:5000/markpost-web:{{ image_tag }}
-    container_name: {{ app_name }}-frontend
+    container_name: markpost-web
     ports:
-      - "{{ frontend_port }}:3000"
+      - "8089:3000"
     environment:
       - API_PROXY_TARGET=http://backend:7330
     depends_on:
@@ -19,10 +19,12 @@ services:
 
   backend:
     image: 192.168.5.50:5000/markpost:{{ image_tag }}
-    container_name: {{ app_name }}-backend
+    container_name: markpost
     volumes:
       - {{ config_file }}:/app/markpost.toml:ro
       - {{ app_path }}/data:/app/data
+    ports:
+      - "7330:7330"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:7330/api/v1/health"]
       interval: 10s

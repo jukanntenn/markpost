@@ -40,7 +40,7 @@ export function DashboardPage() {
   const tDocs = useTranslations("dashboard.documentation");
 
   const { data: postKeyData, isLoading: keyLoading, error: keyError } = usePostKey();
-  const { posts: recentPosts, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = usePosts(1);
+  const { posts: recentPosts, isLoading: postsLoading, error: postsError, refetch: refetchPosts } = usePosts(1, undefined, { refetchInterval: 3000 });
 
   const postKey = postKeyData?.post_key || "";
   const createdAt = postKeyData?.created_at || "";

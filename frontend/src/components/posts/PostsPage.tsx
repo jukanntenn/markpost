@@ -19,7 +19,7 @@ export function PostsPage() {
   const limit = DEFAULT_PAGE_SIZE;
 
   const t = useTranslations("posts");
-  const { posts, pagination, isLoading, error } = usePosts(page, limit);
+  const { posts, pagination, isLoading, error } = usePosts(page, limit, { refetchInterval: page === 1 ? 3000 : undefined });
 
   return (
     <div>

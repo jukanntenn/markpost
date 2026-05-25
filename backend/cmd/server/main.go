@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"markpost/cmd"
 	v1 "markpost/internal/api/rest/v1"
 	"markpost/internal/config"
 	"markpost/internal/domain/user"
@@ -66,6 +67,26 @@ func main() {
 				Action: func(c *cli.Context) error {
 					serve(c.String("config"))
 					return nil
+				},
+			},
+			{
+				Name:  "reset-password",
+				Usage: "Reset a user's password and revoke all sessions",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "username",
+						Aliases:  []string{"u"},
+						Usage:    "Username of the user to reset",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:    "password",
+						Aliases: []string{"p"},
+						Usage:   "New password (generates a random one if omitted)",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunResetPassword(c.String("config"), c.String("username"), c.String("password"))
 				},
 			},
 		},

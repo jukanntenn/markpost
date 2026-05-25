@@ -1,6 +1,6 @@
 # Database Schema
 
-This document describes the current database schema for MarkPost. The schema is defined through GORM model structs in `internal/domain/` and managed via GORM `AutoMigrate`. The project supports both PostgreSQL (production) and SQLite (development/testing) — type descriptions below use GORM semantics and are not tied to a specific database engine.
+This document describes the current database schema for Markpost. The schema is defined through GORM model structs in `internal/domain/` and managed via GORM `AutoMigrate`. The project supports both PostgreSQL (production) and SQLite (development/testing) — type descriptions below use GORM semantics and are not tied to a specific database engine.
 
 ## Entity Relationship Diagram
 

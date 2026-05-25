@@ -1,4 +1,4 @@
-# MarkPost
+# Markpost
 
 **轻量级 Markdown 转 HTML 发布服务。** 通过 API 上传 Markdown，即可获得渲染后的 HTML 页面。简单、自托管、快速。
 
@@ -99,7 +99,7 @@ curl -X POST http://localhost:7330/YOUR_POST_KEY \
 
 ## 配置
 
-MarkPost 使用 TOML 配置文件或环境变量。
+Markpost 使用 TOML 配置文件或环境变量。
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|

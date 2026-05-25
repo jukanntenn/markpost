@@ -26,7 +26,7 @@ Client → Gin Router → Middleware Chain → Handler → Service → Repositor
 
 ## Authentication
 
-MarkPost uses a dual-token JWT system:
+Markpost uses a dual-token JWT system:
 
 - **Access Token** — Short-lived (default 24h), sent in `Authorization: Bearer <token>` header
 - **Refresh Token** — Long-lived (default 30 days), sent in request body for token renewal

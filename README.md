@@ -1,4 +1,4 @@
-# MarkPost
+# Markpost
 
 **A lightweight Markdown-to-HTML publishing service.** Upload Markdown via API, get a rendered HTML page back. Simple, self-hosted, and fast.
 
@@ -99,7 +99,7 @@ Navigate to `http://localhost:7330/p-abc123` — renders as a styled HTML page.
 
 ## Configuration
 
-MarkPost uses a TOML config file or environment variables.
+Markpost uses a TOML config file or environment variables.
 
 | Variable | Description | Default |
 |----------|-------------|---------|

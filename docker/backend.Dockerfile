@@ -4,18 +4,14 @@ RUN apk add --no-cache git gcc musl-dev sqlite-dev
 
 WORKDIR /app
 
-ARG TARGETOS
-ARG TARGETARCH
-
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH \
-    go build -ldflags="-w -s" -o markpost ./cmd/server
+RUN CGO_ENABLED=1 CGO_LDFLAGS="-static" go build -ldflags="-w -s" -o markpost ./cmd/server
 
-FROM alpine:latest
+FROM alpine:3.21
 
 RUN apk add --no-cache ca-certificates tzdata
 

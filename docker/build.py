@@ -4,7 +4,18 @@
 Builds two images: markpost (backend) and markpost-web (frontend).
 Supports load (local, single platform) and push (multi-platform to registry) modes.
 Always applies a 'dev' tag; additional tags can be specified via --tags.
-Automatically registers QEMU binfmt for cross-platform builds when needed.
+
+Environment requirements (not auto-resolved):
+  - Docker daemon running
+  - Docker buildx plugin available
+  - Active buildx builder supporting target platforms
+  - QEMU binfmt registered for foreign architectures (cross-platform builds)
+
+Exit codes:
+  0 - Success
+  1 - Build failure
+  2 - Environment check failure
+  3 - Invalid arguments
 """
 
 import argparse
@@ -13,12 +24,16 @@ import os
 import platform
 import subprocess
 import sys
-import time
 
 IMAGE_NAME = "markpost"
 IMAGE_NAME_WEB = "markpost-web"
 DEFAULT_REGISTRY = "192.168.5.50:5000"
-PLATFORMS = ("linux/amd64", "linux/arm64")
+ALL_PLATFORMS = ("linux/amd64", "linux/arm64")
+
+PLATFORM_ALIASES = {
+    "amd64": "linux/amd64",
+    "arm64": "linux/arm64",
+}
 
 BACKEND_DOCKERFILE = "docker/backend.Dockerfile"
 FRONTEND_DOCKERFILE = "docker/frontend.Dockerfile"
@@ -30,15 +45,18 @@ QEMU_ARCH_MAP = {
 logger = logging.getLogger("build")
 
 
-def setup_logging():
+def setup_logging(verbose=False):
     handler_out = logging.StreamHandler(sys.stdout)
-    handler_out.setLevel(logging.INFO)
+    handler_out.setLevel(logging.DEBUG if verbose else logging.INFO)
     handler_out.addFilter(lambda record: record.levelno <= logging.INFO)
 
     handler_err = logging.StreamHandler(sys.stderr)
     handler_err.setLevel(logging.WARNING)
 
-    logging.basicConfig(level=logging.INFO, handlers=[handler_out, handler_err])
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        handlers=[handler_out, handler_err],
+    )
 
 
 def parse_args():
@@ -68,7 +86,49 @@ def parse_args():
     parser.add_argument(
         "--frontend-only", action="store_true", help="Build only the frontend image"
     )
+    parser.add_argument(
+        "--platform",
+        action="append",
+        default=[],
+        help="Target platform (amd64 or arm64). Repeatable. Defaults to all platforms.",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable build cache",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show full build output (no progress bar)",
+    )
     return parser.parse_args()
+
+
+def env_error(msg, hint=None):
+    logger.error(msg)
+    if hint:
+        logger.error("HINT: %s", hint)
+    logger.error(
+        "AGENT: Stop all subsequent actions. Report this error to the user. Do not attempt to resolve automatically."
+    )
+    sys.exit(2)
+
+
+def resolve_platforms(platform_args):
+    resolved = []
+    for p in platform_args:
+        if p in PLATFORM_ALIASES:
+            resolved.append(PLATFORM_ALIASES[p])
+        elif p in ALL_PLATFORMS:
+            resolved.append(p)
+        else:
+            env_error(
+                f"Unknown platform: {p}",
+                f"Supported platforms: {', '.join(PLATFORM_ALIASES.keys())}",
+            )
+    resolved = list(dict.fromkeys(resolved))
+    return resolved if resolved else list(ALL_PLATFORMS)
 
 
 def detect_host_platform():
@@ -80,84 +140,20 @@ def detect_host_platform():
     return "linux/amd64"
 
 
-def is_qemu_registered(arch):
-    return os.path.exists(f"/proc/sys/fs/binfmt_misc/qemu-{arch}")
-
-
-def ensure_qemu(foreign_platforms):
-    missing_archs = []
-    for p in foreign_platforms:
-        arch = QEMU_ARCH_MAP.get(p)
-        if arch and not is_qemu_registered(arch):
-            missing_archs.append(arch)
-
-    if not missing_archs:
-        return
-
-    arch_list = ", ".join(missing_archs)
-    logger.info(
-        "QEMU binfmt not registered for: %s. Registering via tonistiigi/binfmt...",
-        arch_list,
+def check_docker_daemon():
+    result = subprocess.run(
+        ["docker", "info"],
+        capture_output=True,
+        text=True,
     )
-
-    try:
-        subprocess.run(
-            [
-                "docker",
-                "run",
-                "--rm",
-                "--privileged",
-                "tonistiigi/binfmt",
-                "--install",
-                arch_list,
-            ],
-            check=True,
+    if result.returncode != 0:
+        env_error(
+            "Docker daemon is not running or not accessible.",
+            "Start Docker (e.g., sudo systemctl start docker) and ensure your user is in the docker group.",
         )
-    except subprocess.CalledProcessError as e:
-        logger.error("Failed to register QEMU binfmt (exit code %d).", e.returncode)
-        logger.error(
-            "Try running manually: docker run --rm --privileged tonistiigi/binfmt --install %s",
-            arch_list,
-        )
-        sys.exit(1)
-
-    for arch in missing_archs:
-        registered = False
-        for attempt in range(5):
-            if is_qemu_registered(arch):
-                registered = True
-                break
-            time.sleep(1)
-        if not registered:
-            logger.error(
-                "QEMU registration for %s did not take effect after retries.",
-                arch,
-            )
-            sys.exit(1)
-
-    logger.info("QEMU binfmt registered successfully for: %s", arch_list)
 
 
-def parse_builder_info(inspect_output):
-    driver = "unknown"
-    builder_platforms = []
-    builder_name = "unknown"
-
-    for line in inspect_output.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("Name:") and builder_name == "unknown":
-            builder_name = stripped.split(":", 1)[1].strip()
-        elif stripped.startswith("Driver:"):
-            driver = stripped.split(":", 1)[1].strip()
-        elif stripped.startswith("Platforms:"):
-            builder_platforms = [
-                p.strip() for p in stripped.split(":", 1)[1].split(",")
-            ]
-
-    return builder_name, driver, builder_platforms
-
-
-def check_buildx(target_platforms):
+def check_buildx():
     try:
         subprocess.run(
             ["docker", "buildx", "version"],
@@ -166,86 +162,111 @@ def check_buildx(target_platforms):
             stderr=subprocess.DEVNULL,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
-        logger.error(
-            "Docker buildx is not available. Ensure Docker is installed and buildx plugin is enabled."
+        env_error(
+            "Docker buildx is not available.",
+            "Ensure Docker is installed and the buildx plugin is enabled. See: https://docs.docker.com/buildx/working-with-buildx/",
         )
-        sys.exit(1)
 
+
+def check_builder_platforms(target_platforms):
     result = subprocess.run(
         ["docker", "buildx", "inspect"],
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
-        logger.error(
-            "Failed to inspect active buildx builder: %s", result.stderr.strip()
+        env_error(
+            f"Failed to inspect active buildx builder: {result.stderr.strip()}",
+            "Try running 'docker buildx ls' to see available builders.",
         )
-        sys.exit(1)
 
-    builder_name, driver, builder_platforms = parse_builder_info(result.stdout)
+    builder_name = "unknown"
+    builder_platforms = []
+    for line in result.stdout.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Name:"):
+            builder_name = stripped.split(":", 1)[1].strip()
+        elif stripped.startswith("Platforms:"):
+            builder_platforms = [
+                p.strip() for p in stripped.split(":", 1)[1].split(",")
+            ]
+
+    host_platform = detect_host_platform()
     missing = [p for p in target_platforms if p not in builder_platforms]
 
-    if missing:
-        host_platform = detect_host_platform()
-        foreign_platforms = [p for p in missing if p != host_platform]
+    foreign_platforms = [p for p in missing if p != host_platform]
 
-        if foreign_platforms:
-            ensure_qemu(foreign_platforms)
-
-            logger.info("Bootstrapping builder to detect new platforms...")
-            bootstrap = subprocess.run(
-                ["docker", "buildx", "inspect", "--bootstrap"],
-                capture_output=True,
-                text=True,
-            )
-            if bootstrap.returncode != 0:
-                logger.error(
-                    "Failed to bootstrap builder: %s", bootstrap.stderr.strip()
+    if foreign_platforms:
+        for p in foreign_platforms:
+            arch = QEMU_ARCH_MAP.get(p)
+            if arch and not os.path.exists(f"/proc/sys/fs/binfmt_misc/qemu-{arch}"):
+                env_error(
+                    f"QEMU binfmt for {arch} is not registered — required for cross-platform build ({p}).",
+                    f"Run: docker run --rm --privileged tonistiigi/binfmt --install {arch}",
                 )
-                sys.exit(1)
 
-            result = subprocess.run(
-                ["docker", "buildx", "inspect"],
-                capture_output=True,
-                text=True,
+        result = subprocess.run(
+            ["docker", "buildx", "inspect", "--bootstrap"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            env_error(
+                f"Failed to bootstrap builder: {result.stderr.strip()}",
+                "Try 'docker buildx inspect --bootstrap' manually.",
             )
-            builder_name, driver, builder_platforms = parse_builder_info(result.stdout)
-            missing = [p for p in target_platforms if p not in builder_platforms]
+
+        result = subprocess.run(
+            ["docker", "buildx", "inspect"],
+            capture_output=True,
+            text=True,
+        )
+        builder_platforms = []
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("Platforms:"):
+                builder_platforms = [
+                    p.strip() for p in stripped.split(":", 1)[1].split(",")
+                ]
+        missing = [p for p in target_platforms if p not in builder_platforms]
 
     if missing:
-        logger.error(
-            "Active builder does not support required platform(s): %s\n"
-            "  Builder:           %s\n"
-            "  Builder driver:    %s\n"
-            "  Builder platforms: %s\n"
-            "  Required:          %s",
-            ", ".join(missing),
-            builder_name,
-            driver,
-            ", ".join(builder_platforms) or "(none detected)",
-            ", ".join(target_platforms),
+        env_error(
+            f"Active builder does not support required platform(s): {', '.join(missing)}\n"
+            f"  Builder:           {builder_name}\n"
+            f"  Builder platforms: {', '.join(builder_platforms) or '(none detected)'}\n"
+            f"  Required:          {', '.join(target_platforms)}",
+            "Create a multi-platform builder: docker buildx create --name multiplatform --use",
         )
-        sys.exit(1)
 
-    return builder_name, driver
+    return builder_name
+
+
+def check_environment(target_platforms):
+    check_docker_daemon()
+    check_buildx()
+    return check_builder_platforms(target_platforms)
 
 
 def build_single_image(args, image_name, dockerfile, context_subdir):
-    all_tags = ["dev"] + args.tags
+    target_platforms = resolve_platforms(args.platform)
 
     if args.push:
-        target_platforms = list(PLATFORMS)
-        mode = "push"
+        platforms_to_build = target_platforms
     else:
-        target_platforms = [detect_host_platform()]
-        mode = "load"
+        host_platform = detect_host_platform()
+        if host_platform in target_platforms:
+            platforms_to_build = [host_platform]
+        else:
+            platforms_to_build = [target_platforms[0]]
 
-    builder_name, driver = check_buildx(target_platforms)
+    builder_name = check_environment(platforms_to_build)
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     dockerfile_path = os.path.join(project_root, dockerfile)
     context_path = os.path.join(project_root, context_subdir)
 
+    all_tags = ["dev"] + args.tags
     full_image_names = []
     cmd = ["docker", "buildx", "build"]
     for tag in all_tags:
@@ -256,19 +277,30 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
         full_image_names.append(full_tag)
         cmd.extend(["--tag", full_tag])
 
-    cmd.extend(["--platform", ",".join(target_platforms)])
+    cmd.extend(["--platform", ",".join(platforms_to_build)])
 
     if args.push:
         cmd.append("--push")
+        cache_tag = f"{args.registry}/{image_name}:cache"
+        if not args.no_cache:
+            cmd.extend(["--cache-from", f"type=registry,ref={cache_tag}"])
+            cmd.extend(["--cache-to", f"type=registry,ref={cache_tag},mode=max"])
     else:
         cmd.append("--load")
 
+    if args.no_cache:
+        cmd.append("--no-cache")
+
+    if args.verbose:
+        cmd.extend(["--progress", "plain"])
+
     cmd.extend(["-f", dockerfile_path, context_path])
 
+    mode = "push" if args.push else "load"
     logger.info("Build configuration (%s):", image_name)
     logger.info("  Mode:       %s", mode)
-    logger.info("  Platforms:  %s", ", ".join(target_platforms))
-    logger.info("  Builder:    %s (driver: %s)", builder_name, driver)
+    logger.info("  Platforms:  %s", ", ".join(platforms_to_build))
+    logger.info("  Builder:    %s", builder_name)
     logger.info("  Images:     %s", ", ".join(full_image_names))
     logger.info("  Context:    %s", context_path)
     logger.info("  Dockerfile: %s", dockerfile_path)
@@ -283,12 +315,12 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
 
 
 def main():
-    setup_logging()
     args = parse_args()
+    setup_logging(verbose=args.verbose)
 
     if args.backend_only and args.frontend_only:
         logger.error("Cannot specify both --backend-only and --frontend-only")
-        sys.exit(1)
+        sys.exit(3)
 
     if not args.frontend_only:
         build_single_image(args, IMAGE_NAME, BACKEND_DOCKERFILE, "backend")

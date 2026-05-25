@@ -1,13 +1,13 @@
-FROM node:24-alpine AS builder
+FROM node:24-alpine3.21 AS builder
 
-RUN npm install -g pnpm
+RUN corepack enable
 
 WORKDIR /app
 
 ENV CI=true
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -15,15 +15,13 @@ ENV NEXT_PUBLIC_API_URL=
 
 RUN pnpm build
 
-RUN cp -r .next/standalone /app/dist && \
-    cp -r .next/static /app/dist/.next/static && \
-    cp -r public /app/dist/public
-
-FROM node:24-alpine
+FROM node:24-alpine3.21
 
 WORKDIR /app
 
-COPY --from=builder /app/dist ./
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 ENV HOSTNAME=0.0.0.0
 ENV NODE_ENV=production

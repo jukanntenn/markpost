@@ -1,0 +1,26 @@
+# Tests
+*_test.go
+testdata/
+
+# Generated docs
+docs/
+
+# Dev tools
+tools/
+
+# Config
+*.toml
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+markpost

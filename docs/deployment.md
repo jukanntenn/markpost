@@ -4,7 +4,7 @@
 
 ### Single Container
 
-The simplest way to run MarkPost is with a single Docker container using SQLite:
+The simplest way to run Markpost is with a single Docker container using SQLite:
 
 ```bash
 docker run -d \
@@ -39,7 +39,7 @@ volumes:
 
 ## Configuration
 
-MarkPost is configured via TOML file, environment variables, or both. See `backend/config.example.toml` for the full reference.
+Markpost is configured via TOML file, environment variables, or both. See `backend/config.example.toml` for the full reference.
 
 ### Environment Variable Overrides
 

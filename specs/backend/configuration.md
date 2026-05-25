@@ -1,6 +1,6 @@
 # Configuration Specification
 
-This document defines the rules and conventions for the MarkPost configuration
+This document defines the rules and conventions for the Markpost configuration
 system. It is intended as a reference for developers and operators.
 
 ## 1. File Format and Path

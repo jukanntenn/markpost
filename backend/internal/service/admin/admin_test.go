@@ -2,186 +2,114 @@ package admin
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	"markpost/internal/service"
+	"markpost/internal/infra"
 )
 
-type mockUserLister struct {
-	users    []user.User
-	err      error
-	count    int64
-	countErr error
+func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository, delivery.Repository) {
+	t.Helper()
+	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	postRepo := infra.NewPostRepository(db)
+	channelRepo := infra.NewDeliveryChannelRepository(db)
+
+	svc := NewService(
+		userRepo.(*infra.UserRepository),
+		&postListerAdapter{repo: postRepo},
+		&channelListerAdapter{repo: channelRepo},
+	)
+	return svc, userRepo, postRepo, channelRepo
 }
 
-func (m *mockUserLister) GetAll(_ context.Context, _, _ int) ([]user.User, error) {
-	if m.err != nil {
-		return nil, m.err
+type postListerAdapter struct {
+	repo post.Repository
+}
+
+func (a *postListerAdapter) GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error) {
+	items, err := a.repo.ListAll(ctx, search, offset, limit)
+	if err != nil {
+		return nil, 0, err
 	}
-	return m.users, nil
-}
-
-func (m *mockUserLister) Count(_ context.Context) (int64, error) {
-	if m.countErr != nil {
-		return 0, m.countErr
+	count, err := a.repo.CountAll(ctx, search)
+	if err != nil {
+		return nil, 0, err
 	}
-	return m.count, nil
+	return items, count, nil
 }
 
-type mockPostLister struct {
-	posts []post.Post
-	total int64
-	err   error
+type channelListerAdapter struct {
+	repo delivery.Repository
 }
 
-func (m *mockPostLister) GetAllPosts(_ context.Context, _ string, _, _ int) ([]post.Post, int64, error) {
-	return m.posts, m.total, m.err
-}
-
-type mockChannelLister struct {
-	channels []delivery.Channel
-	total    int64
-	err      error
-}
-
-func (m *mockChannelLister) ListAll(_ context.Context, _, _ int) ([]delivery.Channel, int64, error) {
-	return m.channels, m.total, m.err
+func (a *channelListerAdapter) ListAll(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error) {
+	items, err := a.repo.ListAll(ctx, offset, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+	count, err := a.repo.CountAll(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, count, nil
 }
 
 func TestListAllUsers(t *testing.T) {
+	svc, userRepo, _, _ := setupAdminService(t)
 	ctx := context.Background()
 
-	t.Run("returns users and total on success", func(t *testing.T) {
-		users := []user.User{{ID: 1, Username: "alice"}, {ID: 2, Username: "bob"}}
-		lister := &mockUserLister{users: users, count: 2}
-		svc := NewService(lister, &mockPostLister{}, &mockChannelLister{})
+	_, _ = userRepo.Create(ctx, "a@example.com", "alice", "pass")
+	_, _ = userRepo.Create(ctx, "b@example.com", "bob", "pass")
 
-		result, total, err := svc.ListAllUsers(ctx, 0, 10)
-		if err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-		if len(result) != 2 {
-			t.Errorf("expected 2 users, got %d", len(result))
-		}
-		if total != 2 {
-			t.Errorf("expected total 2, got %d", total)
-		}
-	})
-
-	t.Run("wraps list error as ErrInternal", func(t *testing.T) {
-		lister := &mockUserLister{err: errors.New("db fail")}
-		svc := NewService(lister, &mockPostLister{}, &mockChannelLister{})
-
-		_, _, err := svc.ListAllUsers(ctx, 0, 10)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		se, ok := service.AsServiceError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrInternal {
-			t.Errorf("expected code %s, got %s", service.ErrInternal, se.Code)
-		}
-	})
-
-	t.Run("wraps count error as ErrInternal", func(t *testing.T) {
-		lister := &mockUserLister{
-			users:    []user.User{{ID: 1}},
-			countErr: errors.New("count fail"),
-		}
-		svc := NewService(lister, &mockPostLister{}, &mockChannelLister{})
-
-		_, _, err := svc.ListAllUsers(ctx, 0, 10)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		se, ok := service.AsServiceError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrInternal {
-			t.Errorf("expected code %s, got %s", service.ErrInternal, se.Code)
-		}
-	})
+	result, total, err := svc.ListAllUsers(ctx, 0, 10)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 users, got %d", len(result))
+	}
+	if total != 2 {
+		t.Errorf("expected total 2, got %d", total)
+	}
 }
 
 func TestListAllPosts(t *testing.T) {
+	svc, _, postRepo, _ := setupAdminService(t)
 	ctx := context.Background()
 
-	t.Run("returns posts and total on success", func(t *testing.T) {
-		posts := []post.Post{{ID: 1, Title: "First"}, {ID: 2, Title: "Second"}}
-		lister := &mockPostLister{posts: posts, total: 2}
-		svc := NewService(nil, lister, &mockChannelLister{})
+	_, _ = postRepo.Create(ctx, "First", "Body", 1)
+	_, _ = postRepo.Create(ctx, "Second", "Body", 2)
 
-		result, total, err := svc.ListAllPosts(ctx, "test", 0, 10)
-		if err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-		if len(result) != 2 {
-			t.Errorf("expected 2 posts, got %d", len(result))
-		}
-		if total != 2 {
-			t.Errorf("expected total 2, got %d", total)
-		}
-	})
-
-	t.Run("propagates error from lister", func(t *testing.T) {
-		lister := &mockPostLister{err: service.NewServiceErrorWrap(service.ErrInternal, "list failed", errors.New("db fail"))}
-		svc := NewService(nil, lister, &mockChannelLister{})
-
-		_, _, err := svc.ListAllPosts(ctx, "", 0, 10)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		se, ok := service.AsServiceError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrInternal {
-			t.Errorf("expected code %s, got %s", service.ErrInternal, se.Code)
-		}
-	})
+	result, total, err := svc.ListAllPosts(ctx, "", 0, 10)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 posts, got %d", len(result))
+	}
+	if total != 2 {
+		t.Errorf("expected total 2, got %d", total)
+	}
 }
 
 func TestListAllDeliveryChannels(t *testing.T) {
+	svc, _, _, channelRepo := setupAdminService(t)
 	ctx := context.Background()
 
-	t.Run("returns channels and total on success", func(t *testing.T) {
-		channels := []delivery.Channel{{ID: 1, Name: "ch1"}, {ID: 2, Name: "ch2"}}
-		lister := &mockChannelLister{channels: channels, total: 2}
-		svc := NewService(nil, &mockPostLister{}, lister)
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", WebhookURL: "https://a.com"})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", WebhookURL: "https://b.com"})
 
-		result, total, err := svc.ListAllDeliveryChannels(ctx, 0, 10)
-		if err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-		if len(result) != 2 {
-			t.Errorf("expected 2 channels, got %d", len(result))
-		}
-		if total != 2 {
-			t.Errorf("expected total 2, got %d", total)
-		}
-	})
-
-	t.Run("propagates error from lister", func(t *testing.T) {
-		lister := &mockChannelLister{err: service.NewServiceErrorWrap(service.ErrInternal, "list failed", errors.New("db fail"))}
-		svc := NewService(nil, &mockPostLister{}, lister)
-
-		_, _, err := svc.ListAllDeliveryChannels(ctx, 0, 10)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		se, ok := service.AsServiceError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrInternal {
-			t.Errorf("expected code %s, got %s", service.ErrInternal, se.Code)
-		}
-	})
+	result, total, err := svc.ListAllDeliveryChannels(ctx, 0, 10)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(result) != 2 {
+		t.Errorf("expected 2 channels, got %d", len(result))
+	}
+	if total != 2 {
+		t.Errorf("expected total 2, got %d", total)
+	}
 }

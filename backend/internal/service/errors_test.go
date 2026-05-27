@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"testing"
+
+	"markpost/internal/domain"
 )
 
 func TestErrCode_String(t *testing.T) {
@@ -202,5 +204,56 @@ func TestNewServiceErrorDetails(t *testing.T) {
 	}
 	if e.Err != nil {
 		t.Errorf("Err = %v, want nil", e.Err)
+	}
+}
+
+func TestWrapNotFoundOrInternal(t *testing.T) {
+	t.Run("returns nil for nil error", func(t *testing.T) {
+		err := WrapNotFoundOrInternal(nil, "not found", "internal")
+		if err != nil {
+			t.Errorf("expected nil, got %v", err)
+		}
+	})
+
+	t.Run("wraps ErrNotFound", func(t *testing.T) {
+		err := WrapNotFoundOrInternal(domain.ErrNotFound, "not found msg", "internal msg")
+		se, ok := AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != ErrNotFound {
+			t.Errorf("code = %q, want %q", se.Code, ErrNotFound)
+		}
+		if se.Description != "not found msg" {
+			t.Errorf("description = %q, want %q", se.Description, "not found msg")
+		}
+	})
+
+	t.Run("wraps other errors as internal", func(t *testing.T) {
+		err := WrapNotFoundOrInternal(errors.New("db error"), "not found msg", "internal msg")
+		se, ok := AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != ErrInternal {
+			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+		}
+		if se.Description != "internal msg" {
+			t.Errorf("description = %q, want %q", se.Description, "internal msg")
+		}
+	})
+}
+
+func TestNewBindingError(t *testing.T) {
+	details := []FieldDetail{{Code: ErrRequired, Description: "title"}}
+	e := NewBindingError(details)
+	if e.Code != ErrValidation {
+		t.Errorf("Code = %q, want %q", e.Code, ErrValidation)
+	}
+	if e.Description != "request validation failed" {
+		t.Errorf("Description = %q, want %q", e.Description, "request validation failed")
+	}
+	if len(e.Details) != 1 {
+		t.Errorf("expected 1 detail, got %d", len(e.Details))
 	}
 }

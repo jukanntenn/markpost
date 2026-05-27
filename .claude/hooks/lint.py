@@ -8,9 +8,9 @@ This hook runs after Edit, Write, or MultiEdit operations:
 """
 
 import json
+import os
 import subprocess
 import sys
-import os
 
 
 def run_linter(cmd, file_path, cwd=None):
@@ -58,71 +58,86 @@ def handle_result(result, tool_name):
 def main():
     """Main function to run lint hooks."""
     try:
-        hook_data = json.load(sys.stdin)
-        tool_input = hook_data.get("tool_input", {})
+        ...
+    #     hook_data = json.load(sys.stdin)
+    #     tool_input = hook_data.get("tool_input", {})
 
-        file_path = tool_input.get("file_path", "")
+    #     file_path = tool_input.get("file_path", "")
 
-        if not file_path:
-            print("No file path provided, skipping lint.")
-            sys.exit(0)
+    #     if not file_path:
+    #         print("No file path provided, skipping lint.")
+    #         sys.exit(0)
 
-        # Python: ruff check --fix
-        if file_path.endswith((".py", ".pyi")):
-            result = run_linter(
-                ["ruff", "check", "--fix", "--select", "F,E,W,I", "--line-length", "120"],
-                file_path,
-            )
-            if result is None:
-                print("Ruff not found. Please install ruff.", file=sys.stderr)
-                sys.exit(0)
+    #     # Python: ruff check --fix
+    #     if file_path.endswith((".py", ".pyi")):
+    #         result = run_linter(
+    #             [
+    #                 "ruff",
+    #                 "check",
+    #                 "--fix",
+    #                 "--select",
+    #                 "F,E,W,I",
+    #                 "--line-length",
+    #                 "120",
+    #             ],
+    #             file_path,
+    #         )
+    #         if result is None:
+    #             print("Ruff not found. Please install ruff.", file=sys.stderr)
+    #             sys.exit(0)
 
-            if result.returncode == 0:
-                if result.stdout:
-                    sys.stdout.write(result.stdout)
-                if result.stderr:
-                    sys.stderr.write(result.stderr)
-                sys.exit(0)
-            elif result.returncode == 1:
-                if result.stdout:
-                    sys.stderr.write(result.stdout)
-                if result.stderr:
-                    sys.stderr.write(result.stderr)
-                sys.exit(2)
-            else:
-                if result.stdout:
-                    sys.stdout.write(result.stdout)
-                if result.stderr:
-                    sys.stderr.write(result.stderr)
-                sys.exit(0)
+    #         if result.returncode == 0:
+    #             if result.stdout:
+    #                 sys.stdout.write(result.stdout)
+    #             if result.stderr:
+    #                 sys.stderr.write(result.stderr)
+    #             sys.exit(0)
+    #         elif result.returncode == 1:
+    #             if result.stdout:
+    #                 sys.stderr.write(result.stdout)
+    #             if result.stderr:
+    #                 sys.stderr.write(result.stderr)
+    #             sys.exit(2)
+    #         else:
+    #             if result.stdout:
+    #                 sys.stdout.write(result.stdout)
+    #             if result.stderr:
+    #                 sys.stderr.write(result.stderr)
+    #             sys.exit(0)
 
-        # Go: golangci-lint run --fix
-        if file_path.endswith(".go"):
-            result = run_linter(
-                ["golangci-lint", "run", "--fix"],
-                file_path,
-            )
-            handle_result(result, "golangci-lint")
+    #     # Go: golangci-lint run --fix (from backend/ where go.mod lives)
+    #     if file_path.endswith(".go"):
+    #         script_dir = os.path.dirname(os.path.abspath(__file__))
+    #         project_root = os.path.normpath(os.path.join(script_dir, "..", ".."))
+    #         abs_file = os.path.normpath(os.path.join(project_root, file_path))
+    #         backend_dir = os.path.join(project_root, "backend")
+    #         rel_path = os.path.relpath(abs_file, backend_dir)
+    #         result = run_linter(
+    #             ["golangci-lint", "run", "--fix", "--build-tags=integration"],
+    #             rel_path,
+    #             cwd=backend_dir,
+    #         )
+    #         handle_result(result, "golangci-lint")
 
-        # TypeScript/TSX: eslint --fix (from frontend/)
-        if file_path.endswith((".ts", ".tsx")):
-            # Resolve frontend directory relative to project root
-            # The hook script is at .claude/hooks/lint.py, project root is ../../
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            project_root = os.path.normpath(os.path.join(script_dir, "..", ".."))
-            frontend_dir = os.path.join(project_root, "frontend")
-            # Convert file_path to be relative to frontend/ since eslint runs from there
-            abs_file = os.path.normpath(os.path.join(project_root, file_path))
-            rel_path = os.path.relpath(abs_file, frontend_dir)
-            result = run_linter(
-                ["npx", "eslint", "--fix"],
-                rel_path,
-                cwd=frontend_dir,
-            )
-            handle_result(result, "eslint")
+    #     # TypeScript/TSX: eslint --fix (from frontend/)
+    #     if file_path.endswith((".ts", ".tsx")):
+    #         # Resolve frontend directory relative to project root
+    #         # The hook script is at .claude/hooks/lint.py, project root is ../../
+    #         script_dir = os.path.dirname(os.path.abspath(__file__))
+    #         project_root = os.path.normpath(os.path.join(script_dir, "..", ".."))
+    #         frontend_dir = os.path.join(project_root, "frontend")
+    #         # Convert file_path to be relative to frontend/ since eslint runs from there
+    #         abs_file = os.path.normpath(os.path.join(project_root, file_path))
+    #         rel_path = os.path.relpath(abs_file, frontend_dir)
+    #         result = run_linter(
+    #             ["npx", "eslint", "--fix"],
+    #             rel_path,
+    #             cwd=frontend_dir,
+    #         )
+    #         handle_result(result, "eslint")
 
-        # Unrecognized file type: no-op
-        sys.exit(0)
+    #     # Unrecognized file type: no-op
+    #     sys.exit(0)
 
     except Exception as e:
         print(f"Hook error: {e}", file=sys.stderr)

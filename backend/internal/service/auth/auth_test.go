@@ -2,220 +2,33 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"markpost/internal/domain"
 	"markpost/internal/domain/user"
+	"markpost/internal/infra"
+	"markpost/internal/service"
+	"markpost/pkg/utils"
 )
 
-type mockUserRepository struct {
-	users      map[int]*user.User
-	postKeyMap map[string]*user.User
-	nextID     int
-}
-
-func newMockUserRepository() *mockUserRepository {
-	return &mockUserRepository{
-		users:      make(map[int]*user.User),
-		postKeyMap: make(map[string]*user.User),
-		nextID:     1,
-	}
-}
-
-func (m *mockUserRepository) GetByID(_ context.Context, id int) (*user.User, error) {
-	u, ok := m.users[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	return u, nil
-}
-
-func (m *mockUserRepository) GetByPostKey(_ context.Context, postKey string) (*user.User, error) {
-	u, ok := m.postKeyMap[postKey]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	return u, nil
-}
-
-func (m *mockUserRepository) GetByUsername(_ context.Context, username string) (*user.User, error) {
-	for _, u := range m.users {
-		if u.Username == username {
-			return u, nil
-		}
-	}
-	return nil, domain.ErrNotFound
-}
-
-func (m *mockUserRepository) GetByEmail(_ context.Context, email string) (*user.User, error) {
-	for _, u := range m.users {
-		if u.Email == email {
-			return u, nil
-		}
-	}
-	return nil, domain.ErrNotFound
-}
-
-func (m *mockUserRepository) Create(_ context.Context, email, username, password string) (*user.User, error) {
-	for _, u := range m.users {
-		if u.Email == email || u.Username == username {
-			return nil, nil
-		}
-	}
-	u := &user.User{
-		ID:       m.nextID,
-		Email:    email,
-		Username: username,
-		Password: password,
-		PostKey:  "test-post-key",
-		IsActive: true,
-	}
-	m.users[m.nextID] = u
-	m.postKeyMap[u.PostKey] = u
-	m.nextID++
-	return u, nil
-}
-
-func (m *mockUserRepository) ValidatePassword(_ context.Context, username, password string) (*user.User, error) {
-	u, err := m.GetByUsername(context.Background(), username)
-	if err != nil {
-		return nil, err
-	}
-	if u.Password != password {
-		return nil, fmt.Errorf("invalid password")
-	}
-	return u, nil
-}
-
-func (m *mockUserRepository) SetPassword(_ context.Context, userID int, password string) error {
-	u, ok := m.users[userID]
-	if !ok {
-		return domain.ErrNotFound
-	}
-	u.Password = password
-	return nil
-}
-
-func (m *mockUserRepository) SetRole(_ context.Context, userID int, role user.Role) error {
-	u, ok := m.users[userID]
-	if !ok {
-		return domain.ErrNotFound
-	}
-	u.Role = role
-	return nil
-}
-
-func (m *mockUserRepository) GetByGitHubID(_ context.Context, _ int64) (*user.User, error) {
-	return nil, domain.ErrNotFound
-}
-
-func (m *mockUserRepository) GetOrCreateFromGitHub(_ context.Context, _ *user.GitHubUser) (*user.User, error) {
-	return nil, nil
-}
-
-func (m *mockUserRepository) DeleteByID(_ context.Context, userID int) (int64, error) {
-	delete(m.users, userID)
-	return 1, nil
-}
-
-func (m *mockUserRepository) GetAll(_ context.Context, _, _ int) ([]user.User, error) {
-	return nil, nil
-}
-
-func (m *mockUserRepository) Count(_ context.Context) (int64, error) {
-	return int64(len(m.users)), nil
-}
-
-func (m *mockUserRepository) CreateFromGitHub(_ context.Context, githubUser *user.GitHubUser) (*user.User, error) {
-	u := &user.User{
-		ID:       m.nextID,
-		Email:    githubUser.Email,
-		Username: githubUser.Login,
-		PostKey:  "test-post-key",
-		GitHubID: &githubUser.ID,
-		IsActive: true,
-	}
-	m.users[m.nextID] = u
-	m.postKeyMap[u.PostKey] = u
-	m.nextID++
-	return u, nil
-}
-
-func (m *mockUserRepository) UpdateLastLoginAt(_ context.Context, _ int, _ time.Time) error {
-	return nil
-}
-
-type mockTokenRepository struct {
-	refreshTokens map[string]*user.RefreshToken
-	blacklist     map[string]bool
-}
-
-func newMockTokenRepository() *mockTokenRepository {
-	return &mockTokenRepository{
-		refreshTokens: make(map[string]*user.RefreshToken),
-		blacklist:     make(map[string]bool),
-	}
-}
-
-func (m *mockTokenRepository) StoreRefreshToken(_ context.Context, userID int, tokenHash string, expiresAt time.Time) error {
-	m.refreshTokens[tokenHash] = &user.RefreshToken{
-		UserID:    userID,
-		TokenHash: tokenHash,
-		ExpiresAt: expiresAt,
-	}
-	return nil
-}
-
-func (m *mockTokenRepository) GetRefreshToken(_ context.Context, tokenHash string) (*user.RefreshToken, error) {
-	token, ok := m.refreshTokens[tokenHash]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	return token, nil
-}
-
-func (m *mockTokenRepository) DeleteRefreshToken(_ context.Context, tokenHash string) error {
-	delete(m.refreshTokens, tokenHash)
-	return nil
-}
-
-func (m *mockTokenRepository) DeleteRefreshTokensByUserID(_ context.Context, userID int) error {
-	for hash, token := range m.refreshTokens {
-		if token.UserID == userID {
-			delete(m.refreshTokens, hash)
-		}
-	}
-	return nil
-}
-
-func (m *mockTokenRepository) StoreBlacklistedToken(_ context.Context, tokenHash string, _ time.Time) error {
-	m.blacklist[tokenHash] = true
-	return nil
-}
-
-func (m *mockTokenRepository) IsTokenBlacklisted(_ context.Context, tokenHash string) (bool, error) {
-	return m.blacklist[tokenHash], nil
-}
-
-func (m *mockTokenRepository) CleanupExpiredTokens(_ context.Context) error {
-	return nil
+func setupAuthService(t *testing.T) (*Service, user.Repository, user.TokenRepository) {
+	t.Helper()
+	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	tokenRepo := infra.NewTokenRepository(db)
+	jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
+	svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+	return svc, userRepo, tokenRepo
 }
 
 func TestService_LoginWithEmail(t *testing.T) {
 	t.Run("returns tokens for valid credentials", func(t *testing.T) {
-		mockRepo := newMockUserRepository()
-		mockTokenRepo := newMockTokenRepository()
+		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		testUser, _ := mockRepo.Create(ctx, "test@example.com", "testuser", "correctpassword")
-		_ = mockRepo.SetRole(ctx, testUser.ID, user.RoleUser)
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "correctpassword")
 
-		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
-		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
-
-		u, tokens, err := authSvc.LoginWithEmail(ctx, "testuser", "correctpassword")
+		u, tokens, err := svc.LoginWithEmail(ctx, "testuser", "correctpassword")
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -233,50 +46,68 @@ func TestService_LoginWithEmail(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error for invalid email", func(t *testing.T) {
-		mockRepo := newMockUserRepository()
-		mockTokenRepo := newMockTokenRepository()
+	t.Run("returns error for invalid username", func(t *testing.T) {
+		svc, _, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
-		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
-
-		_, _, err := authSvc.LoginWithEmail(ctx, "nonexistent", "password")
+		_, _, err := svc.LoginWithEmail(ctx, "nonexistent", "password")
 		if err == nil {
 			t.Fatal("expected error for invalid username")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrInvalidCredentials {
+			t.Errorf("expected code %q, got %q", service.ErrInvalidCredentials, se.Code)
 		}
 	})
 
 	t.Run("returns error for invalid password", func(t *testing.T) {
-		mockRepo := newMockUserRepository()
-		mockTokenRepo := newMockTokenRepository()
+		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		testUser, _ := mockRepo.Create(ctx, "test@example.com", "testuser", "correctpassword")
-		_ = mockRepo.SetRole(ctx, testUser.ID, user.RoleUser)
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "correctpassword")
 
-		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
-		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
-
-		_, _, err := authSvc.LoginWithEmail(ctx, "testuser", "wrongpassword")
+		_, _, err := svc.LoginWithEmail(ctx, "testuser", "wrongpassword")
 		if err == nil {
 			t.Fatal("expected error for invalid password")
+		}
+	})
+
+	t.Run("returns error for disabled user", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		userRepo := infra.NewUserRepository(db, 16)
+		tokenRepo := infra.NewTokenRepository(db)
+		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+		ctx := context.Background()
+
+		u, _ := userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		db.Model(&user.User{}).Where("id = ?", u.ID).Update("is_active", false)
+
+		_, _, err := svc.LoginWithEmail(ctx, "testuser", "password")
+		if err == nil {
+			t.Fatal("expected error for disabled user")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrUserDisabled {
+			t.Errorf("expected code %q, got %q", service.ErrUserDisabled, se.Code)
 		}
 	})
 }
 
 func TestService_QueryPostKey(t *testing.T) {
 	t.Run("returns post key for valid user", func(t *testing.T) {
-		mockRepo := newMockUserRepository()
-		mockTokenRepo := newMockTokenRepository()
+		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		testUser, _ := mockRepo.Create(ctx, "test@example.com", "testuser", "password")
+		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "password")
 
-		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
-		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
-
-		postKey, _, err := authSvc.QueryPostKey(ctx, testUser.ID)
+		postKey, _, err := svc.QueryPostKey(ctx, created.ID)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -286,15 +117,198 @@ func TestService_QueryPostKey(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent user", func(t *testing.T) {
-		mockRepo := newMockUserRepository()
-		mockTokenRepo := newMockTokenRepository()
+		svc, _, _ := setupAuthService(t)
 		ctx := context.Background()
-		jwtSvc := NewJWTService("test-access-secret", "test-refresh-secret", time.Hour, time.Hour*24)
-		authSvc := NewService(mockRepo, mockTokenRepo, nil, jwtSvc, "markpost")
 
-		_, _, err := authSvc.QueryPostKey(ctx, 999)
+		_, _, err := svc.QueryPostKey(ctx, 999)
 		if err == nil {
 			t.Fatal("expected error for non-existent user")
+		}
+	})
+}
+
+func TestService_RefreshToken(t *testing.T) {
+	t.Run("returns new tokens for valid refresh token", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+
+		_, tokens, _ := svc.LoginWithEmail(ctx, "testuser", "password")
+
+		u, newTokens, err := svc.RefreshToken(ctx, tokens.RefreshToken)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if u == nil {
+			t.Fatal("expected user, got nil")
+		}
+		if newTokens.AccessToken == "" {
+			t.Error("expected new access token")
+		}
+		if newTokens.RefreshToken == "" {
+			t.Error("expected new refresh token")
+		}
+	})
+
+	t.Run("returns error for invalid refresh token", func(t *testing.T) {
+		svc, _, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		_, _, err := svc.RefreshToken(ctx, "invalid-token")
+		if err == nil {
+			t.Fatal("expected error for invalid refresh token")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrInvalidToken {
+			t.Errorf("expected code %q, got %q", service.ErrInvalidToken, se.Code)
+		}
+	})
+
+	t.Run("returns error for expired refresh token", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		userRepo := infra.NewUserRepository(db, 16)
+		tokenRepo := infra.NewTokenRepository(db)
+		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, -time.Hour)
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		_, tokens, _ := svc.LoginWithEmail(ctx, "testuser", "password")
+
+		_, _, err := svc.RefreshToken(ctx, tokens.RefreshToken)
+		if err == nil {
+			t.Fatal("expected error for expired refresh token")
+		}
+	})
+}
+
+func TestService_Logout(t *testing.T) {
+	t.Run("blacklists access token", func(t *testing.T) {
+		svc, userRepo, tokenRepo := setupAuthService(t)
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		_, tokens, _ := svc.LoginWithEmail(ctx, "testuser", "password")
+
+		err := svc.Logout(ctx, tokens.AccessToken)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+
+		blacklisted, _ := tokenRepo.IsTokenBlacklisted(ctx, utils.HashToken(tokens.AccessToken))
+		if !blacklisted {
+			t.Error("expected token to be blacklisted after logout")
+		}
+	})
+
+	t.Run("handles empty token gracefully", func(t *testing.T) {
+		svc, _, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		err := svc.Logout(ctx, "")
+		if err != nil {
+			t.Fatalf("expected no error for empty token, got: %v", err)
+		}
+	})
+}
+
+func TestService_ChangePassword(t *testing.T) {
+	t.Run("changes password successfully", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
+
+		err := svc.ChangePassword(ctx, created.ID, "oldpassword", "newpassword")
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+
+		_, _, err = svc.LoginWithEmail(ctx, "testuser", "newpassword")
+		if err != nil {
+			t.Fatalf("expected login with new password to work, got: %v", err)
+		}
+	})
+
+	t.Run("returns error for wrong current password", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
+
+		err := svc.ChangePassword(ctx, created.ID, "wrongpassword", "newpassword")
+		if err == nil {
+			t.Fatal("expected error for wrong current password")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrInvalidPassword {
+			t.Errorf("expected code %q, got %q", service.ErrInvalidPassword, se.Code)
+		}
+	})
+
+	t.Run("returns error for non-existent user", func(t *testing.T) {
+		svc, _, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		err := svc.ChangePassword(ctx, 999, "old", "new")
+		if err == nil {
+			t.Fatal("expected error for non-existent user")
+		}
+	})
+}
+
+func TestService_InitializeFirstAdmin(t *testing.T) {
+	t.Run("promotes user to admin", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+
+		err := svc.InitializeFirstAdmin(ctx, "testuser")
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+
+		u, _ := userRepo.GetByUsername(ctx, "testuser")
+		if !u.IsAdmin() {
+			t.Error("expected user to be admin after InitializeFirstAdmin")
+		}
+	})
+
+	t.Run("returns error for non-existent user", func(t *testing.T) {
+		svc, _, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		err := svc.InitializeFirstAdmin(ctx, "nonexistent")
+		if err == nil {
+			t.Fatal("expected error for non-existent user")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrNotFound {
+			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
+		}
+	})
+
+	t.Run("no-op if already admin", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		u, _ := userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		_ = userRepo.SetRole(ctx, u.ID, user.RoleAdmin)
+
+		err := svc.InitializeFirstAdmin(ctx, "testuser")
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
 		}
 	})
 }

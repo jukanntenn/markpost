@@ -8,14 +8,19 @@ import (
 	"markpost/internal/service/post"
 )
 
+// DeliveryHandler processes delivery jobs.
+type DeliveryHandler interface {
+	Deliver(ctx context.Context, job post.DeliveryJob)
+}
+
 // DeliveryDispatcher implements post.DeliveryEnqueuer with an in-process job queue.
 type DeliveryDispatcher struct {
 	jobs    chan post.DeliveryJob
-	deliver *PostDeliveryService
+	deliver DeliveryHandler
 }
 
 // NewDeliveryDispatcher creates a dispatcher with the given delivery service and buffer size.
-func NewDeliveryDispatcher(deliver *PostDeliveryService, bufferSize int) *DeliveryDispatcher {
+func NewDeliveryDispatcher(deliver DeliveryHandler, bufferSize int) *DeliveryDispatcher {
 	if bufferSize <= 0 {
 		bufferSize = 256
 	}

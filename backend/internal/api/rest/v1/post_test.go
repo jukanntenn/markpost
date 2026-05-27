@@ -159,3 +159,69 @@ func TestPostsList_Success(t *testing.T) {
 		t.Error("expected posts in response")
 	}
 }
+
+func TestCreatePost_InvalidBody(t *testing.T) {
+	mockSvc := newMockPostService()
+	router := newTestEngine(withValidators(postValidators...))
+
+	router.POST("/posts", withTestUser(1), CreatePost(mockSvc))
+
+	req := httptest.NewRequest(http.MethodPost, "/posts", bytes.NewBufferString("invalid"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestCreatePost_ServiceError(t *testing.T) {
+	errMock := &errorPostService{err: service.NewServiceError(service.ErrValidation, "title too long")}
+	router := newTestEngine(withValidators(postValidators...))
+
+	router.POST("/posts", withTestUser(1), CreatePost(errMock))
+
+	body := PostRequest{Title: "Test", Body: "Body"}
+	jsonBody, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/posts", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+type errorPostService struct {
+	err error
+}
+
+func (m *errorPostService) CreatePost(_ context.Context, _, _ string, _ int) (string, error) {
+	return "", m.err
+}
+func (m *errorPostService) RenderPostHTML(_ context.Context, _ string) (string, string, error) {
+	return "", "", nil
+}
+func (m *errorPostService) GetPostMarkdown(_ context.Context, _ string) (string, string, error) {
+	return "", "", nil
+}
+func (m *errorPostService) GetUserPosts(_ context.Context, _ int, _, _ int) ([]post.Post, int64, error) {
+	return nil, 0, nil
+}
+
+func TestPostsList_PaginationError(t *testing.T) {
+	mockSvc := newMockPostService()
+	router := newTestEngine()
+
+	router.GET("/posts", withTestUser(1), PostsList(mockSvc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts?limit=999", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}

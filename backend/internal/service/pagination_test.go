@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -80,4 +81,59 @@ func TestCalcTotalPages(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPaginate(t *testing.T) {
+	t.Run("returns items and total on success", func(t *testing.T) {
+		items, total, err := Paginate(
+			func() ([]string, error) { return []string{"a", "b"}, nil },
+			func() (int64, error) { return 2, nil },
+			"test",
+		)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(items) != 2 {
+			t.Errorf("got %d items, want 2", len(items))
+		}
+		if total != 2 {
+			t.Errorf("total = %d, want 2", total)
+		}
+	})
+
+	t.Run("wraps list error", func(t *testing.T) {
+		_, _, err := Paginate(
+			func() ([]string, error) { return nil, errors.New("list fail") },
+			func() (int64, error) { return 0, nil },
+			"test",
+		)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		se, ok := AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != ErrInternal {
+			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+		}
+	})
+
+	t.Run("wraps count error", func(t *testing.T) {
+		_, _, err := Paginate(
+			func() ([]string, error) { return []string{"a"}, nil },
+			func() (int64, error) { return 0, errors.New("count fail") },
+			"test",
+		)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		se, ok := AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != ErrInternal {
+			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+		}
+	})
 }

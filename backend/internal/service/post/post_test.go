@@ -2,118 +2,25 @@ package post
 
 import (
 	"context"
-	"strconv"
 	"testing"
 
-	"markpost/internal/domain"
-	"markpost/internal/domain/post"
+	"markpost/internal/infra"
+	"markpost/internal/service"
 )
 
-type mockPostRepository struct {
-	posts   map[string]*post.Post
-	idPosts map[int]*post.Post
-	nextID  int
-}
-
-func newMockPostRepository() *mockPostRepository {
-	return &mockPostRepository{
-		posts:   make(map[string]*post.Post),
-		idPosts: make(map[int]*post.Post),
-		nextID:  1,
-	}
-}
-
-func (m *mockPostRepository) Create(_ context.Context, title, body string, userID int) (*post.Post, error) {
-	p := &post.Post{
-		ID:     m.nextID,
-		QID:    "test-qid-" + strconv.Itoa(m.nextID),
-		Title:  title,
-		Body:   body,
-		UserID: userID,
-	}
-	m.posts[p.QID] = p
-	m.idPosts[p.ID] = p
-	m.nextID++
-	return p, nil
-}
-
-func (m *mockPostRepository) GetByQID(_ context.Context, qid string) (*post.Post, error) {
-	p, ok := m.posts[qid]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	return p, nil
-}
-
-func (m *mockPostRepository) GetByUserID(_ context.Context, userID, offset, limit int) ([]post.Post, error) {
-	var result []post.Post
-	for _, p := range m.posts {
-		if p.UserID == userID {
-			result = append(result, *p)
-		}
-	}
-	if offset >= len(result) {
-		return []post.Post{}, nil
-	}
-	end := offset + limit
-	if end > len(result) {
-		end = len(result)
-	}
-	return result[offset:end], nil
-}
-
-func (m *mockPostRepository) CountByUserID(_ context.Context, userID int) (int64, error) {
-	var count int64
-	for _, p := range m.posts {
-		if p.UserID == userID {
-			count++
-		}
-	}
-	return count, nil
-}
-
-func (m *mockPostRepository) CountAll(_ context.Context, _ string) (int64, error) {
-	return int64(len(m.posts)), nil
-}
-
-func (m *mockPostRepository) CreateBatch(_ context.Context, posts []post.Post) (int, error) {
-	return len(posts), nil
-}
-
-func (m *mockPostRepository) GetByID(_ context.Context, id int) (*post.Post, error) {
-	p, ok := m.idPosts[id]
-	if !ok {
-		return nil, domain.ErrNotFound
-	}
-	return p, nil
-}
-
-func (m *mockPostRepository) ListAll(_ context.Context, _ string, _, _ int) ([]post.Post, error) {
-	return nil, nil
-}
-
-func (m *mockPostRepository) UpdateByID(_ context.Context, _ int, _, _ string) error {
-	return nil
-}
-
-func (m *mockPostRepository) DeleteByID(_ context.Context, _ int) (int64, error) {
-	return 0, nil
-}
-
-func (m *mockPostRepository) PruneExpired(_ context.Context, _, _ int) error {
-	return nil
-}
-
-func (m *mockPostRepository) CountExpired(_ context.Context, _ int) (int64, error) {
-	return 0, nil
+func setupPostService(t *testing.T) (*Service, *infra.PostRepository) {
+	t.Helper()
+	db := infra.SetupTestDB(t)
+	repo := infra.NewPostRepository(db)
+	svc := NewService(repo, nil)
+	return svc, repo.(*infra.PostRepository)
 }
 
 func TestService_CreatePost(t *testing.T) {
-	mockRepo := newMockPostRepository()
-	svc := NewService(mockRepo, nil)
-	ctx := context.Background()
-
 	t.Run("creates post successfully", func(t *testing.T) {
+		svc, _ := setupPostService(t)
+		ctx := context.Background()
+
 		qid, err := svc.CreatePost(ctx, "Test Title", "Test Body", 1)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
@@ -123,28 +30,42 @@ func TestService_CreatePost(t *testing.T) {
 		}
 	})
 
-	t.Run("creates post with valid data", func(t *testing.T) {
-		qid, _ := svc.CreatePost(ctx, "Another Title", "Another Body", 1)
+	t.Run("creates post with delivery enqueuer", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		repo := infra.NewPostRepository(db)
+		enqueuer := &mockEnqueuer{}
+		svc := NewService(repo, enqueuer)
+		ctx := context.Background()
 
-		p, err := mockRepo.GetByQID(ctx, qid)
+		qid, err := svc.CreatePost(ctx, "Title", "Body", 1)
 		if err != nil {
-			t.Fatalf("expected to find post, got: %v", err)
+			t.Fatalf("expected no error, got: %v", err)
 		}
-		if p.Title != "Another Title" {
-			t.Errorf("expected title 'Another Title', got: %s", p.Title)
+		if qid == "" {
+			t.Error("expected qid")
 		}
-		if p.Body != "Another Body" {
-			t.Errorf("expected body 'Another Body', got: %s", p.Body)
+		if len(enqueuer.jobs) != 1 {
+			t.Errorf("expected 1 enqueued job, got %d", len(enqueuer.jobs))
+		}
+		if enqueuer.jobs[0].Title != "Title" {
+			t.Errorf("job title = %q, want %q", enqueuer.jobs[0].Title, "Title")
 		}
 	})
 }
 
+type mockEnqueuer struct {
+	jobs []DeliveryJob
+}
+
+func (m *mockEnqueuer) Enqueue(job DeliveryJob) {
+	m.jobs = append(m.jobs, job)
+}
+
 func TestService_GetPostMarkdown(t *testing.T) {
-	mockRepo := newMockPostRepository()
-	svc := NewService(mockRepo, nil)
+	svc, repo := setupPostService(t)
 	ctx := context.Background()
 
-	created, _ := mockRepo.Create(ctx, "Test Title", "Test Body", 1)
+	created, _ := repo.Create(ctx, "Test Title", "Test Body", 1)
 
 	t.Run("returns markdown for valid post", func(t *testing.T) {
 		title, body, err := svc.GetPostMarkdown(ctx, created.QID)
@@ -168,11 +89,10 @@ func TestService_GetPostMarkdown(t *testing.T) {
 }
 
 func TestService_RenderPostHTML(t *testing.T) {
-	mockRepo := newMockPostRepository()
-	svc := NewService(mockRepo, nil)
+	svc, repo := setupPostService(t)
 	ctx := context.Background()
 
-	created, _ := mockRepo.Create(ctx, "Test Title", "# Heading\n\nParagraph", 1)
+	created, _ := repo.Create(ctx, "Test Title", "# Heading\n\nParagraph", 1)
 
 	t.Run("renders HTML for valid post", func(t *testing.T) {
 		title, html, err := svc.RenderPostHTML(ctx, created.QID)
@@ -196,13 +116,12 @@ func TestService_RenderPostHTML(t *testing.T) {
 }
 
 func TestService_GetUserPosts(t *testing.T) {
-	mockRepo := newMockPostRepository()
-	svc := NewService(mockRepo, nil)
+	svc, repo := setupPostService(t)
 	ctx := context.Background()
 
-	_, _ = mockRepo.Create(ctx, "Title 1", "Body 1", 1)
-	_, _ = mockRepo.Create(ctx, "Title 2", "Body 2", 1)
-	_, _ = mockRepo.Create(ctx, "Title 3", "Body 3", 2)
+	_, _ = repo.Create(ctx, "Title 1", "Body 1", 1)
+	_, _ = repo.Create(ctx, "Title 2", "Body 2", 1)
+	_, _ = repo.Create(ctx, "Title 3", "Body 3", 2)
 
 	t.Run("returns posts for user", func(t *testing.T) {
 		posts, total, err := svc.GetUserPosts(ctx, 1, 0, 10)
@@ -229,29 +148,120 @@ func TestService_GetUserPosts(t *testing.T) {
 			t.Errorf("expected total 0, got: %d", total)
 		}
 	})
+}
 
-	t.Run("handles pagination correctly", func(t *testing.T) {
-		_, _ = mockRepo.Create(ctx, "Title 4", "Body 4", 3)
-		_, _ = mockRepo.Create(ctx, "Title 5", "Body 5", 3)
-		_, _ = mockRepo.Create(ctx, "Title 6", "Body 6", 3)
+func TestService_GetAllPosts(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
 
-		posts, total, err := svc.GetUserPosts(ctx, 3, 0, 2)
+	_, _ = repo.Create(ctx, "Alpha", "Body", 1)
+	_, _ = repo.Create(ctx, "Beta", "Body", 2)
+
+	posts, total, err := svc.GetAllPosts(ctx, "", 0, 10)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+	if len(posts) != 2 {
+		t.Errorf("expected 2 posts, got: %d", len(posts))
+	}
+	if total != 2 {
+		t.Errorf("expected total 2, got: %d", total)
+	}
+}
+
+func TestService_UpdatePost(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	created, _ := repo.Create(ctx, "Old Title", "Old Body", 1)
+
+	t.Run("updates post successfully", func(t *testing.T) {
+		err := svc.UpdatePost(ctx, created.ID, "New Title", "New Body")
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		if len(posts) != 2 {
-			t.Errorf("expected 2 posts on first page, got: %d", len(posts))
-		}
-		if total != 3 {
-			t.Errorf("expected total 3, got: %d", total)
-		}
+	})
 
-		posts2, _, err := svc.GetUserPosts(ctx, 3, 2, 2)
+	t.Run("returns error for non-existent post", func(t *testing.T) {
+		err := svc.UpdatePost(ctx, 999, "Title", "Body")
+		if err == nil {
+			t.Fatal("expected error for non-existent post")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrNotFound {
+			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
+		}
+	})
+}
+
+func TestService_DeletePost(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	created, _ := repo.Create(ctx, "Title", "Body", 1)
+
+	t.Run("deletes post successfully", func(t *testing.T) {
+		err := svc.DeletePost(ctx, created.ID)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		if len(posts2) != 1 {
-			t.Errorf("expected 1 post on second page, got: %d", len(posts2))
+	})
+
+	t.Run("returns no error for non-existent post", func(t *testing.T) {
+		err := svc.DeletePost(ctx, 999)
+		if err != nil {
+			t.Fatalf("expected no error (idempotent delete), got: %v", err)
+		}
+	})
+}
+
+func TestService_PruneExpired(t *testing.T) {
+	svc, _ := setupPostService(t)
+	ctx := context.Background()
+
+	t.Run("returns error for non-positive retention days", func(t *testing.T) {
+		err := svc.PruneExpired(ctx, 0, 100)
+		if err == nil {
+			t.Fatal("expected error for zero retention days")
+		}
+		se, ok := service.AsServiceError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != service.ErrValidation {
+			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+		}
+	})
+
+	t.Run("uses default batch size when zero", func(t *testing.T) {
+		err := svc.PruneExpired(ctx, 7, 0)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+	})
+}
+
+func TestService_CountExpired(t *testing.T) {
+	svc, _ := setupPostService(t)
+	ctx := context.Background()
+
+	t.Run("returns error for non-positive retention days", func(t *testing.T) {
+		_, err := svc.CountExpired(ctx, 0)
+		if err == nil {
+			t.Fatal("expected error for zero retention days")
+		}
+	})
+
+	t.Run("returns count for valid retention days", func(t *testing.T) {
+		count, err := svc.CountExpired(ctx, 7)
+		if err != nil {
+			t.Fatalf("expected no error, got: %v", err)
+		}
+		if count != 0 {
+			t.Errorf("expected count 0, got: %d", count)
 		}
 	})
 }

@@ -100,3 +100,13 @@ func TestJWTService_ValidateRefresh_InvalidToken(t *testing.T) {
 		t.Fatal("expected error for invalid token")
 	}
 }
+
+func TestJWTTokenPair_ExpiresInSeconds(t *testing.T) {
+	pair := &JWTTokenPair{
+		ExpiresAt: time.Now().Add(time.Hour),
+	}
+	secs := pair.ExpiresInSeconds()
+	if secs < 3500 || secs > 3700 {
+		t.Errorf("ExpiresInSeconds() = %d, want ~3600", secs)
+	}
+}

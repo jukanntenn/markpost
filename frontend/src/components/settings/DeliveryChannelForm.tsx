@@ -27,6 +27,13 @@ export function DeliveryChannelForm({
 }: DeliveryChannelFormProps) {
   const t = useTranslations("settings");
 
+  function updateConfiguration(field: string, value: string) {
+    onFormChange({
+      ...form,
+      configuration: { ...form.configuration, [field]: value },
+    });
+  }
+
   return (
     <>
       <Separator />
@@ -47,10 +54,25 @@ export function DeliveryChannelForm({
           <Label htmlFor="channel-webhook">{t("deliveryChannelWebhookURL")}</Label>
           <Input
             id="channel-webhook"
-            value={form.webhookUrl}
-            onChange={(e) => onFormChange({ ...form, webhookUrl: e.target.value })}
+            value={form.configuration.webhook_url}
+            onChange={(e) => updateConfiguration("webhook_url", e.target.value)}
             placeholder={t("deliveryChannelWebhookPlaceholder")}
             required
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="channel-card-link-url">
+            {t("deliveryChannelCardLinkURL")}
+          </Label>
+          <Input
+            id="channel-card-link-url"
+            value={form.configuration.card_link_url}
+            onChange={(e) =>
+              updateConfiguration("card_link_url", e.target.value)
+            }
+            placeholder={t("deliveryChannelCardLinkURLPlaceholder")}
             disabled={isSubmitting}
           />
         </div>

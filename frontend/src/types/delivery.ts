@@ -1,11 +1,18 @@
 import type { Paginated } from "./pagination";
 
+export interface FeishuConfiguration {
+  webhook_url: string;
+  card_link_url: string;
+}
+
+export type ChannelConfiguration = FeishuConfiguration;
+
 export interface DeliveryChannel {
   id: number;
   kind: string;
   name: string;
   enabled: boolean;
-  webhook_url: string;
+  configuration: ChannelConfiguration;
   keywords: string;
   created_at: string;
   updated_at: string;
@@ -25,7 +32,7 @@ export interface AdminChannel {
   kind: string;
   enabled: boolean;
   user_id: number;
-  webhook_url: string;
+  configuration: ChannelConfiguration;
   created_at: string;
 }
 
@@ -34,13 +41,13 @@ export type AdminChannelsResponse = Paginated<AdminChannel, "channels">;
 export interface CreateChannelPayload {
   kind: string;
   name: string;
-  webhook_url: string;
+  configuration: ChannelConfiguration;
   keywords?: string;
 }
 
 export interface UpdateChannelPayload {
   name?: string;
-  webhook_url?: string;
+  configuration?: ChannelConfiguration;
   keywords?: string;
   enabled?: boolean;
 }

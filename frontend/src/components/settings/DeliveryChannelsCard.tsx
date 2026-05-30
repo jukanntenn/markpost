@@ -21,7 +21,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { QueryState } from "@/components/ui/query-state";
 import { DeliveryChannelForm } from "./DeliveryChannelForm";
-import { useChannelForm, type UpdateChannelMutationVars } from "@/hooks/useChannelForm";
+import {
+  useChannelForm,
+  type UpdateChannelMutationVars,
+} from "@/hooks/useChannelForm";
 import { truncate } from "@/lib/utils";
 
 export function DeliveryChannelsCard() {
@@ -77,7 +80,7 @@ export function DeliveryChannelsCard() {
   } = useChannelForm({ createMutation, updateMutation });
 
   return (
-    <Card>
+    <Card data-testid="delivery-channels-card">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -129,7 +132,7 @@ export function DeliveryChannelsCard() {
                     <div>
                       <p className="text-sm font-medium">{channel.name || t("deliveryChannelUnnamed")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {channel.kind} · {truncate(channel.webhook_url, 40)}
+                        {channel.kind} · {truncate(channel.configuration?.webhook_url ?? "", 40)}
                       </p>
                     </div>
                   </div>
@@ -137,6 +140,7 @@ export function DeliveryChannelsCard() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={t("deliveryChannelEdit")}
                       onClick={() => startEdit(channel)}
                     >
                       <PencilIcon className="size-4" />
@@ -146,6 +150,7 @@ export function DeliveryChannelsCard() {
                         <Button
                           variant="destructive"
                           size="sm"
+                          aria-label={tCommon("confirm")}
                           onClick={() => deleteMutation.mutate(channel.id)}
                           disabled={deleteMutation.isPending}
                         >
@@ -158,6 +163,7 @@ export function DeliveryChannelsCard() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={tCommon("cancel")}
                           onClick={() => setDeleteConfirmId(null)}
                         >
                           {tCommon("cancel")}
@@ -167,6 +173,7 @@ export function DeliveryChannelsCard() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={t("deliveryChannelDelete")}
                         onClick={() => setDeleteConfirmId(channel.id)}
                       >
                         <Trash2Icon className="size-4" />

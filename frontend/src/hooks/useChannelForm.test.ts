@@ -21,7 +21,10 @@ const mockChannel: DeliveryChannel = {
   kind: "feishu",
   name: "My Channel",
   enabled: true,
-  webhook_url: "https://example.com",
+  configuration: {
+    webhook_url: "https://example.com",
+    card_link_url: "",
+  },
   keywords: "test",
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
@@ -73,7 +76,10 @@ describe("useChannelForm", () => {
     expect(result.current.form).toEqual({
       kind: "feishu",
       name: "My Channel",
-      webhookUrl: "https://example.com",
+      configuration: {
+        webhook_url: "https://example.com",
+        card_link_url: "",
+      },
       keywords: "test",
     });
   });
@@ -111,13 +117,15 @@ describe("useChannelForm", () => {
     });
 
     act(() => {
-      result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+      result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
     });
 
     expect(createMutation.mutate).toHaveBeenCalledWith({
       kind: EMPTY_FORM.kind,
       name: EMPTY_FORM.name,
-      webhook_url: EMPTY_FORM.webhookUrl,
+      configuration: EMPTY_FORM.configuration,
       keywords: EMPTY_FORM.keywords,
     });
     expect(updateMutation.mutate).not.toHaveBeenCalled();
@@ -135,14 +143,19 @@ describe("useChannelForm", () => {
     });
 
     act(() => {
-      result.current.handleSubmit({ preventDefault: vi.fn() } as unknown as React.FormEvent);
+      result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
     });
 
     expect(updateMutation.mutate).toHaveBeenCalledWith({
       id: 5,
       data: {
         name: "My Channel",
-        webhook_url: "https://example.com",
+        configuration: {
+          webhook_url: "https://example.com",
+          card_link_url: "",
+        },
         keywords: "test",
       },
     });

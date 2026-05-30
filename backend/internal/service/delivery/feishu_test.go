@@ -77,3 +77,216 @@ func TestFeishuClient_SendText(t *testing.T) {
 		}
 	})
 }
+
+func TestFeishuClient_SendCard(t *testing.T) {
+	t.Run("sends card with post URL as card_link", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendCard(context.Background(), CardDeliveryParams{
+			WebhookURL:  server.URL,
+			PostURL:     "https://example.com/p-abc",
+			PostTitle:   "Test Title",
+			BodyPreview: "Some preview text",
+			PostQID:     "p-abc",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if receivedBody["msg_type"] != "interactive" {
+			t.Errorf("msg_type = %v, want %q", receivedBody["msg_type"], "interactive")
+		}
+
+		card, ok := receivedBody["card"].(map[string]any)
+		if !ok {
+			t.Fatal("expected card to be a map")
+		}
+		if card["schema"] != "2.0" {
+			t.Errorf("schema = %v, want %q", card["schema"], "2.0")
+		}
+		if card["card_link"] == nil {
+			t.Error("expected card_link to be set")
+		}
+	})
+
+	t.Run("uses custom card_link_url with template variable", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendCard(context.Background(), CardDeliveryParams{
+			WebhookURL:  server.URL,
+			CardLinkURL: "https://custom.example.com/post/{{.QID}}",
+			PostURL:     "https://example.com/p-abc",
+			PostTitle:   "Test Title",
+			BodyPreview: "Preview",
+			PostQID:     "p-abc",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		card := receivedBody["card"].(map[string]any)
+		cardLink := card["card_link"].(map[string]any)
+		if cardLink["url"] != "https://custom.example.com/post/p-abc" {
+			t.Errorf("card_link url = %v, want %q", cardLink["url"], "https://custom.example.com/post/p-abc")
+		}
+	})
+
+	t.Run("shows footer when card_link_url differs from post URL", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendCard(context.Background(), CardDeliveryParams{
+			WebhookURL:  server.URL,
+			CardLinkURL: "https://custom.example.com/{{.QID}}",
+			PostURL:     "https://example.com/p-abc",
+			PostTitle:   "Test Title",
+			BodyPreview: "Preview",
+			PostQID:     "p-abc",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		card := receivedBody["card"].(map[string]any)
+		body := card["body"].(map[string]any)
+		elements := body["elements"].([]any)
+
+		hasAction := false
+		for _, elem := range elements {
+			el := elem.(map[string]any)
+			if el["tag"] == "action" {
+				hasAction = true
+				actions := el["actions"].([]any)
+				action := actions[0].(map[string]any)
+				if action["url"] != "https://example.com/p-abc" {
+					t.Errorf("action url = %v, want %q", action["url"], "https://example.com/p-abc")
+				}
+			}
+		}
+		if !hasAction {
+			t.Error("expected action element in card body when card_link_url differs from post URL")
+		}
+	})
+
+	t.Run("hides footer when card_link_url equals post URL", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendCard(context.Background(), CardDeliveryParams{
+			WebhookURL:  server.URL,
+			CardLinkURL: "https://example.com/p-abc",
+			PostURL:     "https://example.com/p-abc",
+			PostTitle:   "Test Title",
+			BodyPreview: "Preview",
+			PostQID:     "p-abc",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		card := receivedBody["card"].(map[string]any)
+		body := card["body"].(map[string]any)
+		elements := body["elements"].([]any)
+
+		for _, elem := range elements {
+			el := elem.(map[string]any)
+			if el["tag"] == "action" {
+				t.Error("expected no action element when card_link_url equals post URL")
+			}
+		}
+	})
+
+	t.Run("sends card without body preview", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendCard(context.Background(), CardDeliveryParams{
+			WebhookURL: server.URL,
+			PostURL:    "https://example.com/p-abc",
+			PostTitle:  "Test Title",
+			PostQID:    "p-abc",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		card := receivedBody["card"].(map[string]any)
+		body := card["body"].(map[string]any)
+		elements := body["elements"].([]any)
+		if len(elements) != 0 {
+			t.Errorf("expected 0 elements, got %d", len(elements))
+		}
+	})
+}
+
+func TestResolveCardLinkURL(t *testing.T) {
+	t.Run("returns post URL when card_link_url is empty", func(t *testing.T) {
+		result := resolveCardLinkURL(CardDeliveryParams{
+			CardLinkURL: "",
+			PostURL:     "https://example.com/p-abc",
+			PostQID:     "p-abc",
+		})
+		if result != "https://example.com/p-abc" {
+			t.Errorf("got %q, want %q", result, "https://example.com/p-abc")
+		}
+	})
+
+	t.Run("resolves template variable", func(t *testing.T) {
+		result := resolveCardLinkURL(CardDeliveryParams{
+			CardLinkURL: "https://custom.com/{{.QID}}",
+			PostURL:     "https://example.com/p-abc",
+			PostQID:     "p-abc",
+		})
+		if result != "https://custom.com/p-abc" {
+			t.Errorf("got %q, want %q", result, "https://custom.com/p-abc")
+		}
+	})
+
+	t.Run("falls back to post URL on invalid template", func(t *testing.T) {
+		result := resolveCardLinkURL(CardDeliveryParams{
+			CardLinkURL: "{{.Invalid",
+			PostURL:     "https://example.com/p-abc",
+			PostQID:     "p-abc",
+		})
+		if result != "https://example.com/p-abc" {
+			t.Errorf("got %q, want %q", result, "https://example.com/p-abc")
+		}
+	})
+}

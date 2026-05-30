@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/json"
 	"time"
 
 	"markpost/internal/domain/delivery"
@@ -106,26 +107,26 @@ func newPostListItem(p post.Post) PostListItem {
 // --- Delivery types ---
 
 type ChannelResponse struct {
-	ID         int                  `json:"id"`
-	Kind       delivery.ChannelKind `json:"kind"`
-	Name       string               `json:"name"`
-	Enabled    bool                 `json:"enabled"`
-	WebhookURL string               `json:"webhook_url"`
-	Keywords   string               `json:"keywords"`
-	CreatedAt  time.Time            `json:"created_at"`
-	UpdatedAt  time.Time            `json:"updated_at"`
+	ID            int                           `json:"id"`
+	Kind          delivery.ChannelKind          `json:"kind"`
+	Name          string                        `json:"name"`
+	Enabled       bool                          `json:"enabled"`
+	Configuration delivery.ChannelConfiguration `json:"configuration"`
+	Keywords      string                        `json:"keywords"`
+	CreatedAt     time.Time                     `json:"created_at"`
+	UpdatedAt     time.Time                     `json:"updated_at"`
 }
 
 func newChannelResponse(ch delivery.Channel) ChannelResponse {
 	return ChannelResponse{
-		ID:         ch.ID,
-		Kind:       ch.Kind,
-		Name:       ch.Name,
-		Enabled:    ch.Enabled,
-		WebhookURL: ch.WebhookURL,
-		Keywords:   ch.Keywords,
-		CreatedAt:  ch.CreatedAt,
-		UpdatedAt:  ch.UpdatedAt,
+		ID:            ch.ID,
+		Kind:          ch.Kind,
+		Name:          ch.Name,
+		Enabled:       ch.Enabled,
+		Configuration: ch.Configuration,
+		Keywords:      ch.Keywords,
+		CreatedAt:     ch.CreatedAt,
+		UpdatedAt:     ch.UpdatedAt,
 	}
 }
 
@@ -138,37 +139,40 @@ type SingleChannelResponse struct {
 }
 
 type CreateDeliveryChannelRequest struct {
-	Kind       string `json:"kind" binding:"required"`
-	Name       string `json:"name" binding:"required"`
-	WebhookURL string `json:"webhook_url" binding:"required"`
-	Keywords   string `json:"keywords"`
+	Kind          string          `json:"kind" binding:"required"`
+	Name          string          `json:"name" binding:"required"`
+	Configuration json.RawMessage `json:"configuration" binding:"required"`
+	Keywords      string          `json:"keywords"`
 }
 
 func (r CreateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParams {
 	return delivery_svc.UpdateChannelParams{
-		Kind:       r.Kind,
-		Name:       r.Name,
-		WebhookURL: r.WebhookURL,
-		Keywords:   r.Keywords,
+		Kind:          r.Kind,
+		Name:          r.Name,
+		Configuration: r.Configuration,
+		Keywords:      r.Keywords,
 	}
 }
 
 type UpdateDeliveryChannelRequest struct {
-	Kind       *string `json:"kind"`
-	Name       *string `json:"name"`
-	WebhookURL *string `json:"webhook_url"`
-	Keywords   *string `json:"keywords"`
-	Enabled    *bool   `json:"enabled"`
+	Kind          *string          `json:"kind"`
+	Name          *string          `json:"name"`
+	Configuration *json.RawMessage `json:"configuration"`
+	Keywords      *string          `json:"keywords"`
+	Enabled       *bool            `json:"enabled"`
 }
 
 func (r UpdateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParams {
-	return delivery_svc.UpdateChannelParams{
-		Kind:       utils.Deref(r.Kind),
-		Name:       utils.Deref(r.Name),
-		WebhookURL: utils.Deref(r.WebhookURL),
-		Keywords:   utils.Deref(r.Keywords),
-		Enabled:    r.Enabled,
+	params := delivery_svc.UpdateChannelParams{
+		Kind:     utils.Deref(r.Kind),
+		Name:     utils.Deref(r.Name),
+		Keywords: utils.Deref(r.Keywords),
+		Enabled:  r.Enabled,
 	}
+	if r.Configuration != nil {
+		params.Configuration = *r.Configuration
+	}
+	return params
 }
 
 // --- Admin types ---
@@ -212,24 +216,24 @@ func newAdminPostItem(p post.Post) AdminPostItem {
 }
 
 type AdminChannelItem struct {
-	ID         int       `json:"id"`
-	Name       string    `json:"name"`
-	Kind       string    `json:"kind"`
-	Enabled    bool      `json:"enabled"`
-	UserID     int       `json:"user_id"`
-	WebhookURL string    `json:"webhook_url"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID            int                           `json:"id"`
+	Name          string                        `json:"name"`
+	Kind          string                        `json:"kind"`
+	Enabled       bool                          `json:"enabled"`
+	UserID        int                           `json:"user_id"`
+	Configuration delivery.ChannelConfiguration `json:"configuration"`
+	CreatedAt     time.Time                     `json:"created_at"`
 }
 
 func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
 	return AdminChannelItem{
-		ID:         ch.ID,
-		Name:       ch.Name,
-		Kind:       string(ch.Kind),
-		Enabled:    ch.Enabled,
-		UserID:     ch.UserID,
-		WebhookURL: ch.WebhookURL,
-		CreatedAt:  ch.CreatedAt,
+		ID:            ch.ID,
+		Name:          ch.Name,
+		Kind:          string(ch.Kind),
+		Enabled:       ch.Enabled,
+		UserID:        ch.UserID,
+		Configuration: ch.Configuration,
+		CreatedAt:     ch.CreatedAt,
 	}
 }
 

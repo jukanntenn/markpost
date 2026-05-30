@@ -8,10 +8,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
+
+	"markpost/internal/domain/delivery"
 )
 
-// FeishuClient sends text messages to Feishu webhook URLs.
+// FeishuClient sends messages to Feishu webhook URLs.
 type FeishuClient struct {
 	httpClient *http.Client
 }
@@ -23,6 +27,52 @@ func NewFeishuClient(timeout time.Duration) *FeishuClient {
 	}
 }
 
+type feishuCardPayload struct {
+	Schema string `json:"schema"`
+	Config struct {
+		UpdateMulti bool `json:"update_multi"`
+	} `json:"config"`
+	CardLink *feishuCardLink  `json:"card_link,omitempty"`
+	Header   feishuCardHeader `json:"header"`
+	Body     feishuCardBody   `json:"body"`
+}
+
+type feishuCardLink struct {
+	URL string `json:"url"`
+}
+
+type feishuCardHeader struct {
+	Title feishuCardTitle `json:"title"`
+}
+
+type feishuCardTitle struct {
+	Tag     string `json:"tag"`
+	Content string `json:"content"`
+}
+
+type feishuCardBody struct {
+	Elements []feishuCardElement `json:"elements"`
+}
+
+type feishuCardElement struct {
+	Tag     string              `json:"tag"`
+	Content string              `json:"content,omitempty"`
+	Text    *feishuCardTextElem `json:"text,omitempty"`
+	Actions []feishuCardAction  `json:"actions,omitempty"`
+}
+
+type feishuCardTextElem struct {
+	Tag     string `json:"tag"`
+	Content string `json:"content"`
+}
+
+type feishuCardAction struct {
+	Tag  string             `json:"tag"`
+	Text feishuCardTextElem `json:"text"`
+	URL  string             `json:"url"`
+	Type string             `json:"type"`
+}
+
 // SendText posts a text message to the given Feishu webhook URL.
 func (c *FeishuClient) SendText(ctx context.Context, webhookURL string, text string) error {
 	payload := map[string]any{
@@ -31,7 +81,96 @@ func (c *FeishuClient) SendText(ctx context.Context, webhookURL string, text str
 			"text": text,
 		},
 	}
+	return c.sendRequest(ctx, webhookURL, payload)
+}
 
+type CardDeliveryParams struct {
+	WebhookURL  string
+	CardLinkURL string
+	PostURL     string
+	PostTitle   string
+	BodyPreview string
+	PostQID     string
+}
+
+// SendCard posts an interactive card message to the given Feishu webhook URL.
+func (c *FeishuClient) SendCard(ctx context.Context, params CardDeliveryParams) error {
+	resolvedCardLinkURL := resolveCardLinkURL(params)
+	showFooter := resolvedCardLinkURL != params.PostURL && params.PostURL != ""
+
+	elements := make([]feishuCardElement, 0)
+
+	if params.BodyPreview != "" {
+		elements = append(elements, feishuCardElement{
+			Tag: "markdown",
+			Text: &feishuCardTextElem{
+				Tag:     "lark_md",
+				Content: params.BodyPreview,
+			},
+		})
+	}
+
+	if showFooter {
+		elements = append(elements, feishuCardElement{
+			Tag: "action",
+			Actions: []feishuCardAction{
+				{
+					Tag: "button",
+					Text: feishuCardTextElem{
+						Tag:     "plain_text",
+						Content: "View Post",
+					},
+					URL:  params.PostURL,
+					Type: "primary",
+				},
+			},
+		})
+	}
+
+	card := feishuCardPayload{
+		Schema: "2.0",
+		Config: struct {
+			UpdateMulti bool `json:"update_multi"`
+		}{UpdateMulti: true},
+		Header: feishuCardHeader{
+			Title: feishuCardTitle{
+				Tag:     "plain_text",
+				Content: params.PostTitle,
+			},
+		},
+		Body: feishuCardBody{
+			Elements: elements,
+		},
+	}
+
+	if resolvedCardLinkURL != "" {
+		card.CardLink = &feishuCardLink{URL: resolvedCardLinkURL}
+	}
+
+	payload := map[string]any{
+		"msg_type": "interactive",
+		"card":     card,
+	}
+	return c.sendRequest(ctx, params.WebhookURL, payload)
+}
+
+func resolveCardLinkURL(params CardDeliveryParams) string {
+	if strings.TrimSpace(params.CardLinkURL) == "" {
+		return params.PostURL
+	}
+	tmpl, err := template.New("card_link").Parse(params.CardLinkURL)
+	if err != nil {
+		return params.PostURL
+	}
+	var buf bytes.Buffer
+	data := map[string]string{"QID": params.PostQID}
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return params.PostURL
+	}
+	return buf.String()
+}
+
+func (c *FeishuClient) sendRequest(ctx context.Context, webhookURL string, payload any) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("feishu marshal payload: %w", err)
@@ -55,4 +194,12 @@ func (c *FeishuClient) SendText(ctx context.Context, webhookURL string, text str
 	}
 
 	return nil
+}
+
+func feishuWebhookFromChannel(ch delivery.Channel) string {
+	return ch.Configuration.Feishu().WebhookURL
+}
+
+func feishuCardLinkURLFromChannel(ch delivery.Channel) string {
+	return ch.Configuration.Feishu().CardLinkURL
 }

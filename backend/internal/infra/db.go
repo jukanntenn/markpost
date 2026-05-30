@@ -3,6 +3,7 @@ package infra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -111,6 +112,10 @@ func New(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("NewDatabase drop stale channels table: %w", err)
 	}
 
+	if err := database.migrateChannelConfiguration(); err != nil {
+		return nil, fmt.Errorf("NewDatabase migrate channel configuration: %w", err)
+	}
+
 	if err := database.seedAdminUser(); err != nil {
 		return nil, fmt.Errorf("NewDatabase seed admin: %w", err)
 	}
@@ -206,6 +211,49 @@ func (d *Database) dropStaleChannelsTable() error {
 		}
 		log.Print("dropped stale channels table")
 	}
+	return nil
+}
+
+func (d *Database) migrateChannelConfiguration() error {
+	if !d.db.Migrator().HasColumn(&delivery.Channel{}, "webhook_url") {
+		return nil
+	}
+
+	type legacyChannel struct {
+		ID         int    `gorm:"primaryKey"`
+		WebhookURL string `gorm:"column:webhook_url"`
+	}
+
+	var rows []legacyChannel
+	if err := d.db.Table("delivery_channels").Find(&rows).Error; err != nil {
+		return fmt.Errorf("read legacy channels: %w", err)
+	}
+
+	for _, row := range rows {
+		config := delivery.ChannelConfiguration{
+			"webhook_url":   row.WebhookURL,
+			"card_link_url": "",
+		}
+		jsonBytes, err := json.Marshal(config)
+		if err != nil {
+			return fmt.Errorf("marshal config for channel %d: %w", row.ID, err)
+		}
+		if err := d.db.Table("delivery_channels").
+			Where("id = ?", row.ID).
+			Update("configuration", string(jsonBytes)).Error; err != nil {
+			return fmt.Errorf("update config for channel %d: %w", row.ID, err)
+		}
+	}
+
+	if len(rows) > 0 {
+		log.Printf("migrated %d delivery channels from webhook_url to configuration", len(rows))
+	}
+
+	if err := d.db.Migrator().DropColumn(&delivery.Channel{}, "webhook_url"); err != nil {
+		return fmt.Errorf("drop legacy webhook_url column: %w", err)
+	}
+	log.Print("dropped legacy webhook_url column from delivery_channels")
+
 	return nil
 }
 

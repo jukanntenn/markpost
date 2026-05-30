@@ -3,6 +3,7 @@ package delivery
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"strings"
 
@@ -12,11 +13,11 @@ import (
 )
 
 type UpdateChannelParams struct {
-	Kind       string
-	Name       string
-	WebhookURL string
-	Keywords   string
-	Enabled    *bool
+	Kind          string
+	Name          string
+	Configuration json.RawMessage
+	Keywords      string
+	Enabled       *bool
 }
 
 // Service provides delivery channel business logic.
@@ -37,13 +38,31 @@ func normalizeAndValidateKind(kind string) (delivery.ChannelKind, error) {
 	return normalized, nil
 }
 
-func validateWebhookURL(raw string) (string, error) {
-	cleaned := strings.TrimSpace(raw)
-	parsedURL, err := url.Parse(cleaned)
-	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
-		return "", service.NewServiceError(service.ErrValidation, "invalid webhook URL: must be a valid HTTP or HTTPS URL")
+func validateConfiguration(kind delivery.ChannelKind, raw json.RawMessage) (delivery.ChannelConfiguration, error) {
+	var config delivery.ChannelConfiguration
+	if err := json.Unmarshal(raw, &config); err != nil {
+		return nil, service.NewServiceError(service.ErrValidation, "invalid configuration JSON: "+err.Error())
 	}
-	return cleaned, nil
+
+	switch kind {
+	case delivery.ChannelKindFeishu:
+		feishu := config.Feishu()
+		if strings.TrimSpace(feishu.WebhookURL) == "" {
+			return nil, service.NewServiceError(service.ErrValidation, "webhook URL is required")
+		}
+		parsedURL, err := url.Parse(strings.TrimSpace(feishu.WebhookURL))
+		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
+			return nil, service.NewServiceError(service.ErrValidation, "invalid webhook URL: must be a valid HTTP or HTTPS URL")
+		}
+		config["webhook_url"] = strings.TrimSpace(feishu.WebhookURL)
+		if _, ok := config["card_link_url"]; !ok {
+			config["card_link_url"] = ""
+		}
+	default:
+		return nil, service.NewServiceError(service.ErrValidation, "unsupported channel kind: "+string(kind))
+	}
+
+	return config, nil
 }
 
 // ListByUserID lists all delivery channels for a user.
@@ -62,26 +81,26 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 		return nil, service.NewServiceError(service.ErrValidation, "channel name is required")
 	}
 
-	if params.WebhookURL == "" {
-		return nil, service.NewServiceError(service.ErrValidation, "webhook URL is required")
-	}
-	cleanedWebhookURL, err := validateWebhookURL(params.WebhookURL)
-	if err != nil {
-		return nil, err
-	}
-
 	kind, err := normalizeAndValidateKind(params.Kind)
 	if err != nil {
 		return nil, err
 	}
 
+	if len(params.Configuration) == 0 {
+		return nil, service.NewServiceError(service.ErrValidation, "configuration is required")
+	}
+	config, err := validateConfiguration(kind, params.Configuration)
+	if err != nil {
+		return nil, err
+	}
+
 	ch := &delivery.Channel{
-		UserID:     userID,
-		Kind:       kind,
-		Name:       cleanedName,
-		Enabled:    true,
-		WebhookURL: cleanedWebhookURL,
-		Keywords:   strings.TrimSpace(params.Keywords),
+		UserID:        userID,
+		Kind:          kind,
+		Name:          cleanedName,
+		Enabled:       true,
+		Configuration: config,
+		Keywords:      strings.TrimSpace(params.Keywords),
 	}
 
 	if err := s.repo.Create(ctx, ch); err != nil {
@@ -106,12 +125,12 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 		ch.Kind = kind
 	}
 	utils.ApplyIfNonEmpty(&ch.Name, params.Name)
-	if params.WebhookURL != "" {
-		cleaned, err := validateWebhookURL(params.WebhookURL)
+	if len(params.Configuration) > 0 {
+		config, err := validateConfiguration(ch.Kind, params.Configuration)
 		if err != nil {
 			return nil, err
 		}
-		ch.WebhookURL = cleaned
+		ch.Configuration = config
 	}
 	utils.ApplyIfNonEmpty(&ch.Keywords, params.Keywords)
 	if params.Enabled != nil {

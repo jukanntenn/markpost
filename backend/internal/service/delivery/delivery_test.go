@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"markpost/internal/domain/delivery"
@@ -17,13 +18,22 @@ func setupDeliveryService(t *testing.T) (*Service, delivery.Repository) {
 	return svc, repo
 }
 
+func feishuConfigJSON(webhookURL, cardLinkURL string) json.RawMessage {
+	cfg := delivery.ChannelConfiguration{
+		"webhook_url":   webhookURL,
+		"card_link_url": cardLinkURL,
+	}
+	b, _ := json.Marshal(cfg)
+	return b
+}
+
 func TestService_ListByUserID(t *testing.T) {
 	svc, repo := setupDeliveryService(t)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", WebhookURL: "https://a.com"})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch2", WebhookURL: "https://b.com"})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch3", WebhookURL: "https://c.com"})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch3", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://c.com", "card_link_url": ""}})
 
 	channels, err := svc.ListByUserID(ctx, 1)
 	if err != nil {
@@ -40,10 +50,10 @@ func TestService_Create(t *testing.T) {
 
 	t.Run("creates channel successfully", func(t *testing.T) {
 		ch, err := svc.Create(ctx, 1, UpdateChannelParams{
-			Kind:       "feishu",
-			Name:       "My Channel",
-			WebhookURL: "https://example.com/webhook",
-			Keywords:   "alert,error",
+			Kind:          "feishu",
+			Name:          "My Channel",
+			Configuration: feishuConfigJSON("https://example.com/webhook", ""),
+			Keywords:      "alert,error",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -57,10 +67,30 @@ func TestService_Create(t *testing.T) {
 		if !ch.Enabled {
 			t.Error("expected channel to be enabled")
 		}
+		feishu := ch.Configuration.Feishu()
+		if feishu.WebhookURL != "https://example.com/webhook" {
+			t.Errorf("webhook_url = %q, want %q", feishu.WebhookURL, "https://example.com/webhook")
+		}
+	})
+
+	t.Run("creates channel with card_link_url", func(t *testing.T) {
+		ch, err := svc.Create(ctx, 1, UpdateChannelParams{
+			Kind:          "feishu",
+			Name:          "Card Link Channel",
+			Configuration: feishuConfigJSON("https://example.com/webhook", "https://custom.example.com/{{.QID}}"),
+			Keywords:      "",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		feishu := ch.Configuration.Feishu()
+		if feishu.CardLinkURL != "https://custom.example.com/{{.QID}}" {
+			t.Errorf("card_link_url = %q, want %q", feishu.CardLinkURL, "https://custom.example.com/{{.QID}}")
+		}
 	})
 
 	t.Run("rejects empty name", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", WebhookURL: "https://example.com"})
+		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", Configuration: feishuConfigJSON("https://example.com", "")})
 		if err == nil {
 			t.Fatal("expected error for empty name")
 		}
@@ -70,22 +100,48 @@ func TestService_Create(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects empty webhook URL", func(t *testing.T) {
+	t.Run("rejects empty configuration", func(t *testing.T) {
 		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", Name: "Test"})
+		if err == nil {
+			t.Fatal("expected error for empty configuration")
+		}
+	})
+
+	t.Run("rejects missing webhook URL", func(t *testing.T) {
+		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+			Kind:          "feishu",
+			Name:          "Test",
+			Configuration: feishuConfigJSON("", ""),
+		})
 		if err == nil {
 			t.Fatal("expected error for empty webhook URL")
 		}
 	})
 
 	t.Run("rejects invalid webhook URL", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", Name: "Test", WebhookURL: "ftp://invalid"})
+		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+			Kind:          "feishu",
+			Name:          "Test",
+			Configuration: feishuConfigJSON("ftp://invalid", ""),
+		})
 		if err == nil {
 			t.Fatal("expected error for invalid webhook URL")
 		}
 	})
 
+	t.Run("rejects invalid configuration JSON", func(t *testing.T) {
+		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+			Kind:          "feishu",
+			Name:          "Test",
+			Configuration: json.RawMessage(`{invalid`),
+		})
+		if err == nil {
+			t.Fatal("expected error for invalid JSON")
+		}
+	})
+
 	t.Run("rejects unsupported kind", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "slack", Name: "Test", WebhookURL: "https://example.com"})
+		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "slack", Name: "Test", Configuration: feishuConfigJSON("https://example.com", "")})
 		if err == nil {
 			t.Fatal("expected error for unsupported kind")
 		}
@@ -100,9 +156,9 @@ func TestService_Update(t *testing.T) {
 	svc, repo := setupDeliveryService(t)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Old", WebhookURL: "https://old.com", Keywords: "old"})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Old", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://old.com", "card_link_url": ""}, Keywords: "old"})
 
-	t.Run("updates channel successfully", func(t *testing.T) {
+	t.Run("updates channel name successfully", func(t *testing.T) {
 		newName := "New Name"
 		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Name: newName})
 		if err != nil {
@@ -124,14 +180,19 @@ func TestService_Update(t *testing.T) {
 		}
 	})
 
-	t.Run("updates webhook URL", func(t *testing.T) {
-		newURL := "https://new.com/webhook"
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{WebhookURL: newURL})
+	t.Run("updates configuration", func(t *testing.T) {
+		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{
+			Configuration: feishuConfigJSON("https://new.com/webhook", "https://custom.com/{{.QID}}"),
+		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if ch.WebhookURL != newURL {
-			t.Errorf("webhook_url = %q, want %q", ch.WebhookURL, newURL)
+		feishu := ch.Configuration.Feishu()
+		if feishu.WebhookURL != "https://new.com/webhook" {
+			t.Errorf("webhook_url = %q, want %q", feishu.WebhookURL, "https://new.com/webhook")
+		}
+		if feishu.CardLinkURL != "https://custom.com/{{.QID}}" {
+			t.Errorf("card_link_url = %q, want %q", feishu.CardLinkURL, "https://custom.com/{{.QID}}")
 		}
 	})
 
@@ -157,7 +218,9 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("rejects invalid webhook URL on update", func(t *testing.T) {
-		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{WebhookURL: "ftp://invalid"})
+		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{
+			Configuration: feishuConfigJSON("ftp://invalid", ""),
+		})
 		if err == nil {
 			t.Fatal("expected error for invalid webhook URL")
 		}
@@ -175,7 +238,7 @@ func TestService_Delete(t *testing.T) {
 	svc, repo := setupDeliveryService(t)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch", WebhookURL: "https://a.com"})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
 
 	t.Run("deletes channel successfully", func(t *testing.T) {
 		err := svc.Delete(ctx, 1, 1)
@@ -200,8 +263,8 @@ func TestService_ListAll(t *testing.T) {
 	svc, repo := setupDeliveryService(t)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", WebhookURL: "https://a.com"})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", WebhookURL: "https://b.com"})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
 
 	channels, total, err := svc.ListAll(ctx, 0, 10)
 	if err != nil {
@@ -242,32 +305,70 @@ func TestNormalizeAndValidateKind(t *testing.T) {
 	}
 }
 
-func TestValidateWebhookURL(t *testing.T) {
-	t.Run("valid URL", func(t *testing.T) {
-		cleaned, err := validateWebhookURL("  https://example.com/webhook  ")
+func TestValidateConfiguration(t *testing.T) {
+	t.Run("valid feishu configuration", func(t *testing.T) {
+		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", ""))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if cleaned != "https://example.com/webhook" {
-			t.Errorf("cleaned = %q, want %q", cleaned, "https://example.com/webhook")
+		feishu := config.Feishu()
+		if feishu.WebhookURL != "https://example.com/hook" {
+			t.Errorf("webhook_url = %q, want %q", feishu.WebhookURL, "https://example.com/hook")
 		}
 	})
 
-	t.Run("invalid URL scheme", func(t *testing.T) {
-		_, err := validateWebhookURL("ftp://example.com/hook")
-		if err == nil {
-			t.Fatal("expected error")
+	t.Run("valid feishu configuration with card_link_url", func(t *testing.T) {
+		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", "https://custom.com/{{.QID}}"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
-		se, _ := service.AsServiceError(err)
-		if se.Code != service.ErrValidation {
-			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+		feishu := config.Feishu()
+		if feishu.CardLinkURL != "https://custom.com/{{.QID}}" {
+			t.Errorf("card_link_url = %q, want %q", feishu.CardLinkURL, "https://custom.com/{{.QID}}")
 		}
 	})
 
-	t.Run("unparseable URL", func(t *testing.T) {
-		_, err := validateWebhookURL("://not-a-url")
+	t.Run("defaults card_link_url to empty", func(t *testing.T) {
+		raw := json.RawMessage(`{"webhook_url":"https://example.com/hook"}`)
+		config, err := validateConfiguration(delivery.ChannelKindFeishu, raw)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		feishu := config.Feishu()
+		if feishu.CardLinkURL != "" {
+			t.Errorf("card_link_url = %q, want empty", feishu.CardLinkURL)
+		}
+	})
+
+	t.Run("rejects invalid JSON", func(t *testing.T) {
+		_, err := validateConfiguration(delivery.ChannelKindFeishu, json.RawMessage(`not json`))
 		if err == nil {
 			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("rejects empty webhook URL", func(t *testing.T) {
+		_, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("", ""))
+		if err == nil {
+			t.Fatal("expected error for empty webhook URL")
+		}
+	})
+
+	t.Run("rejects invalid webhook URL scheme", func(t *testing.T) {
+		_, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("ftp://example.com", ""))
+		if err == nil {
+			t.Fatal("expected error for invalid URL scheme")
+		}
+	})
+
+	t.Run("trims whitespace from webhook URL", func(t *testing.T) {
+		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("  https://example.com/hook  ", ""))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		feishu := config.Feishu()
+		if feishu.WebhookURL != "https://example.com/hook" {
+			t.Errorf("webhook_url = %q, want %q", feishu.WebhookURL, "https://example.com/hook")
 		}
 	})
 }

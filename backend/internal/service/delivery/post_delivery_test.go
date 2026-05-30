@@ -117,80 +117,34 @@ func TestBuildPostURL(t *testing.T) {
 	}
 }
 
-func TestBuildDeliveryMessage(t *testing.T) {
+func TestBuildBodyPreview(t *testing.T) {
 	tests := []struct {
-		name             string
-		title            string
-		body             string
-		postURL          string
-		bodyPreviewChars int
-		wantContains     []string
+		name string
+		body string
+		max  int
+		want string
 	}{
-		{
-			name:             "full message",
-			title:            "Alert",
-			body:             "Something happened",
-			postURL:          "https://example.com/p-1",
-			bodyPreviewChars: 200,
-			wantContains:     []string{"Alert", "Something happened", "https://example.com/p-1"},
-		},
-		{
-			name:             "empty body",
-			title:            "Alert",
-			body:             "",
-			postURL:          "https://example.com/p-1",
-			bodyPreviewChars: 200,
-			wantContains:     []string{"Alert", "https://example.com/p-1"},
-		},
-		{
-			name:             "empty title defaults to New post",
-			title:            "",
-			body:             "Body",
-			postURL:          "https://example.com/p-1",
-			bodyPreviewChars: 200,
-			wantContains:     []string{"New post", "Body"},
-		},
-		{
-			name:             "truncated body",
-			title:            "Alert",
-			body:             "A very long body that should be truncated",
-			postURL:          "https://example.com/p-1",
-			bodyPreviewChars: 10,
-			wantContains:     []string{"Alert", "…"},
-		},
-		{
-			name:             "title only",
-			title:            "Alert",
-			body:             "",
-			postURL:          "",
-			bodyPreviewChars: 200,
-			wantContains:     []string{"Alert"},
-		},
+		{"empty body", "", 200, ""},
+		{"short body", "Hello", 200, "Hello"},
+		{"long body truncated", "A very long body that should be truncated", 10, "A very lon…"},
+		{"exact length", "Hello", 5, "Hello"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildDeliveryMessage(tt.title, tt.body, tt.postURL, tt.bodyPreviewChars)
-			for _, s := range tt.wantContains {
-				if !contains(got, s) {
-					t.Errorf("buildDeliveryMessage() = %q, want to contain %q", got, s)
-				}
+			got := buildBodyPreview(tt.body, tt.max)
+			if got != tt.want {
+				t.Errorf("buildBodyPreview(%q, %d) = %q, want %q", tt.body, tt.max, got, tt.want)
 			}
 		})
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || findSubstring(s, substr))
-}
-
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+func makeFeishuChannelConfig(webhookURL string) delivery.ChannelConfiguration {
+	return delivery.ChannelConfiguration{
+		"webhook_url":   webhookURL,
+		"card_link_url": "",
 	}
-	return false
 }
 
 func TestPostDeliveryService_Deliver(t *testing.T) {
@@ -200,12 +154,12 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 		ctx := context.Background()
 
 		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:     1,
-			Kind:       delivery.ChannelKindFeishu,
-			Name:       "Alert Channel",
-			Enabled:    true,
-			WebhookURL: "https://example.com/webhook",
-			Keywords:   "alert",
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Alert Channel",
+			Enabled:       true,
+			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
+			Keywords:      "alert",
 		})
 
 		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
@@ -223,12 +177,12 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 		ctx := context.Background()
 
 		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:     1,
-			Kind:       delivery.ChannelKindFeishu,
-			Name:       "Disabled",
-			Enabled:    false,
-			WebhookURL: "https://example.com/webhook",
-			Keywords:   "",
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Disabled",
+			Enabled:       false,
+			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
+			Keywords:      "",
 		})
 
 		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
@@ -246,12 +200,12 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 		ctx := context.Background()
 
 		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:     1,
-			Kind:       delivery.ChannelKindFeishu,
-			Name:       "Alert Only",
-			Enabled:    true,
-			WebhookURL: "https://example.com/webhook",
-			Keywords:   "alert",
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Alert Only",
+			Enabled:       true,
+			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
+			Keywords:      "alert",
 		})
 
 		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
@@ -263,7 +217,7 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 		})
 	})
 
-	t.Run("sends to feishu webhook", func(t *testing.T) {
+	t.Run("sends card to feishu webhook", func(t *testing.T) {
 		var received bool
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			received = true
@@ -277,12 +231,12 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 		ctx := context.Background()
 
 		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:     1,
-			Kind:       delivery.ChannelKindFeishu,
-			Name:       "Test",
-			Enabled:    true,
-			WebhookURL: server.URL,
-			Keywords:   "",
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Test",
+			Enabled:       true,
+			Configuration: makeFeishuChannelConfig(server.URL),
+			Keywords:      "",
 		})
 
 		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}

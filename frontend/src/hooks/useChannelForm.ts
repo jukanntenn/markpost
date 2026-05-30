@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
-import type { DeliveryChannel, DeliveryChannelResponse, CreateChannelPayload } from "@/types/delivery";
+import type {
+  DeliveryChannel,
+  DeliveryChannelResponse,
+  CreateChannelPayload,
+} from "@/types/delivery";
 import type { FormState, UpdateChannelMutationVars } from "@/utils/channel-form";
 import {
   EMPTY_FORM,
@@ -13,8 +17,16 @@ export type { FormState } from "@/utils/channel-form";
 export type { UpdateChannelMutationVars } from "@/utils/channel-form";
 
 interface UseChannelFormOptions {
-  createMutation: UseMutationResult<DeliveryChannelResponse, Error, CreateChannelPayload>;
-  updateMutation: UseMutationResult<DeliveryChannelResponse, Error, UpdateChannelMutationVars>;
+  createMutation: UseMutationResult<
+    DeliveryChannelResponse,
+    Error,
+    CreateChannelPayload
+  >;
+  updateMutation: UseMutationResult<
+    DeliveryChannelResponse,
+    Error,
+    UpdateChannelMutationVars
+  >;
 }
 
 interface UseChannelFormReturn {

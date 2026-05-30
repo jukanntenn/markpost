@@ -188,8 +188,8 @@ func TestAdminListPosts_WithSearch(t *testing.T) {
 func TestAdminListChannels_Success(t *testing.T) {
 	svc, _, _, channelRepo := setupAdminHandlerDeps(t)
 	ctx := t.Context()
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", WebhookURL: "https://a.com"})
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", WebhookURL: "https://b.com"})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
 
 	router := newTestEngine()
 	router.GET("/admin/channels", func(c *gin.Context) {

@@ -38,7 +38,7 @@ func (s *PostDeliveryService) Deliver(ctx context.Context, job post.DeliveryJob)
 
 	cfg := config.Get()
 	postURL := buildPostURL(cfg.Server.PublicURL, cfg.Server.Host, cfg.Server.Port, job.PostQID)
-	message := buildDeliveryMessage(job.Title, job.Body, postURL, cfg.Delivery.BodyPreviewChars)
+	bodyPreview := buildBodyPreview(job.Body, cfg.Delivery.BodyPreviewChars)
 
 	for _, channel := range channels {
 		if !channel.Enabled {
@@ -50,13 +50,31 @@ func (s *PostDeliveryService) Deliver(ctx context.Context, job post.DeliveryJob)
 			if !postTitleMatchesAllKeywords(job.Title, channel.Keywords) {
 				continue
 			}
-			if err := s.feishu.SendText(ctx, channel.WebhookURL, message); err != nil {
+			webhookURL := feishuWebhookFromChannel(channel)
+			cardLinkURL := feishuCardLinkURLFromChannel(channel)
+			if err := s.feishu.SendCard(ctx, CardDeliveryParams{
+				WebhookURL:  webhookURL,
+				CardLinkURL: cardLinkURL,
+				PostURL:     postURL,
+				PostTitle:   job.Title,
+				BodyPreview: bodyPreview,
+				PostQID:     job.PostQID,
+			}); err != nil {
 				log.Printf("delivery feishu failed channel_id=%d user_id=%d err=%v", channel.ID, channel.UserID, err)
 			}
 		default:
 			log.Printf("delivery unsupported channel kind=%s channel_id=%d user_id=%d", channel.Kind, channel.ID, channel.UserID)
 		}
 	}
+}
+
+func buildBodyPreview(body string, maxChars int) string {
+	preview := strings.TrimSpace(body)
+	preview = truncateRunes(preview, maxChars)
+	if preview != "" && preview != strings.TrimSpace(body) {
+		preview += "…"
+	}
+	return preview
 }
 
 func postTitleMatchesAllKeywords(title string, rawKeywords string) bool {
@@ -117,29 +135,4 @@ func buildPostURL(publicURL string, host string, port uint16, qid string) string
 		return base
 	}
 	return base + "/" + strings.TrimLeft(qid, "/")
-}
-
-func buildDeliveryMessage(title string, body string, postURL string, bodyPreviewChars int) string {
-	titleText := strings.TrimSpace(title)
-	if titleText == "" {
-		titleText = "New post"
-	}
-
-	bodyPreview := strings.TrimSpace(body)
-	bodyPreview = truncateRunes(bodyPreview, bodyPreviewChars)
-	if bodyPreview != "" && bodyPreview != strings.TrimSpace(body) {
-		bodyPreview += "…"
-	}
-
-	postURL = strings.TrimSpace(postURL)
-	if bodyPreview == "" {
-		if postURL == "" {
-			return titleText
-		}
-		return titleText + "\n\n" + postURL
-	}
-	if postURL == "" {
-		return titleText + "\n\n" + bodyPreview
-	}
-	return titleText + "\n\n" + bodyPreview + "\n\n" + postURL
 }

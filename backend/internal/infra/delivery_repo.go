@@ -49,11 +49,11 @@ func (r *DeliveryChannelRepository) Create(ctx context.Context, channel *deliver
 // Update updates an existing delivery channel.
 func (r *DeliveryChannelRepository) Update(ctx context.Context, channel *delivery.Channel) error {
 	updates := map[string]any{
-		"kind":        channel.Kind,
-		"name":        channel.Name,
-		"enabled":     channel.Enabled,
-		"webhook_url": channel.WebhookURL,
-		"keywords":    channel.Keywords,
+		"kind":          channel.Kind,
+		"name":          channel.Name,
+		"enabled":       channel.Enabled,
+		"configuration": channel.Configuration,
+		"keywords":      channel.Keywords,
 	}
 	return updateByID[delivery.Channel](ctx, r.db, channel.ID, updates, "Update")
 }

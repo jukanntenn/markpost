@@ -18,14 +18,17 @@ import (
 
 func newTestChannel(overrides ...func(*delivery.Channel)) *delivery.Channel {
 	ch := &delivery.Channel{
-		ID:         1,
-		UserID:     1,
-		Kind:       delivery.ChannelKindFeishu,
-		Name:       "Test Channel",
-		WebhookURL: "https://example.com/webhook",
-		Enabled:    true,
-		CreatedAt:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-		UpdatedAt:  time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		ID:      1,
+		UserID:  1,
+		Kind:    delivery.ChannelKindFeishu,
+		Name:    "Test Channel",
+		Enabled: true,
+		Configuration: delivery.ChannelConfiguration{
+			"webhook_url":   "https://example.com/webhook",
+			"card_link_url": "",
+		},
+		CreatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 	for _, o := range overrides {
 		o(ch)
@@ -63,16 +66,22 @@ func (m *mockDeliveryService) Create(_ context.Context, userID int, params deliv
 	if m.err != nil {
 		return nil, m.err
 	}
+
+	var config delivery.ChannelConfiguration
+	if len(params.Configuration) > 0 {
+		json.Unmarshal(params.Configuration, &config)
+	}
+
 	ch := &delivery.Channel{
-		ID:         m.nextID,
-		UserID:     userID,
-		Kind:       delivery.ChannelKind(params.Kind),
-		Name:       params.Name,
-		WebhookURL: params.WebhookURL,
-		Keywords:   params.Keywords,
-		Enabled:    true,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+		ID:            m.nextID,
+		UserID:        userID,
+		Kind:          delivery.ChannelKind(params.Kind),
+		Name:          params.Name,
+		Configuration: config,
+		Keywords:      params.Keywords,
+		Enabled:       true,
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
 	}
 	m.channels[ch.ID] = ch
 	m.nextID++
@@ -93,8 +102,10 @@ func (m *mockDeliveryService) Update(_ context.Context, userID int, id int, para
 	if params.Name != "" {
 		ch.Name = params.Name
 	}
-	if params.WebhookURL != "" {
-		ch.WebhookURL = params.WebhookURL
+	if len(params.Configuration) > 0 {
+		var config delivery.ChannelConfiguration
+		json.Unmarshal(params.Configuration, &config)
+		ch.Configuration = config
 	}
 	if params.Keywords != "" {
 		ch.Keywords = params.Keywords
@@ -233,11 +244,16 @@ func TestCreateDeliveryChannel_Success(t *testing.T) {
 	router := newTestEngine()
 	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
 
+	config := delivery.ChannelConfiguration{
+		"webhook_url":   "https://example.com/webhook",
+		"card_link_url": "",
+	}
+	configJSON, _ := json.Marshal(config)
 	body := CreateDeliveryChannelRequest{
-		Kind:       "feishu",
-		Name:       "My Channel",
-		WebhookURL: "https://example.com/webhook",
-		Keywords:   "alert,error",
+		Kind:          "feishu",
+		Name:          "My Channel",
+		Configuration: configJSON,
+		Keywords:      "alert,error",
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -267,8 +283,11 @@ func TestCreateDeliveryChannel_NoUser(t *testing.T) {
 	router := newTestEngine()
 	router.POST("/channels", CreateDeliveryChannel(mockSvc))
 
+	configJSON, _ := json.Marshal(map[string]string{"webhook_url": "https://example.com"})
 	body := CreateDeliveryChannelRequest{
-		Kind: "feishu", Name: "Test", WebhookURL: "https://example.com",
+		Kind:          "feishu",
+		Name:          "Test",
+		Configuration: configJSON,
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -315,8 +334,11 @@ func TestCreateDeliveryChannel_ServiceError(t *testing.T) {
 	router := newTestEngine()
 	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
 
+	configJSON, _ := json.Marshal(map[string]string{"webhook_url": "https://example.com"})
 	body := CreateDeliveryChannelRequest{
-		Kind: "feishu", Name: "Test", WebhookURL: "https://example.com",
+		Kind:          "feishu",
+		Name:          "Test",
+		Configuration: configJSON,
 	}
 	jsonBody, _ := json.Marshal(body)
 

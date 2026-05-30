@@ -158,6 +158,8 @@
     "deliveryChannelNamePlaceholder": "Optional name",
     "deliveryChannelWebhookURL": "Webhook URL",
     "deliveryChannelWebhookPlaceholder": "Paste Feishu bot webhook URL",
+    "deliveryChannelCardLinkURL": "Card Link URL",
+    "deliveryChannelCardLinkURLPlaceholder": "Leave empty to use post URL, or use the placeholder for post ID",
     "deliveryChannelKeywordsPlaceholder": "keyword1, keyword2",
     "deliveryChannelKeywordsHelp": "Deliver only when the post title contains all keywords (comma-separated).",
     "deliveryChannelCancel": "Cancel",

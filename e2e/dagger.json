@@ -1,0 +1,8 @@
+{
+  "name": "markpost-e2e",
+  "engineVersion": "v0.21.0",
+  "sdk": {
+    "source": "typescript"
+  },
+  "source": "src"
+}

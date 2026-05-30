@@ -7,7 +7,6 @@ export class DashboardPage {
   readonly hideKeyButton: Locator;
   readonly copyKeyButton: Locator;
   readonly latestPostsHeading: Locator;
-  readonly userMenuButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -16,11 +15,10 @@ export class DashboardPage {
     this.hideKeyButton = page.getByTitle("Hide key");
     this.copyKeyButton = page.getByTitle("Copy key");
     this.latestPostsHeading = page.getByText("Latest Posts", { exact: true });
-    this.userMenuButton = page.locator(".dropdown-toggle").filter({ hasText: /tester/ });
   }
 
   async goto() {
-    await this.page.goto("dashboard");
+    await this.page.goto("/dashboard");
   }
 
   async clickShowKey() {
@@ -33,10 +31,11 @@ export class DashboardPage {
 
   async clickCopyKey() {
     await this.copyKeyButton.click();
+    await this.page.getByText("Copy Post Key", { exact: true }).click();
   }
 
   async getPostKeyText() {
-    return this.page.locator(".font-monospace.fs-5");
+    return this.page.locator(".font-mono");
   }
 
   async getCopiedBadge() {
@@ -44,11 +43,7 @@ export class DashboardPage {
   }
 
   async clickUserMenu() {
-    await this.userMenuButton.click();
-  }
-
-  async clickSettings() {
-    await this.page.getByText("Settings", { exact: true }).click();
+    await this.page.getByRole("button").filter({ hasText: /markpost/ }).click();
   }
 
   async clickLogout() {
@@ -56,6 +51,6 @@ export class DashboardPage {
   }
 
   async getQuickCreateButton() {
-    return this.page.getByTitle("Quickly create a sample Markdown post");
+    return this.page.getByTitle("Create Test Post");
   }
 }

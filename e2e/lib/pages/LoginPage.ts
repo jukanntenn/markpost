@@ -6,6 +6,7 @@ export class LoginPage {
   readonly passwordInput: Locator;
   readonly submitButton: Locator;
   readonly alertDanger: Locator;
+  readonly errorAlert: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -13,10 +14,11 @@ export class LoginPage {
     this.passwordInput = page.locator('input[name="password"]');
     this.submitButton = page.locator('button[type="submit"]');
     this.alertDanger = page.locator(".alert-danger");
+    this.errorAlert = page.locator("[data-slot='alert']");
   }
 
   async goto() {
-    await this.page.goto("login");
+    await this.page.goto("/login");
   }
 
   async login(username: string, password: string) {
@@ -30,7 +32,7 @@ export class LoginPage {
   }
 
   async getErrorMessage() {
-    return this.alertDanger;
+    return this.errorAlert;
   }
 
   async isSubmitDisabled() {

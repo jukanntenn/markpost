@@ -16,14 +16,14 @@ export class PostsPage {
   }
 
   async goto() {
-    await this.page.goto("posts");
+    await this.page.goto("/posts");
   }
 
   async getPostLink(title: string) {
     return this.page.getByRole("link", { name: title });
   }
 
-  async getNoPostsMessage() {
+  getNoPostsMessage() {
     return this.page.getByText("No posts yet", { exact: true });
   }
 }

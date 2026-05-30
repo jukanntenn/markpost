@@ -9,22 +9,22 @@ export class SettingsPage {
   readonly newPasswordInput: Locator;
   readonly confirmPasswordInput: Locator;
   readonly changePasswordButton: Locator;
-  readonly languageToggleButton: Locator;
+  readonly localeSelect: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.appSettingsHeading = page.getByText("Application Settings", { exact: true });
     this.languageLabel = page.getByText("Language", { exact: true });
-    this.changePasswordHeading = page.getByRole("heading", { name: "Change Password", exact: true });
-    this.currentPasswordInput = page.locator('input[name="current_password"]');
-    this.newPasswordInput = page.locator('input[name="new_password"]');
-    this.confirmPasswordInput = page.locator('input[name="confirm_password"]');
-    this.changePasswordButton = page.getByRole("button", { name: "Change Password" });
-    this.languageToggleButton = page.getByRole("button", { name: "Change Language" });
+    this.changePasswordHeading = page.getByText("Change Password", { exact: true });
+    this.currentPasswordInput = page.locator("#current-password");
+    this.newPasswordInput = page.locator("#new-password");
+    this.confirmPasswordInput = page.locator("#confirm-password");
+    this.changePasswordButton = page.getByRole("button", { name: "Save" });
+    this.localeSelect = page.locator("#locale-select");
   }
 
   async goto() {
-    await this.page.goto("settings");
+    await this.page.goto("/settings");
   }
 
   async fillPasswordForm(current: string, newPass: string, confirm: string) {
@@ -37,23 +37,15 @@ export class SettingsPage {
     await this.changePasswordButton.click();
   }
 
-  async clickChangePasswordByEnter() {
-    await this.confirmPasswordInput.press("Enter");
-  }
-
   async getSuccessMessage() {
     return this.page.getByText("Password changed successfully!", { exact: true });
   }
 
-  async getAlert() {
-    return this.page.locator(".alert.alert-danger");
+  getAlert() {
+    return this.page.locator("[data-slot='alert']");
   }
 
-  async clickLanguageToggle() {
-    await this.languageToggleButton.click();
-  }
-
-  async selectLanguage(text: string) {
-    await this.page.getByText(text, { exact: true }).click();
+  async selectLocale(value: string) {
+    await this.localeSelect.selectOption(value);
   }
 }

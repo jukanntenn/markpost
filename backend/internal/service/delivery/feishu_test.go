@@ -53,6 +53,20 @@ func TestFeishuClient_SendText(t *testing.T) {
 		}
 	})
 
+	t.Run("returns error for non-zero API code", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"code":11246,"msg":"card json is invalid"}`))
+		}))
+		defer server.Close()
+
+		client := NewFeishuClient(5 * time.Second)
+		err := client.SendText(context.Background(), server.URL, "test")
+		if err == nil {
+			t.Fatal("expected error for non-zero API code")
+		}
+	})
+
 	t.Run("returns error for unreachable URL", func(t *testing.T) {
 		client := NewFeishuClient(100 * time.Millisecond)
 		err := client.SendText(context.Background(), "http://192.0.2.1:12345/webhook", "test")
@@ -174,20 +188,18 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		body := card["body"].(map[string]any)
 		elements := body["elements"].([]any)
 
-		hasAction := false
+		hasButton := false
 		for _, elem := range elements {
 			el := elem.(map[string]any)
-			if el["tag"] == "action" {
-				hasAction = true
-				actions := el["actions"].([]any)
-				action := actions[0].(map[string]any)
-				if action["url"] != "https://example.com/p-abc" {
-					t.Errorf("action url = %v, want %q", action["url"], "https://example.com/p-abc")
+			if el["tag"] == "button" {
+				hasButton = true
+				if el["url"] != "https://example.com/p-abc" {
+					t.Errorf("button url = %v, want %q", el["url"], "https://example.com/p-abc")
 				}
 			}
 		}
-		if !hasAction {
-			t.Error("expected action element in card body when card_link_url differs from post URL")
+		if !hasButton {
+			t.Error("expected button element in card body when card_link_url differs from post URL")
 		}
 	})
 
@@ -220,8 +232,8 @@ func TestFeishuClient_SendCard(t *testing.T) {
 
 		for _, elem := range elements {
 			el := elem.(map[string]any)
-			if el["tag"] == "action" {
-				t.Error("expected no action element when card_link_url equals post URL")
+			if el["tag"] == "button" {
+				t.Error("expected no button element when card_link_url equals post URL")
 			}
 		}
 	})

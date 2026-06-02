@@ -81,7 +81,7 @@ export function LoginPage() {
       <div className="w-full max-w-md">
         <LoginTitle />
 
-        <Card className="shadow-sm">
+        <Card>
           <CardContent className="space-y-4">
             <FormAlert message={error} />
 

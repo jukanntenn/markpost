@@ -55,22 +55,16 @@ type feishuCardBody struct {
 }
 
 type feishuCardElement struct {
-	Tag     string              `json:"tag"`
-	Content string              `json:"content,omitempty"`
-	Text    *feishuCardTextElem `json:"text,omitempty"`
-	Actions []feishuCardAction  `json:"actions,omitempty"`
+	Tag        string              `json:"tag"`
+	Content    string              `json:"content,omitempty"`
+	Text       *feishuCardTextElem `json:"text,omitempty"`
+	URL        string              `json:"url,omitempty"`
+	ButtonType string              `json:"type,omitempty"`
 }
 
 type feishuCardTextElem struct {
 	Tag     string `json:"tag"`
 	Content string `json:"content"`
-}
-
-type feishuCardAction struct {
-	Tag  string             `json:"tag"`
-	Text feishuCardTextElem `json:"text"`
-	URL  string             `json:"url"`
-	Type string             `json:"type"`
 }
 
 // SendText posts a text message to the given Feishu webhook URL.
@@ -102,28 +96,20 @@ func (c *FeishuClient) SendCard(ctx context.Context, params CardDeliveryParams) 
 
 	if params.BodyPreview != "" {
 		elements = append(elements, feishuCardElement{
-			Tag: "markdown",
-			Text: &feishuCardTextElem{
-				Tag:     "lark_md",
-				Content: params.BodyPreview,
-			},
+			Tag:     "markdown",
+			Content: params.BodyPreview,
 		})
 	}
 
 	if showFooter {
 		elements = append(elements, feishuCardElement{
-			Tag: "action",
-			Actions: []feishuCardAction{
-				{
-					Tag: "button",
-					Text: feishuCardTextElem{
-						Tag:     "plain_text",
-						Content: "View Post",
-					},
-					URL:  params.PostURL,
-					Type: "primary",
-				},
+			Tag: "button",
+			Text: &feishuCardTextElem{
+				Tag:     "plain_text",
+				Content: "View Post",
 			},
+			URL:        params.PostURL,
+			ButtonType: "primary",
 		})
 	}
 
@@ -191,6 +177,19 @@ func (c *FeishuClient) sendRequest(ctx context.Context, webhookURL string, paylo
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("feishu webhook status=%d body=%s", resp.StatusCode, string(b))
+	}
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return fmt.Errorf("feishu read response: %w", err)
+	}
+
+	var result struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+	}
+	if json.Unmarshal(respBody, &result) == nil && result.Code != 0 {
+		return fmt.Errorf("feishu api code=%d msg=%s", result.Code, result.Msg)
 	}
 
 	return nil

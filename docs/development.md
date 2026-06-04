@@ -2,169 +2,163 @@
 
 ## Prerequisites
 
-- **Go 1.26+** — Backend language
-- **Node.js 24+** — Frontend runtime
-- **pnpm** — Frontend package manager
-- **Docker & Docker Compose** — Dev environment services (PostgreSQL)
-- **Python 3** — Dev environment orchestration script
-- **golangci-lint** — Go linter
-- **swag** — Swagger doc generator for Go
+| Tool                    | Version     | Description                           | Install                                                                 |
+| ----------------------- | ----------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| Go                      | 1.26+       | Backend language                      | [go.dev/dl](https://go.dev/dl/)                                         |
+| Node.js                 | 24+         | Frontend runtime                      | [nodejs.org](https://nodejs.org/)                                       |
+| pnpm                    | 11+         | Frontend package manager              | [pnpm.io/installation](https://pnpm.io/installation)                    |
+| Docker & Docker Compose | Compose v2+ | Dev environment services (PostgreSQL) | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/)       |
+| Python 3                | 3.12+       | Dev environment orchestration script  | [python.org](https://www.python.org/downloads/)                         |
+| golangci-lint           | latest      | Go linter                             | [golangci-lint.run/install](https://golangci-lint.run/welcome/install/) |
+| air                     | latest      | Go hot-reload during development      | [github.com/cosmtrek/air](https://github.com/cosmtrek/air#installation) |
+| swag                    | latest      | Swagger doc generator for Go          | [github.com/swaggo/swag](https://github.com/swaggo/swag#installation)   |
 
 ## Quick Start
 
-1. Clone the repository
-2. Start the dev environment:
+### Option 1 — `dev.py` (recommended)
+
+Starts PostgreSQL (Docker), the backend (Docker), and the frontend (local `pnpm dev`) in one command:
 
 ```bash
 python3 devops/dev.py start
 ```
 
-This starts PostgreSQL, the backend server, and the frontend dev server via Docker Compose. The backend runs on port 7330 and the frontend on port 3034.
+停止全部已启动的服务:
 
-3. Access the application at `http://localhost:3034`
+```bash
+python3 devops/dev.py stop
+```
 
-## Backend Development
+### Option 2 — VS Code / Cursor / Trae / compatible IDE
 
-Working directory: `backend/`
+The project ships `.vscode/tasks.json` with three tasks:
 
-### Install Dependencies
+- **Start All** — runs both backend and frontend in parallel
+- **Start Backend** — launches `air` in `backend/` with dev JWT keys
+- **Start Frontend** — launches `pnpm dev` in `frontend/`
+
+**Run a task:**
+
+- Open Command Palette (`Ctrl+Shift+P`) → **Tasks: Run Task** → choose a task
+- Or bind a shortcut (e.g. `Alt+R` to run "Start All"):
+  1. Open keyboard shortcuts JSON (`Ctrl+Shift+P` → **Preferences: Open Keyboard Shortcuts (JSON)**)
+  2. Add:
+
+     ```json
+     {
+       "key": "alt+r",
+       "command": "workbench.action.tasks.runTask",
+       "args": "Start All"
+     }
+     ```
+
+### Option 3 — Manual start
+
+Run each service individually. Requires PostgreSQL or a local SQLite setup.
+
+**Backend (with air hot-reload):**
 
 ```bash
 cd backend
-go mod download
-```
-
-### Run Tests
-
-```bash
-go test ./...
-```
-
-Run a specific package:
-
-```bash
-go test ./internal/service/post/...
-```
-
-### Lint
-
-```bash
-golangci-lint run
-```
-
-### Generate Swagger Docs
-
-```bash
-swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
-```
-
-Swagger UI is available at `/swagger/index.html` when running with `debug = true`.
-
-### Hot Reload
-
-Use [air](https://github.com/cosmtrek/air) for live reload during development:
-
-```bash
+cp config.example.toml ../.local/config.toml
+mkdir -p data
 air
 ```
 
-### Build
+the backend defaults to SQLite (`data/markpost.db`).
 
-```bash
-go build -o markpost-server ./cmd/server/
-```
-
-## Frontend Development
-
-Working directory: `frontend/`
-
-### Install Dependencies
+**Frontend:**
 
 ```bash
 cd frontend
-pnpm install
-```
-
-### Dev Server
-
-```bash
 pnpm dev
 ```
 
-Starts on port 3034 with hot module replacement.
+The dev server starts on [http://localhost:3034](http://localhost:3034) with hot module replacement.
 
-### Run Tests
+## Install Dependencies
 
-```bash
-pnpm test          # Watch mode
-pnpm test:run      # Single run (CI)
-pnpm test:e2e      # Playwright E2E tests
-```
-
-### Lint
+`python3 devops/dev.py start` auto-installs dependencies on first run. You can also install manually:
 
 ```bash
-pnpm lint
+cd backend && go mod download
+cd frontend && pnpm install
 ```
 
-### Build
+## Lint
 
 ```bash
-pnpm build
+cd backend && golangci-lint run
+cd frontend && pnpm lint
 ```
+
+## Run Tests
+
+**Backend:**
+
+```bash
+cd backend
+go test ./...                        # all tests
+go test ./internal/service/post/...  # specific package
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+pnpm test          # Vitest in watch mode
+pnpm test:run      # single run (CI)
+```
+
+**E2E (Dagger + Playwright):**
+
+```bash
+cd e2e
+dagger call all --source=..                                                    # run all spec files
+dagger call test --test-file=login.spec.ts --source=..                        # run a single spec file
+dagger call test --test-file=login.spec.ts --test-file=posts.spec.ts --source=..  # run multiple spec files
+```
+
+Each spec runs in an isolated sandbox (PostgreSQL + backend + frontend + Playwright containers).
+
+## Build
+
+```bash
+cd backend && go build -o markpost-server ./cmd/server/
+cd frontend && pnpm build
+```
+
+## Generate Swagger Docs
+
+```bash
+cd backend
+swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+```
+
+Swagger UI is available at `/swagger/index.html` when running backend with `debug = true`.
 
 ## Environment Configuration
 
+The backend reads config from three sources (highest priority wins):
+
+1. **Environment variables** — prefix `MARKPOST_`, nested keys use `__`
+
+   ```bash
+   MARKPOST_DEBUG=true
+   MARKPOST_SERVER__PORT=8080
+   MARKPOST_DB__DSN="postgres://user:pass@localhost:5432/markpost?sslmode=disable"
+   ```
+
+2. **TOML file** — `markpost.toml` next to the binary, or via `-c /path/to/config.toml`
+3. **Built-in defaults** — see `backend/config.example.toml` for a full annotated reference
+
 The dev Docker Compose setup provides PostgreSQL with these defaults:
 
-- Host: `localhost`
-- Port: `5432`
-- Database: `markpost`
-- User: `markpost`
-- Password: `markpost`
+- Host: `postgres` (container network) / `localhost` (host)
+- Database / User / Password: `markpost`
 
-No config file is needed for local development. The backend defaults to SQLite if no DSN is configured, which works for quick testing without Docker.
-
-For the frontend, set `NEXT_PUBLIC_API_URL` if the backend is not accessible at the same origin:
+For the frontend, set `NEXT_PUBLIC_API_URL` if the backend is not at the same origin:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:7330 pnpm dev
-```
-
-## Common Workflows
-
-### Creating a New API Endpoint
-
-1. Define the domain model and repository interface in `internal/domain/`
-2. Implement the repository in `internal/infra/`
-3. Create a service in `internal/service/`
-4. Add a handler in `internal/api/rest/v1/`
-5. Register the route in `cmd/server/main.go` in `SetupRoutes`
-
-### Adding a UI Component
-
-1. Create the component in the appropriate `src/components/` subdirectory
-2. Use shadcn/ui primitives from `src/components/ui/`
-3. Follow the design system in `specs/frontend/design.md`
-4. Use Tailwind utilities with design tokens (`bg-background`, `text-foreground`)
-
-### Adding a Translation
-
-**Backend** (TOML files in `backend/locales/`):
-
-```toml
-["error.my_new_message"]
-other = "My new message"
-```
-
-**Frontend** (JSON files in `frontend/src/i18n/locales/`):
-
-Add keys to both `en.json` and `zh.json`:
-
-```json
-{
-  "myFeature": {
-    "title": "My Feature"
-  }
-}
 ```

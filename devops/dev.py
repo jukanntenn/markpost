@@ -103,7 +103,6 @@ def start():
     logger.info("  Frontend:     http://localhost:%d", FRONTEND_PORT)
     logger.info("  Backend API:  http://localhost:%d/api/v1", BACKEND_PORT)
     logger.info("  Swagger Docs: http://localhost:%d/swagger", BACKEND_PORT)
-    logger.info("  PostgreSQL:   localhost:5432")
     logger.info("Admin:")
     logger.info("  Username:     markpost")
     logger.info("  Password:     markpost")

@@ -47,7 +47,7 @@ e2e/
 
 **`test(testFile: string, source: Directory): string`**
 - Builds Go backend binary from `source.directory("backend")`
-- Builds Next.js standalone from `source.directory("frontend")` with `NEXT_PUBLIC_API_URL=http://backend:7330`
+- Builds Next.js standalone from `source.directory("frontend")` with `BACKEND_URL=http://backend:7330`
 - Starts 4 containers per sandbox:
   1. `postgres` — PostgreSQL 17 with markpost db
   2. `backend` — Go binary, bound to postgres via alias `postgres`

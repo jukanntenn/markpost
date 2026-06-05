@@ -157,8 +157,14 @@ The dev Docker Compose setup provides PostgreSQL with these defaults:
 - Host: `postgres` (container network) / `localhost` (host)
 - Database / User / Password: `markpost`
 
-For the frontend, set `NEXT_PUBLIC_API_URL` if the backend is not at the same origin:
+The frontend ships a committed `frontend/.env` with the default dev backend address:
 
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:7330 pnpm dev
+```
+BACKEND_URL=http://127.0.0.1:7330
+```
+
+The proxy (`src/proxy.ts`) uses this to forward `/api/*` requests to the backend. To override, create `frontend/.env.local` (gitignored):
+
+```
+BACKEND_URL=http://your-backend:7330
 ```

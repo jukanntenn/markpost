@@ -99,7 +99,7 @@ The API client is in `src/lib/api/base.ts`. It provides a generic `request<T>()`
 5. Retries the request with the new token after refresh
 6. Redirects to login if refresh fails
 
-The base URL is configured via `NEXT_PUBLIC_API_URL` environment variable.
+The client always sends relative paths (e.g. `/api/v1/posts`); the server-side proxy (`src/proxy.ts`) forwards them to the backend via `BACKEND_URL`.
 
 ## Route Protection
 

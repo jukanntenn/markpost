@@ -33,7 +33,7 @@ services:
     ports:
       - "7330:3000"
     environment:
-      - API_PROXY_TARGET=http://backend:7330
+      - BACKEND_URL=http://backend:7330
     depends_on:
       backend:
         condition: service_healthy

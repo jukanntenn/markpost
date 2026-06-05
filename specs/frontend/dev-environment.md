@@ -32,15 +32,9 @@ Creates an optimized production build.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL | `""` (same origin) |
+| `BACKEND_URL` | Backend address for server-side proxy | `http://127.0.0.1:7330` |
 
-Set `NEXT_PUBLIC_API_URL` when the backend runs on a different host/port:
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:7330 pnpm dev
-```
-
-In the dev environment started via `python3 devops/dev.py start`, the frontend proxies API requests through Next.js rewrites, so no environment variable is needed.
+The frontend ships a committed `.env` with `BACKEND_URL=http://127.0.0.1:7330`. The proxy (`src/proxy.ts`) uses this to forward `/api/*` requests to the backend. To override, create `.env.local` (gitignored).
 
 ## Testing
 

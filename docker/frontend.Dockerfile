@@ -11,7 +11,6 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-ENV NEXT_PUBLIC_API_URL=
 
 RUN pnpm build
 

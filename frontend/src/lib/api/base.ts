@@ -109,7 +109,7 @@ export async function request<T>(
   const { token } = useAuthStore.getState();
   const { skipAuthRefresh = false, params, json, headers: optHeaders, ...fetchOptions } = options;
 
-  const fullUrl = buildUrl(process.env.NEXT_PUBLIC_API_URL || "", url, params);
+  const fullUrl = buildUrl("", url, params);
 
   const headers: Record<string, string> = { ...optHeaders };
 

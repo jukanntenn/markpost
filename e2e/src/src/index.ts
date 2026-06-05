@@ -78,7 +78,6 @@ export class MarkpostE2E {
       .withDirectory("/app", source)
       .withWorkdir("/app")
       .withExec(["pnpm", "install", "--frozen-lockfile"])
-      .withEnvVariable("NEXT_PUBLIC_API_URL", "http://backend:7330")
       .withExec(["pnpm", "build"])
 
     const standalone = builder.directory("/app/.next/standalone")
@@ -132,6 +131,7 @@ export class MarkpostE2E {
   private frontendService(frontendImg: Container, backendSvc: Container, runId: string): Container {
     return frontendImg
       .withEnvVariable("RUN_ID", runId)
+      .withEnvVariable("BACKEND_URL", "http://backend:7330")
       .withServiceBinding("backend", backendSvc)
       .asService({ useEntrypoint: true })
   }

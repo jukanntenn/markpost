@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -255,7 +256,32 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 
 func TestNewPostDeliveryService(t *testing.T) {
 	config.ResetForTest()
-	config.Load("")
+
+	tmpFile, err := os.CreateTemp("", "test-config-*.toml")
+	if err != nil {
+		t.Fatalf("create temp file: %v", err)
+	}
+	tmpFile.WriteString(`
+server.host = "127.0.0.1"
+server.port = 7330
+[db]
+driver = "sqlite"
+dsn = ":memory:"
+[admin]
+initial_username = "markpost"
+initial_password = "markpost"
+[jwt]
+access_signing_key = "test-access-key-at-least-32-characters"
+refresh_signing_key = "test-refresh-key-at-least-32-characters"
+[delivery]
+request_timeout = "5s"
+`)
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	if err := config.Load(tmpFile.Name()); err != nil {
+		t.Fatalf("config.Load error: %v", err)
+	}
 
 	db := infra.SetupTestDB(t)
 	repo := infra.NewDeliveryChannelRepository(db)

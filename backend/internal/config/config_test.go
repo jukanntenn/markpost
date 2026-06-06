@@ -5,26 +5,71 @@ import (
 	"testing"
 )
 
+const testConfigToml = `
+server.host = "127.0.0.1"
+server.port = 7330
+[db]
+driver = "sqlite"
+dsn = ":memory:"
+[admin]
+initial_username = "markpost"
+initial_password = "markpost"
+[jwt]
+access_signing_key = "test-access-key-at-least-32-characters"
+refresh_signing_key = "test-refresh-key-at-least-32-characters"
+[delivery]
+request_timeout = "5s"
+`
+
+func writeTestConfig(t *testing.T) string {
+	t.Helper()
+	tmpFile, err := os.CreateTemp("", "test-config-*.toml")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	tmpFile.WriteString(testConfigToml)
+	tmpFile.Close()
+	return tmpFile.Name()
+}
+
 func TestLoad(t *testing.T) {
 	ResetForTest()
 
-	err := Load("")
+	path := writeTestConfig(t)
+	defer os.Remove(path)
+
+	err := Load(path)
 	if err != nil {
 		t.Fatalf("Load error: %v", err)
 	}
 
 	cfg := Get()
 	if cfg.Server.Host != "127.0.0.1" {
-		t.Fatalf("expected default host '127.0.0.1', got %s", cfg.Server.Host)
+		t.Fatalf("expected host '127.0.0.1', got %s", cfg.Server.Host)
 	}
-
 	if cfg.Server.Port != 7330 {
-		t.Fatalf("expected default port 7330, got %d", cfg.Server.Port)
+		t.Fatalf("expected port 7330, got %d", cfg.Server.Port)
+	}
+}
+
+func TestLoad_WithoutConfigFails(t *testing.T) {
+	ResetForTest()
+
+	err := Load("")
+	if err == nil {
+		t.Fatal("expected error when no config file is provided")
 	}
 }
 
 func TestGet(t *testing.T) {
 	ResetForTest()
+
+	path := writeTestConfig(t)
+	defer os.Remove(path)
+
+	if err := Load(path); err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
 
 	cfg := Get()
 	if cfg.Server.Host == "" {
@@ -35,16 +80,17 @@ func TestGet(t *testing.T) {
 func TestDefaults(t *testing.T) {
 	ResetForTest()
 
-	cfg := Get()
+	path := writeTestConfig(t)
+	defer os.Remove(path)
 
-	if cfg.DB.Driver != "sqlite" {
-		t.Fatalf("expected default driver 'sqlite', got %s", cfg.DB.Driver)
+	if err := Load(path); err != nil {
+		t.Fatalf("Load error: %v", err)
 	}
 
+	cfg := Get()
 	if cfg.Post.TitleMaxLength != 150 {
 		t.Fatalf("expected default TitleMaxLength 150, got %d", cfg.Post.TitleMaxLength)
 	}
-
 	if cfg.Post.BodyMaxBytes != 32768 {
 		t.Fatalf("expected default BodyMaxBytes 32768, got %d", cfg.Post.BodyMaxBytes)
 	}
@@ -112,6 +158,8 @@ initial_password = "secret"
 [jwt]
 access_signing_key = "test-access-key-min-32-characters!!"
 refresh_signing_key = "test-refresh-key-min-32-characters!!"
+[delivery]
+request_timeout = "5s"
 `
 	tmpFile.WriteString(content)
 	tmpFile.Close()

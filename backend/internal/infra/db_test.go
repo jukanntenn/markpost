@@ -78,6 +78,8 @@ initial_password = "admin123"
 [jwt]
 access_signing_key = "test-access-key-min-32-characters!!"
 refresh_signing_key = "test-refresh-key-min-32-characters!!"
+[delivery]
+request_timeout = "5s"
 `
 	if err := os.WriteFile(tomlPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
@@ -124,6 +126,8 @@ initial_password = "admin123"
 [jwt]
 access_signing_key = "test-access-key-min-32-characters!!"
 refresh_signing_key = "test-refresh-key-min-32-characters!!"
+[delivery]
+request_timeout = "5s"
 `
 	if err := os.WriteFile(tomlPath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config: %v", err)

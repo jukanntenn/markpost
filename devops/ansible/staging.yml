@@ -18,7 +18,7 @@
 
     image_tag: "dev"
     public_url: "https://markpost.bytehome.fun"
-    trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
+    trusted_proxies: '["127.0.0.1", "::1"]'
 
   tasks:
     - name: Ensure paths

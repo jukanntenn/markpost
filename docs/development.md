@@ -17,55 +17,46 @@
 
 ### Option 1 — `dev.py` (recommended)
 
-Starts PostgreSQL (Docker), the backend (Docker), and the frontend (local `pnpm dev`) in one command:
+Starts PostgreSQL and the backend in Docker, plus the frontend dev server locally:
 
 ```bash
-python3 devops/dev.py start
+python3 devops/dev.py start   # start all services
+python3 devops/dev.py stop    # stop all services
 ```
 
-停止全部已启动的服务:
-
-```bash
-python3 devops/dev.py stop
-```
-
-### Option 2 — VS Code / Cursor / Trae / compatible IDE
+### Option 2 — VS Code / Cursor / Trae / compatible IDEs
 
 The project ships `.vscode/tasks.json` with three tasks:
 
-- **Start All** — runs both backend and frontend in parallel
+- **Start All** — runs backend and frontend in parallel
 - **Start Backend** — launches `air` in `backend/` with dev JWT keys
 - **Start Frontend** — launches `pnpm dev` in `frontend/`
 
-**Run a task:**
+Open the Command Palette (`Ctrl+Shift+P`) → **Tasks: Run Task** → pick a task.
+To bind a shortcut (e.g. `Alt+R` → "Start All"), open keyboard shortcuts JSON (`Ctrl+Shift+P` → **Preferences: Open Keyboard Shortcuts (JSON)**) and add:
 
-- Open Command Palette (`Ctrl+Shift+P`) → **Tasks: Run Task** → choose a task
-- Or bind a shortcut (e.g. `Alt+R` to run "Start All"):
-  1. Open keyboard shortcuts JSON (`Ctrl+Shift+P` → **Preferences: Open Keyboard Shortcuts (JSON)**)
-  2. Add:
+```json
+{
+  "key": "alt+r",
+  "command": "workbench.action.tasks.runTask",
+  "args": "Start All"
+}
+```
 
-     ```json
-     {
-       "key": "alt+r",
-       "command": "workbench.action.tasks.runTask",
-       "args": "Start All"
-     }
-     ```
+Note: make sure `air` and `pnpm` are in your PATH.
 
-### Option 3 — Manual start
+### Option 3 — Manual
 
-Run each service individually. Requires PostgreSQL or a local SQLite setup.
-
-**Backend (with air hot-reload):**
+**Backend** (air hot-reload):
 
 ```bash
 cd backend
-cp config.example.toml ../.local/config.toml
-mkdir -p data
+cp config.example.toml markpost.toml
 air
 ```
 
-the backend defaults to SQLite (`data/markpost.db`).
+The dev server starts at [http://localhost:7330](http://localhost:7330), defaulting to SQLite (`data/markpost.db`).
+Set `debug = true` in `markpost.toml` to enable debug mode.
 
 **Frontend:**
 
@@ -74,22 +65,40 @@ cd frontend
 pnpm dev
 ```
 
-The dev server starts on [http://localhost:3034](http://localhost:3034) with hot module replacement.
+The dev server starts at [http://localhost:3034](http://localhost:3034).
 
 ## Install Dependencies
 
-`python3 devops/dev.py start` auto-installs dependencies on first run. You can also install manually:
+`python3 devops/dev.py start` auto-installs dependencies on first run. To install manually:
+
+**Backend:**
 
 ```bash
-cd backend && go mod download
-cd frontend && pnpm install
+cd backend
+go mod download
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+pnpm install
 ```
 
 ## Lint
 
+**Backend:**
+
 ```bash
-cd backend && golangci-lint run
-cd frontend && pnpm lint
+cd backend
+golangci-lint run
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+pnpm lint
 ```
 
 ## Run Tests
@@ -114,30 +123,39 @@ pnpm test:run      # single run (CI)
 
 ```bash
 cd e2e
-dagger call all --source=..                                                    # run all spec files
-dagger call test --test-file=login.spec.ts --source=..                        # run a single spec file
-dagger call test --test-file=login.spec.ts --test-file=posts.spec.ts --source=..  # run multiple spec files
+dagger call all --source=..                                                      # all specs
+dagger call test --test-file=login.spec.ts --source=..                           # single spec
+dagger call test --test-file=login.spec.ts --test-file=posts.spec.ts --source=.. # multiple specs
 ```
 
 Each spec runs in an isolated sandbox (PostgreSQL + backend + frontend + Playwright containers).
 
 ## Build
 
+**Backend:**
+
 ```bash
-cd backend && go build -o markpost-server ./cmd/server/
-cd frontend && pnpm build
+cd backend
+go build ./cmd/server
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+pnpm build
 ```
 
 ## Generate Swagger Docs
 
 ```bash
 cd backend
-swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+swag init -g main.go -d cmd/server,internal/api/rest/v1 -o docs --parseDependency --parseInternal
 ```
 
-Swagger UI is available at `/swagger/index.html` when running backend with `debug = true`.
+Swagger UI is available at `/swagger/index.html` when the backend runs with `debug = true`.
 
-## Environment Configuration
+## Configuration
 
 The backend reads config from three sources (highest priority wins):
 
@@ -150,20 +168,11 @@ The backend reads config from three sources (highest priority wins):
    ```
 
 2. **TOML file** — `markpost.toml` next to the binary, or via `-c /path/to/config.toml`
-3. **Built-in defaults** — see `backend/config.example.toml` for a full annotated reference
+3. **Built-in defaults** — see `backend/config.example.toml` for a full reference
 
-The dev Docker Compose setup provides PostgreSQL with these defaults:
+Environment variables are the recommended way to override defaults.
 
-- Host: `postgres` (container network) / `localhost` (host)
-- Database / User / Password: `markpost`
-
-The frontend ships a committed `frontend/.env` with the default dev backend address:
-
-```
-BACKEND_URL=http://127.0.0.1:7330
-```
-
-The proxy (`src/proxy.ts`) uses this to forward `/api/*` requests to the backend. To override, create `frontend/.env.local` (gitignored):
+The frontend proxy (`src/proxy.ts`) forwards `/api/*` requests to the backend using `BACKEND_URL`, which defaults to `http://127.0.0.1:7330`. To override, create `frontend/.env.local` (gitignored):
 
 ```
 BACKEND_URL=http://your-backend:7330

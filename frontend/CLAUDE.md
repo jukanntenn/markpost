@@ -4,10 +4,10 @@
 
 MUST FOLLOW THESE RULES, NO EXCEPTIONS
 
-- Stack: React, TypeScript, Next.js, Zustand, TanStack Query, next-intl, next-themes, shadcn/ui, Tailwind CSS v4, @base-ui/react
+- Stack: React, TypeScript, Next.js, Zustand, TanStack Query, next-intl, next-themes, Tailwind CSS v4, @base-ui/react
 - Patterns: ALWAYS use Function components + Hooks, NEVER use Class components
 - Types: Keep types alongside code; prefer `interface` for object shapes
-- Styling: Use shadcn/ui primitives + Tailwind utilities; prefer design tokens (`bg-background`, `text-foreground`, `border-border`)
+- Styling: Use @base-ui/react primitives + Tailwind utilities; prefer design tokens (`bg-background`, `text-foreground`, `border-border`)
 - CSS: Global styles and theme tokens live in `src/app/globals.css`; avoid adding additional CSS files unless required
 - Accessibility: Ensure focus-visible states, labels for form fields, and keyboard navigation for menus/dialogs
 - Responsive: Implement responsive layouts for mobile/tablet/desktop

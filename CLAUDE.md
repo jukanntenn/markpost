@@ -10,7 +10,7 @@ You are a senior pair-programming partner specializing in React/TypeScript front
 
 - `go test ./...` — Run tests
 - `golangci-lint run` — Run linter
-- `swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal` — Generate Swagger docs
+- `swag init -g main.go -d cmd/server,internal/api/rest/v1 -o docs --parseDependency --parseInternal` — Generate Swagger docs
 
 **Frontend** (in `frontend/`):
 
@@ -30,7 +30,7 @@ You are a senior pair-programming partner specializing in React/TypeScript front
 
 ## Technology Stack
 
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react, shadcn/ui
+- **Frontend**: Next.js 16 (middleware → proxy convention), React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react
 - **Backend**: Go 1.26, Gin, GORM, JWT, Swagger, Viper
 - **Database**: PostgreSQL, SQLite
 - **Testing**: Vitest, Playwright, MSW, Testing Library
@@ -50,6 +50,7 @@ You are a senior pair-programming partner specializing in React/TypeScript front
 - `src/components/` — React components organized by feature (`ui/`, `auth/`, `layout/`, `login/`, `dashboard/`, `admin/`, `posts/`)
 - `src/hooks/` — Custom React hooks
 - `src/lib/` — Core utilities (`utils.ts`, `api/` fetchers)
+- `src/proxy.ts` — Next.js 16 Proxy (see Proxy Rules below)
 - `src/stores/` — Zustand state management
 - `src/types/` — TypeScript type definitions
 - `src/i18n/` — next-intl configuration and locale files (`en`, `zh`)
@@ -68,6 +69,18 @@ You are a senior pair-programming partner specializing in React/TypeScript front
 - `pkg/` — Shared packages (`apierr/`, `auth/`, `crypto/`, `i18n/`, `utils/`)
 - `docs/` — Generated Swagger docs
 - `tools/` — Dev tools (fake data generator)
+
+## Proxy Rules (Next.js 16)
+
+`middleware.ts` is **deprecated** in Next.js 16. The file convention is now `proxy.ts`.
+
+- **File**: `src/proxy.ts` (or project root), only one per project
+- **Exports**: named `proxy` function or default export; optional `config` object with `matcher`
+- **Runtime**: Node.js (default, no `runtime` config option)
+- **Execution order**: headers → redirects → **proxy** → beforeFiles rewrites → filesystem → afterFiles → dynamic routes → fallback
+- **Matcher**: values must be compile-time constants (statically analyzed); use regex for negative matching
+- **Do not**: use proxy for slow data fetching, full session management, or as a replacement for Server Functions
+- **Env**: `BACKEND_URL` defaults to `http://127.0.0.1:7330` in code; override via `.env.local` in dev or Docker env vars in production
 
 ## Testing
 

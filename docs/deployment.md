@@ -1,15 +1,20 @@
 # Deployment Guide
 
+Markpost runs as a single container with three internal services managed by s6-overlay:
+- **Caddy** — reverse proxy on port 7157 (external entry point)
+- **Go backend** — API server on 127.0.0.1:7330 (internal)
+- **Next.js** — frontend server on 127.0.0.1:3000 (internal)
+
+Caddy routes requests based on path: API and post-rendering endpoints go directly to the Go backend; all other requests go to Next.js.
+
 ## Docker Quick Start
 
 ### Single Container
 
-The simplest way to run Markpost is with a single Docker container using SQLite:
-
 ```bash
 docker run -d \
   --name markpost \
-  -p 7330:7330 \
+  -p 7157:7157 \
   -e MARKPOST_JWT__ACCESS_SIGNING_KEY="your-secret-access-key-min-32-chars" \
   -e MARKPOST_JWT__REFRESH_SIGNING_KEY="your-secret-refresh-key-min-32-chars" \
   -v markpost-data:/app/data \
@@ -25,9 +30,8 @@ services:
   markpost:
     image: jukanntenn/markpost:latest
     ports:
-      - "7330:7330"
+      - "7157:7157"
     environment:
-      MARKPOST_SERVER__HOST: "0.0.0.0"
       MARKPOST_JWT__ACCESS_SIGNING_KEY: "your-secret-access-key"
       MARKPOST_JWT__REFRESH_SIGNING_KEY: "your-secret-refresh-key"
     volumes:
@@ -36,6 +40,25 @@ services:
 volumes:
   markpost-data:
 ```
+
+## Architecture
+
+```
+                    ┌──────────────────────────────────────┐
+                    │        markpost container (:7157)     │
+                    │                                      │
+  External ────────►│  Caddy (0.0.0.0:7157)               │
+  :7157             │    ├ /api/v1/*   ──► Go (127.0.0.1:7330) │
+                    │    ├ /swagger/*  ──► Go              │
+                    │    ├ /mpk-* POST ──► Go              │
+                    │    ├ /p-* GET    ──► Go              │
+                    │    └ rest         ──► Next.js (127.0.0.1:3000) │
+                    │                                      │
+                    │  s6-overlay manages: go, nextjs, caddy │
+                    └──────────────────────────────────────┘
+```
+
+Caddy handles TLS termination, logging, and request routing. s6-overlay ensures all services start in the correct order (Go and Next.js before Caddy) and restarts crashed processes.
 
 ## Configuration
 
@@ -47,7 +70,7 @@ All config values can be set via environment variables with the `MARKPOST_` pref
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MARKPOST_SERVER__HOST` | Bind address | `127.0.0.1` |
+| `MARKPOST_SERVER__HOST` | Bind address | `127.0.0.1` (container) |
 | `MARKPOST_SERVER__PORT` | Listen port | `7330` |
 | `MARKPOST_SERVER__PUBLIC_URL` | Public-facing URL | `http://{host}:{port}` |
 | `MARKPOST_DB__DRIVER` | Database driver (`sqlite`, `postgresql`) | `sqlite` |
@@ -62,6 +85,7 @@ All config values can be set via environment variables with the `MARKPOST_` pref
 | `MARKPOST_RATELIMIT__PER_SECOND` | Requests per second per IP | Unlimited |
 | `MARKPOST_RATELIMIT__BURST` | Burst size | Unlimited |
 | `MARKPOST_SERVER__TRUSTED_PROXIES` | Trusted reverse proxy IPs | `["127.0.0.1", "::1"]` |
+| `MARKPOST_TIMEZONE` | Container timezone | `UTC` |
 | `MARKPOST_OAUTH__GITHUB__CLIENT_ID` | GitHub OAuth App Client ID | `""` (disabled) |
 | `MARKPOST_OAUTH__GITHUB__CLIENT_SECRET` | GitHub OAuth App Client Secret | `""` (disabled) |
 | `MARKPOST_OAUTH__GITHUB__REDIRECT_URL` | GitHub OAuth redirect URL | `""` |
@@ -69,12 +93,12 @@ All config values can be set via environment variables with the `MARKPOST_` pref
 
 ### TOML Configuration File
 
-Create a `markpost.toml` file and mount it or specify via `-c` flag:
+Create a `markpost.toml` file and mount it:
 
 ```bash
 docker run -d \
-  -v ./markpost.toml:/app/markpost.toml \
-  jukanntenn/markpost:latest -c /app/markpost.toml
+  -v ./markpost.toml:/app/markpost.toml:ro \
+  jukanntenn/markpost:latest
 ```
 
 ## Database Options
@@ -101,7 +125,7 @@ Docker Compose example with PostgreSQL:
 ```yaml
 services:
   db:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_DB: markpost
       POSTGRES_USER: markpost
@@ -114,19 +138,20 @@ services:
     depends_on:
       - db
     environment:
-      MARKPOST_SERVER__HOST: "0.0.0.0"
       MARKPOST_DB__DRIVER: "postgresql"
       MARKPOST_DB__DSN: "host=db user=markpost password=secret dbname=markpost sslmode=disable"
       MARKPOST_JWT__ACCESS_SIGNING_KEY: "your-secret-access-key"
       MARKPOST_JWT__REFRESH_SIGNING_KEY: "your-secret-refresh-key"
     ports:
-      - "7330:7330"
+      - "7157:7157"
 
 volumes:
   pg-data:
 ```
 
 ## Reverse Proxy
+
+The container includes Caddy as an internal reverse proxy. For deployments behind an external reverse proxy (e.g., for TLS termination), configure the external proxy to forward to port 7157.
 
 ### Nginx
 
@@ -139,7 +164,7 @@ server {
     ssl_certificate_key /etc/letsencrypt/live/markpost.example.com/privkey.pem;
 
     location / {
-        proxy_pass http://127.0.0.1:7330;
+        proxy_pass http://127.0.0.1:7157;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -148,11 +173,11 @@ server {
 }
 ```
 
-### Caddy
+### External Caddy
 
 ```
 markpost.example.com {
-    reverse_proxy localhost:7330
+    reverse_proxy localhost:7157
 }
 ```
 
@@ -163,12 +188,22 @@ MARKPOST_SERVER__TRUSTED_PROXIES='["127.0.0.1", "::1"]'
 MARKPOST_SERVER__PUBLIC_URL="https://markpost.example.com"
 ```
 
+## Building the Image
+
+```bash
+python3 docker/build.py                    # Build for local platform
+python3 docker/build.py --push             # Build and push multi-platform
+python3 docker/build.py --platform amd64   # Build specific platform
+python3 docker/build.py --tags v1.0.0      # Additional tags
+```
+
 ## Ansible Deployment
 
 Automated deployment playbooks are available in `devops/ansible/`:
 
-- `dev.yml` — Development/staging environment
+- `dev.yml` — Development environment (with PostgreSQL)
 - `staging.yml` — Staging environment
+- `production.yml` — Production environment
 
 Run with:
 

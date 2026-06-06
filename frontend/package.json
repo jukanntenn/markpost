@@ -8,7 +8,7 @@
     "dev": "next dev --port ${FRONTEND_PORT:-3034} --turbopack",
     "build": "next build",
     "start": "next start --port ${FRONTEND_PORT:-3034}",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"

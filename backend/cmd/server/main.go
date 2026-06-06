@@ -1,4 +1,10 @@
 // Package main provides the entry point for the Markpost server.
+//
+// @title Markpost API
+// @version 1.0
+// @description Markpost backend API for post management and delivery.
+// @host localhost:7330
+// @BasePath /
 package main
 
 import (
@@ -9,6 +15,7 @@ import (
 	"strconv"
 
 	"markpost/cmd"
+	_ "markpost/docs"
 	v1 "markpost/internal/api/rest/v1"
 	"markpost/internal/config"
 	"markpost/internal/domain/user"
@@ -199,7 +206,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	r.Use(middleware.RateLimitByIP(lmt))
 
 	if cfg.Debug {
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
 	}
 
 	apiV1 := r.Group("/api/v1")

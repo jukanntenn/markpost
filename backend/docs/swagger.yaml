@@ -1,4 +1,108 @@
+basePath: /
+definitions:
+  apierr.ErrorResponse:
+    properties:
+      code:
+        type: string
+      errors:
+        items:
+          $ref: '#/definitions/apierr.FieldError'
+        type: array
+      message:
+        type: string
+    type: object
+  apierr.FieldError:
+    properties:
+      code:
+        type: string
+      field:
+        type: string
+      message:
+        type: string
+    type: object
+  v1.AuthResponse:
+    properties:
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/v1.UserResponse'
+    type: object
+  v1.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  v1.UserResponse:
+    properties:
+      avatar_url:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+      username:
+        type: string
+    type: object
+  v1.UsernameLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+host: localhost:7330
 info:
   contact: {}
-paths: {}
+  description: Markpost backend API for post management and delivery.
+  title: Markpost API
+  version: "1.0"
+paths:
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UsernameLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      summary: Login with username and password
+      tags:
+      - auth
+  /api/v1/health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.HealthResponse'
+      summary: Health check
+      tags:
+      - health
 swagger: "2.0"

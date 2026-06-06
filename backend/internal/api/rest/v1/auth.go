@@ -56,6 +56,15 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// LoginWithUsername godoc
+// @Summary Login with username and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body UsernameLoginRequest true "Login credentials"
+// @Success 200 {object} AuthResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/login [post]
 func LoginWithUsername(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req UsernameLoginRequest

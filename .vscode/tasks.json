@@ -4,11 +4,12 @@
     {
       "label": "Start Backend",
       "type": "shell",
-      "command": "~/go/bin/air",
+      "command": "air",
       "args": [],
       "options": {
         "cwd": "${workspaceFolder}/backend",
         "env": {
+          "MARKPOST_DEBUG": "true",
           "MARKPOST_JWT__ACCESS_SIGNING_KEY": "dev-access-secret-key-change-in-production",
           "MARKPOST_JWT__REFRESH_SIGNING_KEY": "dev-refresh-secret-key-change-in-production"
         }

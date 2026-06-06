@@ -34,9 +34,6 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: markpost-postgres
-    ports:
-    volumes:
-      - pgdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=markpost
       - POSTGRES_USER=markpost
@@ -48,6 +45,3 @@ services:
       retries: 5
     labels:
       - "com.docker.compose.project=markpost"
-
-volumes:
-  pgdata:

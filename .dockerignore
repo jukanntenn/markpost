@@ -3,12 +3,11 @@
 .gitignore
 
 # Documentation
+docs/
 README.md
 
-# Docker files
-Dockerfile
-docker-compose.yml
-.dockerignore
+# DevOps
+devops/
 
 # Data files
 data/
@@ -18,21 +17,36 @@ data/
 # Binaries
 markpost
 
-# Environment files (build-time secrets must not leak into images)
+# Environment files
 .env
 .env.*
-!.env.example
 
 # Development files
 .vscode/
 .idea/
+.local/
+.claude/
 
 # Logs
 *.log
 
 # OS files
 .DS_Store
-Thumbs.db 
+Thumbs.db
 
-node_modules/
+# Frontend dev artifacts
+frontend/node_modules/
+frontend/.next/
+
+# Backend dev artifacts
+backend/markpost
+backend/tools/
+backend/.air.toml
+
+# Build script (not needed in image)
+docker/build.py
+docker/__pycache__/
+
+# Config
 config.toml
+backend/config.example.toml

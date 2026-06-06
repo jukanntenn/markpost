@@ -76,3 +76,5 @@ venv/
 .coverage
 htmlcov/
 .hypothesis/
+
+.local/

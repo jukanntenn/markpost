@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Build multi-architecture Docker images for markpost using Docker buildx.
+"""Build multi-architecture Docker images for markpost.
 
-Builds two images: markpost (backend) and markpost-web (frontend).
+Builds a single unified image containing Go backend, Next.js frontend,
+Caddy reverse proxy, and s6-overlay process manager.
+
 Supports load (local, single platform) and push (multi-platform to registry) modes.
 Always applies a 'dev' tag; additional tags can be specified via --tags.
 
@@ -26,7 +28,6 @@ import subprocess
 import sys
 
 IMAGE_NAME = "markpost"
-IMAGE_NAME_WEB = "markpost-web"
 DEFAULT_REGISTRY = "192.168.5.50:5000"
 ALL_PLATFORMS = ("linux/amd64", "linux/arm64")
 
@@ -35,8 +36,8 @@ PLATFORM_ALIASES = {
     "arm64": "linux/arm64",
 }
 
-BACKEND_DOCKERFILE = "docker/backend.Dockerfile"
-FRONTEND_DOCKERFILE = "docker/frontend.Dockerfile"
+DOCKERFILE = "docker/Dockerfile"
+BUILD_CONTEXT = "."
 
 QEMU_ARCH_MAP = {
     "linux/arm64": "arm64",
@@ -61,12 +62,12 @@ def setup_logging(verbose=False):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build multi-architecture Docker images"
+        description="Build multi-architecture Docker image for markpost"
     )
     parser.add_argument(
         "--push",
         action="store_true",
-        help="Push images to registry (default: load locally)",
+        help="Push image to registry (default: load locally)",
     )
     parser.add_argument(
         "--registry",
@@ -79,12 +80,6 @@ def parse_args():
         action="extend",
         default=[],
         help="Additional image tags (dev tag is always applied)",
-    )
-    parser.add_argument(
-        "--backend-only", action="store_true", help="Build only the backend image"
-    )
-    parser.add_argument(
-        "--frontend-only", action="store_true", help="Build only the frontend image"
     )
     parser.add_argument(
         "--platform",
@@ -248,7 +243,10 @@ def check_environment(target_platforms):
     return check_builder_platforms(target_platforms)
 
 
-def build_single_image(args, image_name, dockerfile, context_subdir):
+def main():
+    args = parse_args()
+    setup_logging(verbose=args.verbose)
+
     target_platforms = resolve_platforms(args.platform)
 
     if args.push:
@@ -263,17 +261,17 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
     builder_name = check_environment(platforms_to_build)
 
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dockerfile_path = os.path.join(project_root, dockerfile)
-    context_path = os.path.join(project_root, context_subdir)
+    dockerfile_path = os.path.join(project_root, DOCKERFILE)
+    context_path = os.path.join(project_root, BUILD_CONTEXT)
 
     all_tags = ["dev"] + args.tags
     full_image_names = []
     cmd = ["docker", "buildx", "build"]
     for tag in all_tags:
         if args.push:
-            full_tag = f"{args.registry}/{image_name}:{tag}"
+            full_tag = f"{args.registry}/{IMAGE_NAME}:{tag}"
         else:
-            full_tag = f"{image_name}:{tag}"
+            full_tag = f"{IMAGE_NAME}:{tag}"
         full_image_names.append(full_tag)
         cmd.extend(["--tag", full_tag])
 
@@ -281,7 +279,7 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
 
     if args.push:
         cmd.append("--push")
-        cache_tag = f"{args.registry}/{image_name}:cache"
+        cache_tag = f"{args.registry}/{IMAGE_NAME}:cache"
         if not args.no_cache:
             cmd.extend(["--cache-from", f"type=registry,ref={cache_tag}"])
             cmd.extend(["--cache-to", f"type=registry,ref={cache_tag},mode=max"])
@@ -297,7 +295,7 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
     cmd.extend(["-f", dockerfile_path, context_path])
 
     mode = "push" if args.push else "load"
-    logger.info("Build configuration (%s):", image_name)
+    logger.info("Build configuration:")
     logger.info("  Mode:       %s", mode)
     logger.info("  Platforms:  %s", ", ".join(platforms_to_build))
     logger.info("  Builder:    %s", builder_name)
@@ -308,25 +306,10 @@ def build_single_image(args, image_name, dockerfile, context_subdir):
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
-        logger.error("Build failed for %s (exit code %d)!", image_name, e.returncode)
+        logger.error("Build failed (exit code %d)!", e.returncode)
         sys.exit(1)
 
-    logger.info("Build completed for %s: %s", image_name, ", ".join(full_image_names))
-
-
-def main():
-    args = parse_args()
-    setup_logging(verbose=args.verbose)
-
-    if args.backend_only and args.frontend_only:
-        logger.error("Cannot specify both --backend-only and --frontend-only")
-        sys.exit(3)
-
-    if not args.frontend_only:
-        build_single_image(args, IMAGE_NAME, BACKEND_DOCKERFILE, "backend")
-
-    if not args.backend_only:
-        build_single_image(args, IMAGE_NAME_WEB, FRONTEND_DOCKERFILE, "frontend")
+    logger.info("Build completed: %s", ", ".join(full_image_names))
 
 
 if __name__ == "__main__":

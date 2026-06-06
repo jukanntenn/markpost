@@ -1,0 +1,26 @@
+:7157 {
+	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:7330
+	}
+
+	handle /swagger/* {
+		reverse_proxy 127.0.0.1:7330
+	}
+
+	handle /mpk-* {
+		reverse_proxy 127.0.0.1:7330
+	}
+
+	handle /p-* {
+		reverse_proxy 127.0.0.1:7330
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	log {
+		output stderr
+		format console
+	}
+}

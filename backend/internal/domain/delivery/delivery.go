@@ -1,3 +1,4 @@
+// Package delivery defines the domain models for message delivery channels.
 package delivery
 
 import (
@@ -9,8 +10,10 @@ import (
 	"markpost/internal/domain/user"
 )
 
+// ChannelKind represents the type of delivery channel.
 type ChannelKind string
 
+// Supported delivery channel kinds.
 const (
 	ChannelKindFeishu ChannelKind = "feishu"
 )
@@ -19,19 +22,24 @@ var validChannelKinds = map[ChannelKind]bool{
 	ChannelKindFeishu: true,
 }
 
+// TableName returns the database table name for Channel.
 func (Channel) TableName() string { return "delivery_channels" }
 
+// IsValid reports whether the ChannelKind is a recognized value.
 func (k ChannelKind) IsValid() bool {
 	return validChannelKinds[k]
 }
 
+// FeishuConfiguration holds the configuration for a Feishu delivery channel.
 type FeishuConfiguration struct {
 	WebhookURL  string `json:"webhook_url"`
 	CardLinkURL string `json:"card_link_url"`
 }
 
+// ChannelConfiguration stores arbitrary key-value pairs for channel settings.
 type ChannelConfiguration map[string]any
 
+// Feishu parses and returns the Feishu-specific configuration.
 func (c ChannelConfiguration) Feishu() FeishuConfiguration {
 	return FeishuConfiguration{
 		WebhookURL:  c.stringField("webhook_url"),
@@ -51,6 +59,7 @@ func (c ChannelConfiguration) stringField(key string) string {
 	return s
 }
 
+// Value implements the driver.Valuer interface for database serialization.
 func (c ChannelConfiguration) Value() (driver.Value, error) {
 	if c == nil {
 		return "{}", nil
@@ -62,6 +71,7 @@ func (c ChannelConfiguration) Value() (driver.Value, error) {
 	return string(b), nil
 }
 
+// Scan implements the sql.Scanner interface for database deserialization.
 func (c *ChannelConfiguration) Scan(value any) error {
 	if value == nil {
 		*c = ChannelConfiguration{}
@@ -91,6 +101,7 @@ func (c *ChannelConfiguration) Scan(value any) error {
 	return nil
 }
 
+// Channel represents a delivery channel linked to a user.
 type Channel struct {
 	ID            int                  `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserID        int                  `json:"user_id" gorm:"index;not null;column:user_id"`

@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware for gin routers.
 package middleware
 
 import (

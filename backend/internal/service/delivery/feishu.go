@@ -78,6 +78,7 @@ func (c *FeishuClient) SendText(ctx context.Context, webhookURL string, text str
 	return c.sendRequest(ctx, webhookURL, payload)
 }
 
+// CardDeliveryParams holds the parameters for sending a Feishu card message.
 type CardDeliveryParams struct {
 	WebhookURL  string
 	CardLinkURL string

@@ -1,3 +1,4 @@
+// Package testutil provides test helpers for gin engine setup.
 package testutil
 
 import (
@@ -9,16 +10,19 @@ import (
 	"golang.org/x/text/language"
 )
 
+// ValidatorRegistration holds a custom validator tag and its validation function.
 type ValidatorRegistration struct {
 	Tag string
 	Fn  validator.Func
 }
 
+// TestEngineConfig holds configuration options for creating a test gin engine.
 type TestEngineConfig struct {
 	LocalesPath string
 	Validators  []ValidatorRegistration
 }
 
+// NewTestEngine creates a gin engine configured for testing with optional i18n and custom validators.
 func NewTestEngine(cfg TestEngineConfig) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

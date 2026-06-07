@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// PostService defines the interface for post-related operations.
 type PostService interface {
 	CreatePost(ctx context.Context, title, body string, userID int) (string, error)
 	RenderPostHTML(ctx context.Context, qid string) (string, string, error)
@@ -19,6 +20,7 @@ type PostService interface {
 	GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error)
 }
 
+// CreatePost returns a handler that creates a new post for the authenticated user.
 func CreatePost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -38,6 +40,7 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
+// RenderPost returns a handler that renders a post as HTML or raw markdown.
 func RenderPost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -63,6 +66,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
+// PostsList returns a handler that lists posts for the authenticated user with pagination.
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserPaginatedQuery(c, postSvc.GetUserPosts, newPostListItem,

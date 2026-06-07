@@ -7,8 +7,10 @@ import (
 	"markpost/internal/domain"
 )
 
+// ErrCode represents a service-level error code.
 type ErrCode string
 
+// Predefined error codes used throughout the service layer.
 const (
 	ErrInvalidCredentials ErrCode = "invalid_credentials"
 	ErrInvalidPassword    ErrCode = "invalid_password"
@@ -54,28 +56,33 @@ var httpStatuses = map[ErrCode]int{
 	ErrFieldViolation:             400,
 }
 
+// String returns the string representation of the error code.
 func (c ErrCode) String() string { return string(c) }
 
-func (e *ServiceError) HTTPStatus() int {
+// HTTPStatus returns the HTTP status code associated with this error.
+func (e *Error) HTTPStatus() int {
 	if status, ok := httpStatuses[e.Code]; ok {
 		return status
 	}
 	return 500
 }
 
+// FieldDetail describes a single field-level validation error.
 type FieldDetail struct {
 	Code        ErrCode
 	Description string
 }
 
-type ServiceError struct {
+// Error represents a service-level error with an error code and optional details.
+type Error struct {
 	Code        ErrCode
 	Description string
 	Err         error
 	Details     []FieldDetail
 }
 
-func (e *ServiceError) Error() string {
+// Error returns the error message, falling back to the wrapped error or error code.
+func (e *Error) Error() string {
 	if e.Description != "" {
 		return e.Description
 	}
@@ -87,33 +94,38 @@ func (e *ServiceError) Error() string {
 	return e.Code.String()
 }
 
-func (e *ServiceError) Unwrap() error {
+// Unwrap returns the underlying wrapped error.
+func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-func AsServiceError(err error) (*ServiceError, bool) {
-	var se *ServiceError
+// AsServiceError attempts to cast an error to an Error.
+func AsServiceError(err error) (*Error, bool) {
+	var se *Error
 	if errors.As(err, &se) {
 		return se, true
 	}
 	return nil, false
 }
 
-func NewServiceError(code ErrCode, description string) *ServiceError {
-	return &ServiceError{
+// NewServiceError creates a new Error with the given code and description.
+func NewServiceError(code ErrCode, description string) *Error {
+	return &Error{
 		Code:        code,
 		Description: description,
 	}
 }
 
-func NewServiceErrorWrap(code ErrCode, description string, err error) *ServiceError {
-	return &ServiceError{
+// NewServiceErrorWrap creates a new Error that wraps an existing error.
+func NewServiceErrorWrap(code ErrCode, description string, err error) *Error {
+	return &Error{
 		Code:        code,
 		Description: description,
 		Err:         err,
 	}
 }
 
+// WrapNotFoundOrInternal wraps an error as either a not-found or internal service error.
 func WrapNotFoundOrInternal(err error, notFoundMsg, internalMsg string) error {
 	if err == nil {
 		return nil
@@ -124,16 +136,18 @@ func WrapNotFoundOrInternal(err error, notFoundMsg, internalMsg string) error {
 	return NewServiceErrorWrap(ErrInternal, internalMsg, err)
 }
 
-func NewBindingError(details []FieldDetail) *ServiceError {
-	return &ServiceError{
+// NewBindingError creates a validation ServiceError with the given field details.
+func NewBindingError(details []FieldDetail) *Error {
+	return &Error{
 		Code:        ErrValidation,
 		Description: "request validation failed",
 		Details:     details,
 	}
 }
 
-func NewServiceErrorDetails(code ErrCode, description string, details []FieldDetail) *ServiceError {
-	return &ServiceError{
+// NewServiceErrorDetails creates a new Error with the given code, description, and field details.
+func NewServiceErrorDetails(code ErrCode, description string, details []FieldDetail) *Error {
+	return &Error{
 		Code:        code,
 		Description: description,
 		Details:     details,

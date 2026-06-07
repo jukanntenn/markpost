@@ -1,3 +1,4 @@
+// Package apierr provides HTTP error response helpers for the Gin router.
 package apierr
 
 import (
@@ -11,12 +12,14 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
+// FieldError represents a single validation error on a form field.
 type FieldError struct {
 	Field   string `json:"field,omitempty"`
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
+// ErrorResponse represents the JSON body returned when an API request fails.
 type ErrorResponse struct {
 	Code    string       `json:"code"`
 	Message string       `json:"message"`
@@ -97,6 +100,7 @@ var validationFieldMessages = map[service.ErrCode]*i18n.Message{
 	},
 }
 
+// RespondError writes a structured JSON error response to the Gin context.
 func RespondError(c *gin.Context, err error) {
 	se, ok := service.AsServiceError(err)
 	if !ok {

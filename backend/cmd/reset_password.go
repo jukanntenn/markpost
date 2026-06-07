@@ -4,12 +4,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"markpost/internal/config"
 	"markpost/internal/infra"
 	"markpost/pkg/utils"
 )
 
+// RunResetPassword resets the password for the given user and revokes all active sessions.
 func RunResetPassword(configPath, username, password string) error {
 	if err := config.Load(configPath); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -21,7 +23,11 @@ func RunResetPassword(configPath, username, password string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer dbInstance.Close()
+	defer func() {
+		if err := dbInstance.Close(); err != nil {
+			log.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	userRepo := infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo := infra.NewTokenRepository(dbInstance.DB())

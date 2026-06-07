@@ -99,6 +99,7 @@ func resolveFieldName(t reflect.Type, fieldName string) string {
 	return name
 }
 
+// ParseBindingErrors converts a validation error into a slice of field-level details.
 func ParseBindingErrors(err error, req interface{}) []service.FieldDetail {
 	var causes []service.FieldDetail
 	ve, ok := err.(validator.ValidationErrors)
@@ -159,6 +160,7 @@ type PaginationQuery struct {
 	Offset int `form:"-" json:"-"`
 }
 
+// Validate checks the pagination query parameters and normalizes their values.
 func (q *PaginationQuery) Validate() error {
 	offset, page, limit, err := service.ValidatePagination(q.Page, q.Limit)
 	if err != nil {
@@ -170,6 +172,7 @@ func (q *PaginationQuery) Validate() error {
 	return nil
 }
 
+// ToPagination converts the query parameters into a Pagination response for the given total count.
 func (q *PaginationQuery) ToPagination(total int64) Pagination {
 	return Pagination{
 		Page:       q.Page,
@@ -291,6 +294,7 @@ func writeList[T any, R any](
 	c.JSON(http.StatusOK, wrapResponse(mapped))
 }
 
+// NotFound returns a handler that responds with a 404 Not Found status.
 func NotFound() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, MessageResponse{Message: "Not Found"})

@@ -1,4 +1,4 @@
-// JWT token generation and validation.
+// Package auth provides JWT token generation and validation services.
 package auth
 
 import (
@@ -14,6 +14,7 @@ type JWTTokenPair struct {
 	ExpiresAt    time.Time
 }
 
+// ExpiresInSeconds returns the number of seconds until the token pair expires.
 func (t *JWTTokenPair) ExpiresInSeconds() int64 {
 	return int64(time.Until(t.ExpiresAt).Seconds())
 }

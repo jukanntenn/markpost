@@ -12,6 +12,7 @@ import (
 	"markpost/pkg/utils"
 )
 
+// UpdateChannelParams holds the parameters for creating or updating a delivery channel.
 type UpdateChannelParams struct {
 	Kind          string
 	Name          string

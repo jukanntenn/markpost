@@ -10,15 +10,18 @@ import (
 	"markpost/internal/service"
 )
 
+// UserLister defines the interface for retrieving users.
 type UserLister interface {
 	GetAll(ctx context.Context, offset, limit int) ([]user.User, error)
 	Count(ctx context.Context) (int64, error)
 }
 
+// PostLister defines the interface for retrieving posts.
 type PostLister interface {
 	GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
 }
 
+// ChannelLister defines the interface for retrieving delivery channels.
 type ChannelLister interface {
 	ListAll(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
 }

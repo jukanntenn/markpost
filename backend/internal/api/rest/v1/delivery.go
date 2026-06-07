@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// DeliveryService defines the interface for delivery channel operations.
 type DeliveryService interface {
 	ListByUserID(ctx context.Context, userID int) ([]delivery.Channel, error)
 	Create(ctx context.Context, userID int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
@@ -19,6 +20,7 @@ type DeliveryService interface {
 	Delete(ctx context.Context, userID int, id int) error
 }
 
+// ListDeliveryChannels returns a handler that lists all delivery channels for the authenticated user.
 func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -37,6 +39,7 @@ func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
+// CreateDeliveryChannel returns a handler that creates a new delivery channel for the authenticated user.
 func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -56,6 +59,7 @@ func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
+// UpdateDeliveryChannel returns a handler that updates an existing delivery channel for the authenticated user.
 func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserAndID(c, func(u *user.User, id int) {
@@ -75,6 +79,7 @@ func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
+// DeleteDeliveryChannel returns a handler that deletes an existing delivery channel for the authenticated user.
 func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserAndID(c, func(u *user.User, id int) {

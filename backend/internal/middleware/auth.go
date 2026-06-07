@@ -28,6 +28,7 @@ func extractBearerToken(c *gin.Context) (string, bool) {
 	return token, true
 }
 
+// ExtractAccessToken retrieves the access token from the gin context.
 func ExtractAccessToken(c *gin.Context) (string, bool) {
 	t, ok := c.Get("access_token")
 	if !ok {
@@ -101,10 +102,12 @@ func requireAuth(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.
 	}
 }
 
+// Auth returns a middleware that requires a valid JWT access token.
 func Auth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFunc {
 	return requireAuth(jwtSvc, users, nil)
 }
 
+// AuthWithBlacklist returns a middleware that requires a valid JWT access token and checks against the token blacklist.
 func AuthWithBlacklist(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.TokenRepository) gin.HandlerFunc {
 	return requireAuth(jwtSvc, users, tokenRepo)
 }
@@ -118,7 +121,7 @@ func OptionalAuth(jwtSvc *auth.JWTService, users user.Repository) gin.HandlerFun
 			return
 		}
 
-		tryAuthenticate(c, tokenString, jwtSvc, users)
+		_, _, _ = tryAuthenticate(c, tokenString, jwtSvc, users)
 		c.Next()
 	}
 }

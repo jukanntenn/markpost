@@ -27,6 +27,7 @@ func randomString(byteLength int, alphabet string) (string, error) {
 	return string(out), nil
 }
 
+// GeneratePostKey creates a cryptographically random post key prefixed with "mpk-".
 func GeneratePostKey(byteLength int) (string, error) {
 	if byteLength <= 0 {
 		byteLength = 20
@@ -38,6 +39,7 @@ func GeneratePostKey(byteLength int) (string, error) {
 	return "mpk-" + s, nil
 }
 
+// GenerateRandomPassword creates a cryptographically random password of the given length.
 func GenerateRandomPassword(length int) (string, error) {
 	if length <= 0 {
 		length = 12

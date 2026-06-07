@@ -1,3 +1,4 @@
+// Package main verifies that SQLite schema migrations correctly handle table renames.
 package main
 
 import (
@@ -97,5 +98,7 @@ func main() {
 	fmt.Printf("FINAL: users=%d, posts=%d, delivery_channels=%d\n", userCount, postCount, newChannels)
 
 	sqlDB, _ := db.DB()
-	sqlDB.Close()
+	if err := sqlDB.Close(); err != nil {
+		log.Fatal(err)
+	}
 }

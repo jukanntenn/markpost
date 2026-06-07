@@ -38,10 +38,7 @@ func ensureSQLiteDir(dsn string) error {
 		return nil
 	}
 
-	path := dsn
-	if strings.HasPrefix(path, "file:") {
-		path = strings.TrimPrefix(path, "file:")
-	}
+	path := strings.TrimPrefix(dsn, "file:")
 	if idx := strings.Index(path, "?"); idx >= 0 {
 		path = path[:idx]
 	}
@@ -146,6 +143,7 @@ func (d *Database) DB() *gorm.DB {
 	return d.db
 }
 
+// Close closes the underlying database connection.
 func (d *Database) Close() error {
 	sqlDB, err := d.db.DB()
 	if err != nil {
@@ -181,7 +179,7 @@ func (d *Database) migratePasswordColumn() error {
 func (d *Database) migrateQIDPrefix() error {
 	result := d.db.Model(&post.Post{}).
 		Where("qid NOT LIKE ?", "p-%").
-		Update("qid", d.db.Statement.DB.Raw("CONCAT('p-', qid)"))
+		Update("qid", d.db.Statement.Raw("CONCAT('p-', qid)"))
 	log.Printf("migrateQIDPrefix: rowsAffected=%d, error=%v", result.RowsAffected, result.Error)
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "CONCAT") {

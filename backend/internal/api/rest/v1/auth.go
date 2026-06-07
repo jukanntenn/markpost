@@ -13,10 +13,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GitHubAuthURLGenerator defines the interface for generating GitHub OAuth authorization URLs.
 type GitHubAuthURLGenerator interface {
 	GenerateGitHubAuthURL(ctx context.Context) (string, error)
 }
 
+// GenerateGitHubOAuthURL returns a handler that responds with a GitHub OAuth authorization URL.
 func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
@@ -28,6 +30,7 @@ func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	}
 }
 
+// AuthService defines the interface for authentication operations.
 type AuthService interface {
 	LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error)
 	LoginWithEmail(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error)
@@ -45,6 +48,7 @@ func writeAuthResult(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair, er
 	writeAuthResponse(c, u, tokens)
 }
 
+// LoginGitHub returns a handler that authenticates a user via GitHub OAuth.
 func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req GitHubLoginRequest
@@ -76,6 +80,7 @@ func LoginWithUsername(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// RefreshToken returns a handler that refreshes an authentication token pair.
 func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req RefreshTokenRequest
@@ -92,6 +97,7 @@ func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// Logout returns a handler that invalidates the current user's access token.
 func Logout(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if token, ok := middleware.ExtractAccessToken(c); ok {
@@ -107,6 +113,7 @@ func Logout(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// ChangePassword returns a handler that changes the authenticated user's password.
 func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -127,6 +134,7 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
+// QueryPostKey returns a handler that retrieves the authenticated user's post key.
 func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {

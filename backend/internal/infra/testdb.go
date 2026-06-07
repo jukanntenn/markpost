@@ -19,6 +19,7 @@ var testModels = []any{
 	&delivery.Channel{},
 }
 
+// SetupTestDB creates an in-memory SQLite database for testing with all models migrated.
 func SetupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -31,12 +32,13 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	t.Cleanup(func() {
 		sqlDB, _ := db.DB()
 		if sqlDB != nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	})
 	return db
 }
 
+// SetupTestDBWithRepos creates a test database and returns it along with all repository implementations.
 func SetupTestDBWithRepos(t *testing.T) (*gorm.DB, user.Repository, user.TokenRepository, post.Repository, delivery.Repository) {
 	t.Helper()
 	db := SetupTestDB(t)

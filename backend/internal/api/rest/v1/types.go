@@ -13,6 +13,7 @@ import (
 
 // --- Auth types ---
 
+// UserResponse represents the user data returned in API responses.
 type UserResponse struct {
 	ID        int     `json:"id"`
 	Email     string  `json:"email"`
@@ -33,40 +34,48 @@ func newUserResponse(u user.User) UserResponse {
 	}
 }
 
+// TokenFields represents JWT token fields returned in authentication responses.
 type TokenFields struct {
 	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
 }
 
+// AuthResponse represents the response for a successful authentication.
 type AuthResponse struct {
 	User UserResponse `json:"user"`
 	TokenFields
 }
 
+// RefreshTokenResponse represents the response for a successful token refresh.
 type RefreshTokenResponse struct {
 	TokenFields
 }
 
+// PostKeyResponse represents the response containing a user's post key.
 type PostKeyResponse struct {
 	PostKey   string    `json:"post_key"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// GitHubLoginRequest represents the request body for GitHub OAuth login.
 type GitHubLoginRequest struct {
 	Code  string `json:"code" binding:"required"`
 	State string `json:"state" binding:"required"`
 }
 
+// UsernameLoginRequest represents the request body for username and password login.
 type UsernameLoginRequest struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
+// RefreshTokenRequest represents the request body for refreshing an authentication token.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// PasswordChangeRequest represents the request body for changing a user's password.
 type PasswordChangeRequest struct {
 	CurrentPassword string `json:"current_password" binding:"required"`
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
@@ -74,10 +83,12 @@ type PasswordChangeRequest struct {
 
 // --- Post types ---
 
+// CreatePostResponse represents the response for a successful post creation.
 type CreatePostResponse struct {
 	ID string `json:"id"`
 }
 
+// PostListItem represents a single post entry in a paginated post list.
 type PostListItem struct {
 	ID        int       `json:"id"`
 	QID       string    `json:"qid"`
@@ -85,11 +96,13 @@ type PostListItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// PostsListResponse represents a paginated list of posts.
 type PostsListResponse struct {
 	Posts      []PostListItem `json:"posts"`
 	Pagination Pagination     `json:"pagination"`
 }
 
+// PostRequest represents the request body for creating a new post.
 type PostRequest struct {
 	Title string `json:"title" binding:"required,titlesize"`
 	Body  string `json:"body" binding:"required,bodysize"`
@@ -106,6 +119,7 @@ func newPostListItem(p post.Post) PostListItem {
 
 // --- Delivery types ---
 
+// ChannelResponse represents a delivery channel in API responses.
 type ChannelResponse struct {
 	ID            int                           `json:"id"`
 	Kind          delivery.ChannelKind          `json:"kind"`
@@ -130,14 +144,17 @@ func newChannelResponse(ch delivery.Channel) ChannelResponse {
 	}
 }
 
+// ChannelsListResponse represents a list of delivery channels.
 type ChannelsListResponse struct {
 	Channels []ChannelResponse `json:"channels"`
 }
 
+// SingleChannelResponse represents a response containing a single delivery channel.
 type SingleChannelResponse struct {
 	Channel ChannelResponse `json:"channel"`
 }
 
+// CreateDeliveryChannelRequest represents the request body for creating a delivery channel.
 type CreateDeliveryChannelRequest struct {
 	Kind          string          `json:"kind" binding:"required"`
 	Name          string          `json:"name" binding:"required"`
@@ -154,6 +171,7 @@ func (r CreateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 	}
 }
 
+// UpdateDeliveryChannelRequest represents the request body for updating a delivery channel.
 type UpdateDeliveryChannelRequest struct {
 	Kind          *string          `json:"kind"`
 	Name          *string          `json:"name"`
@@ -177,6 +195,7 @@ func (r UpdateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 
 // --- Admin types ---
 
+// AdminUserItem represents a user entry in the admin user list.
 type AdminUserItem struct {
 	ID        int       `json:"id"`
 	Username  string    `json:"username"`
@@ -197,6 +216,7 @@ func newAdminUserItem(u user.User) AdminUserItem {
 	}
 }
 
+// AdminPostItem represents a post entry in the admin post list.
 type AdminPostItem struct {
 	QID       string    `json:"qid"`
 	Title     string    `json:"title"`
@@ -215,6 +235,7 @@ func newAdminPostItem(p post.Post) AdminPostItem {
 	}
 }
 
+// AdminChannelItem represents a delivery channel entry in the admin channel list.
 type AdminChannelItem struct {
 	ID            int                           `json:"id"`
 	Name          string                        `json:"name"`
@@ -237,6 +258,7 @@ func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
 	}
 }
 
+// AdminPostsQuery represents the query parameters for admin post listing.
 type AdminPostsQuery struct {
 	PaginationQuery
 	Search string `form:"search"`
@@ -244,6 +266,7 @@ type AdminPostsQuery struct {
 
 // --- Health types ---
 
+// HealthResponse represents the health check response.
 type HealthResponse struct {
 	Status string `json:"status"`
 }

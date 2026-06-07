@@ -110,7 +110,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	loginRouter.ServeHTTP(loginW, loginReq)
 
 	var loginResp AuthResponse
-	json.Unmarshal(loginW.Body.Bytes(), &loginResp)
+	_ = json.Unmarshal(loginW.Body.Bytes(), &loginResp)
 
 	// Now refresh
 	router := newTestEngine()

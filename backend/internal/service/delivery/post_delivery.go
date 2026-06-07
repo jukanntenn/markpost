@@ -109,16 +109,16 @@ func parseCommaSeparatedKeywords(raw string) []string {
 	return out
 }
 
-func truncateRunes(s string, max int) string {
-	if max <= 0 || s == "" {
+func truncateRunes(s string, maxRunes int) string {
+	if maxRunes <= 0 || s == "" {
 		return ""
 	}
 
 	r := []rune(s)
-	if len(r) <= max {
+	if len(r) <= maxRunes {
 		return s
 	}
-	return string(r[:max])
+	return string(r[:maxRunes])
 }
 
 func buildPostURL(publicURL string, host string, port uint16, qid string) string {

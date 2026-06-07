@@ -33,26 +33,26 @@ func (t *interceptTransport) RoundTrip(req *http.Request) (*http.Response, error
 func newGitHubMockMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "test-github-token",
 			"token_type":   "bearer",
 		})
 	})
 
-	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":         12345,
 			"login":      "testuser",
 			"avatar_url": "https://example.com/avatar.png",
 		})
 	})
 
-	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"email": "primary@example.com", "primary": true, "verified": true},
 			{"email": "secondary@example.com", "primary": false, "verified": true},
 		})
@@ -153,9 +153,9 @@ func TestLoginWithGitHub(t *testing.T) {
 
 func TestLoginWithGitHub_InvalidCode(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "bad verification code")
+		_, _ = fmt.Fprint(w, "bad verification code")
 	})
 
 	svc := setupGitHubAuthService(t, mux)
@@ -176,16 +176,16 @@ func TestLoginWithGitHub_InvalidCode(t *testing.T) {
 
 func TestGetGitHubUser_InvalidData(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "test-token",
 			"token_type":   "bearer",
 		})
 	})
-	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":    0,
 			"login": "",
 		})
@@ -202,24 +202,24 @@ func TestGetGitHubUser_InvalidData(t *testing.T) {
 
 func TestGetGitHubUserEmails_NoPrimary(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "test-token",
 			"token_type":   "bearer",
 		})
 	})
-	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":         99999,
 			"login":      "noprimuser",
 			"avatar_url": "https://example.com/avatar.png",
 		})
 	})
-	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]map[string]any{
+		_ = json.NewEncoder(w).Encode([]map[string]any{
 			{"email": "verified@example.com", "primary": false, "verified": true},
 			{"email": "unverified@example.com", "primary": false, "verified": false},
 		})
@@ -239,24 +239,24 @@ func TestGetGitHubUserEmails_NoPrimary(t *testing.T) {
 
 func TestGetGitHubUserEmails_FetchError(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "test-token",
 			"token_type":   "bearer",
 		})
 	})
-	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":         88888,
 			"login":      "erruser",
 			"avatar_url": "https://example.com/avatar.png",
 		})
 	})
-	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user/emails", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprint(w, "rate limited")
+		_, _ = fmt.Fprint(w, "rate limited")
 	})
 
 	svc := setupGitHubAuthService(t, mux)
@@ -270,16 +270,16 @@ func TestGetGitHubUserEmails_FetchError(t *testing.T) {
 
 func TestGetGitHubUser_FetchError(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/login/oauth/access_token", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "test-token",
 			"token_type":   "bearer",
 		})
 	})
-	mux.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/user", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "internal error")
+		_, _ = fmt.Fprint(w, "internal error")
 	})
 
 	svc := setupGitHubAuthService(t, mux)

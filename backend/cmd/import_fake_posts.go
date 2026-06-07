@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -34,7 +35,11 @@ func RunImportFakePosts(configPath, filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}
-	defer dbInstance.Close()
+	defer func() {
+		if err := dbInstance.Close(); err != nil {
+			log.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	userRepo := infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	u, err := userRepo.GetByUsername(context.Background(), "markpost")

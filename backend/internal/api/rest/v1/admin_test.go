@@ -84,7 +84,7 @@ func TestAdminListUsers_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	users, ok := resp["users"].([]interface{})
 	if !ok {
 		t.Fatal("expected users array in response")
@@ -116,7 +116,7 @@ func TestAdminListUsers_WithPagination(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	pagination, ok := resp["pagination"].(map[string]interface{})
 	if !ok {
 		t.Fatal("expected pagination in response")
@@ -147,7 +147,7 @@ func TestAdminListPosts_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	posts, ok := resp["posts"].([]interface{})
 	if !ok {
 		t.Fatal("expected posts array in response")
@@ -178,7 +178,7 @@ func TestAdminListPosts_WithSearch(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	posts, _ := resp["posts"].([]interface{})
 	if len(posts) != 1 {
 		t.Errorf("expected 1 post, got %d", len(posts))
@@ -206,7 +206,7 @@ func TestAdminListChannels_Success(t *testing.T) {
 	}
 
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	channels, ok := resp["channels"].([]interface{})
 	if !ok {
 		t.Fatal("expected channels array in response")

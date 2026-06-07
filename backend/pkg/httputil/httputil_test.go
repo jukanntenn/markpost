@@ -58,9 +58,9 @@ func TestCheckHTTPResponse(t *testing.T) {
 
 func TestFetchAndDecodeJSON(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"key": "value"})
+			_ = json.NewEncoder(w).Encode(map[string]string{"key": "value"})
 		}))
 		defer srv.Close()
 
@@ -74,7 +74,7 @@ func TestFetchAndDecodeJSON(t *testing.T) {
 	})
 
 	t.Run("non-2xx", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(500)
 		}))
 		defer srv.Close()
@@ -90,9 +90,9 @@ func TestFetchAndDecodeJSON(t *testing.T) {
 	})
 
 	t.Run("invalid json", func(t *testing.T) {
-		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte("not-json"))
+			_, _ = w.Write([]byte("not-json"))
 		}))
 		defer srv.Close()
 

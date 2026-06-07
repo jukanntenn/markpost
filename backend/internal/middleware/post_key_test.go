@@ -38,7 +38,7 @@ func TestPostKey(t *testing.T) {
 		}
 
 		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
 		if resp["user_id"] != float64(created.ID) {
 			t.Errorf("user_id = %v, want %d", resp["user_id"], created.ID)
 		}

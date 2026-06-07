@@ -27,8 +27,8 @@ func writeTestConfig(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	tmpFile.WriteString(testConfigToml)
-	tmpFile.Close()
+	_, _ = tmpFile.WriteString(testConfigToml)
+	_ = tmpFile.Close()
 	return tmpFile.Name()
 }
 
@@ -36,7 +36,7 @@ func TestLoad(t *testing.T) {
 	ResetForTest()
 
 	path := writeTestConfig(t)
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 
 	err := Load(path)
 	if err != nil {
@@ -65,7 +65,7 @@ func TestGet(t *testing.T) {
 	ResetForTest()
 
 	path := writeTestConfig(t)
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 
 	if err := Load(path); err != nil {
 		t.Fatalf("Load error: %v", err)
@@ -81,7 +81,7 @@ func TestDefaults(t *testing.T) {
 	ResetForTest()
 
 	path := writeTestConfig(t)
-	defer os.Remove(path)
+	defer func() { _ = os.Remove(path) }()
 
 	if err := Load(path); err != nil {
 		t.Fatalf("Load error: %v", err)
@@ -102,8 +102,8 @@ func TestFileExists(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create temp file: %v", err)
 		}
-		tmpFile.Close()
-		defer os.Remove(tmpFile.Name())
+		_ = tmpFile.Close()
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 		exists, err := fileExists(tmpFile.Name())
 		if err != nil {
@@ -141,7 +141,7 @@ func TestLoad_WithValidTomlFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	content := `
 debug = true
@@ -161,8 +161,8 @@ refresh_signing_key = "test-refresh-key-min-32-characters!!"
 [delivery]
 request_timeout = "5s"
 `
-	tmpFile.WriteString(content)
-	tmpFile.Close()
+	_, _ = tmpFile.WriteString(content)
+	_ = tmpFile.Close()
 
 	err = Load(tmpFile.Name())
 	if err != nil {

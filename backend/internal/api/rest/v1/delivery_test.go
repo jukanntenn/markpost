@@ -69,7 +69,7 @@ func (m *mockDeliveryService) Create(_ context.Context, userID int, params deliv
 
 	var config delivery.ChannelConfiguration
 	if len(params.Configuration) > 0 {
-		json.Unmarshal(params.Configuration, &config)
+		_ = json.Unmarshal(params.Configuration, &config)
 	}
 
 	ch := &delivery.Channel{
@@ -104,7 +104,7 @@ func (m *mockDeliveryService) Update(_ context.Context, userID int, id int, para
 	}
 	if len(params.Configuration) > 0 {
 		var config delivery.ChannelConfiguration
-		json.Unmarshal(params.Configuration, &config)
+		_ = json.Unmarshal(params.Configuration, &config)
 		ch.Configuration = config
 	}
 	if params.Keywords != "" {

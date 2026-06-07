@@ -19,7 +19,7 @@ func TestNewTestDatabase(t *testing.T) {
 	if database == nil {
 		t.Fatal("expected non-nil database")
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	db := database.DB()
 	if db == nil {
@@ -40,7 +40,7 @@ func TestDatabase_DB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewTestDatabase error: %v", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	if database.DB() == nil {
 		t.Fatal("DB() returned nil")
@@ -94,7 +94,7 @@ request_timeout = "5s"
 	if err != nil {
 		t.Fatalf("New error: %v", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	db := database.DB()
 	if db == nil {
@@ -237,7 +237,7 @@ func TestUserExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewTestDatabase error: %v", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	exists, err := database.userExists("admin")
 	if err != nil {
@@ -253,7 +253,7 @@ func TestCreateUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewTestDatabase error: %v", err)
 	}
-	defer database.Close()
+	defer func() { _ = database.Close() }()
 
 	u, err := makeUser("admin@example.com", "admin", "password123", nil, nil, 16)
 	if err != nil {

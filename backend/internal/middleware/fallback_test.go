@@ -14,7 +14,7 @@ func TestFallback(t *testing.T) {
 	t.Run("recovers from panic", func(t *testing.T) {
 		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
 		router.Use(Fallback())
-		router.GET("/panic", func(c *gin.Context) {
+		router.GET("/panic", func(_ *gin.Context) {
 			panic("something went wrong")
 		})
 

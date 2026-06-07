@@ -93,7 +93,7 @@ func TestAuth(t *testing.T) {
 		created, _ := userRepo.Create(t.Context(), "test@example.com", "testuser", "password")
 		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
 
-		userRepo.DeleteByID(t.Context(), created.ID)
+		_, _ = userRepo.DeleteByID(t.Context(), created.ID)
 
 		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
 		router.Use(Auth(jwtSvc, userRepo))
@@ -138,7 +138,7 @@ func TestAuthWithBlacklist(t *testing.T) {
 		}
 
 		var resp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &resp)
+		_ = json.Unmarshal(w.Body.Bytes(), &resp)
 		if resp["code"] != "invalid_token" {
 			t.Errorf("expected code 'invalid_token', got %v", resp["code"])
 		}

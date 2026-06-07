@@ -15,9 +15,9 @@ func TestFeishuClient_SendText(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -40,9 +40,9 @@ func TestFeishuClient_SendText(t *testing.T) {
 	})
 
 	t.Run("returns error for non-2xx status", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"code":9400}`))
+			_, _ = w.Write([]byte(`{"code":9400}`))
 		}))
 		defer server.Close()
 
@@ -54,9 +54,9 @@ func TestFeishuClient_SendText(t *testing.T) {
 	})
 
 	t.Run("returns error for non-zero API code", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":11246,"msg":"card json is invalid"}`))
+			_, _ = w.Write([]byte(`{"code":11246,"msg":"card json is invalid"}`))
 		}))
 		defer server.Close()
 
@@ -97,9 +97,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -135,9 +135,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -165,9 +165,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -207,9 +207,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -242,9 +242,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 		var receivedBody map[string]any
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			json.Unmarshal(body, &receivedBody)
+			_ = json.Unmarshal(body, &receivedBody)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 

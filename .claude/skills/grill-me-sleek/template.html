@@ -161,6 +161,22 @@ a{color:inherit}
   top:50%;left:50%;transform:translate(-50%,-50%);
   width:5px;height:5px;border-radius:50%;background:var(--c-ink);
 }
+.opt input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;
+  margin-top:5px;flex-shrink:0;
+  width:14px;height:14px;
+  border:1.5px solid var(--c-steel);border-radius:3px;
+  background:transparent;position:relative;cursor:pointer;
+  transition:border-color var(--tr),background var(--tr);
+}
+.opt input[type=checkbox]:checked{border-color:var(--c-ink);background:var(--c-ink)}
+.opt input[type=checkbox]:checked::after{
+  content:'';position:absolute;
+  top:2px;left:4px;
+  width:4px;height:7px;
+  border:solid var(--c-on-primary);border-width:0 1.5px 1.5px 0;
+  transform:rotate(45deg);
+}
 /* pill-tab-active state */
 .opt.sel{background:transparent;color:var(--c-ink)}
 .opt-text{flex:1;word-break:break-word}
@@ -184,11 +200,11 @@ a{color:inherit}
   background:var(--c-surface);border:1px solid var(--c-hairline);
   border-radius:var(--r-md);
   font-family:var(--font);font-size:14px;color:var(--c-ink);
-  outline:none;display:none;
+  outline:none;
   transition:background var(--tr),border-color var(--tr),color var(--tr);
 }
 .custom-input:focus{border-width:2px;border-color:var(--c-brand-blue-deep);background:var(--c-canvas);padding:7px 11px}
-.custom-input.vis{display:block}
+.custom-input.hidden{display:none}
 
 /* ── Notes — card-base + text-input ────────── */
 .notes-card{
@@ -238,6 +254,22 @@ a{color:inherit}
 .submitted p{font-size:14px;color:var(--c-slate)}
 .submitted .hint{margin-top:16px;font-size:13px;color:var(--c-stone)}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* ── Done Mode ─────────────────────────────── */
+.mode-done,.mode-status{
+  text-align:center;padding:40vh 0 0;color:var(--c-ink)
+}
+.mode-done .ck,.mode-status .sp{
+  display:inline-block;margin-bottom:16px
+}
+.mode-done .ck{font-size:28px}
+.mode-status .sp{
+  width:12px;height:12px;
+  border:2px solid var(--c-hairline);border-top-color:var(--c-ink);
+  border-radius:50%;animation:spin .8s linear infinite
+}
+.mode-done h2,.mode-status h2{font-size:16px;font-weight:700;margin-bottom:8px}
+.mode-done p,.mode-status p{font-size:14px;color:var(--c-slate)}
+.mode-done .hint,.mode-status .hint{margin-top:16px;font-size:13px;color:var(--c-stone)}
 
 /* ── Responsive — DESIGN.md breakpoints ────── */
 @media(max-width:1023px){
@@ -301,6 +333,16 @@ a{color:inherit}
     </div>
     <button type="submit" class="btn-submit" id="btn-submit"></button>
   </form>
+  <div id="mode-done" style="display:none" class="mode-done">
+    <div class="ck">&#10003;</div>
+    <h2 id="done-title">All done</h2>
+    <p id="done-text">You can close this tab.</p>
+  </div>
+  <div id="mode-status" style="display:none" class="mode-status">
+    <div class="sp"></div>
+    <h2 id="status-title"></h2>
+    <div id="status-extra"></div>
+  </div>
 </div>
 <script>
 var D=JSON.parse('{{GRILL_DATA}}');
@@ -311,32 +353,40 @@ var I18N={
     submit:"Submit Answers",submitting:"Submitting...",
     notes:"Additional Notes",notesPh:"Any other comments...",
     specify:"Please specify...",recommended:"recommended",
+    customPh:"Additional notes (optional)...",
     submitted:"Submitted.",waiting:"Waiting for the next batch...",
-    stay:"Stay on this tab — new questions will appear here."
+    stay:"Stay on this tab — new questions will appear here.",
+    done:"All done",doneText:"You can close this tab."
   },
   "zh-CN":{
     submit:"提交回答",submitting:"提交中...",
     notes:"补充说明",notesPh:"其他想说的话...",
     specify:"请具体说明...",recommended:"推荐",
+    customPh:"补充说明（可选）...",
     submitted:"已提交。",
     waiting:"等待下一批问题...",
-    stay:"请保持在此页面 — 新问题将自动显示在这里。"
+    stay:"请保持在此页面 — 新问题将自动显示在这里。",
+    done:"全部完成",doneText:"可以关闭此页面了。"
   },
   "zh-TW":{
     submit:"提交回答",submitting:"提交中...",
     notes:"補充說明",notesPh:"其他想說的話...",
     specify:"請具體說明...",recommended:"推薦",
+    customPh:"補充說明（可選）...",
     submitted:"已提交。",
     waiting:"等待下一批問題...",
-    stay:"請保持在此頁面 — 新問題將自動顯示在這裡。"
+    stay:"請保持在此頁面 — 新問題將自動顯示在這裡。",
+    done:"全部完成",doneText:"可以關閉此頁面了。"
   },
   ja:{
     submit:"回答を送信",submitting:"送信中...",
     notes:"追加メモ",notesPh:"その他のコメント...",
     specify:"具体的に入力してください...",recommended:"おすすめ",
+    customPh:"補足説明（任意）...",
     submitted:"送信完了。",
     waiting:"次の質問を待っています...",
-    stay:"このタブを開いたままにしてください — 新しい質問がここに表示されます。"
+    stay:"このタブを開いたままにしてください — 新しい質問がここに表示されます。",
+    done:"完了",doneText:"このタブを閉じてください。"
   }
 };
 
@@ -372,7 +422,7 @@ function applyI18n(){
   document.getElementById('additional_notes').placeholder=t('notesPh');
   document.getElementById('btn-submit').textContent=t('submit');
   document.querySelectorAll('.rec-text').forEach(function(b){b.textContent=' ('+t('recommended')+')'});
-  document.querySelectorAll('.custom-input').forEach(function(i){i.placeholder=t('specify')});
+  document.querySelectorAll('.custom-input').forEach(function(i){i.placeholder=t('customPh')});
 }
 
 /* ── Theme ────────────────────────────────── */
@@ -401,6 +451,24 @@ function cycleTheme(){
 
 /* ── Render ───────────────────────────────── */
 function render(){
+  /* Mode handling */
+  if(D._mode==='done'){
+    document.getElementById('f').style.display='none';
+    document.querySelector('.notes-card')&&(document.querySelector('.notes-card').style.display='none');
+    var dm=document.getElementById('mode-done');dm.style.display='block';
+    if(D.title)document.getElementById('done-title').textContent=D.title;
+    if(D.description)document.getElementById('done-text').textContent=D.description;
+    return;
+  }
+  if(D._mode==='status'){
+    document.getElementById('f').style.display='none';
+    document.querySelector('.notes-card')&&(document.querySelector('.notes-card').style.display='none');
+    var sm=document.getElementById('mode-status');sm.style.display='block';
+    document.getElementById('status-title').textContent=D.title||'';
+    document.getElementById('status-extra').innerHTML=D.description||'';
+    return;
+  }
+
   document.getElementById('title').textContent=D.title||'';
   document.getElementById('desc').textContent=D.description||'';
   var qs=document.getElementById('qs');
@@ -411,12 +479,16 @@ function render(){
     var txt=document.createElement('div');txt.className='q-text';txt.textContent=q.text;
     card.appendChild(txt);
 
+    var isMulti=q.multi===true;
     var opts=document.createElement('div');opts.className='opts';
-    q.options.forEach(function(o){
+    if(isMulti)opts.setAttribute('data-multiselect','');
+
+    q.options.forEach(function(o,i){
       var lbl=document.createElement('label');lbl.className='opt';
       var inp=document.createElement('input');
-      inp.type='radio';inp.name=q.id;inp.value=o;
-      var isRec=(o===q.recommended);
+      inp.type=isMulti?'checkbox':'radio';
+      inp.name=q.id;inp.value=o;
+      var isRec=(i===q.recommended);
       if(isRec){inp.checked=true;lbl.classList.add('sel')}
       var span=document.createElement('span');span.className='opt-text';
       span.appendChild(document.createTextNode(o));
@@ -425,14 +497,21 @@ function render(){
         b.textContent=' ('+t('recommended')+')';span.appendChild(b);
       }
       lbl.appendChild(inp);lbl.appendChild(span);
-      lbl.addEventListener('click',function(){
-        opts.querySelectorAll('.opt').forEach(function(x){x.classList.remove('sel')});
-        lbl.classList.add('sel');
-        var ci=document.getElementById(q.id+'_c');
-        if(ci){
-          var isOther=/other|其他|その他/i.test(o);
-          if(isOther){ci.classList.add('vis');ci.required=true}
-          else{ci.classList.remove('vis');ci.required=false}
+      lbl.addEventListener('click',function(e){
+        if(isMulti){
+          /* toggle behavior */
+          lbl.classList.toggle('sel',inp.checked);
+        }else{
+          /* radio: clicking already-selected deselects it */
+          if(inp.checked && lbl.classList.contains('sel')){
+            e.preventDefault();
+            inp.checked=false;
+            lbl.classList.remove('sel');
+          }else{
+            opts.querySelectorAll('.opt').forEach(function(x){x.classList.remove('sel')});
+            inp.checked=true;
+            lbl.classList.add('sel');
+          }
         }
       });
       opts.appendChild(lbl);
@@ -444,13 +523,12 @@ function render(){
       ex.textContent=q.explanation;card.appendChild(ex);
     }
 
-    var hasOther=q.options.some(function(o){return/other|其他|その他/i.test(o)});
-    if(hasOther){
-      var ci=document.createElement('input');
-      ci.type='text';ci.id=q.id+'_c';ci.name=q.id+'_c';
-      ci.className='custom-input';ci.placeholder=t('specify');
-      card.appendChild(ci);
-    }
+    /* Always-visible custom text input */
+    var ci=document.createElement('input');
+    ci.type='text';ci.id=q.id+'_c';ci.name=q.id+'_c';
+    ci.className='custom-input';
+    ci.placeholder=t('customPh');
+    card.appendChild(ci);
 
     qs.appendChild(card);
   });
@@ -463,7 +541,30 @@ document.getElementById('f').addEventListener('submit',function(e){
   e.preventDefault();
   var btn=document.getElementById('btn-submit');
   btn.disabled=true;btn.textContent=t('submitting');
-  fetch('/submit',{method:'POST',body:new URLSearchParams(new FormData(e.target))})
+  var fd=new FormData(e.target);
+  var params=new URLSearchParams();
+  var multiKeys={};
+  /* Collect multi-select keys */
+  document.querySelectorAll('.opts[data-multiselect]').forEach(function(c){
+    c.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      if(!multiKeys[cb.name])multiKeys[cb.name]=[];
+      if(cb.checked)multiKeys[cb.name].push(cb.value);
+    });
+  });
+  /* Build params */
+  for(var pair of fd.entries()){
+    var k=pair[0],v=pair[1];
+    if(k in multiKeys){
+      /* skip — we handle multi-select separately */
+    }else{
+      params.append(k,v);
+    }
+  }
+  /* Add multi-select as JSON arrays */
+  for(var mk in multiKeys){
+    params.append(mk,JSON.stringify(multiKeys[mk]));
+  }
+  fetch('/submit',{method:'POST',body:params})
     .then(function(){
       document.querySelector('.wrap').innerHTML=
         '<div class="submitted">'

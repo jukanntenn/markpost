@@ -13,36 +13,54 @@ If a question can be answered by exploring the codebase, explore the codebase in
 
 1. **Analyze the user's input** thoroughly to identify all critical decisions, assumptions, and ambiguities.
 2. **Generate a complete list of questions** as a single JSON object (schema below). Each question must include your recommended answer, 2–4 alternative options, and a brief explanation.
-3. **Execute the server script** to present the questions in the browser:
+3. **Push questions** to the server (non-blocking):
 
    ```
-   python3 "$GRILL_SERVER" << 'EOF'
+   bash "skills/grill-me-sleek/run.sh" << 'EOF'
    <JSON_DATA>
    EOF
    ```
+
+   - This returns immediately with a JSON line like: `{"type":"pushed","url":"http://localhost:PORT","round":N,"browser_opened":true}`
    - Use a heredoc with single-quoted delimiter to avoid shell escaping issues.
-   - Alternatively, pass JSON as a CLI argument: `python3 "$GRILL_SERVER" '<json>'`
-   - On Windows, use: `python "$GRILL_SERVER" "<JSON_DATA>"`
-   - The `$GRILL_SERVER` variable resolves to `$CLAUDE_PLUGIN_ROOT/skills/grill-me-sleek/server.py` for plugin installations, or `skills/grill-me-sleek/server.py` for standalone `.claude/skills/` usage.
+   - Alternatively, pass JSON as a CLI argument: `bash "skills/grill-me-sleek/run.sh" '<json>'`
+   - On Windows, use: `bash "skills/grill-me-sleek/run.sh" "<JSON_DATA>"`
 
-4. **Block and wait** for the script to output the user's response JSON to stdout. If the browser could not open automatically, the script will print a URL — instruct the user to open it manually.
-5. **Process the user's answers**: acknowledge decisions, and if any answers reveal new issues, generate a new JSON batch and run the server again. The browser tab stays open and reloads automatically — no need to open a new tab.
-6. **Summarize** the final shared understanding once all branches are resolved.
-7. **Signal completion** by running `python3 "$GRILL_SERVER" --done`. This shows the user a completion page in the browser and shuts down the server after 5 seconds.
+4. **Output guidance** to the user in Markdown. Every round MUST include the browser URL:
 
-## Resolving the server path
+   > 🌐 **Round N** — Please answer the questions in your browser: 🔗 http://localhost:PORT
+   >
+   > I'll receive your answers automatically and continue with the next analysis.
 
-Before running any server command, resolve the path with:
+   If `browser_opened` is false, additionally instruct the user to open the URL manually.
 
-```bash
-if [ -n "$CLAUDE_PLUGIN_ROOT" ]; then
-  GRILL_SERVER="$CLAUDE_PLUGIN_ROOT/skills/grill-me-sleek/server.py"
-else
-  GRILL_SERVER="skills/grill-me-sleek/server.py"
-fi
-```
+5. **Wait for the user's response** by running:
 
-This ensures the server is found whether the skill runs from a plugin installation or a standalone `.claude/skills/` setup.
+   ```
+   bash "skills/grill-me-sleek/run.sh" --wait
+   ```
+
+   This blocks until the user submits answers in the browser, then outputs the response JSON to stdout.
+
+6. **Process the user's answers**: acknowledge decisions, and if any answers reveal new issues, generate a new JSON batch and repeat from step 3. The browser tab stays open and reloads automatically — no need to open a new tab.
+
+7. **Present final summary** in the terminal as a structured list. Every decision point gets one line showing the choice and reasoning. Example format:
+
+   ```
+   ### Decision 1: [Topic]
+   - **Choice:** [what was decided]
+   - **Reason:** [why]
+   ```
+
+   The summary is terminal-only — do not push it to the browser.
+
+   **Note — `recommended` is a zero-based index** into the `options` array. For example, `recommended: 0` pre-selects the first option and shows the "(recommended)" badge.
+
+8. **Wait for explicit user confirmation.** Do NOT proceed to step 9 until the user gives a clear affirmative response (e.g. ok / 确认 / yes / 行 / 好的 / LGTM / 没问题 / 可以 / proceed / confirm). If the user wants to revise a specific decision, discuss only that item, then re-present the full updated summary and wait for confirmation again.
+
+   **⚠️ Anti-ambiguity rule:** You MUST NOT interpret silence, vague acknowledgments, or topic-adjacent replies as consent. Only explicit affirmative words count. When in doubt, ask.
+
+9. **Signal completion** by running `bash "skills/grill-me-sleek/run.sh" --done`. This shows the user a completion page in the browser and shuts down the server after 5 seconds. This step runs ONLY after the user has confirmed the summary in step 8.
 
 ## JSON Schema — Input (you generate this)
 
@@ -54,7 +72,7 @@ This ensures the server is found whether the skill runs from a plugin installati
     {
       "id": "q_[unique_id]",
       "text": "Clear, specific question",
-      "recommended": "Your recommended answer",
+      "recommended": 0,
       "options": ["Option 1", "Option 2", "Other (please specify)"],
       "explanation": "Why you recommend this option"
     }

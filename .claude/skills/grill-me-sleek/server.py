@@ -2,11 +2,12 @@
 """Grill-Me-Sleek server.
 
 Usage:
-  python3 server.py << 'EOF'         # Client: push questions via stdin
+  python3 server.py << 'EOF'         # Push questions (non-blocking, returns URL)
     <json_data>
   EOF
-  python3 server.py '<json_data>'    # Client: push questions, wait for response
-  python3 server.py --done           # Client: signal session complete
+  python3 server.py '<json_data>'    # Push questions (non-blocking, returns URL)
+  python3 server.py --wait           # Block until user submits answers
+  python3 server.py --done           # Signal session complete
   python3 server.py --serve          # Server: long-running background process
 
 Architecture mirrors brainstorming's server.cjs:
@@ -24,13 +25,14 @@ import base64
 import hashlib
 import json
 import os
-import shutil
 import socket
 import struct
 import subprocess
 import sys
 import threading
 import time
+import webbrowser
+from urllib.parse import parse_qs
 
 # ---------------------------------------------------------------------------
 # Paths — initialized in main() from GRILL_SESSION_DIR or derived from ppid
@@ -68,18 +70,21 @@ def _resolve_owner_pid():
 
 
 def _find_live_session():
-    """Find an existing session with a live server (for reuse)."""
-    import glob
+    """Find an existing session with a live server owned by the same owner.
 
-    for d in sorted(glob.glob("/tmp/grill-me-sleek-*"), reverse=True):
-        pf = os.path.join(d, "state", "server.pid")
-        try:
-            with open(pf, "r") as f:
-                pid = int(f.read().strip())
-            os.kill(pid, 0)
-            return d
-        except (FileNotFoundError, ValueError, OSError):
-            pass
+    Only matches sessions whose directory name contains our owner PID, so
+    different Claude instances (different harness PIDs) never collide.
+    """
+    owner = _resolve_owner_pid() or os.getppid()
+    candidate = f"/tmp/grill-me-sleek-{owner}"
+    pf = os.path.join(candidate, "state", "server.pid")
+    try:
+        with open(pf) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 0)
+        return candidate
+    except (FileNotFoundError, ValueError, OSError):
+        pass
     return None
 
 
@@ -146,10 +151,23 @@ def _remove_file(path):
         pass
 
 
+def _count_rounds():
+    """Count existing question batches to determine current round number."""
+    try:
+        files = [
+            f
+            for f in os.listdir(CONTENT_DIR)
+            if f.startswith("questions-") and f.endswith(".json")
+        ]
+        return len(files) + 1
+    except FileNotFoundError:
+        return 1
+
+
 def _server_is_alive():
     """Check PID file + process liveness. Returns (alive, pid)."""
     try:
-        with open(PID_FILE, "r") as f:
+        with open(PID_FILE) as f:
             pid = int(f.read().strip())
     except (FileNotFoundError, ValueError):
         return False, None
@@ -164,7 +182,7 @@ def _server_is_alive():
 
 def _read_port():
     try:
-        with open(PORT_FILE, "r") as f:
+        with open(PORT_FILE) as f:
             return int(f.read().strip())
     except (FileNotFoundError, ValueError):
         return None
@@ -251,71 +269,28 @@ def _ws_del(c):
 # HTML rendering
 # ---------------------------------------------------------------------------
 
-_MONO = "'Inter','Helvetica Neue',Helvetica,Arial,sans-serif"
-
 
 def _render_html(grill_data):
-    with open(_TEMPLATE_PATH, "r", encoding="utf-8") as f:
+    with open(_TEMPLATE_PATH, encoding="utf-8") as f:
         tpl = f.read()
-    esc = json.dumps(grill_data).replace("\\", "\\\\")
-    esc = esc.replace("'", "\\'")
+    esc = json.dumps(grill_data)
+    # Escape for embedding inside JS string literal in HTML <script>:
+    # 1. Double backslashes so JS doesn't eat JSON escapes
+    # 2. Escape single quotes (our string delimiter)
+    # 3. Escape < > so HTML parser doesn't see them as tags
+    esc = esc.replace("\\", "\\\\").replace("'", "\\'")
+    esc = esc.replace("<", "\\u003c").replace(">", "\\u003e")
     return tpl.replace("{{GRILL_DATA}}", esc)
 
 
-def _done_page():
-    """Session-complete page — no ws.js, so it won't reconnect after shutdown."""
-    return (
-        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-        "<title>All done</title><style>"
-        "*{box-sizing:border-box;margin:0;padding:0}"
-        ":root{--c:#1a1a1a;--bg:#fff;--m:#666}"
-        "@media(prefers-color-scheme:dark)"
-        "{:root{--c:#e8e8e8;--bg:#1a1a1a;--m:#aaa}}"
-        f"body{{font-family:{_MONO};background:var(--bg);"
-        "color:var(--c);height:100vh;display:flex;"
-        "align-items:center;justify-content:center;"
-        "transition:background .15s,color .15s}}"
-        ".d{text-align:center}"
-        ".ck{font-size:28px;margin-bottom:12px}"
-        "h1{font-size:16px;font-weight:700;margin-bottom:8px}"
-        "p{font-size:14px;color:var(--m)}"
-        "</style></head>"
-        "<body><div class='d'>"
-        "<div class='ck'>&#10003;</div>"
-        "<h1>All done</h1>"
-        "<p>You can close this tab.</p>"
-        "</div></body></html>"
-    )
+def _done_data(title="All done", text="You can close this tab."):
+    """Data dict for done mode — rendered by template.html."""
+    return {"_mode": "done", "title": title, "description": text}
 
 
-def _status_page(title, extra=""):
-    """Waiting/transition page — includes ws.js for auto-reload."""
-    return (
-        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-        f"<title>{title}</title><style>"
-        "*{box-sizing:border-box;margin:0;padding:0}"
-        ":root{--c:#1a1a1a;--bg:#fff;--m:#666;--bc:rgba(0,0,0,.12)}"
-        "@media(prefers-color-scheme:dark)"
-        "{:root{--c:#e8e8e8;--bg:#1a1a1a;--m:#aaa;--bc:rgba(255,255,255,.12)}}"
-        f"body{{font-family:{_MONO};background:var(--bg);"
-        "color:var(--c);height:100vh;display:flex;"
-        "align-items:center;justify-content:center;"
-        "transition:background .15s,color .15s}}"
-        ".w{text-align:center}"
-        "h1{font-size:16px;font-weight:700;margin-bottom:8px}"
-        "p{font-size:14px;color:var(--m)}"
-        ".sp{display:inline-block;width:12px;height:12px;"
-        "border:2px solid var(--bc);border-top-color:var(--c);"
-        "border-radius:50%;animation:s .8s linear infinite;"
-        "margin-bottom:16px}"
-        "@keyframes s{to{transform:rotate(360deg)}}"
-        "</style></head>"
-        "<body><div class='w'>"
-        "<div class='sp'></div>"
-        f"<h1>{title}</h1>{extra}"
-        "</div></body>"
-        "<script src='/ws.js'></script></html>"
-    )
+def _status_data(title, extra=""):
+    """Data dict for status mode — rendered by template.html."""
+    return {"_mode": "status", "title": title, "description": extra}
 
 
 # ---------------------------------------------------------------------------
@@ -360,10 +335,10 @@ class _ContentWatcher:
         )
         path = os.path.join(CONTENT_DIR, newest)
         try:
-            with open(path, "r") as f:
+            with open(path) as f:
                 data = json.load(f)
             if data.get("type") == "done":
-                self.server.current_html = _done_page()
+                self.server.current_html = _render_html(_done_data())
                 _ws_broadcast({"type": "reload"})
                 _log({"type": "session-done"})
                 threading.Thread(
@@ -419,9 +394,11 @@ class _Handler:
             return
         _touch_activity()
         if method == "GET" and path == "/":
-            html = self.server.current_html or _status_page(
-                "Waiting...",
-                "<p>Waiting for questions from the agent...</p>",
+            html = self.server.current_html or _render_html(
+                _status_data(
+                    "Waiting...",
+                    "<p>Waiting for questions from the agent...</p>",
+                )
             )
             self._html(html)
         elif method == "GET" and path == "/ws.js":
@@ -485,17 +462,28 @@ class _Handler:
     # -- Submit --
 
     def _submit(self, body):
-        from urllib.parse import parse_qs
-
         form = parse_qs(body)
         answers = {}
         notes = form.get("additional_notes", [""])[0]
         for k, v in form.items():
-            if k.startswith("q_"):
+            if k.startswith("q_") and not k.endswith("_c"):
+                raw = v[0]
+                # Multi-select sends JSON array; single-select sends plain text
+                try:
+                    parsed = json.loads(raw)
+                    selected = parsed if isinstance(parsed, list) else raw
+                except (json.JSONDecodeError, TypeError):
+                    selected = raw
                 answers[k] = {
-                    "selected": v[0],
-                    "custom_text": form.get(f"{k}_custom", [""])[0],
+                    "selected": selected,
+                    "custom_text": form.get(f"{k}_c", [""])[0],
                 }
+        # Handle custom_text without selected (user deselected all radios)
+        for k, v in form.items():
+            if k.startswith("q_") and k.endswith("_c"):
+                qk = k[:-2]  # strip _c
+                if qk not in answers and v[0]:
+                    answers[qk] = {"selected": "", "custom_text": v[0]}
         result = {
             "answers": answers,
             "additional_notes": notes,
@@ -504,13 +492,15 @@ class _Handler:
         with open(RESULT_FILE, "w") as f:
             json.dump(result, f, ensure_ascii=False)
         self._html(
-            _status_page(
-                "Submitted.",
-                "<p>Waiting for the next batch...</p>"
-                "<p style='margin-top:16px;font-size:13px;"
-                "color:#9a9898'>"
-                "Stay on this tab &mdash; "
-                "new questions will appear here.</p>",
+            _render_html(
+                _status_data(
+                    "Submitted.",
+                    "<p>Waiting for the next batch...</p>"
+                    "<p style='margin-top:16px;font-size:13px;"
+                    "color:#9a9898'>"
+                    "Stay on this tab &mdash; "
+                    "new questions will appear here.</p>",
+                )
             )
         )
 
@@ -581,7 +571,7 @@ class GrillServer:
                     args=(conn,),
                     daemon=True,
                 ).start()
-            except socket.timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 break
@@ -634,27 +624,38 @@ def _lifecycle(server, owner_pid):
 
 
 def _open_browser(url):
-    import webbrowser
+    """Open URL in browser. WSL: try Windows host commands first."""
+    is_wsl = bool(os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSLENV"))
 
-    if os.environ.get("WSL_DISTRO_NAME") or os.environ.get("WSLENV"):
-        browsers = [
-            "google-chrome",
-            "chromium",
-            "chromium-browser",
-            "firefox",
-            "microsoft-edge",
-        ]
-        if not any(shutil.which(b) for b in browsers):
-            return False
+    if is_wsl:
+        # WSL: prioritize Windows host browser commands
+        # cmd.exe start: first quoted arg is window title, need empty string
+        for cmd in [
+            ["cmd.exe", "/c", "start", '""', url],
+            ["wslview", url],
+            ["powershell.exe", "-c", f"Start-Process '{url}'"],
+        ]:
+            try:
+                subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return True
+            except FileNotFoundError:
+                continue
+
+    # Standard approaches
+
     try:
         if webbrowser.open(url):
             return True
     except Exception:
         pass
+
     for cmd in [
         ["xdg-open", url],
         ["open", url],
-        ["cmd.exe", "/c", "start", url],
     ]:
         try:
             subprocess.Popen(
@@ -705,7 +706,7 @@ def run_server():
 
 
 # ---------------------------------------------------------------------------
-# Client mode — push content, wait for result
+# Client mode — push content (non-blocking) + wait for result
 # ---------------------------------------------------------------------------
 
 
@@ -742,14 +743,15 @@ def run_done():
     _log({"type": "done-signal-sent"})
 
 
-def run_client(json_data):
-    """Push questions to server, wait for user response."""
+def run_push(json_data):
+    """Push questions to server, return URL immediately (non-blocking)."""
     _ensure_dirs()
 
     # Reuse running server or start new one
     alive, _ = _server_is_alive()
     port = _read_port()
     first_run = not alive or port is None
+    browser_opened = True  # assume already open for subsequent rounds
 
     if first_run:
         _remove_file(PID_FILE)
@@ -757,15 +759,15 @@ def run_client(json_data):
         _remove_file(RESULT_FILE)
         port = _start_server_bg()
         url = f"http://localhost:{port}"
-        opened = _open_browser(url)
-        _log({"type": "server-ready", "url": url, "browser_opened": opened})
-        if not opened:
+        browser_opened = _open_browser(url)
+        if not browser_opened:
             print(
                 f"Open this URL manually: {url}",
                 file=sys.stderr,
             )
 
     # Push content: write JSON to content directory
+    round_num = _count_rounds()
     ts = int(time.time() * 1000)
     path = os.path.join(CONTENT_DIR, f"questions-{ts}.json")
     with open(path, "w") as f:
@@ -774,12 +776,25 @@ def run_client(json_data):
     # Clear previous result
     _remove_file(RESULT_FILE)
 
-    # Block until user submits (poll result file)
+    url = f"http://localhost:{port}"
+    _log(
+        {
+            "type": "pushed",
+            "url": url,
+            "round": round_num,
+            "browser_opened": browser_opened,
+        }
+    )
+
+
+def run_wait():
+    """Block until user submits answers, then output result to stdout."""
+    _ensure_dirs()
     try:
         while True:
             if os.path.exists(RESULT_FILE):
                 time.sleep(0.05)
-                with open(RESULT_FILE, "r") as f:
+                with open(RESULT_FILE) as f:
                     result = json.load(f)
                 _remove_file(RESULT_FILE)
                 print(json.dumps(result, ensure_ascii=False))
@@ -809,7 +824,14 @@ def main():
         run_done()
         return
 
-    if len(sys.argv) >= 2 and sys.argv[1] != "-":
+    if len(sys.argv) >= 2 and sys.argv[1] == "--wait":
+        run_wait()
+        return
+
+    # --push or default (no subcommand): push questions (non-blocking)
+    if len(sys.argv) >= 2 and sys.argv[1] == "--push":
+        raw = sys.argv[2] if len(sys.argv) >= 3 else sys.stdin.read()
+    elif len(sys.argv) >= 2 and sys.argv[1] != "-":
         raw = sys.argv[1]
     else:
         raw = sys.stdin.read()
@@ -820,7 +842,7 @@ def main():
         print(f"Invalid JSON: {e}", file=sys.stderr)
         sys.exit(1)
 
-    run_client(data)
+    run_push(data)
 
 
 if __name__ == "__main__":

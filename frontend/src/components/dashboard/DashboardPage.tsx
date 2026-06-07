@@ -23,7 +23,7 @@ import { PostListEmptyState } from "@/components/posts/PostListEmptyState";
 import { usePostKey } from "@/hooks/usePostKey";
 import { usePosts } from "@/hooks/usePosts";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Menu } from "@/components/ui/menu";
 import { QueryState } from "@/components/ui/query-state";
@@ -34,7 +34,6 @@ export function DashboardPage() {
 
   const { copied, copy } = useCopyToClipboard();
 
-  const t = useTranslations("dashboard");
   const tPostKey = useTranslations("dashboard.postKey");
   const tRecentPosts = useTranslations("dashboard.recentPosts");
   const tDocs = useTranslations("dashboard.documentation");
@@ -158,14 +157,9 @@ export function DashboardPage() {
               <FileTextIcon className="size-4" />
               <CardTitle className="text-base">{tRecentPosts("title")}</CardTitle>
             </div>
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto p-0"
-              asChild
-            >
-              <Link href="/posts">{tRecentPosts("viewAll")}</Link>
-            </Button>
+            <Link href="/posts" className={buttonVariants({ variant: "link", className: "h-auto p-0" })}>
+              {tRecentPosts("viewAll")}
+            </Link>
           </CardHeader>
           <CardContent>
             <QueryState isLoading={postsLoading} error={postsError} loadingText={tRecentPosts("loading")} errorText={tRecentPosts("error")}>

@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { useAuthReady } from "@/hooks/useAuthReady";
 import { authApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Menu } from "@/components/ui/menu";
 import {
   ChevronDownIcon,
@@ -20,7 +21,6 @@ import {
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
   const t = useTranslations("navigation");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
@@ -55,16 +55,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur transition-[border-color] duration-150 ${scrolled ? "border-b" : ""}`}
       >
         <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-9 px-2"
-            asChild
-          >
-            <Link href="/dashboard">
-              <img src="/markpost.svg" alt="Markpost" className="h-6 w-auto" />
-            </Link>
-          </Button>
+          <Link href="/dashboard" className={buttonVariants({ variant: "ghost", className: "h-9 px-2" })}>
+            <Image src="/markpost.svg" alt="Markpost" className="h-6 w-auto" width={24} height={24} />
+          </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {isAuthenticated && (

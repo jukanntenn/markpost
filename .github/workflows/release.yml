@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract release notes from CHANGELOG
+      id: changelog
+      run: |
+        version=${GITHUB_REF#refs/tags/v}
+        awk "/\\[${version}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md > release_notes.md
+        if [ ! -s release_notes.md ]; then
+          echo "::error::CHANGELOG.md 中未找到版本 ${version} 的条目。请确保 CHANGELOG.md 包含 [${version}] 的 section。"
+          exit 1
+        fi
+        echo "path=release_notes.md" >> "$GITHUB_OUTPUT"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        body_path: ${{ steps.changelog.outputs.path }}
+        draft: false
+        prerelease: false
+        make_latest: true

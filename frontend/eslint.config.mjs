@@ -2,7 +2,7 @@ import next from "eslint-config-next";
 import coreWebVitals from "eslint-config-next/core-web-vitals";
 import typescript from "eslint-config-next/typescript";
 
-export default [
+const config = [
   ...next,
   ...coreWebVitals,
   ...typescript,
@@ -15,3 +15,5 @@ export default [
     },
   },
 ];
+
+export default config;

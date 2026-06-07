@@ -19,7 +19,7 @@ const AUTH_STORAGE_KEY = "markpost_auth";
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       token: null,
       refreshToken: null,
       user: null,

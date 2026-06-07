@@ -6,7 +6,7 @@ import type { UpdateChannelMutationVars } from "@/utils/channel-form";
 import { EMPTY_FORM } from "@/utils/channel-form";
 import { useChannelForm } from "./useChannelForm";
 
-function createMockMutation<T>() {
+function createMockMutation() {
   return {
     mutate: vi.fn(),
     isPending: false,

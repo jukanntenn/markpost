@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { vi } from "vitest";
 import type { LoginResponse } from "@/types/auth";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
@@ -69,7 +69,9 @@ export function createQueryWrapper() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
+  function QueryWrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+  QueryWrapper.displayName = "QueryWrapper";
+  return QueryWrapper;
 }

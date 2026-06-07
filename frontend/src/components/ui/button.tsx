@@ -40,21 +40,8 @@ const buttonVariants = cva(
 const Button = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button"> &
-    VariantProps<typeof buttonVariants> & {
-      asChild?: boolean;
-    }
->(({ className, variant = "default", size = "default", asChild = false, children, ...props }, ref) => {
-  if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-      ref,
-      "data-slot": "button",
-      "data-variant": variant,
-      "data-size": size,
-      className: cn(buttonVariants({ variant, size, className }), (children as React.ReactElement<{ className?: string }>).props.className),
-      ...props,
-    });
-  }
-
+    VariantProps<typeof buttonVariants>
+>(({ className, variant = "default", size = "default", ...props }, ref) => {
   return (
     <button
       ref={ref}
@@ -63,9 +50,7 @@ const Button = React.forwardRef<
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    >
-      {children}
-    </button>
+    />
   );
 });
 

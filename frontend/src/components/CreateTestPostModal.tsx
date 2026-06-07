@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/stores/toast";
@@ -43,7 +43,6 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [error, setError] = useState<string>("");
-  const titleRef = useRef<HTMLInputElement | null>(null);
 
   const { mutate, isPending, reset } = useMutation({
     mutationFn: (data: CreateTestPostRequest) => createTestPost(postKey, data),
@@ -51,22 +50,23 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
       toast.success(t("successHeader"), {
         description: t("successBody"),
       });
+      handleReset();
       onSuccess();
-      reset();
     },
     onError: setErrorOnError(setError),
   });
 
-  useEffect(() => {
-    if (show) {
-      setError("");
-      setTimeout(() => titleRef.current?.focus(), 0);
-    } else {
-      setTitle("");
-      setBody("");
-      setError("");
-    }
-  }, [show]);
+  function handleReset() {
+    setTitle("");
+    setBody("");
+    setError("");
+    reset();
+  }
+
+  function handleHide() {
+    handleReset();
+    onHide();
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +78,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
   };
 
   return (
-    <Dialog open={show} onOpenChange={(open) => (!open ? onHide() : undefined)}>
+    <Dialog open={show} onOpenChange={(open) => (!open ? handleHide() : undefined)}>
       <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
@@ -94,12 +94,12 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
             <Label htmlFor="test-post-title">{t("titleLabel")}</Label>
             <Input
               id="test-post-title"
-              ref={titleRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("titlePlaceholder")}
               disabled={isPending}
               autoComplete="off"
+              autoFocus
             />
           </div>
 
@@ -116,7 +116,7 @@ function CreateTestPostModal({ show, postKey, onHide, onSuccess }: CreateTestPos
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onHide} disabled={isPending}>
+            <Button type="button" variant="outline" onClick={handleHide} disabled={isPending}>
               {t("cancel")}
             </Button>
             <LoadingButton type="submit" disabled={isPending || !body.trim()} loading={isPending} loadingText={t("creating")}>

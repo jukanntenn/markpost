@@ -5,7 +5,6 @@ import { QueryState } from "@/components/ui/query-state";
 import {
   Table,
   TableBody,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";

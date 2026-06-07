@@ -203,6 +203,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oauth.github.client_id", "")
 	v.SetDefault("oauth.github.client_secret", "")
 	v.SetDefault("oauth.github.redirect_url", "")
+	v.SetDefault("jwt.access_signing_key", "")
+	v.SetDefault("jwt.refresh_signing_key", "")
 	v.SetDefault("jwt.access_token_expire", "24h")
 	v.SetDefault("jwt.refresh_token_expire", "720h")
 	v.SetDefault("ratelimit.per_second", math.MaxInt)

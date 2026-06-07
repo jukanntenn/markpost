@@ -1,96 +1,71 @@
-# golangci-lint configuration for azcount project
+# golangci-lint configuration
 # Documentation: https://golangci-lint.run/usage/configuration/
 
 version: "2"
 
 run:
-  # Timeout for analysis
   timeout: 5m
-
-  # Include test files
   tests: true
 
 linters:
-  # Enable specific linters
+  default: "none"
   enable:
-    # Core checkers
-    - errcheck      # 未处理的错误返回值
-    - unused        # 未使用的代码
-    - staticcheck   # 静态分析 (类似 SpotBugs, 含 gosimple)
-    - ineffassign   # 无效赋值检测
-    - govet         # Go vet 检查
-    - revive        # 代码风格检查
+    - errcheck
+    - unused
+    - staticcheck
+    - ineffassign
+    - govet
+    - revive
 
-  # Disable all default linters and only use enabled ones
-  disable-all: true
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      exclude-functions:
+        - "(*os.File).Close"
+        - "(*os.File).Sync"
+        - "os.Remove"
+        - "os.RemoveAll"
+        - "os.Rename"
+        - "(*bufio.Writer).Flush"
+        - "(*os.File).Truncate"
+
+    staticcheck:
+      checks: ["all", "-SA9004"]
+
+    revive:
+      confidence: 0.8
+
+  exclusions:
+    rules:
+      - linters: [revive]
+        text: "package-comments:"
+      - linters: [revive]
+        text: "exported:"
+      - linters: [revive]
+        text: "var-naming:"
+      - linters: [revive]
+        text: "unused-parameter:"
+      - linters: [revive]
+        text: "stutters"
+      - path: _test\.go
+        linters: [errcheck, revive, staticcheck]
+      - text: "SA1019:"
+        linters: [staticcheck]
 
 formatters:
   enable:
-    - gofmt         # 代码格式化检查
-    - goimports     # 导入排序检查
-
-linters-settings:
-  errcheck:
-    # Check for errors on type assertions
-    check-type-assertions: true
-
-    # Check for errors on blank assignments
-    check-blank: false
-
-    # Ignore errors for cleanup operations
-    ignore: |
-      Close,
-      Remove,
-      RemoveAll,
-      Rename,
-      Flush,
-      Truncate,
-
-  staticcheck:
-    # SA9004: only the first constant has an explicit type
-    checks: ["all", "-SA9004"]
-
-  revive:
-    confidence: 0.8
+    - gofmt
+    - goimports
 
 issues:
-  # Maximum issues count per one linter
   max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text
   max-same-issues: 0
-
-  # Globally exclude patterns
-  exclude:
-    - "package-comments:"
-    - "exported:"
-    - "var-naming:"
-    - "unused-parameter:"
-    - "stutters"
-
-  # Exclude issues in test files
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - errcheck
-        - revive
-        - staticcheck
-
-    # Exclude known staticcheck warnings
-    - text: "SA1019:"
-      linters:
-        - staticcheck
-
-  # Show only new issues
   new: false
 
 output:
-  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate
-  format: colored-line-number
-
-  # Print lines of code with issue
-  print-issued-lines: true
-
-  # Print linter name in the end of issue text
-  print-linter-name: true
+  formats:
+    text:
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true

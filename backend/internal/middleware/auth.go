@@ -34,7 +34,11 @@ func ExtractAccessToken(c *gin.Context) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return t.(string), true
+	s, ok := t.(string)
+	if !ok {
+		return "", false
+	}
+	return s, true
 }
 
 func setUserFields(c *gin.Context, u *user.User) {

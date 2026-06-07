@@ -119,7 +119,11 @@ func serve(configPath string) {
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
-	defer dbInstance.Close()
+	defer func() {
+		if err := dbInstance.Close(); err != nil {
+			log.Printf("Failed to close database: %v", err)
+		}
+	}()
 
 	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
@@ -158,7 +162,7 @@ func serve(configPath string) {
 	deliverySvc := deliverysvc.NewService(deliveryRepo)
 
 	postDeliverySvc := deliverysvc.NewPostDeliveryService(deliveryRepo)
-	deliveryDispatcher := deliverysvc.NewDeliveryDispatcher(postDeliverySvc, 0)
+	deliveryDispatcher := deliverysvc.NewDispatcher(postDeliverySvc, 0)
 	deliveryDispatcher.Start(context.Background())
 
 	postSvc = postsvc.NewService(postRepo, deliveryDispatcher)

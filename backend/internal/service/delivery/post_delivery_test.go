@@ -220,10 +220,10 @@ func TestPostDeliveryService_Deliver(t *testing.T) {
 
 	t.Run("sends card to feishu webhook", func(t *testing.T) {
 		var received bool
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			received = true
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"code":0}`))
+			_, _ = w.Write([]byte(`{"code":0}`))
 		}))
 		defer server.Close()
 
@@ -261,7 +261,7 @@ func TestNewPostDeliveryService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp file: %v", err)
 	}
-	tmpFile.WriteString(`
+	_, _ = tmpFile.WriteString(`
 server.host = "127.0.0.1"
 server.port = 7330
 [db]
@@ -276,8 +276,8 @@ refresh_signing_key = "test-refresh-key-at-least-32-characters"
 [delivery]
 request_timeout = "5s"
 `)
-	tmpFile.Close()
-	defer os.Remove(tmpFile.Name())
+	_ = tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if err := config.Load(tmpFile.Name()); err != nil {
 		t.Fatalf("config.Load error: %v", err)
@@ -298,12 +298,12 @@ request_timeout = "5s"
 	}
 }
 
-func TestDeliveryDispatcher(t *testing.T) {
+func TestDispatcher(t *testing.T) {
 	t.Run("enqueues and processes jobs", func(t *testing.T) {
 		processed := make(chan post.DeliveryJob, 1)
 		mockHandler := &mockDeliveryHandler{processed: processed}
 
-		dispatcher := NewDeliveryDispatcher(mockHandler, 256)
+		dispatcher := NewDispatcher(mockHandler, 256)
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -327,7 +327,7 @@ func TestDeliveryDispatcher(t *testing.T) {
 	})
 
 	t.Run("drops jobs when queue is full", func(t *testing.T) {
-		dispatcher := NewDeliveryDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob, 1)}, 1)
+		dispatcher := NewDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob, 1)}, 1)
 
 		dispatcher.Enqueue(post.DeliveryJob{UserID: 1, PostQID: "p-1", Title: "First"})
 		dispatcher.Enqueue(post.DeliveryJob{UserID: 2, PostQID: "p-2", Title: "Second"})
@@ -338,7 +338,7 @@ func TestDeliveryDispatcher(t *testing.T) {
 	})
 
 	t.Run("uses default buffer size when zero", func(t *testing.T) {
-		dispatcher := NewDeliveryDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob)}, 0)
+		dispatcher := NewDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob)}, 0)
 		if cap(dispatcher.jobs) != 256 {
 			t.Errorf("buffer size = %d, want 256", cap(dispatcher.jobs))
 		}

@@ -8,31 +8,31 @@ import (
 	"markpost/internal/service/post"
 )
 
-// DeliveryHandler processes delivery jobs.
-type DeliveryHandler interface {
+// Handler processes delivery jobs.
+type Handler interface {
 	Deliver(ctx context.Context, job post.DeliveryJob)
 }
 
-// DeliveryDispatcher implements post.DeliveryEnqueuer with an in-process job queue.
-type DeliveryDispatcher struct {
+// Dispatcher implements post.DeliveryEnqueuer with an in-process job queue.
+type Dispatcher struct {
 	jobs    chan post.DeliveryJob
-	deliver DeliveryHandler
+	deliver Handler
 }
 
-// NewDeliveryDispatcher creates a dispatcher with the given delivery service and buffer size.
-func NewDeliveryDispatcher(deliver DeliveryHandler, bufferSize int) *DeliveryDispatcher {
+// NewDispatcher creates a dispatcher with the given delivery service and buffer size.
+func NewDispatcher(deliver Handler, bufferSize int) *Dispatcher {
 	if bufferSize <= 0 {
 		bufferSize = 256
 	}
 
-	return &DeliveryDispatcher{
+	return &Dispatcher{
 		jobs:    make(chan post.DeliveryJob, bufferSize),
 		deliver: deliver,
 	}
 }
 
 // Start launches the background goroutine that processes delivery jobs.
-func (d *DeliveryDispatcher) Start(ctx context.Context) {
+func (d *Dispatcher) Start(ctx context.Context) {
 	go func() {
 		for {
 			select {
@@ -46,7 +46,7 @@ func (d *DeliveryDispatcher) Start(ctx context.Context) {
 }
 
 // Enqueue pushes a delivery job onto the queue, dropping it if the queue is full.
-func (d *DeliveryDispatcher) Enqueue(job post.DeliveryJob) {
+func (d *Dispatcher) Enqueue(job post.DeliveryJob) {
 	select {
 	case d.jobs <- job:
 	default:

@@ -15,30 +15,30 @@ func TestErrCode_String(t *testing.T) {
 	})
 }
 
-func TestServiceError_Error(t *testing.T) {
+func TestError_Error(t *testing.T) {
 	tests := []struct {
 		name     string
-		err      ServiceError
+		err      Error
 		expected string
 	}{
 		{
 			name:     "returns description when set",
-			err:      ServiceError{Description: "something"},
+			err:      Error{Description: "something"},
 			expected: "something",
 		},
 		{
 			name:     "returns wrapped error message when description is empty",
-			err:      ServiceError{Err: errors.New("wrapped")},
+			err:      Error{Err: errors.New("wrapped")},
 			expected: "wrapped",
 		},
 		{
 			name:     "returns description when both description and err are set",
-			err:      ServiceError{Description: "desc", Err: errors.New("wrapped")},
+			err:      Error{Description: "desc", Err: errors.New("wrapped")},
 			expected: "desc",
 		},
 		{
 			name:     "returns code string when both empty",
-			err:      ServiceError{Code: ErrValidation},
+			err:      Error{Code: ErrValidation},
 			expected: "validation",
 		},
 	}
@@ -53,10 +53,10 @@ func TestServiceError_Error(t *testing.T) {
 	}
 }
 
-func TestServiceError_Unwrap(t *testing.T) {
+func TestError_Unwrap(t *testing.T) {
 	t.Run("returns wrapped error", func(t *testing.T) {
 		inner := errors.New("inner")
-		e := ServiceError{Err: inner}
+		e := Error{Err: inner}
 		if got := e.Unwrap(); got == nil {
 			t.Fatal("Unwrap() returned nil, want non-nil")
 		} else if got.Error() != "inner" {
@@ -65,7 +65,7 @@ func TestServiceError_Unwrap(t *testing.T) {
 	})
 
 	t.Run("returns nil when no wrapped error", func(t *testing.T) {
-		var e ServiceError
+		var e Error
 		if got := e.Unwrap(); got != nil {
 			t.Errorf("Unwrap() = %v, want nil", got)
 		}
@@ -74,7 +74,7 @@ func TestServiceError_Unwrap(t *testing.T) {
 
 func TestAsServiceError(t *testing.T) {
 	t.Run("returns true for service error pointer", func(t *testing.T) {
-		original := &ServiceError{Code: ErrInternal}
+		original := &Error{Code: ErrInternal}
 		se, ok := AsServiceError(original)
 		if !ok {
 			t.Fatal("AsServiceError() returned false, want true")
@@ -150,7 +150,7 @@ func TestError_HTTPStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &ServiceError{Code: tt.code}
+			e := &Error{Code: tt.code}
 			if got := e.HTTPStatus(); got != tt.expected {
 				t.Errorf("HTTPStatus() = %d, want %d", got, tt.expected)
 			}

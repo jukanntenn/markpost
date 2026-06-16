@@ -2,6 +2,7 @@ package post
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"markpost/internal/infra"
@@ -113,6 +114,41 @@ func TestService_RenderPostHTML(t *testing.T) {
 			t.Fatal("expected error for non-existent post")
 		}
 	})
+}
+
+func TestService_RenderPostHTML_GFM(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	body := "| h1 | h2 |\n|----|----|\n| a  | b  |\n\n" +
+		"<details>\n<summary>more</summary>\n\n" +
+		"- [x] done\n\n" +
+		"~~strike~~\n\n" +
+		"https://example.com\n"
+
+	created, err := repo.Create(ctx, "T", body, 1)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	if err != nil {
+		t.Fatalf("render post: %v", err)
+	}
+
+	for _, want := range []string{
+		"<table>",
+		"<thead>",
+		"<details",
+		"<summary>more</summary>",
+		`type="checkbox"`,
+		"<del>strike</del>",
+		`href="https://example.com"`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected %q in rendered HTML\nhtml: %s", want, html)
+		}
+	}
 }
 
 func TestService_GetUserPosts(t *testing.T) {

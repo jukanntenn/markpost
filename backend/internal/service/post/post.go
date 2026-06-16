@@ -9,6 +9,7 @@ import (
 	"markpost/internal/service"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
 )
 
@@ -35,6 +36,7 @@ type Service struct {
 // NewService creates a new Service instance.
 func NewService(postRepo post.Repository, delivery DeliveryEnqueuer) *Service {
 	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
 		),

@@ -4,10 +4,12 @@ package post
 import (
 	"bytes"
 	"context"
+	"regexp"
 
 	"markpost/internal/domain/post"
 	"markpost/internal/service"
 
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer/html"
@@ -28,9 +30,10 @@ type DeliveryJob struct {
 
 // Service provides post-related business logic.
 type Service struct {
-	postRepo post.Repository
-	md       goldmark.Markdown
-	delivery DeliveryEnqueuer
+	postRepo  post.Repository
+	md        goldmark.Markdown
+	sanitizer *bluemonday.Policy
+	delivery  DeliveryEnqueuer
 }
 
 // NewService creates a new Service instance.
@@ -43,10 +46,39 @@ func NewService(postRepo post.Repository, delivery DeliveryEnqueuer) *Service {
 	)
 
 	return &Service{
-		postRepo: postRepo,
-		md:       md,
-		delivery: delivery,
+		postRepo:  postRepo,
+		md:        md,
+		sanitizer: newPostHTMLSanitizer(),
+		delivery:  delivery,
 	}
+}
+
+// newPostHTMLSanitizer builds the HTML allowlist applied to every rendered post.
+// UGCPolicy already permits GFM tables, <details>/<summary>, <del>, links and
+// images while stripping <script>/<iframe>, event handlers and non-http(s)
+// URL schemes. On top of it we allow the GFM tasklist checkbox and harden
+// external links against tabnabbing.
+func newPostHTMLSanitizer() *bluemonday.Policy {
+	return bluemonday.UGCPolicy().
+		AllowAttrs("type").Matching(regexp.MustCompile(`^checkbox$`)).OnElements("input").
+		AllowAttrs("checked", "disabled").OnElements("input").
+		AddTargetBlankToFullyQualifiedLinks(true).
+		RequireNoReferrerOnFullyQualifiedLinks(true)
+}
+
+// rawHTMLElementRe matches HTML elements parsed in raw-text / RCDATA mode.
+// An unterminated one — e.g. a literal "<script>" that appears in post prose —
+// makes the HTML tokenizer swallow the rest of the document as element text,
+// hiding every following block (this is exactly the post1 bug, and it fools
+// bluemonday the same way it fools a browser). Escaping only the opening "<"
+// renders such tags as inert visible text before sanitization, so the page can
+// no longer be truncated and the sanitizer keeps full control.
+var rawHTMLElementRe = regexp.MustCompile(
+	`(?i)<(/?)(script|style|iframe|noscript|noframes|noembed|textarea|title|xmp|plaintext)([\s/>])`,
+)
+
+func neutralizeRawHTMLElements(htmlContent string) string {
+	return rawHTMLElementRe.ReplaceAllString(htmlContent, "&lt;$1$2$3")
 }
 
 func (s *Service) getPostByQID(ctx context.Context, qid string) (*post.Post, error) {
@@ -88,7 +120,7 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (string, strin
 		return "", "", service.NewServiceErrorWrap(service.ErrInternal, "render post failed", err)
 	}
 
-	return p.Title, buf.String(), nil
+	return p.Title, s.sanitizer.Sanitize(neutralizeRawHTMLElements(buf.String())), nil
 }
 
 // GetPostMarkdown retrieves a post's raw markdown content.

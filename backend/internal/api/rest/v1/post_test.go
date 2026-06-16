@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"markpost/internal/domain/post"
+	"markpost/internal/infra"
 	"markpost/internal/service"
+	postsvc "markpost/internal/service/post"
 )
 
 type mockPostService struct {
@@ -112,6 +115,44 @@ func TestRenderPost_Success(t *testing.T) {
 	contentType := w.Header().Get("Content-Type")
 	if contentType != "text/markdown; charset=utf-8" {
 		t.Errorf("expected content type text/markdown; charset=utf-8, got %s", contentType)
+	}
+}
+
+func TestRenderPost_HTMLIsSanitized(t *testing.T) {
+	db := infra.SetupTestDB(t)
+	repo := infra.NewPostRepository(db)
+	svc := postsvc.NewService(repo, nil)
+
+	body := "<script>alert(1)</script>\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+	qid, err := svc.CreatePost(context.Background(), "Sanitized", body, 1)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	router := newTestEngine()
+	router.LoadHTMLGlob("../../../../templates/*")
+	router.GET("/posts/:id", RenderPost(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/"+qid, nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d; body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Errorf("expected text/html content type, got %q", ct)
+	}
+
+	html := w.Body.String()
+	if strings.Contains(html, "<script") {
+		t.Errorf("rendered response must not contain <script>\nbody: %s", html)
+	}
+	if !strings.Contains(html, "<table>") {
+		t.Errorf("expected rendered GFM table in response\nbody: %s", html)
+	}
+	if !strings.Contains(html, `<h1 class="post-title">Sanitized</h1>`) {
+		t.Errorf("expected rendered title in response\nbody: %s", html)
 	}
 }
 

@@ -151,6 +151,68 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 	}
 }
 
+func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	body := "https://example.com\n\n" +
+		"<script>alert(1)</script>\n\n" +
+		"<img src=x onerror=alert(1)>\n\n" +
+		"<a href=\"javascript:alert(1)\">x</a>\n"
+
+	created, err := repo.Create(ctx, "T", body, 1)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	if err != nil {
+		t.Fatalf("render post: %v", err)
+	}
+
+	for _, unsafe := range []string{"<script", "onerror", "javascript:"} {
+		if strings.Contains(html, unsafe) {
+			t.Errorf("sanitized HTML must not contain %q\nhtml: %s", unsafe, html)
+		}
+	}
+	for _, want := range []string{
+		`href="https://example.com"`,
+		`target="_blank"`,
+		"noopener",
+		"noreferrer",
+		"nofollow",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected %q in rendered HTML\nhtml: %s", want, html)
+		}
+	}
+}
+
+func TestService_RenderPostHTML_UnclosedScriptKeepsContent(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	body := "before <script> after\n\n## survived\n\ntail text"
+	created, err := repo.Create(ctx, "T", body, 1)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	if err != nil {
+		t.Fatalf("render post: %v", err)
+	}
+
+	if strings.Contains(html, "<script") {
+		t.Errorf("rendered HTML must not contain a real <script tag\nhtml: %s", html)
+	}
+	for _, want := range []string{"before", "after", "survived", "tail text", "&lt;script"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("content after an unclosed <script> must survive; missing %q\nhtml: %s", want, html)
+		}
+	}
+}
+
 func TestService_GetUserPosts(t *testing.T) {
 	svc, repo := setupPostService(t)
 	ctx := context.Background()

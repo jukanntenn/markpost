@@ -42,6 +42,7 @@ func NewService(postRepo post.Repository, delivery DeliveryEnqueuer) *Service {
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
+			html.WithHardWraps(),
 		),
 	)
 

@@ -151,6 +151,30 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 	}
 }
 
+func TestService_RenderPostHTML_HardWraps(t *testing.T) {
+	svc, repo := setupPostService(t)
+	ctx := context.Background()
+
+	body := "line one\nline two\nline three\n"
+
+	created, err := repo.Create(ctx, "T", body, 1)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	if err != nil {
+		t.Fatalf("render post: %v", err)
+	}
+
+	if !strings.Contains(html, "line one<br") {
+		t.Errorf("expected soft line break to render as <br>\nhtml: %s", html)
+	}
+	if !strings.Contains(html, "line two<br") {
+		t.Errorf("expected soft line break to render as <br>\nhtml: %s", html)
+	}
+}
+
 func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
 	svc, repo := setupPostService(t)
 	ctx := context.Background()

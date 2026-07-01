@@ -6,6 +6,10 @@ import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  compileKeywordFilter,
+  describeFilter,
+} from "@/lib/keyword-filter";
 import type { FormState } from "@/hooks/useChannelForm";
 
 interface DeliveryChannelFormProps {
@@ -86,6 +90,7 @@ export function DeliveryChannelForm({
             placeholder={t("deliveryChannelKeywordsPlaceholder")}
             disabled={isSubmitting}
           />
+          <KeywordFilterFeedback value={form.keywords} />
         </div>
 
         <div className="flex gap-2">
@@ -103,5 +108,30 @@ export function DeliveryChannelForm({
         </div>
       </form>
     </>
+  );
+}
+
+function KeywordFilterFeedback({ value }: { value: string }) {
+  const t = useTranslations("settings");
+
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  const { node, error } = compileKeywordFilter(value);
+  if (error !== null) {
+    return (
+      <p className="text-sm text-destructive">
+        {t("deliveryChannelKeywordsInvalid", { error })}
+      </p>
+    );
+  }
+
+  const description = describeFilter(node);
+  if (description === null) return null;
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      {t("deliveryChannelKeywordsPreview", { preview: description })}
+    </p>
   );
 }

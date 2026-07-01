@@ -78,7 +78,7 @@ func (m *mockDeliveryService) Create(_ context.Context, userID int, params deliv
 		Kind:          delivery.ChannelKind(params.Kind),
 		Name:          params.Name,
 		Configuration: config,
-		Keywords:      params.Keywords,
+		Keywords:      derefStr(params.Keywords),
 		Enabled:       true,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
@@ -107,8 +107,8 @@ func (m *mockDeliveryService) Update(_ context.Context, userID int, id int, para
 		_ = json.Unmarshal(params.Configuration, &config)
 		ch.Configuration = config
 	}
-	if params.Keywords != "" {
-		ch.Keywords = params.Keywords
+	if params.Keywords != nil {
+		ch.Keywords = *params.Keywords
 	}
 	if params.Enabled != nil {
 		ch.Enabled = *params.Enabled
@@ -501,4 +501,11 @@ func TestDeleteDeliveryChannel_NoUser(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
 	}
+}
+
+func derefStr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

@@ -15,6 +15,7 @@
 | [logging.md](./backend/logging.md) | When and what to log, what never to log, fatal logging conventions |
 | [database-schema.md](./backend/database-schema.md) | Understanding table structure, field definitions, indexes, foreign keys, and database design conventions |
 | [api-schema.md](./backend/api-schema.md) | API endpoint reference — all routes, request/response fields, and authentication requirements |
+| [keyword-filter.md](./backend/keyword-filter.md) | Channel keyword filter expression grammar — OR/AND/NOT operators, quoting rules, multilingual matching, validation, and performance |
 
 ## Frontend Specs
 

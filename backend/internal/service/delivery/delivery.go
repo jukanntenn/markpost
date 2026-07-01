@@ -9,6 +9,7 @@ import (
 
 	"markpost/internal/domain/delivery"
 	"markpost/internal/service"
+	"markpost/internal/service/delivery/filter"
 	"markpost/pkg/utils"
 )
 
@@ -17,7 +18,7 @@ type UpdateChannelParams struct {
 	Kind          string
 	Name          string
 	Configuration json.RawMessage
-	Keywords      string
+	Keywords      *string
 	Enabled       *bool
 }
 
@@ -95,13 +96,21 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 		return nil, err
 	}
 
+	keywords := ""
+	if params.Keywords != nil {
+		keywords = strings.TrimSpace(*params.Keywords)
+	}
+	if _, err := filter.Compile(keywords); err != nil {
+		return nil, service.NewServiceError(service.ErrValidation, "invalid keywords expression: "+err.Error())
+	}
+
 	ch := &delivery.Channel{
 		UserID:        userID,
 		Kind:          kind,
 		Name:          cleanedName,
 		Enabled:       true,
 		Configuration: config,
-		Keywords:      strings.TrimSpace(params.Keywords),
+		Keywords:      keywords,
 	}
 
 	if err := s.repo.Create(ctx, ch); err != nil {
@@ -125,7 +134,6 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 		}
 		ch.Kind = kind
 	}
-	utils.ApplyIfNonEmpty(&ch.Name, params.Name)
 	if len(params.Configuration) > 0 {
 		config, err := validateConfiguration(ch.Kind, params.Configuration)
 		if err != nil {
@@ -133,7 +141,14 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 		}
 		ch.Configuration = config
 	}
-	utils.ApplyIfNonEmpty(&ch.Keywords, params.Keywords)
+	if params.Keywords != nil {
+		normalized := strings.TrimSpace(*params.Keywords)
+		if _, err := filter.Compile(normalized); err != nil {
+			return nil, service.NewServiceError(service.ErrValidation, "invalid keywords expression: "+err.Error())
+		}
+		ch.Keywords = normalized
+	}
+	utils.ApplyIfNonEmpty(&ch.Name, params.Name)
 	if params.Enabled != nil {
 		ch.Enabled = *params.Enabled
 	}

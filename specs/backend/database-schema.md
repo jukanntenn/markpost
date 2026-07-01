@@ -38,6 +38,10 @@ erDiagram
         int id PK
         int user_id FK
         string kind
+        string name
+        bool enabled
+        json configuration
+        text keywords
     }
 ```
 
@@ -118,8 +122,8 @@ Defined in `internal/domain/delivery/delivery.go`. Stores delivery channel confi
 | `Kind` | `kind` | varchar(32) | no | — | — | Channel type. Values: `'feishu'` |
 | `Name` | `name` | varchar | no | `''` | — | Human-readable channel name |
 | `Enabled` | `enabled` | boolean | no | `true` | — | Whether the channel is active |
-| `WebhookURL` | `webhook_url` | text | no | — | — | Webhook endpoint URL for push notifications |
-| `Keywords` | `keywords` | text | no | `''` | — | Comma-separated keywords for filtering posts to push |
+| `Configuration` | `configuration` | text | no | `'{}'` | — | JSON-encoded channel configuration (e.g. Feishu `webhook_url`, `card_link_url`) |
+| `Keywords` | `keywords` | text | no | `''` | — | Filter expression for deciding whether to push a post (validated at write time; see [keyword-filter.md](./keyword-filter.md)) |
 | `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
 | `UpdatedAt` | `updated_at` | timestamp | no | `now()` | — | Record last update time (auto) |
 

@@ -10,6 +10,7 @@ import (
 
 	"markpost/internal/config"
 	"markpost/internal/domain/delivery"
+	"markpost/internal/service/delivery/filter"
 	"markpost/internal/service/post"
 )
 
@@ -45,11 +46,17 @@ func (s *PostDeliveryService) Deliver(ctx context.Context, job post.DeliveryJob)
 			continue
 		}
 
+		matches, err := filter.Compile(channel.Keywords)
+		if err != nil {
+			log.Printf("delivery skip channel with invalid keywords channel_id=%d user_id=%d err=%v", channel.ID, channel.UserID, err)
+			continue
+		}
+		if !matches.Match(job.Title) {
+			continue
+		}
+
 		switch channel.Kind {
 		case delivery.ChannelKindFeishu:
-			if !postTitleMatchesAllKeywords(job.Title, channel.Keywords) {
-				continue
-			}
 			webhookURL := feishuWebhookFromChannel(channel)
 			cardLinkURL := feishuCardLinkURLFromChannel(channel)
 			if err := s.feishu.SendCard(ctx, CardDeliveryParams{
@@ -75,38 +82,6 @@ func buildBodyPreview(body string, maxChars int) string {
 		preview += "…"
 	}
 	return preview
-}
-
-func postTitleMatchesAllKeywords(title string, rawKeywords string) bool {
-	keywords := parseCommaSeparatedKeywords(rawKeywords)
-	if len(keywords) == 0 {
-		return true
-	}
-
-	titleText := strings.ToLower(strings.TrimSpace(title))
-	if titleText == "" {
-		return false
-	}
-
-	for _, kw := range keywords {
-		if !strings.Contains(titleText, strings.ToLower(kw)) {
-			return false
-		}
-	}
-	return true
-}
-
-func parseCommaSeparatedKeywords(raw string) []string {
-	parts := strings.Split(raw, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		kw := strings.TrimSpace(part)
-		if kw == "" {
-			continue
-		}
-		out = append(out, kw)
-	}
-	return out
 }
 
 func truncateRunes(s string, maxRunes int) string {

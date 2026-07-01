@@ -167,7 +167,7 @@ func (r CreateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 		Kind:          r.Kind,
 		Name:          r.Name,
 		Configuration: r.Configuration,
-		Keywords:      r.Keywords,
+		Keywords:      &r.Keywords,
 	}
 }
 
@@ -184,7 +184,7 @@ func (r UpdateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 	params := delivery_svc.UpdateChannelParams{
 		Kind:     utils.Deref(r.Kind),
 		Name:     utils.Deref(r.Name),
-		Keywords: utils.Deref(r.Keywords),
+		Keywords: r.Keywords,
 		Enabled:  r.Enabled,
 	}
 	if r.Configuration != nil {

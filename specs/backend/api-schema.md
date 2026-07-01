@@ -130,11 +130,15 @@ Base path: `/api/v1`
 
 **Request body**: `kind`, `name`, `webhook_url`, `keywords`
 
+`keywords` is an optional filter expression over the post title. Syntax: `,`/`|` = OR, `&` = AND, `!` = NOT, `()` group; spaces are keyword content (no quotes needed); empty = always deliver. Malformed expressions are rejected with `400`. See [keyword-filter.md](./keyword-filter.md) for the full grammar.
+
 **Response**: `201` `{ channel: { id, kind, name, enabled, webhook_url, keywords, created_at, updated_at } }`
 
 ### PUT /delivery/channels/:id
 
 **Request body**（部分更新）: `kind`, `name`, `webhook_url`, `keywords`, `enabled`
+
+`keywords` is a partial-update field: omit to leave unchanged, pass an empty string to clear it (clears → matches everything). As with POST, the expression is validated and a malformed value is rejected with `400`.
 
 **Response**: `{ channel: { ... } }`
 

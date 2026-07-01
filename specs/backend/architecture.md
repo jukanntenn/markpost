@@ -28,6 +28,7 @@ backend/
 │       ├── auth/      — Authentication, JWT, OAuth
 │       ├── post/      — Post CRUD, Markdown rendering
 │       ├── delivery/  — Delivery channel management
+│       │   └── filter/ — Keyword filter expression compiler/evaluator
 │       └── admin/     — Admin-only operations
 ├── pkg/               — Shared packages usable by any layer
 │   ├── apierr/        — API error response formatting

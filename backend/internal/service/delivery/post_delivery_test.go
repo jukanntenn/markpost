@@ -11,10 +11,11 @@ import (
 	"markpost/internal/config"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/infra"
+	"markpost/internal/service/delivery/filter"
 	"markpost/internal/service/post"
 )
 
-func TestPostTitleMatchesAllKeywords(t *testing.T) {
+func TestKeywordFilterMatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		title    string
@@ -24,44 +25,35 @@ func TestPostTitleMatchesAllKeywords(t *testing.T) {
 		{"no keywords matches anything", "Any Title", "", true},
 		{"single keyword match", "Server Alert", "alert", true},
 		{"single keyword no match", "Server OK", "alert", false},
-		{"multiple keywords all match", "Alert Error Report", "alert,error", true},
-		{"multiple keywords partial match", "Alert only", "alert,error", false},
+		{"comma is OR: any keyword matches", "Alert only", "alert,error", true},
+		{"comma is OR: none match", "Normal Post", "alert,error", false},
+		{"AND via ampersand requires all", "Alert Error Report", "alert & error", true},
+		{"AND missing one fails", "Alert only", "alert & error", false},
 		{"case insensitive", "ALERT Error", "alert,error", true},
 		{"empty title with keywords", "", "alert", false},
-		{"whitespace keywords ignored", "Title", "  ,  , ", true},
-		{"keyword with spaces", "Server Alert", "  alert  ", true},
+		{"whitespace-only keywords matches all", "Title", "   ", true},
+		{"keyword with surrounding spaces", "Server Alert", "  alert  ", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := postTitleMatchesAllKeywords(tt.title, tt.keywords)
+			m, err := filter.Compile(tt.keywords)
+			if err != nil {
+				t.Fatalf("filter.Compile(%q) error: %v", tt.keywords, err)
+			}
+			got := m.Match(tt.title)
 			if got != tt.want {
-				t.Errorf("postTitleMatchesAllKeywords(%q, %q) = %v, want %v", tt.title, tt.keywords, got, tt.want)
+				t.Errorf("keywords=%q title=%q = %v, want %v", tt.keywords, tt.title, got, tt.want)
 			}
 		})
 	}
 }
 
-func TestParseCommaSeparatedKeywords(t *testing.T) {
-	tests := []struct {
-		name string
-		raw  string
-		want int
-	}{
-		{"empty", "", 0},
-		{"single", "alert", 1},
-		{"multiple", "alert,error,warning", 3},
-		{"with spaces", "  alert , error  , warning ", 3},
-		{"empty parts", "alert,,error,", 2},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := parseCommaSeparatedKeywords(tt.raw)
-			if len(got) != tt.want {
-				t.Errorf("parseCommaSeparatedKeywords(%q) returned %d items, want %d", tt.raw, len(got), tt.want)
-			}
-		})
+func TestKeywordFilterRejectsInvalid(t *testing.T) {
+	for _, raw := range []string{"a,,b", "a && b", "!", "(a", `"abc`} {
+		if _, err := filter.Compile(raw); err == nil {
+			t.Errorf("expected invalid keywords %q to be rejected", raw)
+		}
 	}
 }
 

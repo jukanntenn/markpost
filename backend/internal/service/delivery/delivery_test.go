@@ -53,7 +53,7 @@ func TestService_Create(t *testing.T) {
 			Kind:          "feishu",
 			Name:          "My Channel",
 			Configuration: feishuConfigJSON("https://example.com/webhook", ""),
-			Keywords:      "alert,error",
+			Keywords:      ptrTo("alert,error"),
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -78,7 +78,6 @@ func TestService_Create(t *testing.T) {
 			Kind:          "feishu",
 			Name:          "Card Link Channel",
 			Configuration: feishuConfigJSON("https://example.com/webhook", "https://custom.example.com/{{.QID}}"),
-			Keywords:      "",
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -208,12 +207,33 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("updates keywords", func(t *testing.T) {
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: "new,keywords"})
+		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("new,keywords")})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if ch.Keywords != "new,keywords" {
 			t.Errorf("keywords = %q, want %q", ch.Keywords, "new,keywords")
+		}
+	})
+
+	t.Run("clears keywords with empty string", func(t *testing.T) {
+		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("")})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if ch.Keywords != "" {
+			t.Errorf("keywords = %q, want %q", ch.Keywords, "")
+		}
+	})
+
+	t.Run("rejects invalid keywords on update", func(t *testing.T) {
+		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("a,,b")})
+		if err == nil {
+			t.Fatal("expected error for invalid keywords")
+		}
+		se, _ := service.AsServiceError(err)
+		if se.Code != service.ErrValidation {
+			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
 		}
 	})
 
@@ -372,3 +392,5 @@ func TestValidateConfiguration(t *testing.T) {
 		}
 	})
 }
+
+func ptrTo(s string) *string { return &s }

@@ -5,6 +5,10 @@
 // @description Markpost backend API for post management and delivery.
 // @host localhost:7330
 // @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description "Bearer <access_token>"
 package main
 
 import (

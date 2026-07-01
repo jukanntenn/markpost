@@ -6,6 +6,7 @@ import (
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
+	_ "markpost/pkg/apierr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,17 @@ type AdminService interface {
 	ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
 }
 
-// AdminListUsers returns a handler that lists all users for the admin panel.
+// AdminListUsers godoc
+// @Summary List all users (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.PaginatedUsers
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users [get]
 func AdminListUsers(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		handlePaginatedQuery(c,
@@ -29,7 +40,18 @@ func AdminListUsers(adminSvc AdminService) gin.HandlerFunc {
 	}
 }
 
-// AdminListPosts returns a handler that lists all posts for the admin panel.
+// AdminListPosts godoc
+// @Summary List all posts (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param search query string false "Search keyword"
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.PaginatedPosts
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/posts [get]
 func AdminListPosts(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		handleSearchPaginatedQuery(c,
@@ -41,7 +63,17 @@ func AdminListPosts(adminSvc AdminService) gin.HandlerFunc {
 	}
 }
 
-// AdminListChannels returns a handler that lists all delivery channels for the admin panel.
+// AdminListChannels godoc
+// @Summary List all delivery channels (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.PaginatedChannels
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/channels [get]
 func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		handlePaginatedQuery(c,

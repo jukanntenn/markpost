@@ -20,7 +20,17 @@ type PostService interface {
 	GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error)
 }
 
-// CreatePost returns a handler that creates a new post for the authenticated user.
+// CreatePost godoc
+// @Summary Create a new post with a post key
+// @Tags posts
+// @Accept json
+// @Produce json
+// @Param post_key path string true "Post key used for authentication"
+// @Param body body PostRequest true "Post title and markdown body"
+// @Success 201 {object} CreatePostResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /{post_key} [post]
 func CreatePost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -40,7 +50,15 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
-// RenderPost returns a handler that renders a post as HTML or raw markdown.
+// RenderPost godoc
+// @Summary Render a post as HTML or raw markdown
+// @Tags posts
+// @Produce html
+// @Param id path string true "Post QID"
+// @Param format query string false "Response format (raw returns markdown)"
+// @Success 200 {string} string ""
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /{id} [get]
 func RenderPost(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
@@ -66,7 +84,16 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
-// PostsList returns a handler that lists posts for the authenticated user with pagination.
+// PostsList godoc
+// @Summary List the current user's posts
+// @Tags posts
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} PostsListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/posts [get]
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserPaginatedQuery(c, postSvc.GetUserPosts, newPostListItem,

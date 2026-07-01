@@ -472,7 +472,7 @@ http://localhost:7330/swagger/index.html
 在 `backend/` 目录下执行：
 
 ```bash
-swag init -g main.go -o docs --parseDependency --parseInternal
+swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 ```
 
 ### 注释规范

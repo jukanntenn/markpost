@@ -150,10 +150,29 @@ pnpm build
 
 ```bash
 cd backend
-swag init -g main.go -d cmd/server,internal/api/rest/v1 -o docs --parseDependency --parseInternal
+swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
 ```
 
 Swagger UI is available at `/swagger/index.html` when the backend runs with `debug = true`.
+
+## API Testing with yaak
+
+The backend ships a Swagger 2.0 spec at `backend/docs/swagger.json`, which [yaak](https://yaak.app/) imports natively — no conversion script is needed.
+
+### Import into yaak
+
+1. Open yaak
+2. **File** → **Import Into Workspace**
+3. Select `backend/docs/swagger.json` (yaak auto-detects Swagger 2.0)
+4. Set the workspace base URL to `http://localhost:7330`
+5. For authenticated endpoints, set an `Authorization` header with your access token
+
+### Workflow
+
+When the backend API changes:
+1. Update Swagger annotations in Go code
+2. Run `swag init` to regenerate `backend/docs/swagger.json`
+3. Re-import into yaak (your environment configs are preserved)
 
 ## Configuration
 

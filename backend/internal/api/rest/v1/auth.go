@@ -18,7 +18,13 @@ type GitHubAuthURLGenerator interface {
 	GenerateGitHubAuthURL(ctx context.Context) (string, error)
 }
 
-// GenerateGitHubOAuthURL returns a handler that responds with a GitHub OAuth authorization URL.
+// GenerateGitHubOAuthURL godoc
+// @Summary Get GitHub OAuth authorization URL
+// @Tags oauth
+// @Produce json
+// @Success 200 {object} OAuthURLResponse
+// @Failure 500 {object} apierr.ErrorResponse
+// @Router /api/v1/oauth/url [get]
 func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
@@ -26,7 +32,7 @@ func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 			apierr.RespondError(c, err)
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"url": url})
+		c.JSON(http.StatusOK, OAuthURLResponse{URL: url})
 	}
 }
 
@@ -48,7 +54,15 @@ func writeAuthResult(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair, er
 	writeAuthResponse(c, u, tokens)
 }
 
-// LoginGitHub returns a handler that authenticates a user via GitHub OAuth.
+// LoginGitHub godoc
+// @Summary Login with GitHub OAuth code
+// @Tags oauth
+// @Accept json
+// @Produce json
+// @Param body body GitHubLoginRequest true "GitHub OAuth code and state"
+// @Success 200 {object} AuthResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/oauth/login [post]
 func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req GitHubLoginRequest
@@ -67,6 +81,7 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 // @Produce json
 // @Param body body UsernameLoginRequest true "Login credentials"
 // @Success 200 {object} AuthResponse
+// @Failure 400 {object} apierr.ErrorResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Router /api/v1/auth/login [post]
 func LoginWithUsername(authSvc AuthService) gin.HandlerFunc {
@@ -80,7 +95,15 @@ func LoginWithUsername(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-// RefreshToken returns a handler that refreshes an authentication token pair.
+// RefreshToken godoc
+// @Summary Refresh authentication token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body RefreshTokenRequest true "Refresh token"
+// @Success 200 {object} RefreshTokenResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/refresh [post]
 func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req RefreshTokenRequest
@@ -97,7 +120,14 @@ func RefreshToken(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-// Logout returns a handler that invalidates the current user's access token.
+// Logout godoc
+// @Summary Logout the current user
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/logout [post]
 func Logout(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if token, ok := middleware.ExtractAccessToken(c); ok {
@@ -113,7 +143,17 @@ func Logout(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-// ChangePassword returns a handler that changes the authenticated user's password.
+// ChangePassword godoc
+// @Summary Change the current user's password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body PasswordChangeRequest true "Current and new password"
+// @Success 200 {object} MessageResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/change-password [post]
 func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -134,7 +174,14 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 	}
 }
 
-// QueryPostKey returns a handler that retrieves the authenticated user's post key.
+// QueryPostKey godoc
+// @Summary Get the current user's post key
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} PostKeyResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/post_key [get]
 func QueryPostKey(authSvc AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {

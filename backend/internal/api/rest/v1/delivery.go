@@ -20,7 +20,14 @@ type DeliveryService interface {
 	Delete(ctx context.Context, userID int, id int) error
 }
 
-// ListDeliveryChannels returns a handler that lists all delivery channels for the authenticated user.
+// ListDeliveryChannels godoc
+// @Summary List the current user's delivery channels
+// @Tags delivery
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} ChannelsListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/channels [get]
 func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -39,7 +46,17 @@ func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
-// CreateDeliveryChannel returns a handler that creates a new delivery channel for the authenticated user.
+// CreateDeliveryChannel godoc
+// @Summary Create a delivery channel
+// @Tags delivery
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body CreateDeliveryChannelRequest true "Channel kind, name, configuration and keywords"
+// @Success 201 {object} SingleChannelResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/channels [post]
 func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUser(c, func(u *user.User) {
@@ -59,7 +76,19 @@ func CreateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
-// UpdateDeliveryChannel returns a handler that updates an existing delivery channel for the authenticated user.
+// UpdateDeliveryChannel godoc
+// @Summary Update a delivery channel
+// @Tags delivery
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Param body body UpdateDeliveryChannelRequest true "Channel fields to update"
+// @Success 200 {object} SingleChannelResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/channels/{id} [put]
 func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserAndID(c, func(u *user.User, id int) {
@@ -79,7 +108,16 @@ func UpdateDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	}
 }
 
-// DeleteDeliveryChannel returns a handler that deletes an existing delivery channel for the authenticated user.
+// DeleteDeliveryChannel godoc
+// @Summary Delete a delivery channel
+// @Tags delivery
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/channels/{id} [delete]
 func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserAndID(c, func(u *user.User, id int) {

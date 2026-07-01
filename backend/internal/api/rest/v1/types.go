@@ -58,6 +58,11 @@ type PostKeyResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// OAuthURLResponse represents the response containing a GitHub OAuth authorization URL.
+type OAuthURLResponse struct {
+	URL string `json:"url"`
+}
+
 // GitHubLoginRequest represents the request body for GitHub OAuth login.
 type GitHubLoginRequest struct {
 	Code  string `json:"code" binding:"required"`
@@ -262,6 +267,24 @@ func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
 type AdminPostsQuery struct {
 	PaginationQuery
 	Search string `form:"search"`
+}
+
+// PaginatedUsers represents a paginated list of admin user items.
+type PaginatedUsers struct {
+	Users      []AdminUserItem `json:"users"`
+	Pagination Pagination      `json:"pagination"`
+}
+
+// PaginatedPosts represents a paginated list of admin post items.
+type PaginatedPosts struct {
+	Posts      []AdminPostItem `json:"posts"`
+	Pagination Pagination      `json:"pagination"`
+}
+
+// PaginatedChannels represents a paginated list of admin channel items.
+type PaginatedChannels struct {
+	Channels   []AdminChannelItem `json:"channels"`
+	Pagination Pagination         `json:"pagination"`
 }
 
 // --- Health types ---

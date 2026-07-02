@@ -52,7 +52,7 @@ docker run -d \
        ports:
          - "7157:7157"
        volumes:
-         - ./config.toml:/app/markpost.toml:ro
+         - ./config.toml:/app/config.toml:ro
        depends_on:
          db:
            condition: service_healthy
@@ -76,7 +76,7 @@ docker run -d \
        image: postgres:17-alpine
        volumes:
          - markpost-db:/var/lib/postgresql/data
-         - ./config.toml:/app/markpost.toml:ro
+         - ./config.toml:/app/config.toml:ro
        environment:
          - POSTGRES_DB=markpost
          - POSTGRES_USER=postgres
@@ -136,7 +136,7 @@ services:
     restart: always
     volumes:
       - ./data:/app/data
-      - ./config.toml:/app/markpost.toml:ro
+      - ./config.toml:/app/config.toml:ro
     ports:
       - "7157:7157"
     healthcheck:

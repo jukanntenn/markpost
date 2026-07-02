@@ -5,7 +5,7 @@ services:
     ports:
       - "8089:7157"
     volumes:
-      - {{ config_file }}:/app/markpost.toml:ro
+      - {{ config_file }}:/app/config.toml:ro
     environment:
       - MARKPOST_DEBUG=true
     depends_on:

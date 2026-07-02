@@ -2,9 +2,9 @@
 # Markpost Configuration
 # =============================================================================
 #
-# Place this file as "markpost.toml" next to the server binary, or specify a
+# Place this file as "config.toml" next to the server binary, or specify a
 # path via the --config / -c flag:
-#     ./markpost-server -c /path/to/markpost.toml
+#     ./markpost -c /path/to/config.toml
 #
 # Override rules (highest priority wins):
 #     Environment variables  >  TOML file  >  Built-in defaults

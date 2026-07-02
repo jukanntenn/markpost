@@ -49,4 +49,5 @@ docker/__pycache__/
 
 # Config
 config.toml
+backend/config.toml
 backend/config.example.toml

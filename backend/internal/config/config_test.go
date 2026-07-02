@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -175,5 +176,44 @@ request_timeout = "5s"
 	}
 	if cfg.Server.Port != 8080 {
 		t.Errorf("port = %d, want 8080", cfg.Server.Port)
+	}
+}
+
+func writeNamedConfig(t *testing.T, dir, name string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(testConfigToml), 0o644); err != nil {
+		t.Fatalf("failed to write %s: %v", name, err)
+	}
+}
+
+func TestLoad_AutoDiscoveryConfigToml(t *testing.T) {
+	ResetForTest()
+
+	t.Chdir(t.TempDir())
+	writeNamedConfig(t, ".", "config.toml")
+
+	if err := Load(""); err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+
+	cfg := Get()
+	if cfg.Server.Host != "127.0.0.1" {
+		t.Fatalf("expected host '127.0.0.1', got %s", cfg.Server.Host)
+	}
+}
+
+func TestLoad_AutoDiscoveryMarkpostTomlFallback(t *testing.T) {
+	ResetForTest()
+
+	t.Chdir(t.TempDir())
+	writeNamedConfig(t, ".", "markpost.toml")
+
+	if err := Load(""); err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+
+	cfg := Get()
+	if cfg.Server.Host != "127.0.0.1" {
+		t.Fatalf("expected host '127.0.0.1', got %s", cfg.Server.Host)
 	}
 }

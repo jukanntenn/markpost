@@ -11,14 +11,14 @@ Configuration files use [TOML](https://toml.io/en/).
 
 ### 1.2 Default File Name
 
-`markpost.toml`
+`config.toml`
 
 ### 1.3 Search Paths
 
 The server searches for the configuration file in the following order:
 
 1. Path specified via `--config` / `-c` CLI flag (takes precedence).
-2. `./markpost.toml` — same directory as the server binary.
+2. `./config.toml` — same directory as the server binary.
 
 If no file is found, the application starts using built-in defaults and
 environment variables only.
@@ -59,7 +59,7 @@ present in the TOML file.
 Example:
 
 ```toml
-# markpost.toml
+# config.toml
 [server]
 port = 8080
 ```

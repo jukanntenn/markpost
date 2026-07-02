@@ -51,12 +51,12 @@ Note: make sure `air` and `pnpm` are in your PATH.
 
 ```bash
 cd backend
-cp config.example.toml markpost.toml
+cp config.example.toml config.toml
 air
 ```
 
 The dev server starts at [http://localhost:7330](http://localhost:7330), defaulting to SQLite (`data/markpost.db`).
-Set `debug = true` in `markpost.toml` to enable debug mode.
+Set `debug = true` in `config.toml` to enable debug mode.
 
 **Frontend:**
 
@@ -186,7 +186,7 @@ The backend reads config from three sources (highest priority wins):
    MARKPOST_DB__DSN="postgres://user:pass@localhost:5432/markpost?sslmode=disable"
    ```
 
-2. **TOML file** — `markpost.toml` next to the binary, or via `-c /path/to/config.toml`
+2. **TOML file** — `config.toml` next to the binary, or via `-c /path/to/config.toml`
 3. **Built-in defaults** — see `backend/config.example.toml` for a full reference
 
 Environment variables are the recommended way to override defaults.

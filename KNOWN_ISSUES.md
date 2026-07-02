@@ -59,3 +59,47 @@ rendered on read.
 - GFM spec §6.5: https://github.github.com/gfm/#strikethrough-extension-
 - cmark-gfm require-double-tilde: https://github.com/github/cmark-gfm/pull/362
 - cmark-gfm #99 (single tilde is problematic): https://github.com/github/cmark-gfm/issues/99
+
+
+## Config file name: `markpost.toml` backward-compat fallback pending removal
+
+**Status:** Tracked, not yet actionable (2026-07-02).
+
+### Background
+
+In the single Docker container the Go binary is named `markpost` and runs in
+`/app`, so the old auto-discovered config file `/app/markpost.toml` collided
+with the binary name. The default config file was renamed from `markpost.toml`
+to `config.toml`. To avoid breaking existing deployments that still mount
+`/app/markpost.toml`, the config loader (`config.go`) keeps a temporary
+fallback: it searches for `config` first, then `markpost`.
+
+### Follow-up work
+
+Once all environments (dev / staging / production) have switched their volume
+mounts to `:/app/config.toml:ro` and run an image with the new loader:
+
+1. Remove the `"markpost"` candidate from the name list in
+   `backend/internal/config/config.go` (`loadConfig` else-branch loop).
+2. Delete the `TestLoad_AutoDiscoveryMarkpostTomlFallback` test in
+   `backend/internal/config/config_test.go`.
+3. Run `go test ./... && golangci-lint run` and commit as a single cleanup.
+
+### Verification of migration completion
+
+Confirm no deployment still references the old mount target before removing the
+fallback:
+
+```bash
+# Ansible templates (all three should be /app/config.toml)
+rg -n 'config_file' devops/ansible/templates/*/docker-compose.yml.j2
+
+# Any stray mount references
+rg -rn '/app/markpost.toml' .
+```
+
+### References
+
+- Config loader: `backend/internal/config/config.go`
+- Fallback test: `backend/internal/config/config_test.go`
+- Deployment mounts: `docs/deployment.md`

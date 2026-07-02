@@ -77,7 +77,7 @@ The backend also supports SQLite for lightweight deployments. SQLite is the defa
 
 See [configuration.md](./configuration.md) for the full configuration reference.
 
-For local development, you can create a `markpost.toml` file or use environment variables. The minimum configuration needed is JWT signing keys.
+For local development, you can create a `config.toml` file or use environment variables. The minimum configuration needed is JWT signing keys.
 
 ## Building
 

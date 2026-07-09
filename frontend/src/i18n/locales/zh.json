@@ -16,7 +16,8 @@
       "allPosts": "全部 Posts | Markpost",
       "adminUsers": "用户 - 管理后台 | Markpost",
       "adminPosts": "Posts - 管理后台 | Markpost",
-      "adminChannels": "渠道 - 管理后台 | Markpost"
+      "adminChannels": "渠道 - 管理后台 | Markpost",
+      "adminDeliveryHistory": "投递历史 - 管理后台 | Markpost"
     }
   },
   "language": {
@@ -175,7 +176,19 @@
     "deliveryChannelUpdated": "渠道更新成功",
     "deliveryChannelUpdateFailed": "渠道更新失败",
     "deliveryChannelDeleted": "渠道已删除",
-    "deliveryChannelDeleteFailed": "渠道删除失败"
+    "deliveryChannelDeleteFailed": "渠道删除失败",
+    "deliveryHistory": "投递历史",
+    "deliveryHistoryList": "你的文章最近的投递结果",
+    "deliveryHistoryLoading": "加载中...",
+    "deliveryHistoryEmpty": "暂无投递历史",
+    "deliveryHistoryLoadFailed": "加载投递历史失败",
+    "deliveryHistoryPostDeleted": "原文章已删除",
+    "deliveryHistoryChannelDeleted": "投递渠道已删除",
+    "deliveryHistoryStatus_delivered": "已投递",
+    "deliveryHistoryStatus_failed": "失败",
+    "deliveryHistoryStatus_expired": "已过期",
+    "deliveryHistoryPrev": "上一页",
+    "deliveryHistoryNext": "下一页"
   },
   "admin": {
     "id": "ID",
@@ -197,7 +210,8 @@
       "title": "管理后台",
       "users": "用户",
       "posts": "Posts",
-      "channels": "渠道"
+      "channels": "渠道",
+      "history": "投递历史"
     },
     "errors": {
       "forbidden": "无权限访问",
@@ -283,6 +297,22 @@
       "deleteConfirm": "确认删除渠道「{{name}}」？",
       "deleteConfirmEmpty": "确认删除该渠道？",
       "deleted": "渠道已删除"
+    },
+    "history": {
+      "title": "投递历史",
+      "createdAt": "时间",
+      "post": "文章",
+      "channel": "渠道",
+      "user": "用户",
+      "status": "状态",
+      "error": "错误",
+      "postDeleted": "文章已删除",
+      "channelDeleted": "渠道已删除",
+      "userDeleted": "用户已注销",
+      "status_delivered": "已投递",
+      "status_failed": "失败",
+      "status_expired": "已过期",
+      "empty": "暂无投递历史"
     }
   },
   "notFound": {

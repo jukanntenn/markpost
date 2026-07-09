@@ -1,7 +1,7 @@
 import { request, paginationParams } from "./base";
 import type { AdminUsersResponse } from "@/types/users";
 import type { AdminPostsResponse } from "@/types/posts";
-import type { AdminChannelsResponse } from "@/types/delivery";
+import type { AdminChannelsResponse, DeliveryHistoryResponse } from "@/types/delivery";
 
 export const adminApi = {
   listUsers: (page?: number, limit?: number) =>
@@ -16,6 +16,11 @@ export const adminApi = {
 
   listChannels: (page?: number, limit?: number) =>
     request<AdminChannelsResponse>("/api/v1/admin/channels", {
+      params: paginationParams(page, limit),
+    }),
+
+  listDeliveryHistory: (page?: number, limit?: number) =>
+    request<DeliveryHistoryResponse>("/api/v1/admin/delivery-history", {
       params: paginationParams(page, limit),
     }),
 };

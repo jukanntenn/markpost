@@ -21,12 +21,16 @@ export const adminKeys = {
   channels: {
     all: () => [...adminKeys.all(), "channels"] as const,
   },
+  history: {
+    all: () => [...adminKeys.all(), "history"] as const,
+  },
 };
 
 export const deliveryKeys = {
   all: () => ["delivery"] as const,
   channels: () => [...deliveryKeys.all(), "channels"] as const,
   detail: (id: number) => [...deliveryKeys.all(), "detail", id] as const,
+  history: (page: number, limit: number) => [...deliveryKeys.all(), "history", { page, limit }] as const,
 };
 
 export const postKeyKeys = {

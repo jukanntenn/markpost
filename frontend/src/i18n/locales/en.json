@@ -16,7 +16,8 @@
       "allPosts": "All Posts | Markpost",
       "adminUsers": "Users - Admin | Markpost",
       "adminPosts": "Posts - Admin | Markpost",
-      "adminChannels": "Channels - Admin | Markpost"
+      "adminChannels": "Channels - Admin | Markpost",
+      "adminDeliveryHistory": "Delivery History - Admin | Markpost"
     }
   },
   "language": {
@@ -175,7 +176,19 @@
     "deliveryChannelUpdated": "Channel updated",
     "deliveryChannelUpdateFailed": "Failed to update channel",
     "deliveryChannelDeleted": "Channel deleted",
-    "deliveryChannelDeleteFailed": "Failed to delete channel"
+    "deliveryChannelDeleteFailed": "Failed to delete channel",
+    "deliveryHistory": "Delivery History",
+    "deliveryHistoryList": "Recent delivery outcomes for your posts",
+    "deliveryHistoryLoading": "Loading history...",
+    "deliveryHistoryEmpty": "No delivery history yet",
+    "deliveryHistoryLoadFailed": "Failed to load history",
+    "deliveryHistoryPostDeleted": "Original post deleted",
+    "deliveryHistoryChannelDeleted": "Delivery channel deleted",
+    "deliveryHistoryStatus_delivered": "Delivered",
+    "deliveryHistoryStatus_failed": "Failed",
+    "deliveryHistoryStatus_expired": "Expired",
+    "deliveryHistoryPrev": "Previous",
+    "deliveryHistoryNext": "Next"
   },
   "admin": {
     "id": "ID",
@@ -197,7 +210,8 @@
       "title": "Admin",
       "users": "Users",
       "posts": "Posts",
-      "channels": "Channels"
+      "channels": "Channels",
+      "history": "Delivery History"
     },
     "errors": {
       "forbidden": "Access denied",
@@ -283,6 +297,22 @@
       "deleteConfirm": "Delete channel \"{{name}}\"?",
       "deleteConfirmEmpty": "Delete this channel?",
       "deleted": "Channel deleted"
+    },
+    "history": {
+      "title": "Delivery History",
+      "createdAt": "Time",
+      "post": "Post",
+      "channel": "Channel",
+      "user": "User",
+      "status": "Status",
+      "error": "Error",
+      "postDeleted": "Post deleted",
+      "channelDeleted": "Channel deleted",
+      "userDeleted": "User deleted",
+      "status_delivered": "Delivered",
+      "status_failed": "Failed",
+      "status_expired": "Expired",
+      "empty": "No delivery history found"
     }
   },
   "notFound": {

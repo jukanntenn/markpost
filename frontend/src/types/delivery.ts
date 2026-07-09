@@ -38,6 +38,21 @@ export interface AdminChannel {
 
 export type AdminChannelsResponse = Paginated<AdminChannel, "channels">;
 
+export type DeliveryStatus = "delivered" | "failed" | "expired";
+
+export interface DeliveryHistoryItem {
+  id: number;
+  status: DeliveryStatus;
+  last_error: string;
+  created_at: string;
+  post_title: string | null;
+  post_qid: string | null;
+  channel_name: string | null;
+  username: string | null;
+}
+
+export type DeliveryHistoryResponse = Paginated<DeliveryHistoryItem, "history">;
+
 export interface CreateChannelPayload {
   kind: string;
   name: string;

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { UsersIcon, FileTextIcon, RadioIcon } from "lucide-react";
+import { UsersIcon, FileTextIcon, RadioIcon, SendIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface AdminNavItem {
@@ -17,6 +17,7 @@ const adminNavItems: AdminNavItem[] = [
   { href: "/admin/users", labelKey: "nav.users", icon: UsersIcon },
   { href: "/admin/posts", labelKey: "nav.posts", icon: FileTextIcon },
   { href: "/admin/channels", labelKey: "nav.channels", icon: RadioIcon },
+  { href: "/admin/delivery-history", labelKey: "nav.history", icon: SendIcon },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

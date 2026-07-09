@@ -215,6 +215,19 @@ burst = 50
 # [REQUIRED]  Env: MARKPOST_DELIVERY__REQUEST_TIMEOUT  Default: "5s"
 # request_timeout = "5s"
 
-# Number of retry attempts for failed deliveries.  0 = no retries.
-# [OPTIONAL]  Env: MARKPOST_DELIVERY__RETRY_COUNT  Default: 0
-# retry_count = 0
+# Worker pool size (concurrent Feishu sends). Must be >= 1.
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__WORKERS  Default: 32
+# workers = 32
+
+# Pond task queue depth (backlog beyond the worker count).
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__QUEUE_SIZE  Default: 1024
+# queue_size = 1024
+
+# Scheduler tick interval for claiming due attempts.
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__SCAN_INTERVAL  Default: "1s"
+# scan_interval = "1s"
+
+# How long delivery_history rows are retained before the prune command deletes
+# them. Run cmd/prune_delivery_history via cron to sweep.
+# [OPTIONAL]  Env: MARKPOST_DELIVERY__HISTORY_RETENTION  Default: "168h" (7 days)
+# history_retention = "168h"

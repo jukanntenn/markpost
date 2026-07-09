@@ -104,6 +104,34 @@ definitions:
       id:
         type: string
     type: object
+  internal_api_rest_v1.DeliveryHistoryItem:
+    properties:
+      channel_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      last_error:
+        type: string
+      post_qid:
+        type: string
+      post_title:
+        type: string
+      status:
+        type: string
+      username:
+        type: string
+    type: object
+  internal_api_rest_v1.DeliveryHistoryListResponse:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryItem'
+        type: array
+      pagination:
+        $ref: '#/definitions/internal_api_rest_v1.Pagination'
+    type: object
   internal_api_rest_v1.GitHubLoginRequest:
     properties:
       code:
@@ -403,6 +431,39 @@ paths:
       security:
       - BearerAuth: []
       summary: List all delivery channels (admin)
+      tags:
+      - admin
+  /api/v1/admin/delivery-history:
+    get:
+      parameters:
+      - default: 1
+        description: Page number (min 1)
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (min 1)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all delivery history (admin)
       tags:
       - admin
   /api/v1/admin/posts:
@@ -719,6 +780,35 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a delivery channel
+      tags:
+      - delivery
+  /api/v1/delivery/history:
+    get:
+      parameters:
+      - default: 1
+        description: Page number (min 1)
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (min 1)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the current user's delivery history
       tags:
       - delivery
   /api/v1/health:

@@ -14,7 +14,7 @@ func setupDeliveryService(t *testing.T) (*Service, delivery.Repository) {
 	t.Helper()
 	db := infra.SetupTestDB(t)
 	repo := infra.NewDeliveryChannelRepository(db)
-	svc := NewService(repo)
+	svc := NewService(repo, nil)
 	return svc, repo
 }
 

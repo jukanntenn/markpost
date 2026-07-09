@@ -16,11 +16,13 @@ func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository
 	userRepo := infra.NewUserRepository(db, 16)
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
+	attemptRepo := infra.NewAttemptRepository(db)
 
 	svc := NewService(
 		userRepo.(*infra.UserRepository),
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
+		attemptRepo,
 	)
 	return svc, userRepo, postRepo, channelRepo
 }

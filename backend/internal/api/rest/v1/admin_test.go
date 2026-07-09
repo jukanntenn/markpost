@@ -22,11 +22,13 @@ func setupAdminHandlerDeps(t *testing.T) (*admin.Service, user.Repository, post.
 	userRepo := infra.NewUserRepository(db, 16)
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
+	attemptRepo := infra.NewAttemptRepository(db)
 
 	svc := admin.NewService(
 		userRepo.(*infra.UserRepository),
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
+		attemptRepo,
 	)
 	return svc, userRepo, postRepo, channelRepo
 }

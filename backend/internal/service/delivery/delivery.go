@@ -24,12 +24,13 @@ type UpdateChannelParams struct {
 
 // Service provides delivery channel business logic.
 type Service struct {
-	repo delivery.Repository
+	repo        delivery.Repository
+	attemptRepo delivery.AttemptRepository
 }
 
 // NewService creates a new Service instance.
-func NewService(repo delivery.Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo delivery.Repository, attemptRepo delivery.AttemptRepository) *Service {
+	return &Service{repo: repo, attemptRepo: attemptRepo}
 }
 
 func normalizeAndValidateKind(kind string) (delivery.ChannelKind, error) {
@@ -180,5 +181,14 @@ func (s *Service) ListAll(ctx context.Context, offset, limit int) ([]delivery.Ch
 		func() ([]delivery.Channel, error) { return s.repo.ListAll(ctx, offset, limit) },
 		func() (int64, error) { return s.repo.CountAll(ctx) },
 		"all channels",
+	)
+}
+
+// ListHistory lists a user's own delivery history (newest first) with pagination.
+func (s *Service) ListHistory(ctx context.Context, userID, offset, limit int) ([]*delivery.HistoryRow, int64, error) {
+	return service.Paginate(
+		func() ([]*delivery.HistoryRow, error) { return s.attemptRepo.ListHistory(ctx, userID, offset, limit) },
+		func() (int64, error) { return s.attemptRepo.CountHistory(ctx, userID) },
+		"delivery history",
 	)
 }

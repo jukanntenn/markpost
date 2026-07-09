@@ -32,6 +32,7 @@ type DeliveryEnqueuer interface {
 // DeliveryJob represents a delivery job.
 type DeliveryJob struct {
 	UserID  int
+	PostID  int
 	PostQID string
 	Title   string
 	Body    string
@@ -146,6 +147,7 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 	if s.delivery != nil {
 		s.delivery.Enqueue(DeliveryJob{
 			UserID:  userID,
+			PostID:  p.ID,
 			PostQID: p.QID,
 			Title:   title,
 			Body:    body,

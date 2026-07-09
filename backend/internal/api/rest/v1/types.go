@@ -198,6 +198,52 @@ func (r UpdateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 	return params
 }
 
+// DeliveryHistoryItem represents a delivery history entry in API responses. The
+// nullable pointers reflect ON DELETE SET NULL: a nil field means the referenced
+// post/channel/user was deleted.
+type DeliveryHistoryItem struct {
+	ID          int64     `json:"id"`
+	Status      string    `json:"status"`
+	LastError   string    `json:"last_error"`
+	CreatedAt   time.Time `json:"created_at"`
+	PostTitle   *string   `json:"post_title"`
+	PostQID     *string   `json:"post_qid"`
+	ChannelName *string   `json:"channel_name"`
+	Username    *string   `json:"username"`
+}
+
+func newDeliveryHistoryItem(h *delivery.HistoryRow) DeliveryHistoryItem {
+	return DeliveryHistoryItem{
+		ID:          h.ID,
+		Status:      deliveryStatusName(h.Status),
+		LastError:   h.LastError,
+		CreatedAt:   h.CreatedAt,
+		PostTitle:   h.PostTitle,
+		PostQID:     h.PostQID,
+		ChannelName: h.ChannelName,
+		Username:    h.Username,
+	}
+}
+
+func deliveryStatusName(s delivery.Status) string {
+	switch s {
+	case delivery.StatusDelivered:
+		return "delivered"
+	case delivery.StatusFailed:
+		return "failed"
+	case delivery.StatusExpired:
+		return "expired"
+	default:
+		return "unknown"
+	}
+}
+
+// DeliveryHistoryListResponse represents a paginated list of delivery history.
+type DeliveryHistoryListResponse struct {
+	History    []DeliveryHistoryItem `json:"history"`
+	Pagination Pagination            `json:"pagination"`
+}
+
 // --- Admin types ---
 
 // AdminUserItem represents a user entry in the admin user list.

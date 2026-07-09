@@ -26,19 +26,27 @@ type ChannelLister interface {
 	ListAll(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
 }
 
+// HistoryLister defines the interface for retrieving delivery history.
+type HistoryLister interface {
+	ListHistory(ctx context.Context, ownerID int, offset, limit int) ([]*delivery.HistoryRow, error)
+	CountHistory(ctx context.Context, ownerID int) (int64, error)
+}
+
 // Service provides admin-level business logic.
 type Service struct {
 	userLister    UserLister
 	postLister    PostLister
 	channelLister ChannelLister
+	historyLister HistoryLister
 }
 
 // NewService creates a new admin Service instance.
-func NewService(userLister UserLister, postLister PostLister, channelLister ChannelLister) *Service {
+func NewService(userLister UserLister, postLister PostLister, channelLister ChannelLister, historyLister HistoryLister) *Service {
 	return &Service{
 		userLister:    userLister,
 		postLister:    postLister,
 		channelLister: channelLister,
+		historyLister: historyLister,
 	}
 }
 
@@ -59,4 +67,14 @@ func (s *Service) ListAllPosts(ctx context.Context, search string, offset, limit
 // ListAllDeliveryChannels retrieves all delivery channels with pagination.
 func (s *Service) ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error) {
 	return s.channelLister.ListAll(ctx, offset, limit)
+}
+
+// ListAllDeliveryHistory retrieves all delivery history (all users, including
+// anonymized rows) with pagination.
+func (s *Service) ListAllDeliveryHistory(ctx context.Context, offset, limit int) ([]*delivery.HistoryRow, int64, error) {
+	return service.Paginate(
+		func() ([]*delivery.HistoryRow, error) { return s.historyLister.ListHistory(ctx, 0, offset, limit) },
+		func() (int64, error) { return s.historyLister.CountHistory(ctx, 0) },
+		"delivery history",
+	)
 }

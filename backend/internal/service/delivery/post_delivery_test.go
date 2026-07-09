@@ -10,6 +10,8 @@ import (
 
 	"markpost/internal/config"
 	"markpost/internal/domain/delivery"
+	domainpost "markpost/internal/domain/post"
+	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/service/delivery/filter"
 	"markpost/internal/service/post"
@@ -140,113 +142,8 @@ func makeFeishuChannelConfig(webhookURL string) delivery.ChannelConfiguration {
 	}
 }
 
-func TestPostDeliveryService_Deliver(t *testing.T) {
-	t.Run("sends to matching channels", func(t *testing.T) {
-		db := infra.SetupTestDB(t)
-		repo := infra.NewDeliveryChannelRepository(db)
-		ctx := context.Background()
-
-		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:        1,
-			Kind:          delivery.ChannelKindFeishu,
-			Name:          "Alert Channel",
-			Enabled:       true,
-			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
-			Keywords:      "alert",
-		})
-
-		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
-		svc.Deliver(ctx, post.DeliveryJob{
-			UserID:  1,
-			PostQID: "p-test",
-			Title:   "Server Alert",
-			Body:    "Something happened",
-		})
-	})
-
-	t.Run("skips disabled channels", func(t *testing.T) {
-		db := infra.SetupTestDB(t)
-		repo := infra.NewDeliveryChannelRepository(db)
-		ctx := context.Background()
-
-		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:        1,
-			Kind:          delivery.ChannelKindFeishu,
-			Name:          "Disabled",
-			Enabled:       false,
-			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
-			Keywords:      "",
-		})
-
-		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
-		svc.Deliver(ctx, post.DeliveryJob{
-			UserID:  1,
-			PostQID: "p-test",
-			Title:   "Test",
-			Body:    "Body",
-		})
-	})
-
-	t.Run("skips non-matching keywords", func(t *testing.T) {
-		db := infra.SetupTestDB(t)
-		repo := infra.NewDeliveryChannelRepository(db)
-		ctx := context.Background()
-
-		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:        1,
-			Kind:          delivery.ChannelKindFeishu,
-			Name:          "Alert Only",
-			Enabled:       true,
-			Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
-			Keywords:      "alert",
-		})
-
-		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
-		svc.Deliver(ctx, post.DeliveryJob{
-			UserID:  1,
-			PostQID: "p-test",
-			Title:   "Normal Post",
-			Body:    "Nothing special",
-		})
-	})
-
-	t.Run("sends card to feishu webhook", func(t *testing.T) {
-		var received bool
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			received = true
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{"code":0}`))
-		}))
-		defer server.Close()
-
-		db := infra.SetupTestDB(t)
-		repo := infra.NewDeliveryChannelRepository(db)
-		ctx := context.Background()
-
-		_ = repo.Create(ctx, &delivery.Channel{
-			UserID:        1,
-			Kind:          delivery.ChannelKindFeishu,
-			Name:          "Test",
-			Enabled:       true,
-			Configuration: makeFeishuChannelConfig(server.URL),
-			Keywords:      "",
-		})
-
-		svc := &PostDeliveryService{repo: repo, feishu: NewFeishuClient(5 * time.Second)}
-		svc.Deliver(ctx, post.DeliveryJob{
-			UserID:  1,
-			PostQID: "p-test",
-			Title:   "Test",
-			Body:    "Body",
-		})
-
-		if !received {
-			t.Error("expected feishu webhook to be called")
-		}
-	})
-}
-
-func TestNewPostDeliveryService(t *testing.T) {
+func loadDeliveryTestConfig(t *testing.T) {
+	t.Helper()
 	config.ResetForTest()
 
 	tmpFile, err := os.CreateTemp("", "test-config-*.toml")
@@ -269,78 +166,281 @@ refresh_signing_key = "test-refresh-key-at-least-32-characters"
 request_timeout = "5s"
 `)
 	_ = tmpFile.Close()
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	t.Cleanup(func() { _ = os.Remove(tmpFile.Name()) })
 
 	if err := config.Load(tmpFile.Name()); err != nil {
 		t.Fatalf("config.Load error: %v", err)
 	}
+}
 
-	db := infra.SetupTestDB(t)
-	repo := infra.NewDeliveryChannelRepository(db)
+func TestPostDeliveryService_Send(t *testing.T) {
+	loadDeliveryTestConfig(t)
 
-	svc := NewPostDeliveryService(repo)
+	t.Run("sends feishu card to webhook", func(t *testing.T) {
+		var received bool
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			received = true
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		channel := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Test",
+			Enabled:       true,
+			Configuration: makeFeishuChannelConfig(server.URL),
+			Keywords:      "",
+		}
+		p := &domainpost.Post{ID: 1, QID: "p-test", Title: "Test", Body: "Body"}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		if err := svc.Send(context.Background(), p, channel); err != nil {
+			t.Fatalf("Send error: %v", err)
+		}
+		if !received {
+			t.Error("expected feishu webhook to be called")
+		}
+	})
+
+	t.Run("returns error on feishu failure", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer server.Close()
+
+		channel := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Configuration: makeFeishuChannelConfig(server.URL),
+		}
+		p := &domainpost.Post{ID: 1, QID: "p-test", Title: "Test"}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		if err := svc.Send(context.Background(), p, channel); err == nil {
+			t.Fatal("expected error from failed webhook")
+		}
+	})
+
+	t.Run("returns error for unsupported channel kind", func(t *testing.T) {
+		channel := &delivery.Channel{UserID: 1, Kind: "unknown"}
+		p := &domainpost.Post{ID: 1, QID: "p-test", Title: "Test"}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		err := svc.Send(context.Background(), p, channel)
+		if err == nil {
+			t.Fatal("expected error for unsupported kind")
+		}
+	})
+}
+
+func TestNewPostDeliveryService(t *testing.T) {
+	loadDeliveryTestConfig(t)
+
+	svc := NewPostDeliveryService()
 	if svc == nil {
 		t.Fatal("expected non-nil service")
-	}
-	if svc.repo == nil {
-		t.Error("expected non-nil repo")
 	}
 	if svc.feishu == nil {
 		t.Error("expected non-nil feishu client")
 	}
 }
 
-func TestDispatcher(t *testing.T) {
-	t.Run("enqueues and processes jobs", func(t *testing.T) {
-		processed := make(chan post.DeliveryJob, 1)
-		mockHandler := &mockDeliveryHandler{processed: processed}
+// seedUserPostChannel inserts a user, a post owned by that user, and a feishu
+// delivery channel for the user, returning their IDs for attempt setup.
+func seedUserPostChannel(t *testing.T, db *infra.Database) (userID, postID, channelID int) {
+	t.Helper()
 
-		dispatcher := NewDispatcher(mockHandler, 256)
+	u := &user.User{
+		Email:    "alice@example.com",
+		Username: "alice",
+		Password: "x",
+		PostKey:  "pk-seed",
+	}
+	if err := db.DB().Create(u).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		dispatcher.Start(ctx)
+	p := &domainpost.Post{QID: "p-seed", Title: "Server Alert", Body: "boom", UserID: u.ID}
+	if err := db.DB().Create(p).Error; err != nil {
+		t.Fatalf("seed post: %v", err)
+	}
 
-		dispatcher.Enqueue(post.DeliveryJob{
-			UserID:  1,
-			PostQID: "p-test",
-			Title:   "Test",
-			Body:    "Body",
-		})
-
-		select {
-		case job := <-processed:
-			if job.Title != "Test" {
-				t.Errorf("job title = %q, want %q", job.Title, "Test")
-			}
-		case <-time.After(time.Second):
-			t.Fatal("timeout waiting for job to be processed")
-		}
-	})
-
-	t.Run("drops jobs when queue is full", func(t *testing.T) {
-		dispatcher := NewDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob, 1)}, 1)
-
-		dispatcher.Enqueue(post.DeliveryJob{UserID: 1, PostQID: "p-1", Title: "First"})
-		dispatcher.Enqueue(post.DeliveryJob{UserID: 2, PostQID: "p-2", Title: "Second"})
-
-		if len(dispatcher.jobs) != 1 {
-			t.Errorf("queue length = %d, want 1", len(dispatcher.jobs))
-		}
-	})
-
-	t.Run("uses default buffer size when zero", func(t *testing.T) {
-		dispatcher := NewDispatcher(&mockDeliveryHandler{processed: make(chan post.DeliveryJob)}, 0)
-		if cap(dispatcher.jobs) != 256 {
-			t.Errorf("buffer size = %d, want 256", cap(dispatcher.jobs))
-		}
-	})
+	ch := &delivery.Channel{
+		UserID:        u.ID,
+		Kind:          delivery.ChannelKindFeishu,
+		Name:          "alerts",
+		Enabled:       true,
+		Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
+		Keywords:      "alert",
+	}
+	if err := db.DB().Create(ch).Error; err != nil {
+		t.Fatalf("seed channel: %v", err)
+	}
+	return u.ID, p.ID, ch.ID
 }
 
-type mockDeliveryHandler struct {
-	processed chan post.DeliveryJob
+func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
+	loadDeliveryTestConfig(t)
+	database, err := infra.NewTestDatabase()
+	if err != nil {
+		t.Fatalf("NewTestDatabase: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	uid, pid, cid := seedUserPostChannel(t, database)
+	// also seed a non-matching channel to confirm it produces no attempt.
+	_ = database.DB().Create(&delivery.Channel{
+		UserID:        uid,
+		Kind:          delivery.ChannelKindFeishu,
+		Name:          "no-match",
+		Enabled:       true,
+		Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
+		Keywords:      "nomatch",
+	}).Error
+
+	channelRepo := infra.NewDeliveryChannelRepository(database.DB())
+	attemptRepo := infra.NewAttemptRepository(database.DB())
+	postRepo := infra.NewPostRepository(database.DB())
+
+	dispatcher := NewDispatcher(attemptRepo, channelRepo, postRepo, &recordingSender{})
+	dispatcher.Enqueue(post.DeliveryJob{
+		UserID:  uid,
+		PostID:  pid,
+		PostQID: "p-seed",
+		Title:   "Server Alert",
+		Body:    "boom",
+	})
+
+	var attempts []delivery.Attempt
+	if err := database.DB().Find(&attempts).Error; err != nil {
+		t.Fatalf("find attempts: %v", err)
+	}
+	if len(attempts) != 1 {
+		t.Fatalf("expected 1 matching attempt, got %d", len(attempts))
+	}
+	a := attempts[0]
+	if a.Status != delivery.StatusPending {
+		t.Errorf("status = %d, want %d", a.Status, delivery.StatusPending)
+	}
+	if a.ChannelID != cid {
+		t.Errorf("channel_id = %d, want %d", a.ChannelID, cid)
+	}
+	if a.PostID != pid {
+		t.Errorf("post_id = %d, want %d", a.PostID, pid)
+	}
 }
 
-func (m *mockDeliveryHandler) Deliver(_ context.Context, job post.DeliveryJob) {
-	m.processed <- job
+func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
+	loadDeliveryTestConfig(t)
+	database, err := infra.NewTestDatabase()
+	if err != nil {
+		t.Fatalf("NewTestDatabase: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	uid, pid, cid := seedUserPostChannel(t, database)
+
+	ctx := context.Background()
+	now := time.Now()
+	attempt := &delivery.Attempt{
+		UserID:    uid,
+		PostID:    pid,
+		ChannelID: cid,
+		Status:    delivery.StatusPending,
+		NextAt:    now.UnixMilli(),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	attemptRepo := infra.NewAttemptRepository(database.DB())
+	if err := attemptRepo.Create(ctx, []*delivery.Attempt{attempt}); err != nil {
+		t.Fatalf("create attempt: %v", err)
+	}
+
+	// Claim returns the one due attempt.
+	claimed, err := attemptRepo.ClaimDue(ctx, now.UnixMilli(), now.Add(time.Minute).UnixMilli(), 10)
+	if err != nil {
+		t.Fatalf("ClaimDue: %v", err)
+	}
+	if len(claimed) != 1 {
+		t.Fatalf("expected 1 claimed, got %d", len(claimed))
+	}
+	if claimed[0].ID != attempt.ID {
+		t.Errorf("claimed id = %d, want %d", claimed[0].ID, attempt.ID)
+	}
+
+	// A second claim right away must not re-claim the reserved row.
+	again, err := attemptRepo.ClaimDue(ctx, now.UnixMilli(), now.Add(time.Minute).UnixMilli(), 10)
+	if err != nil {
+		t.Fatalf("ClaimDue second: %v", err)
+	}
+	if len(again) != 0 {
+		t.Errorf("expected 0 re-claimed, got %d", len(again))
+	}
+
+	// Archive as delivered: attempt row gone, history row written.
+	if err := attemptRepo.ArchiveAndDelete(ctx, claimed[0], delivery.StatusDelivered, ""); err != nil {
+		t.Fatalf("ArchiveAndDelete: %v", err)
+	}
+
+	var remaining []delivery.Attempt
+	database.DB().Find(&remaining)
+	if len(remaining) != 0 {
+		t.Errorf("expected attempt deleted, %d remain", len(remaining))
+	}
+	var history []delivery.History
+	database.DB().Find(&history)
+	if len(history) != 1 || history[0].Status != delivery.StatusDelivered {
+		t.Errorf("expected 1 delivered history row, got %+v", history)
+	}
+}
+
+func TestDispatcher_MarkRetryAdvancesNextAt(t *testing.T) {
+	loadDeliveryTestConfig(t)
+	database, err := infra.NewTestDatabase()
+	if err != nil {
+		t.Fatalf("NewTestDatabase: %v", err)
+	}
+	defer func() { _ = database.Close() }()
+
+	uid, pid, cid := seedUserPostChannel(t, database)
+	ctx := context.Background()
+	now := time.Now()
+	attempt := &delivery.Attempt{
+		UserID:    uid,
+		PostID:    pid,
+		ChannelID: cid,
+		Status:    delivery.StatusPending,
+		NextAt:    now.UnixMilli(),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	attemptRepo := infra.NewAttemptRepository(database.DB())
+	if err := attemptRepo.Create(ctx, []*delivery.Attempt{attempt}); err != nil {
+		t.Fatalf("create attempt: %v", err)
+	}
+
+	wantAt := now.Add(time.Minute).UnixMilli()
+	if err := attemptRepo.MarkRetry(ctx, attempt.ID, 1, "boom", wantAt); err != nil {
+		t.Fatalf("MarkRetry: %v", err)
+	}
+
+	var got delivery.Attempt
+	database.DB().First(&got, attempt.ID)
+	if got.Attempts != 1 {
+		t.Errorf("attempts = %d, want 1", got.Attempts)
+	}
+	if got.NextAt != wantAt {
+		t.Errorf("next_at = %d, want %d", got.NextAt, wantAt)
+	}
+	if got.LastError != "boom" {
+		t.Errorf("last_error = %q, want %q", got.LastError, "boom")
+	}
+}
+
+type recordingSender struct{}
+
+func (recordingSender) Send(_ context.Context, _ *domainpost.Post, _ *delivery.Channel) error {
+	return nil
 }

@@ -17,6 +17,8 @@ var testModels = []any{
 	&user.TokenBlacklist{},
 	&post.Post{},
 	&delivery.Channel{},
+	&delivery.Attempt{},
+	&delivery.History{},
 }
 
 // SetupTestDB creates an in-memory SQLite database for testing with all models migrated.

@@ -104,11 +104,17 @@ type RateLimitConfig struct {
 	DailyBurst  int     `mapstructure:"daily_burst" validate:"gte=0"`
 }
 
-// DeliveryConfig holds delivery-related configuration.
+// DeliveryConfig holds delivery-related configuration. The retry sequence and
+// expiry wall are NOT here — they are hardcoded constants in
+// internal/service/delivery/backoff.go (one channel kind today, so per-channel
+// retry tuning has no consumer; see specs/backend/delivery.md Decision 4).
 type DeliveryConfig struct {
 	BodyPreviewChars int           `mapstructure:"body_preview_chars" validate:"gte=0"`
 	RequestTimeout   time.Duration `mapstructure:"request_timeout" validate:"required"`
-	RetryCount       int           `mapstructure:"retry_count" validate:"gte=0"`
+	Workers          int           `mapstructure:"workers" validate:"gte=1"`
+	QueueSize        int           `mapstructure:"queue_size" validate:"gte=0"`
+	ScanInterval     time.Duration `mapstructure:"scan_interval" validate:"required"`
+	HistoryRetention time.Duration `mapstructure:"history_retention" validate:"required"`
 }
 
 // RenderConfig holds configuration for the in-process render cache
@@ -263,7 +269,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("ratelimit.authed_write.burst", 60)
 	v.SetDefault("delivery.body_preview_chars", 200)
 	v.SetDefault("delivery.request_timeout", "5s")
-	v.SetDefault("delivery.retry_count", 0)
+	v.SetDefault("delivery.workers", 32)
+	v.SetDefault("delivery.queue_size", 1024)
+	v.SetDefault("delivery.scan_interval", "1s")
+	v.SetDefault("delivery.history_retention", "168h")
 	v.SetDefault("render.enabled", true)
 	v.SetDefault("render.cache_size_bytes", 134217728) // 128 MiB
 	v.SetDefault("render.num_counters", 100000)        // ~10x expected key count

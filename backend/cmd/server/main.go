@@ -162,15 +162,19 @@ func serve(configPath string) {
 	postRepo := infra.NewPostRepository(dbInstance.DB())
 
 	deliveryRepo := infra.NewDeliveryChannelRepository(dbInstance.DB())
-	deliverySvc := deliverysvc.NewService(deliveryRepo)
+	attemptRepo := infra.NewAttemptRepository(dbInstance.DB())
+	deliverySvc := deliverysvc.NewService(deliveryRepo, attemptRepo)
 
-	postDeliverySvc := deliverysvc.NewPostDeliveryService(deliveryRepo)
-	deliveryDispatcher := deliverysvc.NewDispatcher(postDeliverySvc, 0)
-	deliveryDispatcher.Start(context.Background())
+	postDeliverySvc := deliverysvc.NewPostDeliveryService()
+	deliveryDispatcher := deliverysvc.NewDispatcher(attemptRepo, deliveryRepo, postRepo, postDeliverySvc)
+	dispatcherCtx, dispatcherCancel := context.WithCancel(context.Background())
+	defer dispatcherCancel()
+	deliveryDispatcher.Start(dispatcherCtx)
+	defer deliveryDispatcher.Stop()
 
 	postSvc = postsvc.NewService(postRepo, deliveryDispatcher)
 
-	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc)
+	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo)
 
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
@@ -199,6 +203,8 @@ func serve(configPath string) {
 	visitHost := cfg.Server.Host
 	log.Println("Visit http://" + visitHost + ":" + strconv.FormatUint(uint64(cfg.Server.Port), 10))
 	if err := r.Run(listenAddr); err != nil {
+		dispatcherCancel()
+		deliveryDispatcher.Stop()
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
@@ -258,6 +264,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			deliveryGroup.PUT("/:id", middleware.RateLimitByUserID(l3Write), v1.UpdateDeliveryChannel(deliverySvc))
 			deliveryGroup.DELETE("/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteDeliveryChannel(deliverySvc))
 		}
+		jwtAuth.GET("/delivery/history", v1.ListDeliveryHistory(deliverySvc))
 
 		adminGroup := jwtAuth.Group("/admin")
 		adminGroup.Use(middleware.RequireAdmin())
@@ -265,6 +272,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
 			adminGroup.GET("/channels", v1.AdminListChannels(adminSvc))
+			adminGroup.GET("/delivery-history", v1.AdminListDeliveryHistory(adminSvc))
 			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))
 		}
 	}

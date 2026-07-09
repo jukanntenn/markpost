@@ -18,6 +18,7 @@ type DeliveryService interface {
 	Create(ctx context.Context, userID int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
 	Update(ctx context.Context, userID int, id int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
 	Delete(ctx context.Context, userID int, id int) error
+	ListHistory(ctx context.Context, userID, offset, limit int) ([]*delivery.HistoryRow, int64, error)
 }
 
 // ListDeliveryChannels godoc
@@ -130,5 +131,25 @@ func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 				Message: getI18nMessage(c, "Channel deleted successfully", "delivery.channel_deleted"),
 			})
 		})
+	}
+}
+
+// ListDeliveryHistory godoc
+// @Summary List the current user's delivery history
+// @Tags delivery
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.DeliveryHistoryListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/history [get]
+func ListDeliveryHistory(deliverySvc DeliveryService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUserPaginatedQuery(c,
+			deliverySvc.ListHistory,
+			newDeliveryHistoryItem,
+			paginatedWrap[DeliveryHistoryItem]("history"),
+		)
 	}
 }

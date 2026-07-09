@@ -16,6 +16,7 @@ type AdminService interface {
 	ListAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error)
 	ListAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
 	ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
+	ListAllDeliveryHistory(ctx context.Context, offset, limit int) ([]*delivery.HistoryRow, int64, error)
 }
 
 // AdminListUsers godoc
@@ -81,6 +82,28 @@ func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 			adminSvc.ListAllDeliveryChannels,
 			newAdminChannelItem,
 			paginatedWrap[AdminChannelItem]("channels"),
+		)
+	}
+}
+
+// AdminListDeliveryHistory godoc
+// @Summary List all delivery history (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.DeliveryHistoryListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/delivery-history [get]
+func AdminListDeliveryHistory(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		handlePaginatedQuery(c,
+			bindPaginationQuery,
+			adminSvc.ListAllDeliveryHistory,
+			newDeliveryHistoryItem,
+			paginatedWrap[DeliveryHistoryItem]("history"),
 		)
 	}
 }

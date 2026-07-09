@@ -4,6 +4,7 @@ package infra
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -16,6 +17,8 @@ import (
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 
+	mysqldriver "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -27,6 +30,8 @@ var allModels = []any{
 	&user.TokenBlacklist{},
 	&post.Post{},
 	&delivery.Channel{},
+	&delivery.Attempt{},
+	&delivery.History{},
 }
 
 // Database wraps a GORM database connection.
@@ -68,6 +73,11 @@ func New(dsn string) (*Database, error) {
 		if err != nil {
 			return nil, fmt.Errorf("NewDatabase open postgres: %w", err)
 		}
+	case "mysql":
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err != nil {
+			return nil, fmt.Errorf("NewDatabase open mysql: %w", err)
+		}
 	case "sqlite":
 		if err = ensureSQLiteDir(dsn); err != nil {
 			return nil, fmt.Errorf("NewDatabase prepare sqlite: %w", err)
@@ -84,13 +94,13 @@ func New(dsn string) (*Database, error) {
 	case "sqlite":
 		if sqlDB, err2 := db.DB(); err2 == nil {
 			sqlDB.SetMaxOpenConns(1)
-			defer sqlDB.SetMaxOpenConns(0)
+			defer func() { sqlDB.SetMaxOpenConns(0) }()
 			db.Exec("PRAGMA foreign_keys = OFF")
 		}
-	case "postgresql":
+	case "postgresql", "mysql":
 		sqlDB, err2 := db.DB()
 		if err2 != nil {
-			return nil, fmt.Errorf("NewDatabase access postgres pool: %w", err2)
+			return nil, fmt.Errorf("NewDatabase access %s pool: %w", cfg.DB.Driver, err2)
 		}
 		sqlDB.SetMaxOpenConns(25)
 		sqlDB.SetMaxIdleConns(10)
@@ -127,6 +137,10 @@ func New(dsn string) (*Database, error) {
 		if err := database.migratePostBodyCompressionLZ4(); err != nil {
 			return nil, fmt.Errorf("NewDatabase migrate post body lz4: %w", err)
 		}
+	}
+
+	if err := database.migrateDeliveryIndexesAndOptions(); err != nil {
+		return nil, fmt.Errorf("NewDatabase migrate delivery indexes: %w", err)
 	}
 
 	if err := database.seedAdminUser(); err != nil {
@@ -310,6 +324,100 @@ func (d *Database) migratePostBodyCompressionLZ4() error {
 	}
 	return d.db.Exec("ALTER TABLE posts ALTER COLUMN body SET COMPRESSION lz4").Error
 }
+
+// migrateDeliveryIndexesAndOptions creates the per-dialect indexes and (on
+// Postgres) the storage reloptions for the delivery queue tables. The claim
+// query is WHERE status = <pending> AND next_at <= ? ORDER BY next_at; the
+// optimal index for it differs by dialect and cannot be expressed in a GORM
+// struct tag:
+//
+//   - Postgres/SQLite: a partial index (next_at) WHERE status = 0 keeps the
+//     index small and, on Postgres, cooperates with HOT updates (once a row
+//     leaves pending its index entry is dropped, so later status/next_at
+//     updates never touch this index).
+//   - MySQL: partial indexes are unsupported (CREATE INDEX has no WHERE
+//     grammar), so a composite (status, next_at) covers the claim query.
+//     A usable index is load-bearing on InnoDB — without it the claim's record
+//     locks escalate to a full-table scan lock.
+//
+// On Postgres the hot table also gets fillfactor=90 (HOT-friendly page space)
+// and aggressive autovacuum reloptions; the append-only history table gets
+// fillfactor=100. MySQL and SQLite have no per-table fillfactor/autovacuum
+// analog and are left at driver defaults.
+//
+// The history index (user_id, created_at DESC) is identical across dialects
+// but is created here (rather than via a GORM tag) so the IF NOT EXISTS guard
+// and the per-dialect branch stay in one place.
+func (d *Database) migrateDeliveryIndexesAndOptions() error {
+	driver := config.Get().DB.Driver
+
+	switch driver {
+	case "postgresql":
+		stmts := []string{
+			`CREATE INDEX IF NOT EXISTS idx_da_pending ON delivery_attempts (next_at) WHERE status = 0`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+			`ALTER TABLE delivery_attempts SET (
+				fillfactor = 90,
+				autovacuum_vacuum_scale_factor = 0.05,
+				autovacuum_vacuum_threshold = 1000,
+				autovacuum_analyze_scale_factor = 0.02,
+				autovacuum_analyze_threshold = 1000
+			)`,
+			`ALTER TABLE delivery_history SET (fillfactor = 100)`,
+		}
+		for _, s := range stmts {
+			if err := d.db.Exec(s).Error; err != nil {
+				return fmt.Errorf("postgres delivery index/option: %w", err)
+			}
+		}
+	case "sqlite":
+		stmts := []string{
+			`CREATE INDEX IF NOT EXISTS idx_da_pending ON delivery_attempts (next_at) WHERE status = 0`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+		}
+		for _, s := range stmts {
+			if err := d.db.Exec(s).Error; err != nil {
+				return fmt.Errorf("sqlite delivery index: %w", err)
+			}
+		}
+	case "mysql":
+		stmts := []string{
+			`CREATE INDEX idx_da_status_next ON delivery_attempts (status, next_at)`,
+			`CREATE INDEX idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+		}
+		for _, s := range stmts {
+			if err := d.db.Exec(s).Error; err != nil {
+				if isIndexExistsErr(err) {
+					continue
+				}
+				return fmt.Errorf("mysql delivery index: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// isIndexExistsErr reports whether err is MySQL's "duplicate key name" error,
+// raised when CREATE INDEX targets an index that already exists. MySQL does not
+// support CREATE INDEX ... IF NOT EXISTS (the create_index_stmt grammar at
+// sql/sql_yacc.yy has no opt_if_not_exists, and prepare_key raises
+// ER_DUP_KEYNAME unconditionally at sql/sql_table.cc:7596), so repeated index
+// creation must detect this one error and treat it as success to stay
+// idempotent. ER_DUP_KEYNAME is error number 1061, SQLSTATE 42000
+// (share/messages_to_clients.txt). Matching on the driver's typed error number
+// avoids false positives from string-matching the message.
+func isIndexExistsErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	var mysqlErr *mysqldriver.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == errDupKeyName
+	}
+	return false
+}
+
+const errDupKeyName = 1061
 
 func (d *Database) seedAdminUser() error {
 	cfg := config.Get()

@@ -108,7 +108,12 @@ request_timeout = "5s"
 	}
 }
 
-func TestNew_UnsupportedDriver(t *testing.T) {
+// TestNew_RejectsUnknownDriver confirms an unknown DB driver is rejected.
+// Every value allowed by the config validator (sqlite, mysql, postgresql) is
+// now handled by New, so the gate is config validation: a value outside that
+// set fails config.Load before New is ever reached. The default branch in New
+// remains as defense-in-depth.
+func TestNew_RejectsUnknownDriver(t *testing.T) {
 	config.ResetForTest()
 
 	tmpDir := t.TempDir()
@@ -118,7 +123,7 @@ func TestNew_UnsupportedDriver(t *testing.T) {
 host = "127.0.0.1"
 port = 7330
 [db]
-driver = "mysql"
+driver = "redis"
 dsn = "test"
 [admin]
 initial_username = "admin"
@@ -134,13 +139,8 @@ request_timeout = "5s"
 	}
 
 	err := config.Load(tomlPath)
-	if err != nil {
-		t.Fatalf("config.Load error: %v", err)
-	}
-
-	_, err = New("test")
 	if err == nil {
-		t.Fatal("expected error for unsupported driver")
+		t.Fatal("expected config validation to reject unknown db.driver")
 	}
 }
 

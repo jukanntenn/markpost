@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 )
 
@@ -28,6 +29,91 @@ func (Channel) TableName() string { return "delivery_channels" }
 // IsValid reports whether the ChannelKind is a recognized value.
 func (k ChannelKind) IsValid() bool {
 	return validChannelKinds[k]
+}
+
+// Status is the lifecycle state of a delivery attempt or history row. It is an
+// int8 (not a string) so the column maps to the smallest integer type on each
+// dialect via GORM's size-based logic: tinyint on MySQL (1B), smallint on
+// Postgres (2B, its floor), integer on SQLite (value-width). StatusPending is 0
+// so the database default (default:0) lands on the pending state. The numeric
+// mapping is append-only forever: inserting a state in the middle would
+// renumber every later state and corrupt existing rows.
+type Status int8
+
+// Delivery attempt/history statuses. Order is significant and must stay
+// append-only.
+const (
+	StatusPending   Status = 0 // due or in-flight
+	StatusDelivered Status = 1 // terminal — a send succeeded
+	StatusFailed    Status = 2 // terminal — retry sequence exhausted
+	StatusExpired   Status = 3 // terminal — expiry wall passed
+)
+
+// IsTerminal reports whether the status is a terminal state (no further
+// transitions).
+func (s Status) IsTerminal() bool {
+	return s == StatusDelivered || s == StatusFailed || s == StatusExpired
+}
+
+// TableName returns the database table name for Attempt.
+func (Attempt) TableName() string { return "delivery_attempts" }
+
+// Attempt is a single in-flight delivery job: one post to one channel, retried
+// with backoff until it reaches a terminal state. A row lives only while
+// delivery is in progress (at most the expiry wall); on any terminal state it
+// is archived to History and deleted in the same transaction.
+type Attempt struct {
+	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID    int       `json:"user_id" gorm:"not null;column:user_id;index"`
+	PostID    int       `json:"post_id" gorm:"not null;column:post_id;index"`
+	ChannelID int       `json:"channel_id" gorm:"not null;column:channel_id;index"`
+	Status    Status    `json:"status" gorm:"not null;default:0"`
+	Attempts  int       `json:"attempts" gorm:"not null;default:0"`
+	NextAt    int64     `json:"next_at" gorm:"not null"` // epoch ms; when the next attempt may run
+	LastError string    `json:"last_error" gorm:"not null;type:text;default:''"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"` // drives the expiry wall
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
+
+	User    user.User `json:"-" gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE"`
+	Post    post.Post `json:"-" gorm:"foreignKey:PostID;constraint:OnDelete:CASCADE"`
+	Channel Channel   `json:"-" gorm:"foreignKey:ChannelID;constraint:OnDelete:CASCADE"`
+}
+
+// TableName returns the database table name for History.
+func (History) TableName() string { return "delivery_history" }
+
+// History is the cold archive of a delivery's terminal outcome, retained for
+// the history-retention window (7 days). All foreign keys are nullable with
+// ON DELETE SET NULL so deleting a user/post/channel does not cascade-delete
+// the history row (which could lock a large row set) — the reference is
+// nulled and the row is preserved as an anonymous record.
+type History struct {
+	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID    *int      `json:"user_id" gorm:"column:user_id;index"`       // nullable; ON DELETE SET NULL
+	PostID    *int      `json:"post_id" gorm:"column:post_id;index"`       // nullable; ON DELETE SET NULL
+	ChannelID *int      `json:"channel_id" gorm:"column:channel_id;index"` // nullable; ON DELETE SET NULL
+	Status    Status    `json:"status" gorm:"not null"`                    // delivered | failed | expired
+	LastError string    `json:"last_error" gorm:"not null;type:text;default:''"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+
+	User    *user.User `json:"-" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
+	Post    *post.Post `json:"-" gorm:"foreignKey:PostID;constraint:OnDelete:SET NULL"`
+	Channel *Channel   `json:"-" gorm:"foreignKey:ChannelID;constraint:OnDelete:SET NULL"`
+}
+
+// HistoryRow is the read projection of a delivery_history row joined to its
+// post/channel/user at read time (the spec's normalization rule: titles and
+// names are JOINed, not snapshotted). The nullable pointers reflect
+// ON DELETE SET NULL: a nil field means the referenced row was deleted.
+type HistoryRow struct {
+	ID          int64     `json:"id" gorm:"column:id"`
+	Status      Status    `json:"status" gorm:"column:status"`
+	LastError   string    `json:"last_error" gorm:"column:last_error"`
+	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
+	PostTitle   *string   `json:"post_title" gorm:"column:post_title"`
+	PostQID     *string   `json:"post_qid" gorm:"column:post_qid"`
+	ChannelName *string   `json:"channel_name" gorm:"column:channel_name"`
+	Username    *string   `json:"username" gorm:"column:username"`
 }
 
 // FeishuConfiguration holds the configuration for a Feishu delivery channel.

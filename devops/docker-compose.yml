@@ -11,6 +11,18 @@ services:
       - MARKPOST_DB__DSN=postgres://markpost:markpost@postgres:5432/markpost?sslmode=disable
       - MARKPOST_JWT__ACCESS_SIGNING_KEY=dev-access-secret-key-change-in-production
       - MARKPOST_JWT__REFRESH_SIGNING_KEY=dev-refresh-secret-key-change-in-production
+      # Rate limiters aligned with production defaults (three independent limiters).
+      - MARKPOST_RATELIMIT__READ__PER_SECOND=100
+      - MARKPOST_RATELIMIT__READ__BURST=200
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__PER_SECOND=0.1666666667
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__BURST=20
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_PER_SECOND=0.0115740741
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_BURST=1000
+      - MARKPOST_RATELIMIT__AUTHED_WRITE__PER_SECOND=0.5
+      - MARKPOST_RATELIMIT__AUTHED_WRITE__BURST=60
+      # Render cache aligned with production (singleflight + ristretto, 128 MiB).
+      - MARKPOST_RENDER__ENABLED=true
+      - MARKPOST_RENDER__CACHE_SIZE_BYTES=134217728
     ports:
       - "7330:7330"
     volumes:
@@ -38,6 +50,21 @@ services:
       - POSTGRES_DB=markpost
       - POSTGRES_USER=markpost
       - POSTGRES_PASSWORD=markpost
+    # GUC tuning aligned with production (see devops/ansible/templates/production/postgresql.conf.j2).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - synchronous_commit=off
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U markpost"]
       interval: 10s
@@ -45,3 +72,6 @@ services:
       retries: 5
     labels:
       - "com.docker.compose.project=markpost"
+
+volumes:
+  pgdata:

@@ -59,6 +59,18 @@ def run(name, *args, **kwargs):
     return subprocess.run([name, *args], **defaults)
 
 
+def run_check(name, *args, **kwargs):
+    result = run(name, *args, **kwargs)
+    if result.returncode != 0:
+        logger.error("[fail] %s %s (exit %d)", name, " ".join(args), result.returncode)
+        if result.stdout:
+            logger.error("%s", result.stdout)
+        if result.stderr:
+            logger.error("%s", result.stderr)
+        sys.exit(result.returncode)
+    return result
+
+
 def wait_for(url, name, timeout=120):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -76,7 +88,7 @@ def wait_for(url, name, timeout=120):
 
 def start():
     logger.info("Starting backend (Docker Compose)...")
-    run("docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--build")
+    run_check("docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--build")
     logger.info("Docker services started")
 
     wait_for(f"http://localhost:{BACKEND_PORT}/api/v1/health", "Backend")

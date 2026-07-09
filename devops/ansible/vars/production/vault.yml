@@ -1,3 +1,4 @@
 jwt_access_signing_key: CHANGE_ME
 jwt_refresh_signing_key: CHANGE_ME
 admin_password: CHANGE_ME
+db_password: CHANGE_ME

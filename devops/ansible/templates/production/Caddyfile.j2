@@ -1,0 +1,60 @@
+# markpost production Caddyfile.
+# Served inside the markpost container by s6-overlay. Cloudflare terminates TLS
+# at the edge; Caddy is TLS-less and routes to three loopback services.
+#
+# trusted_proxies: set to Cloudflare's published CIDR ranges so that only
+# Cloudflare (a trusted peer) may prepend to the X-Forwarded-For chain. Direct
+# client connections have their XFF overwritten by Caddy, closing the spoofing
+# gap that gin.PlatformCloudflare would leave on the directly-reachable write
+# path. Source: https://www.cloudflare.com/ips/ — sync when Cloudflare updates.
+# {{ cloudflare_cidrs_comment | default("# Replace the private_ranges below with Cloudflare's IPv4+IPv6 CIDRs from https://www.cloudflare.com/ips/") }}
+:7157 {
+	encode zstd gzip
+
+	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle /static/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle /swagger/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle /mpk-* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle /p-* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000 {
+			trusted_proxies {{ cloudflare_cidrs | default("private_ranges") }}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	log {
+		output stderr
+		format console
+	}
+}

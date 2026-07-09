@@ -1,20 +1,27 @@
+debug = false
+post_key_length = 16
+
 [server]
 host = "127.0.0.1"
+port = 7330
 public_url = "{{ public_url }}"
 trusted_proxies = {{ trusted_proxies }}
 
 [db]
-driver = "sqlite"
-dsn = "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+driver = "postgresql"
+# Unix-socket connection to the sibling postgres container. The socket dir
+# /var/run/postgres is a shared named volume (see docker-compose.yml).
+dsn = "host=/var/run/postgres user={{ db_user | default('markpost') }} password={{ db_password }} dbname=markpost sslmode=disable"
 
 [jwt]
 access_signing_key = "{{ jwt_access_signing_key }}"
 refresh_signing_key = "{{ jwt_refresh_signing_key }}"
+access_token_expire = "24h"
+refresh_token_expire = "720h"
 
 [admin]
+initial_username = "markpost"
 initial_password = "{{ admin_password }}"
-
-post_key_length = 16
 
 [post]
 title_max_length = 500
@@ -26,9 +33,33 @@ allow_origins = ["{{ public_url }}"]
 allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
 
 [ratelimit]
-per_second = 5
-burst = 50
+# L1 read: per-IP, generous — the CDN absorbs most reads.
+[ratelimit.read]
+per_second = 100
+burst = 200
+# L2 public write: per user_id, 10/min + 1000/day cap.
+[ratelimit.public_write]
+per_second = 0.1666666667
+burst = 20
+daily_per_second = 0.0115740741
+daily_burst = 1000
+# L3 authenticated write: per user_id, 30/min.
+[ratelimit.authed_write]
+per_second = 0.5
+burst = 60
+
+[render]
+enabled = true
+cache_size_bytes = 134217728
+
+[cloudflare]
+# Optional. Set both to enable best-effort cache-tag purge on post deletion.
+# Absent (the default) means self-hosted without Cloudflare; deletion still
+# removes the origin render cache and the CDN falls back to TTL expiry.
+api_token = "{{ cloudflare_api_token | default('') }}"
+zone_id = "{{ cloudflare_zone_id | default('') }}"
 
 [delivery]
 body_preview_chars = 200
 request_timeout = "5s"
+retry_count = 0

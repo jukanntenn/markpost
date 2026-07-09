@@ -1,0 +1,14 @@
+# markpost Postgres configuration (production).
+# Tuned for the SaaS reference instance: a 2-core / 2 GB box sharing RAM with
+# Caddy + Go + Next.js, so shared_buffers is intentionally 256 MB (not 25% of
+# 2 GB) to leave adequate OS page cache. See specs/backend/performance-optimization.md
+# Decision 22 for the rationale and rejected alternatives.
+
+# postmaster-context (require restart)
+shared_buffers = 256MB
+max_connections = 50
+
+# reloadable
+effective_cache_size = 1GB
+maintenance_work_mem = 128MB
+synchronous_commit = off

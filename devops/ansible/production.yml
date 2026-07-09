@@ -15,11 +15,16 @@
     app_path: "{{ apps_path }}/{{ app_name }}"
     compose_file: "{{ app_path }}/docker-compose.yml"
     config_file: "{{ app_path }}/config.toml"
+    caddyfile: "{{ app_path }}/Caddyfile"
+    pgconf_file: "{{ app_path }}/postgresql.conf"
 
     image_tag: "latest"
     app_port: 7157
     public_url: ""
     trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
+    # Cloudflare CIDR list for Caddy trusted_proxies. Replace with the current
+    # ranges from https://www.cloudflare.com/ips/ (IPv4 + IPv6, space-separated).
+    cloudflare_cidrs: "private_ranges"
 
   tasks:
     - name: Ensure paths
@@ -42,6 +47,18 @@
         src: production/config.toml.j2
         dest: "{{ config_file }}"
         mode: "0600"
+
+    - name: Copy Caddyfile
+      template:
+        src: production/Caddyfile.j2
+        dest: "{{ caddyfile }}"
+        mode: "0644"
+
+    - name: Copy postgresql.conf
+      template:
+        src: production/postgresql.conf.j2
+        dest: "{{ pgconf_file }}"
+        mode: "0644"
 
     - name: Stop containers
       community.docker.docker_compose_v2:

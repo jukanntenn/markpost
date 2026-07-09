@@ -3,12 +3,17 @@ services:
     image: {{ registry | default('192.168.5.50:5000') }}/markpost:{{ image_tag }}
     container_name: {{ app_name }}
     ports:
-      - 8089:7157
+      - "8089:7157"
     volumes:
       - {{ config_file }}:/app/config.toml:ro
       - {{ app_path }}/data:/app/data
+      - {{ app_path }}/Caddyfile:/etc/caddy/Caddyfile:ro
+      - postgres-socket:/var/run/postgres
     environment:
       - MARKPOST_DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:7157/api/v1/health"]
       interval: 10s
@@ -16,3 +21,26 @@ services:
       retries: 3
       start_period: 30s
     restart: always
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: {{ app_name }}-postgres
+    environment:
+      - POSTGRES_DB=markpost
+      - POSTGRES_USER={{ db_user | default('markpost') }}
+      - POSTGRES_PASSWORD={{ db_password }}
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - {{ app_path }}/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - postgres-socket:/var/run/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ db_user | default('markpost') }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata:
+  postgres-socket:

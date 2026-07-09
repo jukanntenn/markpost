@@ -15,8 +15,6 @@ WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-COPY backend/.air.toml ./
-
 RUN mkdir -p /app/data
 
 EXPOSE 7330

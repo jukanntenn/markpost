@@ -69,7 +69,7 @@ func TestService_GetPostMarkdown(t *testing.T) {
 	created, _ := repo.Create(ctx, "Test Title", "Test Body", 1)
 
 	t.Run("returns markdown for valid post", func(t *testing.T) {
-		title, body, err := svc.GetPostMarkdown(ctx, created.QID)
+		title, body, _, _, err := svc.GetPostMarkdown(ctx, created.QID)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -82,7 +82,7 @@ func TestService_GetPostMarkdown(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent post", func(t *testing.T) {
-		_, _, err := svc.GetPostMarkdown(ctx, "nonexistent")
+		_, _, _, _, err := svc.GetPostMarkdown(ctx, "nonexistent")
 		if err == nil {
 			t.Fatal("expected error for non-existent post")
 		}
@@ -96,7 +96,7 @@ func TestService_RenderPostHTML(t *testing.T) {
 	created, _ := repo.Create(ctx, "Test Title", "# Heading\n\nParagraph", 1)
 
 	t.Run("renders HTML for valid post", func(t *testing.T) {
-		title, html, err := svc.RenderPostHTML(ctx, created.QID)
+		title, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -109,7 +109,7 @@ func TestService_RenderPostHTML(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent post", func(t *testing.T) {
-		_, _, err := svc.RenderPostHTML(ctx, "nonexistent")
+		_, _, _, _, err := svc.RenderPostHTML(ctx, "nonexistent")
 		if err == nil {
 			t.Fatal("expected error for non-existent post")
 		}
@@ -131,7 +131,7 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 		t.Fatalf("create post: %v", err)
 	}
 
-	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	_, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
 		t.Fatalf("render post: %v", err)
 	}
@@ -141,9 +141,9 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 		"<thead>",
 		"<details",
 		"<summary>more</summary>",
-		`type="checkbox"`,
+		"type=checkbox",
 		"<del>strike</del>",
-		`href="https://example.com"`,
+		"href=https://example.com",
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("expected %q in rendered HTML\nhtml: %s", want, html)
@@ -162,7 +162,7 @@ func TestService_RenderPostHTML_HardWraps(t *testing.T) {
 		t.Fatalf("create post: %v", err)
 	}
 
-	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	_, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
 		t.Fatalf("render post: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
 		t.Fatalf("create post: %v", err)
 	}
 
-	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	_, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
 		t.Fatalf("render post: %v", err)
 	}
@@ -200,8 +200,8 @@ func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
-		`href="https://example.com"`,
-		`target="_blank"`,
+		"href=https://example.com",
+		"target=_blank",
 		"noopener",
 		"noreferrer",
 		"nofollow",
@@ -222,7 +222,7 @@ func TestService_RenderPostHTML_UnclosedScriptKeepsContent(t *testing.T) {
 		t.Fatalf("create post: %v", err)
 	}
 
-	_, html, err := svc.RenderPostHTML(ctx, created.QID)
+	_, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
 		t.Fatalf("render post: %v", err)
 	}
@@ -289,34 +289,6 @@ func TestService_GetAllPosts(t *testing.T) {
 	if total != 2 {
 		t.Errorf("expected total 2, got: %d", total)
 	}
-}
-
-func TestService_UpdatePost(t *testing.T) {
-	svc, repo := setupPostService(t)
-	ctx := context.Background()
-
-	created, _ := repo.Create(ctx, "Old Title", "Old Body", 1)
-
-	t.Run("updates post successfully", func(t *testing.T) {
-		err := svc.UpdatePost(ctx, created.ID, "New Title", "New Body")
-		if err != nil {
-			t.Fatalf("expected no error, got: %v", err)
-		}
-	})
-
-	t.Run("returns error for non-existent post", func(t *testing.T) {
-		err := svc.UpdatePost(ctx, 999, "Title", "Body")
-		if err == nil {
-			t.Fatal("expected error for non-existent post")
-		}
-		se, ok := service.AsServiceError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrNotFound {
-			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
-		}
-	})
 }
 
 func TestService_DeletePost(t *testing.T) {

@@ -8,12 +8,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"markpost/internal/config"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -79,12 +80,21 @@ func New(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.DB.Driver)
 	}
 
-	if cfg.DB.Driver == "sqlite" {
+	switch cfg.DB.Driver {
+	case "sqlite":
 		if sqlDB, err2 := db.DB(); err2 == nil {
 			sqlDB.SetMaxOpenConns(1)
 			defer sqlDB.SetMaxOpenConns(0)
 			db.Exec("PRAGMA foreign_keys = OFF")
 		}
+	case "postgresql":
+		sqlDB, err2 := db.DB()
+		if err2 != nil {
+			return nil, fmt.Errorf("NewDatabase access postgres pool: %w", err2)
+		}
+		sqlDB.SetMaxOpenConns(25)
+		sqlDB.SetMaxIdleConns(10)
+		sqlDB.SetConnMaxLifetime(30 * time.Minute)
 	}
 
 	if err = db.AutoMigrate(allModels...); err != nil {
@@ -111,6 +121,12 @@ func New(dsn string) (*Database, error) {
 
 	if err := database.migrateChannelConfiguration(); err != nil {
 		return nil, fmt.Errorf("NewDatabase migrate channel configuration: %w", err)
+	}
+
+	if cfg.DB.Driver == "postgresql" {
+		if err := database.migratePostBodyCompressionLZ4(); err != nil {
+			return nil, fmt.Errorf("NewDatabase migrate post body lz4: %w", err)
+		}
 	}
 
 	if err := database.seedAdminUser(); err != nil {
@@ -253,6 +269,46 @@ func (d *Database) migrateChannelConfiguration() error {
 	log.Print("dropped legacy webhook_url column from delivery_channels")
 
 	return nil
+}
+
+// migratePostBodyCompressionLZ4 switches the posts.body TOAST compressor to
+// lz4 on Postgres 14+. lz4 decompresses ~3x faster than the default pglz at a
+// comparable ratio.
+//
+// The ALTER is gated on the column's current attcompression: it only runs once,
+// on the first startup after the upgrade, and becomes a cheap catalog read on
+// every subsequent restart. SET COMPRESSION is metadata-only (it does not
+// rewrite rows and takes AccessExclusiveLock only for the instant of the
+// catalog update), and is idempotent in effect — but re-issuing the DDL every
+// boot would needlessly reacquire that lock, so we skip it once the attribute
+// is already lz4.
+//
+// Existing rows keep their old compression until they are rewritten, so a
+// one-time `VACUUM FULL posts` is recommended in a maintenance window to
+// retrofit them — that is intentionally NOT done here because it takes a
+// long-lived AccessExclusiveLock. SQLite has no TOAST and is skipped (caller
+// gates on driver).
+func (d *Database) migratePostBodyCompressionLZ4() error {
+	// pg_attribute.attcompression is a char set by SET COMPRESSION:
+	// 'p' = pglz, 'l' = lz4, '\0' = default (see toast_compression.h:
+	// TOAST_PGLZ_COMPRESSION / TOAST_LZ4_COMPRESSION / InvalidCompressionMethod).
+	// It is NOT an OID into pg_am (that catalog is for index access methods).
+	const alreadyLZ4 = `SELECT EXISTS (
+		SELECT 1
+		FROM pg_attribute a
+		JOIN pg_class c ON c.oid = a.attrelid
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE c.relname = 'posts'
+		  AND a.attname = 'body'
+		  AND a.attcompression = 'l')`
+	var already bool
+	if err := d.db.Raw(alreadyLZ4).Scan(&already).Error; err != nil {
+		return fmt.Errorf("check body compression: %w", err)
+	}
+	if already {
+		return nil
+	}
+	return d.db.Exec("ALTER TABLE posts ALTER COLUMN body SET COMPRESSION lz4").Error
 }
 
 func (d *Database) seedAdminUser() error {

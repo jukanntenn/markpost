@@ -156,27 +156,6 @@ func TestPostRepository_CountAll(t *testing.T) {
 	}
 }
 
-func TestPostRepository_UpdateByID(t *testing.T) {
-	db := SetupTestDB(t)
-	repo := NewPostRepository(db)
-	ctx := context.Background()
-
-	created, _ := repo.Create(ctx, "Old Title", "Old Body", 1)
-
-	err := repo.UpdateByID(ctx, created.ID, "New Title", "New Body")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	p, _ := repo.GetByID(ctx, created.ID)
-	if p.Title != "New Title" {
-		t.Errorf("title = %q, want %q", p.Title, "New Title")
-	}
-	if p.Body != "New Body" {
-		t.Errorf("body = %q, want %q", p.Body, "New Body")
-	}
-}
-
 func TestPostRepository_DeleteByID(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewPostRepository(db)
@@ -196,6 +175,76 @@ func TestPostRepository_DeleteByID(t *testing.T) {
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got: %v", err)
 	}
+}
+
+func TestPostRepository_DeleteByQID(t *testing.T) {
+	t.Run("owner-scoped delete by correct owner removes the row", func(t *testing.T) {
+		db := SetupTestDB(t)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		created, _ := repo.Create(ctx, "Title", "Body", 1)
+		affected, err := repo.DeleteByQID(ctx, created.QID, 1)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if affected != 1 {
+			t.Fatalf("affected = %d, want 1", affected)
+		}
+		if _, err := repo.GetByQID(ctx, created.QID); !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("expected ErrNotFound after delete, got: %v", err)
+		}
+	})
+
+	t.Run("owner-scoped delete by wrong owner affects 0 rows", func(t *testing.T) {
+		db := SetupTestDB(t)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		created, _ := repo.Create(ctx, "Title", "Body", 1)
+		affected, err := repo.DeleteByQID(ctx, created.QID, 2)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if affected != 0 {
+			t.Errorf("affected = %d, want 0 (wrong owner)", affected)
+		}
+		if _, err := repo.GetByQID(ctx, created.QID); err != nil {
+			t.Errorf("post must still exist after wrong-owner delete: %v", err)
+		}
+	})
+
+	t.Run("admin delete (ownerID=0) removes any owner's row", func(t *testing.T) {
+		db := SetupTestDB(t)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		created, _ := repo.Create(ctx, "Title", "Body", 1)
+		affected, err := repo.DeleteByQID(ctx, created.QID, 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if affected != 1 {
+			t.Fatalf("affected = %d, want 1", affected)
+		}
+		if _, err := repo.GetByQID(ctx, created.QID); !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("expected ErrNotFound after admin delete, got: %v", err)
+		}
+	})
+
+	t.Run("nonexistent QID affects 0 rows", func(t *testing.T) {
+		db := SetupTestDB(t)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		affected, err := repo.DeleteByQID(ctx, "p-missing", 0)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if affected != 0 {
+			t.Errorf("affected = %d, want 0 for missing QID", affected)
+		}
+	})
 }
 
 func TestPostRepository_CreateBatch(t *testing.T) {
@@ -239,9 +288,12 @@ func TestPostRepository_PruneExpired(t *testing.T) {
 
 	_, _ = repo.Create(ctx, "New Post", "Body", 1)
 
-	err := repo.PruneExpired(ctx, 7, 100)
+	pruned, err := repo.PruneExpired(ctx, 7, 100)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(pruned) != 1 || pruned[0] != p.QID {
+		t.Errorf("pruned QIDs = %v, want [%s]", pruned, p.QID)
 	}
 
 	count, _ := repo.CountAll(ctx, "")

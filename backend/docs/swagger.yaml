@@ -442,6 +442,34 @@ paths:
       summary: List all posts (admin)
       tags:
       - admin
+  /api/v1/admin/posts/{id}:
+    delete:
+      parameters:
+      - description: Post QID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete any post (admin)
+      tags:
+      - admin
   /api/v1/admin/users:
     get:
       parameters:
@@ -791,6 +819,34 @@ paths:
       security:
       - BearerAuth: []
       summary: List the current user's posts
+      tags:
+      - posts
+  /api/v1/posts/{id}:
+    delete:
+      parameters:
+      - description: Post QID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/markpost_pkg_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a post owned by the current user
       tags:
       - posts
 securityDefinitions:

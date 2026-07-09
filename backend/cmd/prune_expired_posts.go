@@ -36,10 +36,11 @@ func RunPruneExpiredPosts(configPath string, dryRun bool, batchSize int) error {
 		return nil
 	}
 
-	if err := postRepo.PruneExpired(context.Background(), retentionDays, batchSize); err != nil {
+	pruned, err := postRepo.PruneExpired(context.Background(), retentionDays, batchSize)
+	if err != nil {
 		return fmt.Errorf("failed to cleanup expired posts: %w", err)
 	}
 
-	fmt.Println("Pruning expired posts completed")
+	fmt.Printf("Pruning expired posts completed (%d deleted)\n", len(pruned))
 	return nil
 }

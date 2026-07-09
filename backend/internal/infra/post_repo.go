@@ -95,41 +95,59 @@ func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, er
 	return countQuery(ctx, r.searchQuery(search), "CountAll")
 }
 
-// UpdateByID updates a post by its ID.
-func (r *PostRepository) UpdateByID(ctx context.Context, id int, title string, body string) error {
-	return updateByID[post.Post](ctx, r.db, id, map[string]any{"title": title, "body": body}, "UpdateByID")
-}
-
 // DeleteByID deletes a post by its ID.
 func (r *PostRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
 	return deleteWhere[post.Post](ctx, r.db.Where("id = ?", id))
 }
 
-// PruneExpired deletes expired posts based on retention days.
-func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, batchSize int) error {
+// DeleteByQID deletes a post by its QID. When ownerID is non-zero the row is
+// only deleted if it belongs to that owner (returns affected=0 otherwise); an
+// ownerID of 0 deletes by QID with no owner constraint (admin path).
+func (r *PostRepository) DeleteByQID(ctx context.Context, qid string, ownerID int) (int64, error) {
+	q := r.db.WithContext(ctx).Where("qid = ?", qid)
+	if ownerID > 0 {
+		q = q.Where("user_id = ?", ownerID)
+	}
+	return deleteWhere[post.Post](ctx, q)
+}
+
+// PruneExpired deletes expired posts based on retention days. It returns the
+// QIDs of the deleted posts so the caller can drop their origin render-cache
+// entries. It does not issue CDN purges — stale delivery of already-expired
+// ephemeral content is harmless, and prune volume can be large.
+func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, batchSize int) ([]string, error) {
 	expiredBefore := time.Now().AddDate(0, 0, -retentionDays)
+	var pruned []string
 
 	for {
-		ids, err := r.getIDsBefore(ctx, expiredBefore, batchSize)
+		rows, err := r.getQIDsBefore(ctx, expiredBefore, batchSize)
 		if err != nil {
-			return fmt.Errorf("PruneExpired: %w", err)
+			return pruned, fmt.Errorf("PruneExpired: %w", err)
 		}
 
-		if len(ids) == 0 {
+		if len(rows) == 0 {
 			break
+		}
+
+		qids := make([]string, 0, len(rows))
+		ids := make([]int, 0, len(rows))
+		for _, ro := range rows {
+			qids = append(qids, ro.QID)
+			ids = append(ids, ro.ID)
 		}
 
 		deleted, err := r.deleteByIDs(ctx, ids)
 		if err != nil {
-			return fmt.Errorf("PruneExpired: %w", err)
+			return pruned, fmt.Errorf("PruneExpired: %w", err)
 		}
+		pruned = append(pruned, qids...)
 
 		if deleted < int64(batchSize) {
 			break
 		}
 	}
 
-	return nil
+	return pruned, nil
 }
 
 // CountExpired counts expired posts based on retention days.
@@ -138,19 +156,26 @@ func (r *PostRepository) CountExpired(ctx context.Context, retentionDays int) (i
 	return countQuery(ctx, r.db.Model(&post.Post{}).Where("created_at < ?", expiredBefore), "CountExpired")
 }
 
-func (r *PostRepository) getIDsBefore(ctx context.Context, before time.Time, limit int) ([]int, error) {
-	var ids []int
+type expiredRow struct {
+	ID  int    `gorm:"column:id"`
+	QID string `gorm:"column:qid"`
+}
 
-	queryBuilder := r.db.WithContext(ctx).Model(&post.Post{}).Where("created_at < ?", before)
+func (r *PostRepository) getQIDsBefore(ctx context.Context, before time.Time, limit int) ([]expiredRow, error) {
+	var rows []expiredRow
+
+	queryBuilder := r.db.WithContext(ctx).Model(&post.Post{}).
+		Select("id, qid").
+		Where("created_at < ?", before)
 	if limit > 0 {
 		queryBuilder = queryBuilder.Limit(limit)
 	}
 
-	if err := queryBuilder.Pluck("id", &ids).Error; err != nil {
-		return nil, fmt.Errorf("getIDsBefore: %w", err)
+	if err := queryBuilder.Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("getQIDsBefore: %w", err)
 	}
 
-	return ids, nil
+	return rows, nil
 }
 
 func (r *PostRepository) deleteByIDs(ctx context.Context, ids []int) (int64, error) {

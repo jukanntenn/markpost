@@ -3,7 +3,6 @@ package config
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"sync"
@@ -15,17 +14,19 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Debug         bool            `mapstructure:"debug"`
-	PostKeyLength int             `mapstructure:"post_key_length" validate:"gte=12"`
-	Server        ServerConfig    `mapstructure:"server"`
-	DB            DBConfig        `mapstructure:"db"`
-	Admin         AdminConfig     `mapstructure:"admin"`
-	Post          PostConfig      `mapstructure:"post"`
-	CORS          CORSConfig      `mapstructure:"cors"`
-	OAuth         OAuthConfig     `mapstructure:"oauth"`
-	JWT           JWTConfig       `mapstructure:"jwt"`
-	Ratelimit     RatelimitConfig `mapstructure:"ratelimit"`
-	Delivery      DeliveryConfig  `mapstructure:"delivery"`
+	Debug         bool             `mapstructure:"debug"`
+	PostKeyLength int              `mapstructure:"post_key_length" validate:"gte=12"`
+	Server        ServerConfig     `mapstructure:"server"`
+	DB            DBConfig         `mapstructure:"db"`
+	Admin         AdminConfig      `mapstructure:"admin"`
+	Post          PostConfig       `mapstructure:"post"`
+	CORS          CORSConfig       `mapstructure:"cors"`
+	OAuth         OAuthConfig      `mapstructure:"oauth"`
+	JWT           JWTConfig        `mapstructure:"jwt"`
+	Ratelimit     RatelimitConfig  `mapstructure:"ratelimit"`
+	Delivery      DeliveryConfig   `mapstructure:"delivery"`
+	Render        RenderConfig     `mapstructure:"render"`
+	Cloudflare    CloudflareConfig `mapstructure:"cloudflare"`
 }
 
 // ServerConfig holds server-related configuration.
@@ -82,10 +83,25 @@ type JWTConfig struct {
 	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire"`
 }
 
-// RatelimitConfig holds rate limiting configuration.
+// RatelimitConfig holds rate limiting configuration for the three independent
+// limiters. Each limiter is scoped to a route class and keyed on the dimension
+// that actually identifies the actor (IP for the public read path, user_id for
+// the authenticated write paths). Rates are per second; burst is the token
+// bucket capacity. L2 carries an additional daily cap expressed as a per-second
+// rate (1000/86400).
 type RatelimitConfig struct {
-	PerSecond int `mapstructure:"per_second" validate:"gte=0"`
-	Burst     int `mapstructure:"burst" validate:"gte=0"`
+	Read RateLimitConfig `mapstructure:"read"`
+	L2   RateLimitConfig `mapstructure:"public_write"`
+	L3   RateLimitConfig `mapstructure:"authed_write"`
+}
+
+// RateLimitConfig holds a single limiter's rate and burst, plus an optional
+// secondary daily-cap rate (used only by L2's public-write limiter).
+type RateLimitConfig struct {
+	PerSecond   float64 `mapstructure:"per_second" validate:"gte=0"`
+	Burst       int     `mapstructure:"burst" validate:"gte=0"`
+	DailyPerSec float64 `mapstructure:"daily_per_second" validate:"gte=0"`
+	DailyBurst  int     `mapstructure:"daily_burst" validate:"gte=0"`
 }
 
 // DeliveryConfig holds delivery-related configuration.
@@ -93,6 +109,26 @@ type DeliveryConfig struct {
 	BodyPreviewChars int           `mapstructure:"body_preview_chars" validate:"gte=0"`
 	RequestTimeout   time.Duration `mapstructure:"request_timeout" validate:"required"`
 	RetryCount       int           `mapstructure:"retry_count" validate:"gte=0"`
+}
+
+// RenderConfig holds configuration for the in-process render cache
+// (singleflight + ristretto). The cache stores rendered HTML/raw bodies keyed
+// by QID + buildID; entries are invalidated on delete/prune and rotated on
+// release. A small or self-hosted instance can disable or shrink it.
+type RenderConfig struct {
+	Enabled        bool `mapstructure:"enabled"`
+	CacheSizeBytes int  `mapstructure:"cache_size_bytes" validate:"gte=0"`
+	NumCounters    int  `mapstructure:"num_counters" validate:"gte=0"`
+	BufferItems    int  `mapstructure:"buffer_items" validate:"gte=0"`
+}
+
+// CloudflareConfig holds the optional Cloudflare API credentials used for
+// best-effort cache-tag purge on post deletion. Absent (the default) means the
+// instance is self-hosted without Cloudflare; deletion still removes the origin
+// render cache and DB row, and the CDN falls back to natural TTL expiry.
+type CloudflareConfig struct {
+	APIToken string `mapstructure:"api_token"`
+	ZoneID   string `mapstructure:"zone_id"`
 }
 
 var (
@@ -212,11 +248,26 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("jwt.refresh_signing_key", "")
 	v.SetDefault("jwt.access_token_expire", "24h")
 	v.SetDefault("jwt.refresh_token_expire", "720h")
-	v.SetDefault("ratelimit.per_second", math.MaxInt)
-	v.SetDefault("ratelimit.burst", math.MaxInt)
+	// L1 read: per-IP, generous — the CDN absorbs most reads; this only governs
+	// the small fraction that revalidates against the origin.
+	v.SetDefault("ratelimit.read.per_second", 100)
+	v.SetDefault("ratelimit.read.burst", 200)
+	// L2 public write: per user_id (resolved by PostKey). 10/min + a 1000/day cap,
+	// matching the business hard limits.
+	v.SetDefault("ratelimit.public_write.per_second", 0.1666666667)
+	v.SetDefault("ratelimit.public_write.burst", 20)
+	v.SetDefault("ratelimit.public_write.daily_per_second", 1000.0/86400)
+	v.SetDefault("ratelimit.public_write.daily_burst", 1000)
+	// L3 authenticated write: per user_id from the JWT. 30/min.
+	v.SetDefault("ratelimit.authed_write.per_second", 0.5)
+	v.SetDefault("ratelimit.authed_write.burst", 60)
 	v.SetDefault("delivery.body_preview_chars", 200)
 	v.SetDefault("delivery.request_timeout", "5s")
 	v.SetDefault("delivery.retry_count", 0)
+	v.SetDefault("render.enabled", true)
+	v.SetDefault("render.cache_size_bytes", 134217728) // 128 MiB
+	v.SetDefault("render.num_counters", 100000)        // ~10x expected key count
+	v.SetDefault("render.buffer_items", 64)
 }
 
 // ResetForTest resets the configuration for testing purposes.

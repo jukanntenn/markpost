@@ -1,5 +1,11 @@
 :7157 {
+	encode zstd gzip
+
 	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:7330
+	}
+
+	handle /static/* {
 		reverse_proxy 127.0.0.1:7330
 	}
 

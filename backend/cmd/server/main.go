@@ -30,7 +30,6 @@ import (
 	deliverysvc "markpost/internal/service/delivery"
 	postsvc "markpost/internal/service/post"
 
-	"github.com/didip/tollbooth/v8"
 	"github.com/gin-contrib/cors"
 	ginI18n "github.com/gin-contrib/i18n"
 	"github.com/gin-gonic/gin"
@@ -207,11 +206,14 @@ func serve(configPath string) {
 // SetupRoutes configures all API routes for the application.
 func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service) {
 	cfg := config.Get()
-	lmt := tollbooth.NewLimiter(float64(cfg.Ratelimit.PerSecond), nil)
-	lmt.SetBurst(cfg.Ratelimit.Burst)
-	lmt.SetMessageContentType("application/json; charset=utf-8")
 
-	r.Use(middleware.RateLimitByIP(lmt))
+	// Three independent rate limiters, each scoped to a route class and keyed on
+	// the dimension that identifies the actor. They replace the single global
+	// limiter so read throttling is no longer coupled to write throttling.
+	l1Read := middleware.NewLimiter(cfg.Ratelimit.Read.PerSecond, cfg.Ratelimit.Read.Burst)
+	l2Write := middleware.NewLimiter(cfg.Ratelimit.L2.PerSecond, cfg.Ratelimit.L2.Burst)
+	l2Daily := middleware.NewLimiter(cfg.Ratelimit.L2.DailyPerSec, cfg.Ratelimit.L2.DailyBurst)
+	l3Write := middleware.NewLimiter(cfg.Ratelimit.L3.PerSecond, cfg.Ratelimit.L3.Burst)
 
 	if cfg.Debug {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
@@ -236,16 +238,25 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	jwtAuth.Use(middleware.AuthWithBlacklist(jwtSvc, userRepo, tokenRepo))
 	{
 		jwtAuth.GET("/post_key", v1.QueryPostKey(authSvc))
-		jwtAuth.POST("/auth/logout", v1.Logout(authSvc))
-		jwtAuth.POST("/auth/change-password", v1.ChangePassword(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
+
+		// L3: authenticated state changes keyed on user_id (from JWT). Reads
+		// (GET) stay outside the limiter so listing does not consume the write
+		// budget.
+		jwtWrite := jwtAuth.Group("")
+		jwtWrite.Use(middleware.RateLimitByUserID(l3Write))
+		{
+			jwtWrite.POST("/auth/logout", v1.Logout(authSvc))
+			jwtWrite.POST("/auth/change-password", v1.ChangePassword(authSvc))
+			jwtWrite.DELETE("/posts/:id", v1.DeleteOwnPost(postSvc))
+		}
 
 		deliveryGroup := jwtAuth.Group("/delivery/channels")
 		{
 			deliveryGroup.GET("", v1.ListDeliveryChannels(deliverySvc))
-			deliveryGroup.POST("", v1.CreateDeliveryChannel(deliverySvc))
-			deliveryGroup.PUT("/:id", v1.UpdateDeliveryChannel(deliverySvc))
-			deliveryGroup.DELETE("/:id", v1.DeleteDeliveryChannel(deliverySvc))
+			deliveryGroup.POST("", middleware.RateLimitByUserID(l3Write), v1.CreateDeliveryChannel(deliverySvc))
+			deliveryGroup.PUT("/:id", middleware.RateLimitByUserID(l3Write), v1.UpdateDeliveryChannel(deliverySvc))
+			deliveryGroup.DELETE("/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteDeliveryChannel(deliverySvc))
 		}
 
 		adminGroup := jwtAuth.Group("/admin")
@@ -254,11 +265,16 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
 			adminGroup.GET("/channels", v1.AdminListChannels(adminSvc))
+			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))
 		}
 	}
 
-	r.POST("/:post_key", middleware.PostKey(userRepo), v1.CreatePost(postSvc))
-	r.GET("/:id", v1.RenderPost(postSvc))
+	// L2: public writes keyed on user_id, resolved by PostKey. The 10/min and
+	// 1000/day limiters chain so both must pass.
+	r.POST("/:post_key", middleware.PostKey(userRepo), middleware.RateLimitByUserID(l2Write, l2Daily), v1.CreatePost(postSvc))
+	r.GET("/static/:filename", v1.StaticCSS())
+	// L1: public reads keyed on client IP.
+	r.GET("/:id", middleware.RateLimitByIP(l1Read), v1.RenderPost(postSvc))
 
 	r.NoRoute(v1.NotFound())
 }

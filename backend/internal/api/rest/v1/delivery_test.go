@@ -62,7 +62,7 @@ func (m *mockDeliveryService) ListByUserID(_ context.Context, userID int) ([]del
 	return result, nil
 }
 
-func (m *mockDeliveryService) ListHistory(_ context.Context, _, _, _ int) ([]*delivery.HistoryRow, int64, error) {
+func (m *mockDeliveryService) ListHistory(_ context.Context, _, _, _, _ int) ([]*delivery.HistoryRow, int64, error) {
 	return nil, 0, nil
 }
 

@@ -177,7 +177,7 @@ func TestAttemptRepository_ListHistoryJoinsAndNulls(t *testing.T) {
 	insertHistory(nil, &chid, &u.ID, delivery.StatusFailed)
 
 	// User-scoped list.
-	rows, err := repo.ListHistory(ctx, u.ID, 0, 50)
+	rows, err := repo.ListHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID}, 0, 50)
 	if err != nil {
 		t.Fatalf("ListHistory: %v", err)
 	}
@@ -228,7 +228,7 @@ func TestAttemptRepository_ListHistoryJoinsAndNulls(t *testing.T) {
 	}
 
 	// Count matches the list.
-	count, err := repo.CountHistory(ctx, u.ID)
+	count, err := repo.CountHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID})
 	if err != nil {
 		t.Fatalf("CountHistory: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestAttemptRepository_ListHistoryAdminViewIncludesAnonymized(t *testing.T) 
 	}
 
 	// User-scoped: only the owned row.
-	userRows, err := repo.ListHistory(ctx, u.ID, 0, 50)
+	userRows, err := repo.ListHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID}, 0, 50)
 	if err != nil {
 		t.Fatalf("ListHistory(user): %v", err)
 	}
@@ -270,8 +270,8 @@ func TestAttemptRepository_ListHistoryAdminViewIncludesAnonymized(t *testing.T) 
 		t.Errorf("user-scoped rows = %d, want 1 (anonymized excluded)", len(userRows))
 	}
 
-	// Admin view (ownerID=0): both rows including the anonymized one.
-	adminRows, err := repo.ListHistory(ctx, 0, 0, 50)
+	// Admin view (zero filter): both rows including the anonymized one.
+	adminRows, err := repo.ListHistory(ctx, delivery.HistoryFilter{}, 0, 50)
 	if err != nil {
 		t.Fatalf("ListHistory(admin): %v", err)
 	}
@@ -279,11 +279,81 @@ func TestAttemptRepository_ListHistoryAdminViewIncludesAnonymized(t *testing.T) 
 		t.Errorf("admin rows = %d, want 2 (anonymized included)", len(adminRows))
 	}
 
-	adminCount, err := repo.CountHistory(ctx, 0)
+	adminCount, err := repo.CountHistory(ctx, delivery.HistoryFilter{})
 	if err != nil {
 		t.Fatalf("CountHistory(admin): %v", err)
 	}
 	if adminCount != 2 {
 		t.Errorf("admin CountHistory = %d, want 2", adminCount)
+	}
+}
+
+func TestAttemptRepository_ListHistoryByChannel(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewAttemptRepository(db).(*AttemptRepository)
+	ctx := context.Background()
+
+	u := &user.User{Email: "ch@b.c", Username: "chuser", Password: "x", PostKey: "cpk"}
+	if err := db.Create(u).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	ch1 := &delivery.Channel{UserID: u.ID, Kind: delivery.ChannelKindFeishu, Name: "ch1", Configuration: delivery.ChannelConfiguration{}}
+	ch2 := &delivery.Channel{UserID: u.ID, Kind: delivery.ChannelKindFeishu, Name: "ch2", Configuration: delivery.ChannelConfiguration{}}
+	if err := db.Create([]*delivery.Channel{ch1, ch2}).Error; err != nil {
+		t.Fatalf("seed channels: %v", err)
+	}
+
+	insertHistory := func(channelID int, status delivery.Status) {
+		chid := channelID
+		if err := db.Exec(
+			"INSERT INTO delivery_history (status, last_error, user_id, channel_id) VALUES (?, '', ?, ?)",
+			status, u.ID, chid,
+		).Error; err != nil {
+			t.Fatalf("seed history: %v", err)
+		}
+	}
+	insertHistory(ch1.ID, delivery.StatusDelivered)
+	insertHistory(ch1.ID, delivery.StatusFailed)
+	insertHistory(ch2.ID, delivery.StatusExpired)
+
+	// Filter by ch1: only the two ch1 rows.
+	rows, err := repo.ListHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID, ChannelID: ch1.ID}, 0, 50)
+	if err != nil {
+		t.Fatalf("ListHistory(ch1): %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("ch1 rows = %d, want 2", len(rows))
+	}
+	for _, r := range rows {
+		if r.ChannelName == nil || *r.ChannelName != "ch1" {
+			t.Errorf("channel_name = %v, want ch1", r.ChannelName)
+		}
+	}
+
+	// Count agrees.
+	ch1Count, err := repo.CountHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID, ChannelID: ch1.ID})
+	if err != nil {
+		t.Fatalf("CountHistory(ch1): %v", err)
+	}
+	if ch1Count != 2 {
+		t.Errorf("ch1 count = %d, want 2", ch1Count)
+	}
+
+	// Filter by ch2: only the one ch2 row.
+	ch2Rows, err := repo.ListHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID, ChannelID: ch2.ID}, 0, 50)
+	if err != nil {
+		t.Fatalf("ListHistory(ch2): %v", err)
+	}
+	if len(ch2Rows) != 1 {
+		t.Fatalf("ch2 rows = %d, want 1", len(ch2Rows))
+	}
+
+	// No channel filter: all three rows.
+	allRows, err := repo.ListHistory(ctx, delivery.HistoryFilter{OwnerID: u.ID}, 0, 50)
+	if err != nil {
+		t.Fatalf("ListHistory(all): %v", err)
+	}
+	if len(allRows) != 3 {
+		t.Errorf("all rows = %d, want 3", len(allRows))
 	}
 }

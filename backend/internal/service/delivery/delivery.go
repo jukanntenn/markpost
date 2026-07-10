@@ -184,11 +184,13 @@ func (s *Service) ListAll(ctx context.Context, offset, limit int) ([]delivery.Ch
 	)
 }
 
-// ListHistory lists a user's own delivery history (newest first) with pagination.
-func (s *Service) ListHistory(ctx context.Context, userID, offset, limit int) ([]*delivery.HistoryRow, int64, error) {
+// ListHistory lists a user's own delivery history (newest first) with
+// pagination. channelID > 0 further scopes the result to one channel.
+func (s *Service) ListHistory(ctx context.Context, userID, channelID, offset, limit int) ([]*delivery.HistoryRow, int64, error) {
+	filter := delivery.HistoryFilter{OwnerID: userID, ChannelID: channelID}
 	return service.Paginate(
-		func() ([]*delivery.HistoryRow, error) { return s.attemptRepo.ListHistory(ctx, userID, offset, limit) },
-		func() (int64, error) { return s.attemptRepo.CountHistory(ctx, userID) },
+		func() ([]*delivery.HistoryRow, error) { return s.attemptRepo.ListHistory(ctx, filter, offset, limit) },
+		func() (int64, error) { return s.attemptRepo.CountHistory(ctx, filter) },
 		"delivery history",
 	)
 }

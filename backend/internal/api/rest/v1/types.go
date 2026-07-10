@@ -315,6 +315,14 @@ type AdminPostsQuery struct {
 	Search string `form:"search"`
 }
 
+// DeliveryHistoryQuery binds the query parameters for a user's delivery history
+// listing: pagination plus an optional channel_id filter (0 or absent = no
+// channel filter).
+type DeliveryHistoryQuery struct {
+	PaginationQuery
+	ChannelID int `form:"channel_id"`
+}
+
 // PaginatedUsers represents a paginated list of admin user items.
 type PaginatedUsers struct {
 	Users      []AdminUserItem `json:"users"`

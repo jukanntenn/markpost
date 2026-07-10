@@ -206,9 +206,9 @@ func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Dur
 // ListHistory returns delivery history (newest first), paginated, with the post
 // title/qid, channel name, and username JOINed at read time (the spec's
 // normalization rule). LEFT JOIN preserves rows whose referenced post/channel/
-// user was deleted — the corresponding pointer field is nil. ownerID > 0 scopes
-// to one user; ownerID == 0 lists all rows (admin view, including anonymized).
-func (r *AttemptRepository) ListHistory(ctx context.Context, ownerID int, offset, limit int) ([]*delivery.HistoryRow, error) {
+// user was deleted — the corresponding pointer field is nil. filter scopes the
+// result (see delivery.HistoryFilter).
+func (r *AttemptRepository) ListHistory(ctx context.Context, filter delivery.HistoryFilter, offset, limit int) ([]*delivery.HistoryRow, error) {
 	q := r.db.WithContext(ctx).Table("delivery_history AS h").
 		Select(`h.id, h.status, h.last_error, h.created_at,
 		        p.title AS post_title, p.qid AS post_qid,
@@ -218,8 +218,11 @@ func (r *AttemptRepository) ListHistory(ctx context.Context, ownerID int, offset
 		Joins("LEFT JOIN delivery_channels c ON c.id = h.channel_id").
 		Joins("LEFT JOIN users u ON u.id = h.user_id").
 		Order("h.created_at DESC")
-	if ownerID > 0 {
-		q = q.Where("h.user_id = ?", ownerID)
+	if filter.OwnerID > 0 {
+		q = q.Where("h.user_id = ?", filter.OwnerID)
+	}
+	if filter.ChannelID > 0 {
+		q = q.Where("h.channel_id = ?", filter.ChannelID)
 	}
 	var rows []*delivery.HistoryRow
 	if err := q.Offset(offset).Limit(limit).Scan(&rows).Error; err != nil {
@@ -228,12 +231,15 @@ func (r *AttemptRepository) ListHistory(ctx context.Context, ownerID int, offset
 	return rows, nil
 }
 
-// CountHistory returns the total row count matching the same ownerID filter as
+// CountHistory returns the total row count matching the same filter as
 // ListHistory, for pagination.
-func (r *AttemptRepository) CountHistory(ctx context.Context, ownerID int) (int64, error) {
+func (r *AttemptRepository) CountHistory(ctx context.Context, filter delivery.HistoryFilter) (int64, error) {
 	q := r.db.WithContext(ctx).Model(&delivery.History{})
-	if ownerID > 0 {
-		q = q.Where("user_id = ?", ownerID)
+	if filter.OwnerID > 0 {
+		q = q.Where("user_id = ?", filter.OwnerID)
+	}
+	if filter.ChannelID > 0 {
+		q = q.Where("channel_id = ?", filter.ChannelID)
 	}
 	var count int64
 	if err := q.Count(&count).Error; err != nil {

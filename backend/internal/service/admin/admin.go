@@ -28,8 +28,8 @@ type ChannelLister interface {
 
 // HistoryLister defines the interface for retrieving delivery history.
 type HistoryLister interface {
-	ListHistory(ctx context.Context, ownerID int, offset, limit int) ([]*delivery.HistoryRow, error)
-	CountHistory(ctx context.Context, ownerID int) (int64, error)
+	ListHistory(ctx context.Context, filter delivery.HistoryFilter, offset, limit int) ([]*delivery.HistoryRow, error)
+	CountHistory(ctx context.Context, filter delivery.HistoryFilter) (int64, error)
 }
 
 // Service provides admin-level business logic.
@@ -72,9 +72,10 @@ func (s *Service) ListAllDeliveryChannels(ctx context.Context, offset, limit int
 // ListAllDeliveryHistory retrieves all delivery history (all users, including
 // anonymized rows) with pagination.
 func (s *Service) ListAllDeliveryHistory(ctx context.Context, offset, limit int) ([]*delivery.HistoryRow, int64, error) {
+	filter := delivery.HistoryFilter{}
 	return service.Paginate(
-		func() ([]*delivery.HistoryRow, error) { return s.historyLister.ListHistory(ctx, 0, offset, limit) },
-		func() (int64, error) { return s.historyLister.CountHistory(ctx, 0) },
+		func() ([]*delivery.HistoryRow, error) { return s.historyLister.ListHistory(ctx, filter, offset, limit) },
+		func() (int64, error) { return s.historyLister.CountHistory(ctx, filter) },
 		"delivery history",
 	)
 }

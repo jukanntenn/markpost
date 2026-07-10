@@ -224,6 +224,18 @@ func bindAdminPostsQuery(c *gin.Context) (string, PaginationQuery, bool) {
 	return q.Search, q.PaginationQuery, true
 }
 
+func bindDeliveryHistoryQuery(c *gin.Context) (int, PaginationQuery, bool) {
+	var q DeliveryHistoryQuery
+	if err := c.ShouldBindQuery(&q); err != nil {
+		writeBindingError(c, &q, err)
+		return 0, PaginationQuery{}, false
+	}
+	if !validatePaginationQuery(c, &q.PaginationQuery) {
+		return 0, PaginationQuery{}, false
+	}
+	return q.ChannelID, q.PaginationQuery, true
+}
+
 func withUserPaginatedQuery[T any, R any](
 	c *gin.Context,
 	fetch func(ctx context.Context, userID, offset, limit int) ([]T, int64, error),

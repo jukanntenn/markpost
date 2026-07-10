@@ -46,11 +46,20 @@ type AttemptRepository interface {
 	// portable subquery-LIMIT form.
 	PruneHistory(ctx context.Context, retention time.Duration, batchSize int) (int64, error)
 	// ListHistory returns delivery history (newest first), paginated, with the
-	// post title/qid, channel name, and username JOINed at read time. ownerID > 0
-	// scopes to one user (NULL user_id rows are excluded from a user's own page);
-	// ownerID == 0 lists all rows including anonymized ones (admin view).
-	ListHistory(ctx context.Context, ownerID int, offset, limit int) ([]*HistoryRow, error)
-	// CountHistory returns the total row count matching the same ownerID filter
-	// as ListHistory, for pagination.
-	CountHistory(ctx context.Context, ownerID int) (int64, error)
+	// post title/qid, channel name, and username JOINed at read time. filter
+	// scopes the result: OwnerID > 0 limits to one user (NULL user_id rows are
+	// excluded from a user's own page); OwnerID == 0 lists all rows including
+	// anonymized ones (admin view). ChannelID > 0 further limits to one channel.
+	ListHistory(ctx context.Context, filter HistoryFilter, offset, limit int) ([]*HistoryRow, error)
+	// CountHistory returns the total row count matching the same filter as
+	// ListHistory, for pagination.
+	CountHistory(ctx context.Context, filter HistoryFilter) (int64, error)
+}
+
+// HistoryFilter scopes a delivery_history read. A zero value selects every row
+// (the admin all-rows view). OwnerID > 0 limits to one user; ChannelID > 0
+// limits to one channel (always within the OwnerID scope when set).
+type HistoryFilter struct {
+	OwnerID   int
+	ChannelID int
 }

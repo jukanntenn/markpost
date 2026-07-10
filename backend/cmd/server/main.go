@@ -99,6 +99,98 @@ func main() {
 					return cmd.RunResetPassword(c.String("config"), c.String("username"), c.String("password"))
 				},
 			},
+			{
+				Name:  "import-fake-posts",
+				Usage: "Import fake posts from a JSON file (for load-test seeding)",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "file",
+						Aliases:  []string{"f"},
+						Usage:    "Path to the JSON file produced by tools/generate_fake_data",
+						Required: true,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunImportFakePosts(c.String("config"), c.String("file"))
+				},
+			},
+			{
+				Name:  "seed-users",
+				Usage: "Create test users with post_keys (and optional delivery channels) for load testing",
+				Flags: []cli.Flag{
+					&cli.IntFlag{
+						Name:  "count",
+						Usage: "Number of users to create",
+						Value: 100,
+					},
+					&cli.StringFlag{
+						Name:  "prefix",
+						Usage: "Username prefix for seeded users",
+						Value: "loadtest",
+					},
+					&cli.StringFlag{
+						Name:  "password",
+						Usage: "Password for seeded users",
+						Value: "loadtestpass",
+					},
+					&cli.IntFlag{
+						Name:  "channels",
+						Usage: "Number of Feishu delivery channels to attach per user",
+						Value: 0,
+					},
+					&cli.StringFlag{
+						Name:  "channel-keywords",
+						Usage: "Keyword filter expression for each delivery channel",
+						Value: "",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunSeedUsers(
+						c.String("config"),
+						c.Int("count"),
+						c.String("prefix"),
+						c.String("password"),
+						c.Int("channels"),
+						c.String("channel-keywords"),
+					)
+				},
+			},
+			{
+				Name:  "prune-expired-posts",
+				Usage: "Delete posts older than the retention window (cron-invoked)",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "dry-run",
+						Usage: "Count expired posts without deleting",
+					},
+					&cli.IntFlag{
+						Name:  "batch-size",
+						Usage: "Rows deleted per statement (0 = server default)",
+						Value: 0,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunPruneExpiredPosts(c.String("config"), c.Bool("dry-run"), c.Int("batch-size"))
+				},
+			},
+			{
+				Name:  "prune-delivery-history",
+				Usage: "Delete delivery_history rows older than the retention window (cron-invoked)",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "dry-run",
+						Usage: "Count old rows without deleting",
+					},
+					&cli.IntFlag{
+						Name:  "batch-size",
+						Usage: "Rows deleted per statement (0 = server default)",
+						Value: 0,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunPruneDeliveryHistory(c.String("config"), c.Bool("dry-run"), c.Int("batch-size"))
+				},
+			},
 		},
 		Action: func(c *cli.Context) error {
 			serve(c.String("config"))

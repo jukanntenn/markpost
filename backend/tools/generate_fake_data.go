@@ -1,15 +1,20 @@
-// Command generate_fake_data generates fake post data for testing.
+// Command generate_fake_data generates fake post data as JSON for seeding a
+// database prior to load testing. The output is consumed by the
+// `import-fake-posts` server subcommand.
+//
+// Body size, post count, and the random seed are flag-configurable so a run is
+// reproducible: the same seed yields the same QIDs and bodies, which keeps
+// load-test target files stable across regenerations.
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
+	"flag"
 	"fmt"
-	"math/big"
+	"math/rand"
 	"os"
+	"strings"
 	"time"
-
-	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type FakePost struct {
@@ -30,50 +35,69 @@ var titleWords = []string{
 	"Linux", "Docker", "Kubernetes", "nginx", "redis", "mysql",
 }
 
-var bodyTexts = []string{
-	"在现代软件开发中,合理的技术选型对项目的成功至关重要。本文将从多个角度分析各种技术方案的优缺点,帮助开发者做出更明智的决策。通过实际案例的对比,我们可以看到不同架构模式在不同场景下的表现。",
-	"并发编程是Go语言的核心特性之一。通过Goroutine和Channel,我们可以轻松实现高效的并发处理,充分利用多核CPU的计算能力。本文将详细介绍Go并发模型的原理,并通过实例演示如何避免常见的并发陷阱。",
-	"数据库性能优化是后端开发中的重要话题。合理的索引设计、查询优化、读写分离等策略都能显著提升系统的响应速度和吞吐量。我们将深入探讨SQL优化的技巧,以及如何在保证数据一致性的前提下提升性能。",
-	"微服务架构是现代分布式系统的重要设计模式。通过将单体应用拆分为多个小型服务,我们可以实现更好的可扩展性和可维护性。然而,微服务也带来了分布式事务、服务发现、链路追踪等新的挑战。",
-	"容器化技术改变了应用的部署方式。Docker提供了轻量级的虚拟化解决方案,而Kubernetes则提供了强大的容器编排能力。本文将介绍如何使用这些工具构建现代化的云原生应用。",
-	"RESTful API设计是Web开发的基础。良好的API设计应该遵循资源导向的原则,使用合适的HTTP方法和状态码。我们将讨论如何设计清晰、一致、易于使用的API接口。",
-	"缓存是提升系统性能的有效手段。通过在内存中存储热点数据,可以大幅减轻数据库的压力。Redis作为流行的缓存解决方案,提供了丰富的数据结构和强大的功能。",
-	"消息队列是实现系统解耦和异步处理的重要工具。通过引入消息队列,我们可以将同步调用转换为异步处理,提升系统的吞吐量和容错能力。RabbitMQ和Kafka是两种常用的消息中间件。",
-	"测试是保证软件质量的关键环节。单元测试、集成测试、端到端测试构成了完整的测试体系。本文将介绍Go语言中的测试最佳实践,包括表驱动测试、测试替身等技巧。",
-	"算法与数据结构是计算机科学的基石。掌握常用的算法和数据结构,能够帮助我们编写更高效的代码。我们将通过实际问题,演示如何选择和实现合适的算法方案。",
-	"网络安全是Web应用不可忽视的方面。HTTPS、CSRF防护、XSS防护、SQL注入防护等都是构建安全应用必须要考虑的问题。本文将介绍常见的安全漏洞及其防御措施。",
-	"前端技术发展迅速,React、Vue、Angular等框架各具特色。选择合适的前端框架,并遵循组件化、状态管理等最佳实践,可以大幅提升开发效率和代码质量。",
-	"负载均衡是高可用系统的核心组件。通过将流量分发到多个服务器,可以实现系统的水平扩展。我们将介绍常用的负载均衡算法,以及Nginx等负载均衡器的配置方法。",
-	"日志和监控是运维系统的重要组成部分。通过收集和分析日志数据,我们可以及时发现和定位问题。Prometheus和Grafana是流行的监控解决方案,可以提供全面的系统可观测性。",
-	"代码审查是提升代码质量的有效手段。通过团队成员之间的相互审查,可以发现潜在的问题,分享知识经验,建立统一的编码规范。本文将介绍代码审查的流程和注意事项。",
+// markdownBlocks are reusable markdown fragments exercising the renderer
+// (headings, lists, fenced code, tables, links, emphasis). generateBody tiles
+// them until the target byte budget is reached so the rendered output stresses
+// goldmark + bluemonday + minify realistically rather than being a flat wall.
+var markdownBlocks = []string{
+	"## 深入分析\n\n现代软件开发中，合理的技术选型对项目的成功至关重要。" +
+		"本文将从多个角度分析各种技术方案的优缺点，帮助开发者做出更明智的决策。\n\n" +
+		"- 第一要点涉及并发模型的取舍\n" +
+		"- 第二要点关注数据一致性的边界\n" +
+		"- 第三要点讨论可观测性与运维成本\n\n" +
+		"| 维度 | 方案A | 方案B |\n|------|-------|-------|\n| 延迟 | 低 | 中 |\n| 成本 | 高 | 低 |\n\n",
+	"### 代码示例\n\n" +
+		"```go\nfunc process(ctx context.Context, in Input) (Output, error) {\n" +
+		"    select {\n    case <-ctx.Done():\n        return Output{}, ctx.Err()\n    default:\n    }\n" +
+		"    return transform(in), nil\n}\n```\n\n" +
+		"该实现遵循 [Go 并发最佳实践](https://go.dev/doc/) 并使用 `context` 控制生命周期。\n\n",
+	"#### 设计权衡\n\n" +
+		"在 **吞吐量** 与 **延迟** 之间存在固有的权衡。" +
+		"通过 ~~过度优化~~ 提前优化往往会引入不必要的复杂度。\n\n" +
+		">  simplicity is the ultimate sophistication.\n\n",
+	"##### 扩展阅读\n\n" +
+		"1. 分布式系统的 CAP 定理及其现代诠释\n" +
+		"2. 缓存失效策略与一致性模型\n" +
+		"3. 消息队列的恰好一次语义\n\n" +
+		"参考 [这篇文章](https://example.com/deep-dive) 获取更多细节。\n\n",
 }
 
 func main() {
-	outputFile := "fake.json"
-	if len(os.Args) > 1 {
-		outputFile = os.Args[1]
+	count := flag.Int("count", 100, "number of fake posts to generate")
+	bodyBytes := flag.Int("body-bytes", 32768, "target body size in bytes per post (approximate)")
+	output := flag.String("output", "fake.json", "output JSON file path")
+	seed := flag.Int64("seed", 0, "random seed (0 = non-deterministic; fixed value = reproducible output)")
+	flag.Parse()
+
+	if *count <= 0 {
+		fmt.Fprintln(os.Stderr, "count must be positive")
+		os.Exit(1)
+	}
+	if *bodyBytes <= 0 {
+		fmt.Fprintln(os.Stderr, "body-bytes must be positive")
+		os.Exit(1)
 	}
 
-	posts := make([]FakePost, 100)
+	// A fixed seed makes QIDs and body content reproducible across runs, which
+	// keeps load-test target files stable. math/rand suffices here: this is
+	// synthetic test data, not a security primitive.
+	rng := rand.New(rand.NewSource(*seed))
+
+	posts := make([]FakePost, *count)
 	now := time.Now()
-	ninetyDaysAgo := now.AddDate(0, 0, -90)
+	windowStart := now.AddDate(0, 0, -90)
 
-	for i := 0; i < 100; i++ {
-		qid, _ := gonanoid.New()
+	for i := 0; i < *count; i++ {
+		qid := generateQID(rng)
 
-		randomHours, _ := rand.Int(rand.Reader, big.NewInt(90*24))
-		createdAt := ninetyDaysAgo.Add(time.Duration(randomHours.Int64()) * time.Hour)
-
-		randomMins, _ := rand.Int(rand.Reader, big.NewInt(1440))
-		updatedAt := createdAt.Add(time.Duration(randomMins.Int64()) * time.Minute)
-
-		title := generateTitle(10, 50)
-		body := generateBody(100, 500)
+		ageHours := rng.Intn(90 * 24)
+		createdAt := windowStart.Add(time.Duration(ageHours) * time.Hour)
+		updatedAt := createdAt.Add(time.Duration(rng.Intn(1440)) * time.Minute)
 
 		posts[i] = FakePost{
 			QID:       qid,
-			Title:     title,
-			Body:      body,
+			Title:     generateTitle(rng, 10, 50),
+			Body:      generateBody(rng, *bodyBytes),
 			CreatedAt: createdAt,
 			UpdatedAt: updatedAt,
 		}
@@ -81,45 +105,62 @@ func main() {
 
 	data, err := json.Marshal(posts)
 	if err != nil {
-		fmt.Printf("Error marshaling JSON: %v\n", err)
+		fmt.Fprintf(os.Stderr, "marshal: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile(outputFile, data, 0644); err != nil {
-		fmt.Printf("Error writing file: %v\n", err)
+	if err := os.WriteFile(*output, data, 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "write %s: %v\n", *output, err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Successfully generated %d fake posts to %s\n", len(posts), outputFile)
+	fmt.Printf("Generated %d fake posts (%d-byte bodies) to %s\n", len(posts), *bodyBytes, *output)
 }
 
-func generateTitle(minLen, maxLen int) string {
-	title := ""
-	for len(title) < minLen || len(title) > maxLen {
-		title = ""
-		wordCount, _ := rand.Int(rand.Reader, big.NewInt(5))
-		wordCountInt := int(wordCount.Int64()) + 3
+// qidAlphabet mirrors nanoid's default URL-safe alphabet. generateQID draws
+// from the seeded rng so QIDs are reproducible under a fixed seed (gonanoid
+// itself sources crypto/rand and cannot be seeded).
+const qidAlphabet = "_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-		for i := 0; i < wordCountInt; i++ {
-			idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(titleWords))))
-			title += titleWords[idx.Int64()]
+func generateQID(rng *rand.Rand) string {
+	b := make([]byte, 21)
+	for i := range b {
+		b[i] = qidAlphabet[rng.Intn(len(qidAlphabet))]
+	}
+	return string(b)
+}
+
+func generateTitle(rng *rand.Rand, minLen, maxLen int) string {
+	var b strings.Builder
+	for b.Len() < minLen {
+		b.WriteString(titleWords[rng.Intn(len(titleWords))])
+	}
+	s := b.String()
+	if len(s) > maxLen {
+		// Truncate on a rune boundary to avoid splitting a multibyte char.
+		r := []rune(s)
+		maxRunes := maxLen
+		if maxRunes > len(r) {
+			maxRunes = len(r)
 		}
+		// Byte cap may still land mid-rune; trim back to the last full rune.
+		for len(string(r[:maxRunes])) > maxLen && maxRunes > 0 {
+			maxRunes--
+		}
+		return string(r[:maxRunes])
 	}
-	return truncateByBytes(title, maxLen)
+	return s
 }
 
-func generateBody(minLen, maxLen int) string {
-	body := ""
-	for len(body) < minLen {
-		idx, _ := rand.Int(rand.Reader, big.NewInt(int64(len(bodyTexts))))
-		body += bodyTexts[idx.Int64()] + "\n\n"
+// generateBody tiles markdownBlocks until the accumulated length meets or
+// exceeds the target byte budget n, returning the full blocks without
+// truncation. Truncating mid-block (and mid-multibyte rune) would produce
+// invalid UTF-8 and unbalanced markdown fences; stopping at the block boundary
+// keeps the body well-formed at a size approximately >= n.
+func generateBody(rng *rand.Rand, n int) string {
+	var b strings.Builder
+	for b.Len() < n {
+		b.WriteString(markdownBlocks[rng.Intn(len(markdownBlocks))])
 	}
-	return truncateByBytes(body, maxLen)
-}
-
-func truncateByBytes(s string, maxBytes int) string {
-	if len(s) <= maxBytes {
-		return s
-	}
-	return string([]byte(s)[:maxBytes])
+	return b.String()
 }

@@ -29,6 +29,9 @@ Thumbs.db
 *.out
 backend/server
 backend/tmp/
+backend/fake.json
+# Load-test runtime artifacts (seed data, vegeta results)
+scripts/loadtest/out/
 # Coverage
 coverage.*
 *.coverprofile

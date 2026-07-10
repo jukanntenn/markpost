@@ -345,9 +345,18 @@ func (d *Database) migratePostBodyCompressionLZ4() error {
 // fillfactor=100. MySQL and SQLite have no per-table fillfactor/autovacuum
 // analog and are left at driver defaults.
 //
-// The history index (user_id, created_at DESC) is identical across dialects
-// but is created here (rather than via a GORM tag) so the IF NOT EXISTS guard
-// and the per-dialect branch stay in one place.
+// The history table carries two indexes, created here (rather than via GORM
+// tags) so the IF NOT EXISTS guard and the per-dialect branch stay in one
+// place:
+//
+//   - idx_dh_user_channel_created (user_id, channel_id, created_at DESC): the
+//     three-column composite covers both the user-scoped history query
+//     (WHERE user_id = ?) and the per-channel query (WHERE user_id = ? AND
+//     channel_id = ?) via the leftmost-prefix rule. It supersedes the old
+//     idx_dh_user_created, which is dropped.
+//   - idx_dh_created (created_at DESC): serves the admin "all history" view
+//     (ORDER BY created_at DESC with no user_id predicate), which the
+//     user_id-leading composite index cannot serve (no leftmost equality).
 func (d *Database) migrateDeliveryIndexesAndOptions() error {
 	driver := config.Get().DB.Driver
 
@@ -355,7 +364,9 @@ func (d *Database) migrateDeliveryIndexesAndOptions() error {
 	case "postgresql":
 		stmts := []string{
 			`CREATE INDEX IF NOT EXISTS idx_da_pending ON delivery_attempts (next_at) WHERE status = 0`,
-			`CREATE INDEX IF NOT EXISTS idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+			`DROP INDEX IF EXISTS idx_dh_user_created`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_user_channel_created ON delivery_history (user_id, channel_id, created_at DESC)`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_created ON delivery_history (created_at DESC)`,
 			`ALTER TABLE delivery_attempts SET (
 				fillfactor = 90,
 				autovacuum_vacuum_scale_factor = 0.05,
@@ -373,7 +384,9 @@ func (d *Database) migrateDeliveryIndexesAndOptions() error {
 	case "sqlite":
 		stmts := []string{
 			`CREATE INDEX IF NOT EXISTS idx_da_pending ON delivery_attempts (next_at) WHERE status = 0`,
-			`CREATE INDEX IF NOT EXISTS idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+			`DROP INDEX IF EXISTS idx_dh_user_created`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_user_channel_created ON delivery_history (user_id, channel_id, created_at DESC)`,
+			`CREATE INDEX IF NOT EXISTS idx_dh_created ON delivery_history (created_at DESC)`,
 		}
 		for _, s := range stmts {
 			if err := d.db.Exec(s).Error; err != nil {
@@ -383,11 +396,13 @@ func (d *Database) migrateDeliveryIndexesAndOptions() error {
 	case "mysql":
 		stmts := []string{
 			`CREATE INDEX idx_da_status_next ON delivery_attempts (status, next_at)`,
-			`CREATE INDEX idx_dh_user_created ON delivery_history (user_id, created_at DESC)`,
+			`DROP INDEX idx_dh_user_created ON delivery_history`,
+			`CREATE INDEX idx_dh_user_channel_created ON delivery_history (user_id, channel_id, created_at DESC)`,
+			`CREATE INDEX idx_dh_created ON delivery_history (created_at DESC)`,
 		}
 		for _, s := range stmts {
 			if err := d.db.Exec(s).Error; err != nil {
-				if isIndexExistsErr(err) {
+				if isIndexExistsErr(err) || isUnknownIndexErr(err) {
 					continue
 				}
 				return fmt.Errorf("mysql delivery index: %w", err)
@@ -417,7 +432,27 @@ func isIndexExistsErr(err error) bool {
 	return false
 }
 
-const errDupKeyName = 1061
+// isUnknownIndexErr reports whether err is MySQL's "can't drop; index doesn't
+// exist" error. MySQL does not support DROP INDEX ... IF EXISTS in the ALTER
+// TABLE form used by InnoDB (the drop_index_stmt production at
+// sql/sql_yacc.yy has no opt_if_exists), so a DROP on an already-absent index
+// raises ER_CANT_DROP_FIELD_OR_KEY (1091). Tolerating it keeps the migration
+// idempotent on MySQL, mirroring DROP INDEX IF EXISTS on Postgres/SQLite.
+func isUnknownIndexErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	var mysqlErr *mysqldriver.MySQLError
+	if errors.As(err, &mysqlErr) {
+		return mysqlErr.Number == errCantDropFieldOrKey
+	}
+	return false
+}
+
+const (
+	errDupKeyName         = 1061
+	errCantDropFieldOrKey = 1091
+)
 
 func (d *Database) seedAdminUser() error {
 	cfg := config.Get()

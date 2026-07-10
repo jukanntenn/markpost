@@ -3,11 +3,12 @@ services:
     image: {{ registry | default('192.168.5.50:5000') }}/markpost:{{ image_tag }}
     container_name: {{ app_name }}
     ports:
-      - "8089:7157"
+      - "443:7157"
     volumes:
       - {{ config_file }}:/app/config.toml:ro
       - {{ app_path }}/data:/app/data
       - {{ app_path }}/Caddyfile:/etc/caddy/Caddyfile:ro
+      - {{ app_path }}/certs:/app/certs:ro
       - postgres-socket:/var/run/postgres
     environment:
       - MARKPOST_DEBUG=false

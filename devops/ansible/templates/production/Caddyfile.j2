@@ -1,6 +1,8 @@
 # markpost production Caddyfile.
 # Served inside the markpost container by s6-overlay. Cloudflare terminates TLS
-# at the edge; Caddy is TLS-less and routes to three loopback services.
+# at the edge (visitor side); Caddy terminates TLS-B with a Cloudflare Origin CA
+# certificate (edge→origin leg, Full strict). The cert is mounted at
+# /app/certs/ from the host {{ app_path }}/certs/ directory.
 #
 # trusted_proxies: set to Cloudflare's published CIDR ranges so that only
 # Cloudflare (a trusted peer) may prepend to the X-Forwarded-For chain. Direct
@@ -9,6 +11,7 @@
 # path. Source: https://www.cloudflare.com/ips/ — sync when Cloudflare updates.
 # {{ cloudflare_cidrs_comment | default("# Replace the private_ranges below with Cloudflare's IPv4+IPv6 CIDRs from https://www.cloudflare.com/ips/") }}
 :7157 {
+	tls /app/certs/origin.pem /app/certs/origin.key
 	encode zstd gzip
 
 	handle /api/v1/* {

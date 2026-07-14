@@ -102,12 +102,6 @@ type PostListItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// PostsListResponse represents a paginated list of posts.
-type PostsListResponse struct {
-	Posts      []PostListItem `json:"posts"`
-	Pagination Pagination     `json:"pagination"`
-}
-
 // PostRequest represents the request body for creating a new post.
 type PostRequest struct {
 	Title string `json:"title" binding:"required,titlesize"`

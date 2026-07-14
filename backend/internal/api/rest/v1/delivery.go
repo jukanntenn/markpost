@@ -127,9 +127,8 @@ func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 				return
 			}
 
-			c.JSON(http.StatusOK, MessageResponse{
-				Message: getI18nMessage(c, "Channel deleted successfully", "delivery.channel_deleted"),
-			})
+			// 204 No Content (no body) per api-design.md §2 (DELETE → 204).
+			c.Status(http.StatusNoContent)
 		})
 	}
 }

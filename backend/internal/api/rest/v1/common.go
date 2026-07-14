@@ -345,13 +345,26 @@ func NotFound() gin.HandlerFunc {
 	}
 }
 
-func paginatedResponse(key string, items any, p Pagination) map[string]any {
-	return map[string]any{key: items, "pagination": p}
+// paginatedResponse builds the flat wrapped list object mandated by
+// api-design.md §4: { items, total, page, limit, total_pages }. The resource
+// key is intentionally not used — the field is always "items" so the frontend
+// type is uniform across endpoints.
+func paginatedResponse(items any, p Pagination) map[string]any {
+	return map[string]any{
+		"items":       items,
+		"total":       p.Total,
+		"page":        p.Page,
+		"limit":       p.Limit,
+		"total_pages": p.TotalPages,
+	}
 }
 
-func paginatedWrap[T any](key string) func([]T, Pagination) any {
+// paginatedWrap adapts paginatedResponse to the writePaginatedList signature.
+// The key argument is retained for call-site compatibility but ignored — the
+// spec mandates a uniform "items" field.
+func paginatedWrap[T any](_ string) func([]T, Pagination) any {
 	return func(items []T, p Pagination) any {
-		return paginatedResponse(key, items, p)
+		return paginatedResponse(items, p)
 	}
 }
 

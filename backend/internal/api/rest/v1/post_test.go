@@ -289,8 +289,8 @@ func TestPostsList_Success(t *testing.T) {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
 
-	if resp["posts"] == nil {
-		t.Error("expected posts in response")
+	if resp["items"] == nil {
+		t.Error("expected items in response")
 	}
 }
 

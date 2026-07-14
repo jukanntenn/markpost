@@ -452,16 +452,11 @@ func TestDeleteDeliveryChannel_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("expected status %d, got %d", http.StatusNoContent, w.Code)
 	}
-
-	var resp MessageResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("failed to unmarshal response: %v", err)
-	}
-	if resp.Message == "" {
-		t.Error("expected non-empty message in response")
+	if w.Body.Len() != 0 {
+		t.Errorf("expected empty body for 204, got %q", w.Body.String())
 	}
 }
 

@@ -123,9 +123,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		withUserPaginatedQuery(c, postSvc.GetUserPosts, newPostListItem,
-			func(items []PostListItem, p Pagination) any {
-				return PostsListResponse{Posts: items, Pagination: p}
-			},
+			paginatedWrap[PostListItem]("posts"),
 		)
 	}
 }

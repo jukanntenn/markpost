@@ -363,7 +363,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 		{
 			deliveryGroup.GET("", v1.ListDeliveryChannels(deliverySvc))
 			deliveryGroup.POST("", middleware.RateLimitByUserID(l3Write), v1.CreateDeliveryChannel(deliverySvc))
-			deliveryGroup.PUT("/:id", middleware.RateLimitByUserID(l3Write), v1.UpdateDeliveryChannel(deliverySvc))
+			deliveryGroup.PATCH("/:id", middleware.RateLimitByUserID(l3Write), v1.UpdateDeliveryChannel(deliverySvc))
 			deliveryGroup.DELETE("/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteDeliveryChannel(deliverySvc))
 		}
 		jwtAuth.GET("/delivery/history", v1.ListDeliveryHistory(deliverySvc))
@@ -373,8 +373,8 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 		{
 			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
-			adminGroup.GET("/channels", v1.AdminListChannels(adminSvc))
-			adminGroup.GET("/delivery-history", v1.AdminListDeliveryHistory(adminSvc))
+			adminGroup.GET("/delivery/channels", v1.AdminListChannels(adminSvc))
+			adminGroup.GET("/delivery/history", v1.AdminListDeliveryHistory(adminSvc))
 			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))
 		}
 	}

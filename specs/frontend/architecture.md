@@ -1,117 +1,125 @@
 # Frontend Architecture
 
+本文档定义前端架构：App Router 结构、组件组织、状态管理、API client、路由保护、Provider stack。构建配置（纯静态导出）见 [build.md](./build.md)；路由守卫见 [routes.md](./routes.md)；i18n 见 [i18n.md](./i18n.md)。
+
 ## Overview
 
-The frontend is a Next.js 16 application using the App Router with React 19. It follows a component-based architecture with Zustand for client state and TanStack Query for server state.
+前端是 Next.js 16 应用，使用 App Router + React 19，**纯静态导出**（`output: "export"`，无服务端运行时）。客户端状态用 Zustand，服务端状态用 TanStack Query。
+
+详见 [build.md](./build.md) 的纯静态导出设计与能力边界。
 
 ## App Router Structure
 
-Pages are organized using route groups:
+页面用路由组（route groups）组织：
 
 ```
 src/app/
-├── layout.tsx                     — Root layout (fonts, providers)
-├── page.tsx                       — Landing page
-├── globals.css                    — Global styles and CSS variables
-├── health/route.ts                — Health check API route
-├── auth/                           — OAuth callback (outside route groups)
-│   └── github/callback/page.tsx   — GitHub OAuth redirect target
-├── (auth)/                        — Auth route group
-│   ├── layout.tsx                 — Auth layout (centered, no sidebar)
-│   ├── auth/page.tsx              — OAuth callback page
-│   └── login/page.tsx             — Login page
-└── (dashboard)/                   — Dashboard route group
-    ├── layout.tsx                 — Dashboard layout (sidebar + header)
-    ├── dashboard/page.tsx         — Main dashboard
-    ├── posts/page.tsx             — Post list
-    ├── settings/page.tsx          — User settings
-    └── admin/                     — Admin section
-        ├── layout.tsx             — Admin layout
-        ├── page.tsx               — Admin dashboard
-        ├── users/page.tsx         — User management
-        ├── posts/page.tsx         — Post management
-        └── channels/page.tsx      — Channel management
+├── layout.tsx                     根 layout（字体、providers）
+├── page.tsx                       着陆页（→ /dashboard）
+├── globals.css                    全局样式 + CSS 变量
+├── (auth)/                        auth 路由组
+│   ├── layout.tsx                 auth layout（居中、无侧边栏）+ PublicRoute 守卫
+│   ├── login/page.tsx             登录页
+│   └── auth/callback/page.tsx     OAuth 回调页
+└── (dashboard)/                   dashboard 路由组
+    ├── layout.tsx                 dashboard layout（侧边栏 + header）+ ProtectedRoute 守卫
+    ├── dashboard/page.tsx         仪表盘
+    ├── posts/page.tsx             文章列表
+    ├── settings/page.tsx          设置
+    └── admin/                     admin 区（嵌套 AdminRoute 守卫）
+        ├── layout.tsx             admin layout
+        ├── page.tsx               管理概览
+        ├── users/page.tsx         用户管理
+        ├── posts/page.tsx         文章管理
+        └── delivery/
+            ├── channels/page.tsx  渠道管理
+            └── history/page.tsx   投递历史
 ```
 
-Route groups `(auth)` and `(dashboard)` share no layout — each has its own.
+路由组 `(auth)` 和 `(dashboard)` 各有独立 layout，不共享。
+
+> **已移除**：`src/app/health/route.ts`（API Route，纯静态不支持）；`src/proxy.ts`（SSR 代理，纯静态不支持）。详见 [build.md](./build.md) §3。
 
 ## Component Organization
 
 ```
 src/components/
-├── ui/          — shadcn/ui primitives (Button, Input, Dialog, etc.)
-├── auth/        — Auth-related components
-├── layout/      — Layout components (Sidebar, Header)
-├── login/       — Login page-specific components
-├── dashboard/   — Dashboard components
-├── admin/       — Admin components
-├── posts/       — Post-related components
-├── settings/    — User settings components
-└── providers/   — Context providers (LocaleProvider, QueryProvider)
+├── ui/          shadcn/ui 原语（Button、Input、Dialog 等）
+├── auth/        认证相关组件（AuthGate、PublicRoute、ProtectedRoute、AdminRoute、route-configs）
+├── layout/      布局组件（Sidebar、Header、DashboardLayout、AdminLayout）
+├── login/       登录页专用组件（LoginPage、LoginCallbackPage）
+├── dashboard/   dashboard 组件
+├── admin/       admin 组件
+├── posts/       文章相关组件
+├── settings/    设置组件
+└── providers/   Context providers（QueryProvider）
 ```
 
 ## State Management
 
 ### Server State — TanStack Query
 
-API data fetching is managed by TanStack Query. The `QueryProvider` wraps the app and provides the query client.
+API 数据获取由 TanStack Query 管理。`QueryProvider` 包裹应用，提供 query client。
 
-### Client State — Zustand
+### Client State — Zustand（认证状态）
 
-Authentication state is managed via Zustand with persistence:
+认证状态用 Zustand + `persist` 中间件管理，持久化到 localStorage：
 
 ```typescript
 // src/stores/auth.ts
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       token: null,
       refreshToken: null,
       user: null,
+      _hasHydrated: false,
       // ...
     }),
     {
       name: "markpost_auth",
-      partialize: (state) => ({
-        token: state.token,
-        refreshToken: state.refreshToken,
-        user: state.user,
-      }),
+      partialize: ({ token, refreshToken, user }) => ({ token, refreshToken, user }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
 ```
 
-State is persisted to localStorage under the `markpost_auth` key. Hydration state is tracked via `_hasHydrated`.
+状态持久化到 localStorage（key = `markpost_auth`）。水合状态用 `_hasHydrated` 跟踪（防闪烁，见 [routes.md](./routes.md) 水合处理）。
 
-### Toast State
-
-A separate Zustand store (`src/stores/toast.ts`) manages toast notifications.
+token 存储的安全考量见 [auth.md](../auth.md) §6。
 
 ## API Client
 
-The API client is in `src/lib/api/base.ts`. It provides a generic `request<T>()` function that:
+API client 在 `src/lib/api/base.ts`，提供泛型 `request<T>()` 函数：
 
-1. Reads the auth token from the Zustand store
-2. Sets `Authorization: Bearer <token>` header
-3. Sends the request to the backend
-4. On 401, automatically attempts token refresh
-5. Retries the request with the new token after refresh
-6. Redirects to login if refresh fails
+1. 从 Zustand store 读 access token
+2. 设置 `Authorization: Bearer <token>` header
+3. **携带 `Accept-Language: <当前 locale>` header**（后端据此返回对应语言错误消息，见 [i18n.md](./i18n.md)）
+4. 发送请求（**相对路径** `/api/v1/...`，由反向代理转发到后端）
+5. 401 时自动尝试 token refresh（单飞去重）
+6. refresh 成功 → 用新 token 重试原请求
+7. refresh 失败 → logout → 重定向登录
 
-The client always sends relative paths (e.g. `/api/v1/posts`); the server-side proxy (`src/proxy.ts`) forwards them to the backend via `BACKEND_URL`.
+> **直连后端**（不再有 SSR 代理）：前端发相对路径，部署时由 Nginx/Caddy 反代到 Go 后端。详见 [build.md](./build.md) §4。
+
+自动刷新机制详见 [auth.md](../auth.md) §6.3。
 
 ## Route Protection
 
-Protected routes check authentication state in the dashboard layout. The auth store's `isAuthenticated()` method returns true only when both `token` and `user` are present.
+路由保护由客户端守卫组件实现。详见 [routes.md](./routes.md)。
 
-Admin routes additionally check `isAdmin()` which verifies `user.role === "admin"`.
+要点：客户端守卫**仅控制 UX**，安全保障在后端 API 层（JWT + Admin 中间件）。
 
 ## Provider Stack
 
-The root layout wraps the app in these providers (outer to inner):
+根 layout 包裹以下 providers（外到内）：
 
-1. `LocaleProvider` — next-intl locale context
+1. `LocaleProvider` — next-intl locale context（**纯客户端自举**，不接收 serverLocale/serverMessages，见 [i18n.md](./i18n.md)）
 2. `QueryProvider` — TanStack Query client
-3. `ThemeProvider` — next-themes (dark/light/system)
-4. `ToastProvider` — Toast notification context
+3. `ThemeProvider` — next-themes（dark/light/system）
+4. `ToastProvider` — Toast 通知 context
+
+> root layout **不调用服务端 i18n API**（`getLocale()` / `getMessages()`）。纯静态导出下这些不可用。`LocaleProvider` 完全自举：初始 locale = `en`，hydration 后从 localStorage 读取并动态加载 messages。

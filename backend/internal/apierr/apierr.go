@@ -37,7 +37,7 @@ type ErrorResponse struct {
 func RespondError(c *gin.Context, err error) {
 	se, ok := service.AsError(err)
 	if !ok {
-		slog.Error("unexpected error", "error", err,
+		slog.ErrorContext(c.Request.Context(), "unexpected error", "error", err,
 			"method", c.Request.Method, "path", c.Request.URL.Path)
 		writeError(c, service.ErrInternal, nil, nil)
 		return

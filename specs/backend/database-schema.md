@@ -86,7 +86,7 @@ Defined in `internal/domain/post/post.go`. Stores user posts with Markdown body 
 
 ### `refresh_tokens`
 
-Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT authentication. Write-once — records are created and deleted, never updated.
+Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT authentication. Records are created and **soft-revoked**（`revoked=true`），保留记录用于 token theft 重用检测（见 [auth.md](../auth.md) §2.2-2.3）。过期 + revoked 的行由定期清理物理删除。
 
 Explicit table name: `refresh_tokens`.
 
@@ -95,6 +95,7 @@ Explicit table name: `refresh_tokens`.
 | `ID` | `id` | bigint auto-increment | no | — | PK | Primary key |
 | `UserID` | `user_id` | integer | no | — | index | Owning user (no FK constraint; cleanup handled at application level) |
 | `TokenHash` | `token_hash` | varchar | no | — | unique | SHA256 hash of the refresh token |
+| `Revoked` | `revoked` | boolean | no | `false` | — | 吊销标记。`true` 表示已吊销（用于 token theft 重用检测，见 [auth.md](../auth.md) §2） |
 | `ExpiresAt` | `expires_at` | timestamp | no | — | — | Token expiration time |
 | `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
 
@@ -156,3 +157,9 @@ Schema changes are applied via GORM `AutoMigrate` on application startup (see `i
 ### 7. Table Naming
 
 Tables without an explicit `TableName()` method use GORM's default pluralized naming (e.g., `users`, `posts`, `channels`). Tables that define `TableName()` specify their name explicitly in the model struct (e.g., `refresh_tokens`, `token_blacklist`).
+
+---
+
+## 数据库连接（DSN）
+
+Schema 设计只管表结构。数据库连接（DSN 格式、driver 推断、SQLite 目录自动创建）见 [dsn.md](./dsn.md)。

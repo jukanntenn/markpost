@@ -231,3 +231,15 @@ burst = 50
 # them. Run cmd/prune_delivery_history via cron to sweep.
 # [OPTIONAL]  Env: MARKPOST_DELIVERY__HISTORY_RETENTION  Default: "168h" (7 days)
 # history_retention = "168h"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Observability: three pillars (logs / traces / metrics) exported to the local
+# filesystem as JSONL. No external services are used. See specs/backend/observability.md.
+# ──────────────────────────────────────────────────────────────────────────────
+[observability]
+
+# Directory for app-*.jsonl (logs), traces-*.jsonl (OTel spans), and
+# metrics-*.jsonl (OTel metrics). Daily 00:00 rotation, 100 MB size cap,
+# 14 backups / 30 days retention, zstd-compressed rotated files.
+# [OPTIONAL]  Env: MARKPOST_OBSERVABILITY__LOG_DIR  Default: "./logs"
+# log_dir = "./logs"

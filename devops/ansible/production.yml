@@ -3,7 +3,7 @@
 # ansible-playbook -i devops/ansible/hosts.yml devops/ansible/production.yml --vault-password-file ~/.ansible-vault/markpost-production.pwd
 
 - name: Deploy markpost (production)
-  hosts: oect
+  hosts: ttyo
   user: "{{ user }}"
   gather_facts: no
   vars_files:
@@ -20,11 +20,17 @@
 
     image_tag: "latest"
     app_port: 7157
+    # Public origin URL (e.g. "https://markpost.cc"). Used for CORS allow_origins,
+    # server.public_url, and the GitHub OAuth redirect_url.
     public_url: ""
-    trusted_proxies: "[\"127.0.0.1\", \"::1\"]"
+    trusted_proxies: '["127.0.0.1", "::1"]'
     # Cloudflare CIDR list for Caddy trusted_proxies. Replace with the current
     # ranges from https://www.cloudflare.com/ips/ (IPv4 + IPv6, space-separated).
     cloudflare_cidrs: "private_ranges"
+    # GitHub OAuth + Cloudflare purge credentials live in
+    # vars/production/vault.yml (github_client_id, github_client_secret,
+    # cloudflare_api_token, cloudflare_zone_id). Leaving them unset disables
+    # OAuth and cache-tag purge respectively.
 
   tasks:
     - name: Ensure paths
@@ -60,16 +66,16 @@
         dest: "{{ pgconf_file }}"
         mode: "0644"
 
-    - name: Stop containers
-      community.docker.docker_compose_v2:
-        project_src: "{{ app_path }}"
-        state: absent
-
     - name: Pull images
       community.docker.docker_compose_v2:
         project_src: "{{ app_path }}"
         pull: always
         state: present
+
+    - name: Stop containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        state: absent
 
     - name: Start containers
       community.docker.docker_compose_v2:

@@ -15,8 +15,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
+	"net/http"
 	"os"
-	"strconv"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"markpost/cmd"
 	_ "markpost/docs"
@@ -25,6 +29,7 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/middleware"
+	"markpost/internal/observability"
 	"markpost/internal/service/admin"
 	"markpost/internal/service/auth"
 	deliverysvc "markpost/internal/service/delivery"
@@ -37,6 +42,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/urfave/cli/v2"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/text/language"
@@ -214,11 +220,22 @@ func serve(configPath string) {
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
-	defer func() {
-		if err := dbInstance.Close(); err != nil {
-			log.Printf("Failed to close database: %v", err)
-		}
-	}()
+
+	// Observability: three pillars (logs/traces/metrics) to the local filesystem.
+	logDir := cfg.Observability.LogDir
+	if logDir == "" {
+		logDir = "./logs"
+	}
+	appLogger := observability.NewAppLogger(logDir)
+	tracesLogger := observability.NewTracesLogger(logDir)
+	metricsLogger := observability.NewMetricsLogger(logDir)
+	providers, err := observability.Init(appLogger, tracesLogger, metricsLogger)
+	if err != nil {
+		log.Fatalf("Failed to init observability: %v", err)
+	}
+	// Structured logging with trace_id/span_id correlation (observability.md
+	// §trace↔log 关联). Replaces the default text handler.
+	slog.SetDefault(slog.New(observability.NewTraceHandler(appLogger)))
 
 	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
@@ -248,12 +265,13 @@ func serve(configPath string) {
 	if stateStore, err := auth.NewRistrettoOAuthStateStore(); err == nil {
 		authSvc = authSvc.WithOAuthStateStore(stateStore)
 	} else {
-		log.Printf("OAuth state store disabled (ristretto init failed: %v)", err)
+		slog.Error("OAuth state store disabled", "error", err)
 	}
 
-	log.Printf("Initializing first admin user: %s", cfg.Admin.InitialUsername)
+	slog.Info("initializing first admin user", "username", cfg.Admin.InitialUsername)
 	if err := authSvc.InitializeFirstAdmin(context.Background(), cfg.Admin.InitialUsername); err != nil {
-		log.Fatalf("Failed to initialize first admin: %v", err)
+		slog.Error("failed to initialize first admin", "error", err)
+		os.Exit(1)
 	}
 
 	postRepo := infra.NewPostRepository(dbInstance.DB())
@@ -273,12 +291,18 @@ func serve(configPath string) {
 
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo)
 
-	r := gin.Default()
+	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
+	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
+	// (observability.md §初始化装配).
+	r := gin.New()
 	r.LoadHTMLGlob("templates/*")
 
 	if err := r.SetTrustedProxies(cfg.Server.TrustedProxies); err != nil {
 		log.Fatalf("Failed to set trusted proxies: %v", err)
 	}
+
+	// otelgin creates a trace span per HTTP request (method/path/status/latency).
+	r.Use(otelgin.Middleware("markpost"))
 
 	r.Use(ginI18n.Localize(ginI18n.WithBundle(&ginI18n.BundleCfg{
 		RootPath: "./locales",
@@ -297,18 +321,44 @@ func serve(configPath string) {
 
 	UseCors(r)
 
-	log.Printf("Initializing rate limiting...")
+	slog.Info("initializing rate limiting")
 	SetupRoutes(r, deliverySvc, adminSvc)
 
-	log.Println("Server starting...")
 	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	visitHost := cfg.Server.Host
-	log.Println("Visit http://" + visitHost + ":" + strconv.FormatUint(uint64(cfg.Server.Port), 10))
-	if err := r.Run(listenAddr); err != nil {
-		dispatcherCancel()
-		deliveryDispatcher.Stop()
-		log.Fatalf("Failed to start server: %v", err)
+	slog.Info("server starting", "addr", listenAddr)
+
+	// Graceful shutdown: on SIGINT/SIGTERM stop accepting connections, flush
+	// OTel exporters (so no buffered spans/metrics are lost), close the
+	// timberjack loggers, stop the delivery dispatcher, and close the DB.
+	srv := &http.Server{Addr: listenAddr, Handler: r}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			dispatcherCancel()
+			deliveryDispatcher.Stop()
+			slog.Error("failed to start server", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	slog.Info("shutting down")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server shutdown error", "error", err)
 	}
+	dispatcherCancel()
+	deliveryDispatcher.Stop()
+	if err := providers.Shutdown(shutdownCtx); err != nil {
+		slog.Error("observability shutdown error", "error", err)
+	}
+	if err := dbInstance.Close(); err != nil {
+		slog.Error("failed to close database", "error", err)
+	}
+	slog.Info("server stopped")
 }
 
 // SetupRoutes configures all API routes for the application.

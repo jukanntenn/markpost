@@ -30,6 +30,8 @@ Thumbs.db
 backend/server
 backend/tmp/
 backend/fake.json
+# Observability JSONL logs (timberjack-rolled app/traces/metrics)
+backend/logs/
 # Load-test runtime artifacts (seed data, vegeta results)
 scripts/loadtest/out/
 # Coverage
@@ -80,3 +82,4 @@ htmlcov/
 .hypothesis/
 
 .local/
+.zcode/plans/

@@ -25,8 +25,9 @@ type Config struct {
 	JWT           JWTConfig        `mapstructure:"jwt"`
 	Ratelimit     RatelimitConfig  `mapstructure:"ratelimit"`
 	Delivery      DeliveryConfig   `mapstructure:"delivery"`
-	Render        RenderConfig     `mapstructure:"render"`
-	Cloudflare    CloudflareConfig `mapstructure:"cloudflare"`
+	Render        RenderConfig       `mapstructure:"render"`
+	Cloudflare    CloudflareConfig   `mapstructure:"cloudflare"`
+	Observability ObservabilityConfig `mapstructure:"observability"`
 }
 
 // ServerConfig holds server-related configuration.
@@ -135,6 +136,15 @@ type RenderConfig struct {
 type CloudflareConfig struct {
 	APIToken string `mapstructure:"api_token"`
 	ZoneID   string `mapstructure:"zone_id"`
+}
+
+// ObservabilityConfig configures the three-pillar observability stack. All
+// pillars export to the local filesystem under LogDir as JSONL; no external
+// services are used (observability.md).
+type ObservabilityConfig struct {
+	// LogDir is the directory for app-*.jsonl / traces-*.jsonl / metrics-*.jsonl.
+	// Defaults to "./logs" when empty.
+	LogDir string `mapstructure:"log_dir"`
 }
 
 var (
@@ -277,6 +287,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("render.cache_size_bytes", 134217728) // 128 MiB
 	v.SetDefault("render.num_counters", 100000)        // ~10x expected key count
 	v.SetDefault("render.buffer_items", 64)
+	v.SetDefault("observability.log_dir", "./logs")
 }
 
 // ResetForTest resets the configuration for testing purposes.

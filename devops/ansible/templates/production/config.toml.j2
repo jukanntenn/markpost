@@ -5,6 +5,9 @@ post_key_length = 16
 host = "127.0.0.1"
 port = 7330
 public_url = "{{ public_url }}"
+# Caddy is the only direct peer. In SaaS mode this is the Cloudflare CIDRs
+# (synced from https://www.cloudflare.com/ips/); the deploy-time value comes
+# from production.yml: trusted_proxies.
 trusted_proxies = {{ trusted_proxies }}
 
 [db]
@@ -26,11 +29,19 @@ initial_password = "{{ admin_password }}"
 [post]
 title_max_length = 500
 body_max_bytes = 1048576
-retention_days = 30
+# 7 days: aligns with performance-optimization.md storage/retention estimates
+# (~11 GB at 7 days). delivery.history_retention is set to match (168h).
+retention_days = 7
 
 [cors]
 allow_origins = ["{{ public_url }}"]
 allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+[oauth.github]
+# Empty client_id/secret disables GitHub OAuth. Set both in vault to enable.
+client_id = "{{ github_client_id | default('') }}"
+client_secret = "{{ github_client_secret | default('') }}"
+redirect_url = "{{ public_url }}/api/v1/auth/github/callback"
 
 [ratelimit]
 # L1 read: per-IP, generous — the CDN absorbs most reads.
@@ -53,7 +64,7 @@ enabled = true
 cache_size_bytes = 134217728
 
 [cloudflare]
-# Optional. Set both to enable best-effort cache-tag purge on post deletion.
+# Set both to enable best-effort cache-tag purge on post deletion.
 # Absent (the default) means self-hosted without Cloudflare; deletion still
 # removes the origin render cache and the CDN falls back to TTL expiry.
 api_token = "{{ cloudflare_api_token | default('') }}"
@@ -62,4 +73,9 @@ zone_id = "{{ cloudflare_zone_id | default('') }}"
 [delivery]
 body_preview_chars = 200
 request_timeout = "5s"
-retry_count = 0
+# 32 workers cover ~106 jobs/s sustained (300 ms Feishu response).
+workers = 32
+queue_size = 1024
+scan_interval = "1s"
+# Matches post.retention_days (7 days): history must not outlive the post.
+history_retention = "168h"

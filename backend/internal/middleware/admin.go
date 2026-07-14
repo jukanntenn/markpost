@@ -12,12 +12,12 @@ func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		u, ok := ExtractUser(c)
 		if !ok {
-			abortWithError(c, service.NewServiceError(service.ErrUnauthorized, "user not found in context"))
+			abortWithError(c, service.New(service.ErrUnauthorized, "user not found in context"))
 			return
 		}
 
 		if !u.IsAdmin() {
-			abortWithError(c, service.NewServiceError(service.ErrForbidden, "admin access required"))
+			abortWithError(c, service.New(service.ErrForbidden, "admin access required"))
 			return
 		}
 

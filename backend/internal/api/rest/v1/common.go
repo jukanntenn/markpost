@@ -11,7 +11,8 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/middleware"
 	"markpost/internal/service"
-	"markpost/pkg/apierr"
+	"markpost/internal/service/post"
+	"markpost/internal/apierr"
 	"markpost/pkg/utils"
 
 	ginI18n "github.com/gin-contrib/i18n"
@@ -43,7 +44,7 @@ func withUserAndID(c *gin.Context, fn func(*user.User, int)) {
 func requireUser(c *gin.Context) (*user.User, bool) {
 	u, ok := middleware.ExtractUser(c)
 	if !ok {
-		err := service.NewServiceError(service.ErrFailedGetUser, "failed to get user from context")
+		err := service.New(service.ErrInternal, "failed to get user from context")
 		apierr.RespondError(c, err)
 		return nil, false
 	}
@@ -105,8 +106,8 @@ func ParseBindingErrors(err error, req interface{}) []service.FieldDetail {
 	ve, ok := err.(validator.ValidationErrors)
 	if !ok {
 		return []service.FieldDetail{{
-			Code:        service.ErrFieldViolation,
-			Description: "",
+			Field: "",
+			Code:  service.ErrFieldViolation,
 		}}
 	}
 
@@ -117,27 +118,58 @@ func ParseBindingErrors(err error, req interface{}) []service.FieldDetail {
 
 	for _, fe := range ve {
 		jsonField := resolveFieldName(t, fe.Field())
-		tag := fe.Tag()
-		var code service.ErrCode
-		switch tag {
-		case "required":
-			code = service.ErrRequired
-		case "min":
-			code = service.ErrMinLength
-		default:
-			code = service.ErrFieldViolation
-		}
-		causes = append(causes, service.FieldDetail{
-			Code:        code,
-			Description: jsonField,
-		})
+		causes = append(causes, fieldErrorToDetail(fe, jsonField))
 	}
 	return causes
 }
 
 func writeBindingError(c *gin.Context, req interface{}, err error) {
-	causes := ParseBindingErrors(err, req)
-	apierr.RespondError(c, service.NewBindingError(causes))
+	apierr.RespondError(c, handleBindingError(req, err))
+}
+
+// handleBindingError classifies a binding error into the right service.Error:
+// JSON deserialization failures (syntax errors, type mismatches, empty body)
+// become ErrInvalidRequest (400 — the request body cannot be parsed); struct
+// validator failures become ErrValidation (422 — the body parses but a field
+// value violates a business rule). See error-handling.md "binding error".
+func handleBindingError(req interface{}, err error) *service.Error {
+	ve, ok := err.(validator.ValidationErrors)
+	if !ok {
+		// JSON syntax / type mismatch / empty body — not a field validation.
+		return service.New(service.ErrInvalidRequest, err.Error())
+	}
+	return service.NewValidation(ParseBindingErrors(ve, req))
+}
+
+// tagRegistry maps validator tags to their ErrCode and i18n placeholder name.
+// Adding a rule is a one-line entry here. See error-handling.md.
+var tagRegistry = map[string]struct {
+	code        *service.ErrCode
+	placeholder string
+}{
+	"required":   {service.ErrRequired, ""},
+	"min":        {service.ErrMinLength, "Min"},
+	"max":        {service.ErrMaxLength, "Max"},
+	"len":        {service.ErrLength, "Len"},
+	"email":      {service.ErrEmail, ""},
+	"oneof":      {service.ErrOneOf, "OneOf"},
+	"titlesize":  {post.ErrTitleSize, "Max"},
+	"bodysize":   {post.ErrBodySize, "Max"},
+}
+
+// fieldErrorToDetail maps a validator FieldError to a FieldDetail, resolving
+// the code via tagRegistry and pulling the rule Param (or ParamProvider for
+// custom rules whose Param() is empty).
+func fieldErrorToDetail(fe validator.FieldError, jsonField string) service.FieldDetail {
+	spec, ok := tagRegistry[fe.Tag()]
+	if !ok {
+		return service.FieldDetail{Field: jsonField, Code: service.ErrFieldViolation, Param: fe.Param()}
+	}
+	param := fe.Param()
+	if param == "" && spec.code.ParamProvider != nil {
+		param = spec.code.ParamProvider()
+	}
+	return service.FieldDetail{Field: jsonField, Code: spec.code, Param: param}
 }
 
 // MessageResponse represents a simple message response.
@@ -185,7 +217,7 @@ func (q *PaginationQuery) ToPagination(total int64) Pagination {
 func parsePathID(c *gin.Context) (int, bool) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		apierr.RespondError(c, service.NewServiceError(service.ErrValidation, "invalid ID"))
+		apierr.RespondError(c, service.New(service.ErrInvalidRequest, "invalid ID"))
 		return 0, false
 	}
 	return id, true

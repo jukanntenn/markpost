@@ -60,7 +60,8 @@ type PostKeyResponse struct {
 
 // OAuthURLResponse represents the response containing a GitHub OAuth authorization URL.
 type OAuthURLResponse struct {
-	URL string `json:"url"`
+	URL   string `json:"url"`
+	State string `json:"state"`
 }
 
 // GitHubLoginRequest represents the request body for GitHub OAuth login.

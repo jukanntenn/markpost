@@ -1,65 +1,110 @@
-["error.failed_get_user"]
-other = "Failed to get user information"
+# English locale (source/baseline). Keys mirror the service.ErrCode Message.ID
+# values; the code-embedded DefaultMessage is the authoritative fallback, this
+# file is the goi18n extract baseline.
 
-["error.failed_render_post"]
-other = "Failed to render post"
-
+# --- shared error codes ---
 ["error.internal"]
 other = "Internal server error"
-
-["error.invalid_credentials"]
-other = "Invalid username or password"
-
-["error.invalid_current_password"]
-other = "Current password is incorrect"
-
-["error.invalid_post_key"]
-other = "Invalid post key"
-
-["error.invalid_request"]
-other = "Invalid request format"
-
-["error.invalid_token"]
-other = "Invalid token"
-
-["error.missing_authorization_header"]
-other = "Missing Authorization header"
-
-["error.missing_code"]
-other = "Missing code field"
-
-["error.missing_state_param"]
-other = "Missing state query parameter"
-
-["error.not_found"]
-other = "Not Found"
-
-["error.rate_limited"]
-other = "You have reached maximum request limit."
-
-["error.password_changed_success"]
-other = "Password changed successfully"
-
-["error.unauthorized"]
-other = "Unauthorized"
 
 ["error.validation_failed"]
 other = "Request validation failed"
 
-["error.validation_min_length"]
-other = "Value does not meet minimum length"
+["error.invalid_request"]
+other = "Invalid request format"
 
-["error.validation_required"]
-other = "This field is required"
+["error.not_found"]
+other = "Not Found"
 
-["health.running"]
-other = "markpost is running"
+["error.unauthorized"]
+other = "Unauthorized"
 
 ["error.forbidden"]
 other = "Forbidden"
 
+["error.conflict"]
+other = "Resource conflict"
+
+["error.rate_limited"]
+other = "Too many requests"
+
+# --- field-validation codes ---
+["error.validation_required"]
+other = "{{.Field}} is required"
+
+["error.validation_min_length"]
+other = "{{.Field}} must be at least {{.Min}} characters"
+
+["error.validation_max_length"]
+other = "{{.Field}} must be at most {{.Max}} characters"
+
+["error.validation_length"]
+other = "{{.Field}} must be {{.Len}} characters long"
+
+["error.validation_email"]
+other = "{{.Field}} must be a valid email address"
+
+["error.validation_oneof"]
+other = "{{.Field}} must be one of: {{.OneOf}}"
+
+["error.validation_field_violation"]
+other = "{{.Field}} is invalid"
+
+["error.validation_titlesize"]
+other = "{{.Field}} exceeds the maximum of {{.Max}} characters"
+
+["error.validation_bodysize"]
+other = "{{.Field}} exceeds the maximum of {{.Max}} bytes"
+
+# --- auth-domain codes ---
+["error.invalid_credentials"]
+other = "Invalid username or password"
+
+["error.invalid_password"]
+other = "Current password is incorrect"
+
 ["error.user_disabled"]
 other = "User account is disabled"
 
+["error.invalid_token"]
+other = "Invalid or expired token"
+
+["error.invalid_post_key"]
+other = "Invalid post key"
+
+["error.missing_state"]
+other = "OAuth state parameter is missing"
+
+["error.missing_code"]
+other = "OAuth code parameter is missing"
+
+["error.invalid_state"]
+other = "OAuth state is invalid, expired, or already used"
+
+["error.oauth_exchange_failed"]
+other = "OAuth authorization exchange failed"
+
+["error.github_user_fetch_failed"]
+other = "Failed to fetch GitHub account information"
+
+["error.password_too_short"]
+other = "Password must be at least {{.Min}} characters"
+
+["error.password_too_long"]
+other = "Password must not exceed {{.Max}} characters"
+
+# --- delivery-domain codes ---
+["error.unsupported_channel_kind"]
+other = "Unsupported channel kind"
+
+# --- success/info messages ---
+["error.password_changed_success"]
+other = "Password changed successfully"
+
+["auth.logout_success"]
+other = "Logged out successfully"
+
 ["delivery.channel_deleted"]
 other = "Channel deleted successfully"
+
+["health.running"]
+other = "markpost is running"

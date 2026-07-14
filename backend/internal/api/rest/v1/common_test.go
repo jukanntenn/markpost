@@ -43,10 +43,10 @@ func TestParseBindingErrors_NonValidatorError(t *testing.T) {
 		t.Fatalf("expected 1 cause, got %d", len(causes))
 	}
 	if causes[0].Code != service.ErrFieldViolation {
-		t.Errorf("expected ErrFieldViolation, got %s", causes[0].Code)
+		t.Errorf("expected ErrFieldViolation, got %s", causes[0].Code.Value)
 	}
-	if causes[0].Description != "" {
-		t.Errorf("expected empty description, got %q", causes[0].Description)
+	if causes[0].Field != "" {
+		t.Errorf("expected empty field, got %q", causes[0].Field)
 	}
 }
 
@@ -59,8 +59,8 @@ func TestParseBindingErrors_RequiredTag(t *testing.T) {
 	for _, c := range causes {
 		if c.Code == service.ErrRequired {
 			found = true
-			if c.Description != "title" {
-				t.Errorf("expected description 'title', got %q", c.Description)
+			if c.Field != "title" {
+				t.Errorf("expected field 'title', got %q", c.Field)
 			}
 		}
 	}
@@ -78,8 +78,8 @@ func TestParseBindingErrors_MinTag(t *testing.T) {
 	for _, c := range causes {
 		if c.Code == service.ErrMinLength {
 			found = true
-			if c.Description != "count" {
-				t.Errorf("expected description 'count', got %q", c.Description)
+			if c.Field != "count" {
+				t.Errorf("expected field 'count', got %q", c.Field)
 			}
 		}
 	}
@@ -89,19 +89,21 @@ func TestParseBindingErrors_MinTag(t *testing.T) {
 }
 
 func TestParseBindingErrors_UnknownTag(t *testing.T) {
+	// "excludesall" is not in tagRegistry, so it falls through to
+	// ErrFieldViolation (the tagRegistry fallback).
 	type unknownTagReq struct {
-		Email string `json:"email" validate:"email"`
+		Value string `json:"value" validate:"excludesall=abc"`
 	}
 	v := validator.New()
-	ve := validateStruct(t, v, unknownTagReq{Email: "not-an-email"})
+	ve := validateStruct(t, v, unknownTagReq{Value: "abc"})
 
-	causes := ParseBindingErrors(ve, unknownTagReq{Email: "not-an-email"})
+	causes := ParseBindingErrors(ve, unknownTagReq{Value: "abc"})
 	if len(causes) == 0 {
 		t.Fatal("expected at least one cause")
 	}
 	for _, c := range causes {
 		if c.Code != service.ErrFieldViolation {
-			t.Errorf("expected ErrFieldViolation for unknown tag, got %s", c.Code)
+			t.Errorf("expected ErrFieldViolation for unknown tag, got %s", c.Code.Value)
 		}
 	}
 }
@@ -113,7 +115,7 @@ func TestParseBindingErrors_PointerToStruct(t *testing.T) {
 	causes := ParseBindingErrors(ve, &testReq{})
 	found := false
 	for _, c := range causes {
-		if c.Code == service.ErrRequired && c.Description == "title" {
+		if c.Code == service.ErrRequired && c.Field == "title" {
 			found = true
 		}
 	}
@@ -130,8 +132,8 @@ func TestParseBindingErrors_FormTagFallback(t *testing.T) {
 	if len(causes) == 0 {
 		t.Fatal("expected at least one cause")
 	}
-	if causes[0].Description != "q" {
-		t.Errorf("expected description 'q' from form tag, got %q", causes[0].Description)
+	if causes[0].Field != "q" {
+		t.Errorf("expected description 'q' from form tag, got %q", causes[0].Field)
 	}
 }
 
@@ -143,8 +145,8 @@ func TestParseBindingErrors_NoJsonOrFormTag(t *testing.T) {
 	if len(causes) == 0 {
 		t.Fatal("expected at least one cause")
 	}
-	if causes[0].Description != "Name" {
-		t.Errorf("expected description 'Name' (field name fallback), got %q", causes[0].Description)
+	if causes[0].Field != "Name" {
+		t.Errorf("expected description 'Name' (field name fallback), got %q", causes[0].Field)
 	}
 }
 

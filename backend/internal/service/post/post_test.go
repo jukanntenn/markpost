@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"markpost/internal/domain/post"
 	"markpost/internal/infra"
 	"markpost/internal/service"
 )
@@ -55,10 +56,10 @@ func TestService_CreatePost(t *testing.T) {
 }
 
 type mockEnqueuer struct {
-	jobs []DeliveryJob
+	jobs []post.DeliveryJob
 }
 
-func (m *mockEnqueuer) Enqueue(job DeliveryJob) {
+func (m *mockEnqueuer) Enqueue(job post.DeliveryJob) {
 	m.jobs = append(m.jobs, job)
 }
 
@@ -321,12 +322,12 @@ func TestService_PruneExpired(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for zero retention days")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != service.ErrValidation {
-			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrValidation.Value, se.Code.Value)
 		}
 	})
 

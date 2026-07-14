@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"markpost/internal/domain/user"
-	"markpost/pkg/apierr"
+	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )

@@ -245,6 +245,11 @@ func serve(configPath string) {
 		jwtSvc,
 		"markpost",
 	)
+	if stateStore, err := auth.NewRistrettoOAuthStateStore(); err == nil {
+		authSvc = authSvc.WithOAuthStateStore(stateStore)
+	} else {
+		log.Printf("OAuth state store disabled (ristretto init failed: %v)", err)
+	}
 
 	log.Printf("Initializing first admin user: %s", cfg.Admin.InitialUsername)
 	if err := authSvc.InitializeFirstAdmin(context.Background(), cfg.Admin.InitialUsername); err != nil {
@@ -276,8 +281,13 @@ func serve(configPath string) {
 	}
 
 	r.Use(ginI18n.Localize(ginI18n.WithBundle(&ginI18n.BundleCfg{
-		RootPath:         "./locales",
-		AcceptLanguage:   []language.Tag{language.English, language.Chinese},
+		RootPath: "./locales",
+		AcceptLanguage: []language.Tag{
+			language.English,
+			language.SimplifiedChinese,
+			language.TraditionalChinese,
+			language.Japanese,
+		},
 		DefaultLanguage:  language.English,
 		UnmarshalFunc:    toml.Unmarshal,
 		FormatBundleFile: "toml",

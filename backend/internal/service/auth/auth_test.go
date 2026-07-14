@@ -54,12 +54,12 @@ func TestService_LoginWithEmail(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for invalid username")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
-		if se.Code != service.ErrInvalidCredentials {
-			t.Errorf("expected code %q, got %q", service.ErrInvalidCredentials, se.Code)
+		if se.Code != ErrInvalidCredentials {
+			t.Errorf("expected code %q, got %q", ErrInvalidCredentials.Value, se.Code.Value)
 		}
 	})
 
@@ -90,12 +90,12 @@ func TestService_LoginWithEmail(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for disabled user")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
-		if se.Code != service.ErrUserDisabled {
-			t.Errorf("expected code %q, got %q", service.ErrUserDisabled, se.Code)
+		if se.Code != ErrUserDisabled {
+			t.Errorf("expected code %q, got %q", ErrUserDisabled.Value, se.Code.Value)
 		}
 	})
 }
@@ -159,12 +159,12 @@ func TestService_RefreshToken(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for invalid refresh token")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
-		if se.Code != service.ErrInvalidToken {
-			t.Errorf("expected code %q, got %q", service.ErrInvalidToken, se.Code)
+		if se.Code != ErrInvalidToken {
+			t.Errorf("expected code %q, got %q", ErrInvalidToken.Value, se.Code.Value)
 		}
 	})
 
@@ -244,12 +244,12 @@ func TestService_ChangePassword(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for wrong current password")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
-		if se.Code != service.ErrInvalidPassword {
-			t.Errorf("expected code %q, got %q", service.ErrInvalidPassword, se.Code)
+		if se.Code != ErrInvalidPassword {
+			t.Errorf("expected code %q, got %q", ErrInvalidPassword.Value, se.Code.Value)
 		}
 	})
 
@@ -290,12 +290,12 @@ func TestService_InitializeFirstAdmin(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for non-existent user")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != service.ErrNotFound {
-			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrNotFound.Value, se.Code.Value)
 		}
 	})
 

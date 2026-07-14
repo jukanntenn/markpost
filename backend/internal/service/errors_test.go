@@ -7,12 +7,10 @@ import (
 	"markpost/internal/domain"
 )
 
-func TestErrCode_String(t *testing.T) {
-	t.Run("returns underlying string", func(t *testing.T) {
-		if got := ErrValidation.String(); got != "validation" {
-			t.Errorf("ErrValidation.String() = %q, want %q", got, "validation")
-		}
-	})
+func TestErrCode_Value(t *testing.T) {
+	if got := ErrValidation.Value; got != "validation" {
+		t.Errorf("ErrValidation.Value = %q, want %q", got, "validation")
+	}
 }
 
 func TestError_Error(t *testing.T) {
@@ -37,7 +35,7 @@ func TestError_Error(t *testing.T) {
 			expected: "desc",
 		},
 		{
-			name:     "returns code string when both empty",
+			name:     "returns code value when both empty",
 			err:      Error{Code: ErrValidation},
 			expected: "validation",
 		},
@@ -72,12 +70,12 @@ func TestError_Unwrap(t *testing.T) {
 	})
 }
 
-func TestAsServiceError(t *testing.T) {
+func TestAsError(t *testing.T) {
 	t.Run("returns true for service error pointer", func(t *testing.T) {
 		original := &Error{Code: ErrInternal}
-		se, ok := AsServiceError(original)
+		se, ok := AsError(original)
 		if !ok {
-			t.Fatal("AsServiceError() returned false, want true")
+			t.Fatal("AsError() returned false, want true")
 		}
 		if se != original {
 			t.Error("returned pointer does not point to the same Error value")
@@ -85,20 +83,20 @@ func TestAsServiceError(t *testing.T) {
 	})
 
 	t.Run("returns false for non-service error", func(t *testing.T) {
-		se, ok := AsServiceError(errors.New("plain"))
+		se, ok := AsError(errors.New("plain"))
 		if ok {
-			t.Fatal("AsServiceError() returned true for plain error, want false")
+			t.Fatal("AsError() returned true for plain error, want false")
 		}
 		if se != nil {
-			t.Errorf("AsServiceError() = %v, want nil", se)
+			t.Errorf("AsError() = %v, want nil", se)
 		}
 	})
 }
 
-func TestNewServiceError(t *testing.T) {
-	e := NewServiceError(ErrValidation, "bad")
+func TestNew(t *testing.T) {
+	e := New(ErrValidation, "bad")
 	if e.Code != ErrValidation {
-		t.Errorf("Code = %q, want %q", e.Code, ErrValidation)
+		t.Errorf("Code = %p, want %p", e.Code, ErrValidation)
 	}
 	if e.Description != "bad" {
 		t.Errorf("Description = %q, want %q", e.Description, "bad")
@@ -111,11 +109,11 @@ func TestNewServiceError(t *testing.T) {
 	}
 }
 
-func TestNewServiceErrorWrap(t *testing.T) {
+func TestWrap(t *testing.T) {
 	cause := errors.New("cause")
-	e := NewServiceErrorWrap(ErrInternal, "msg", cause)
+	e := Wrap(ErrInternal, "msg", cause)
 	if e.Code != ErrInternal {
-		t.Errorf("Code = %q, want %q", e.Code, ErrInternal)
+		t.Errorf("Code mismatch")
 	}
 	if e.Description != "msg" {
 		t.Errorf("Description = %q, want %q", e.Description, "msg")
@@ -128,73 +126,40 @@ func TestNewServiceErrorWrap(t *testing.T) {
 	}
 }
 
-func TestError_HTTPStatus(t *testing.T) {
+func TestErrCode_HTTP(t *testing.T) {
 	tests := []struct {
 		name     string
-		code     ErrCode
+		code     *ErrCode
 		expected int
 	}{
-		{"invalid_credentials returns 401", ErrInvalidCredentials, 401},
-		{"invalid_password returns 400", ErrInvalidPassword, 400},
 		{"not_found returns 404", ErrNotFound, 404},
 		{"unauthorized returns 401", ErrUnauthorized, 401},
 		{"internal returns 500", ErrInternal, 500},
-		{"validation returns 400", ErrValidation, 400},
+		{"validation returns 422", ErrValidation, 422},
 		{"forbidden returns 403", ErrForbidden, 403},
 		{"rate_limited returns 429", ErrRateLimited, 429},
-		{"required returns 400", ErrRequired, 400},
-		{"min_length returns 400", ErrMinLength, 400},
-		{"field_violation returns 400", ErrFieldViolation, 400},
-		{"unknown code defaults to 500", ErrCode("nonexistent"), 500},
+		{"invalid_request returns 400", ErrInvalidRequest, 400},
+		{"conflict returns 409", ErrConflict, 409},
+		{"required returns 422", ErrRequired, 422},
+		{"min_length returns 422", ErrMinLength, 422},
+		{"max_length returns 422", ErrMaxLength, 422},
+		{"field_violation returns 422", ErrFieldViolation, 422},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Error{Code: tt.code}
-			if got := e.HTTPStatus(); got != tt.expected {
-				t.Errorf("HTTPStatus() = %d, want %d", got, tt.expected)
+			if got := tt.code.HTTP; got != tt.expected {
+				t.Errorf("HTTP = %d, want %d", got, tt.expected)
 			}
 		})
 	}
 }
 
-var allErrCodes = []ErrCode{
-	ErrInvalidCredentials,
-	ErrInvalidPassword,
-	ErrUnauthorized,
-	ErrInternal,
-	ErrValidation,
-	ErrNotFound,
-	ErrFailedGetUser,
-	ErrMissingAuthorizationHeader,
-	ErrInvalidToken,
-	ErrInvalidPostKey,
-	ErrUserDisabled,
-	ErrForbidden,
-	ErrRateLimited,
-	ErrInvalidRequest,
-	ErrRequired,
-	ErrMinLength,
-	ErrFieldViolation,
-}
-
-func TestHTTPStatusesCompleteness(t *testing.T) {
-	for _, code := range allErrCodes {
-		_, ok := httpStatuses[code]
-		if !ok {
-			t.Errorf("ErrCode %q missing from httpStatuses", code)
-		}
-	}
-	if len(allErrCodes) != len(httpStatuses) {
-		t.Errorf("httpStatuses has %d entries, expected %d (allErrCodes)", len(httpStatuses), len(allErrCodes))
-	}
-}
-
-func TestNewServiceErrorDetails(t *testing.T) {
+func TestWithDetails(t *testing.T) {
 	details := []FieldDetail{{Code: ErrRequired}}
-	e := NewServiceErrorDetails(ErrValidation, "bad", details)
+	e := WithDetails(ErrValidation, "bad", details)
 	if e.Code != ErrValidation {
-		t.Errorf("Code = %q, want %q", e.Code, ErrValidation)
+		t.Errorf("Code mismatch")
 	}
 	if e.Description != "bad" {
 		t.Errorf("Description = %q, want %q", e.Description, "bad")
@@ -217,12 +182,12 @@ func TestWrapNotFoundOrInternal(t *testing.T) {
 
 	t.Run("wraps ErrNotFound", func(t *testing.T) {
 		err := WrapNotFoundOrInternal(domain.ErrNotFound, "not found msg", "internal msg")
-		se, ok := AsServiceError(err)
+		se, ok := AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != ErrNotFound {
-			t.Errorf("code = %q, want %q", se.Code, ErrNotFound)
+			t.Errorf("code mismatch")
 		}
 		if se.Description != "not found msg" {
 			t.Errorf("description = %q, want %q", se.Description, "not found msg")
@@ -231,12 +196,12 @@ func TestWrapNotFoundOrInternal(t *testing.T) {
 
 	t.Run("wraps other errors as internal", func(t *testing.T) {
 		err := WrapNotFoundOrInternal(errors.New("db error"), "not found msg", "internal msg")
-		se, ok := AsServiceError(err)
+		se, ok := AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != ErrInternal {
-			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+			t.Errorf("code mismatch")
 		}
 		if se.Description != "internal msg" {
 			t.Errorf("description = %q, want %q", se.Description, "internal msg")
@@ -244,11 +209,11 @@ func TestWrapNotFoundOrInternal(t *testing.T) {
 	})
 }
 
-func TestNewBindingError(t *testing.T) {
-	details := []FieldDetail{{Code: ErrRequired, Description: "title"}}
-	e := NewBindingError(details)
+func TestNewValidation(t *testing.T) {
+	details := []FieldDetail{{Field: "title", Code: ErrRequired}}
+	e := NewValidation(details)
 	if e.Code != ErrValidation {
-		t.Errorf("Code = %q, want %q", e.Code, ErrValidation)
+		t.Errorf("Code mismatch")
 	}
 	if e.Description != "request validation failed" {
 		t.Errorf("Description = %q, want %q", e.Description, "request validation failed")
@@ -256,4 +221,26 @@ func TestNewBindingError(t *testing.T) {
 	if len(e.Details) != 1 {
 		t.Errorf("expected 1 detail, got %d", len(e.Details))
 	}
+}
+
+func TestErrCode_MarshalJSON(t *testing.T) {
+	t.Run("renders value as JSON string", func(t *testing.T) {
+		b, err := ErrValidation.MarshalJSON()
+		if err != nil {
+			t.Fatalf("MarshalJSON error: %v", err)
+		}
+		if got := string(b); got != `"validation"` {
+			t.Errorf("MarshalJSON = %s, want %q", got, `"validation"`)
+		}
+	})
+	t.Run("nil renders empty string", func(t *testing.T) {
+		var c *ErrCode
+		b, err := c.MarshalJSON()
+		if err != nil {
+			t.Fatalf("MarshalJSON error: %v", err)
+		}
+		if got := string(b); got != `""` {
+			t.Errorf("MarshalJSON = %s, want %q", got, `""`)
+		}
+	})
 }

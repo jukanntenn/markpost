@@ -34,25 +34,74 @@ func (r *TokenRepository) StoreRefreshToken(ctx context.Context, userID int, tok
 	return nil
 }
 
-// GetRefreshToken retrieves a refresh token by its hash.
+// GetRefreshToken retrieves the active (non-revoked) refresh token by its
+// hash, or domain.ErrNotFound when absent or already revoked. Filtering on
+// revoked=false is what lets the reuse-detection path distinguish "never
+// existed" (ErrNotFound here) from "revoked then resubmitted" (IsRefreshTokenRevoked).
 func (r *TokenRepository) GetRefreshToken(ctx context.Context, tokenHash string) (*user.RefreshToken, error) {
-	t, err := findFirst[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash), domain.ErrNotFound)
+	t, err := findFirst[user.RefreshToken](
+		ctx,
+		r.db.Where("token_hash = ? AND revoked = ?", tokenHash, false),
+		domain.ErrNotFound,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("GetRefreshToken: %w", err)
 	}
 	return t, nil
 }
 
-// DeleteRefreshToken deletes a refresh token by its hash.
-func (r *TokenRepository) DeleteRefreshToken(ctx context.Context, tokenHash string) error {
-	_, err := deleteWhere[user.RefreshToken](ctx, r.db.Where("token_hash = ?", tokenHash))
-	return err
+// IsRefreshTokenRevoked reports whether the hash matches a revoked refresh
+// token — the token-theft signal when a refresh request resubmits a revoked
+// token.
+func (r *TokenRepository) IsRefreshTokenRevoked(ctx context.Context, tokenHash string) (bool, error) {
+	count, err := countQuery(ctx,
+		r.db.Model(&user.RefreshToken{}).Where("token_hash = ? AND revoked = ?", tokenHash, true),
+		"IsRefreshTokenRevoked",
+	)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
-// DeleteRefreshTokensByUserID deletes all refresh tokens for a user.
-func (r *TokenRepository) DeleteRefreshTokensByUserID(ctx context.Context, userID int) error {
-	_, err := deleteWhere[user.RefreshToken](ctx, r.db.Where("user_id = ?", userID))
-	return err
+// GetRevokedRefreshToken returns the revoked refresh token row for the hash
+// (for the reuse-detection path to read its UserID), or domain.ErrNotFound.
+func (r *TokenRepository) GetRevokedRefreshToken(ctx context.Context, tokenHash string) (*user.RefreshToken, error) {
+	t, err := findFirst[user.RefreshToken](
+		ctx,
+		r.db.Where("token_hash = ? AND revoked = ?", tokenHash, true),
+		domain.ErrNotFound,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("GetRevokedRefreshToken: %w", err)
+	}
+	return t, nil
+}
+
+// RevokeRefreshToken soft-revokes a single refresh token (sets revoked=true),
+// preserving the row for reuse detection instead of deleting it.
+func (r *TokenRepository) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
+	result := r.db.WithContext(ctx).
+		Model(&user.RefreshToken{}).
+		Where("token_hash = ? AND revoked = ?", tokenHash, false).
+		Update("revoked", true)
+	if result.Error != nil {
+		return fmt.Errorf("RevokeRefreshToken: %w", result.Error)
+	}
+	return nil
+}
+
+// RevokeAllByUserID soft-revokes every active refresh token for a user — used
+// on logout and on detected token theft (auth.md §2.3, §5).
+func (r *TokenRepository) RevokeAllByUserID(ctx context.Context, userID int) error {
+	result := r.db.WithContext(ctx).
+		Model(&user.RefreshToken{}).
+		Where("user_id = ? AND revoked = ?", userID, false).
+		Update("revoked", true)
+	if result.Error != nil {
+		return fmt.Errorf("RevokeAllByUserID: %w", result.Error)
+	}
+	return nil
 }
 
 // StoreBlacklistedToken adds a token to the blacklist.

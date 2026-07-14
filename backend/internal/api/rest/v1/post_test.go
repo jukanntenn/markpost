@@ -52,14 +52,14 @@ func (m *mockPostService) RenderPostHTML(_ context.Context, qid string) (string,
 		etag := fmtEtag(html)
 		return p.Title, html, etag, p.CreatedAt, nil
 	}
-	return "", "", "", time.Time{}, service.NewServiceError(service.ErrNotFound, "post not found")
+	return "", "", "", time.Time{}, service.New(service.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetPostMarkdown(_ context.Context, qid string) (string, string, string, time.Time, error) {
 	if p, ok := m.posts[qid]; ok {
 		return p.Title, p.Body, fmtEtag("# " + p.Title + "\n\n" + p.Body), p.CreatedAt, nil
 	}
-	return "", "", "", time.Time{}, service.NewServiceError(service.ErrNotFound, "post not found")
+	return "", "", "", time.Time{}, service.New(service.ErrNotFound, "post not found")
 }
 
 func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) ([]post.Post, int64, error) {
@@ -75,10 +75,10 @@ func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) 
 func (m *mockPostService) DeletePostByQID(_ context.Context, qid string, ownerID int) error {
 	p, ok := m.posts[qid]
 	if !ok {
-		return service.NewServiceError(service.ErrNotFound, "post not found")
+		return service.New(service.ErrNotFound, "post not found")
 	}
 	if ownerID > 0 && p.UserID != ownerID {
-		return service.NewServiceError(service.ErrNotFound, "post not found")
+		return service.New(service.ErrNotFound, "post not found")
 	}
 	delete(m.posts, qid)
 	return nil
@@ -368,7 +368,7 @@ func TestDeleteAnyPost_AdminDeletesAnyOwner(t *testing.T) {
 }
 
 func TestCreatePost_ServiceError(t *testing.T) {
-	errMock := &errorPostService{err: service.NewServiceError(service.ErrValidation, "title too long")}
+	errMock := &errorPostService{err: service.New(service.ErrValidation, "title too long")}
 	router := newTestEngine(withValidators(postValidators...))
 
 	router.POST("/posts", withTestUser(1), CreatePost(errMock))
@@ -380,8 +380,8 @@ func TestCreatePost_ServiceError(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
 	}
 }
 

@@ -83,7 +83,44 @@ func setupGitHubAuthService(t *testing.T, mux *http.ServeMux) *Service {
 		Scopes:      []string{"user:email"},
 	}
 
-	return NewService(userRepo, tokenRepo, oauthCfg, jwtSvc, "markpost")
+	return NewService(userRepo, tokenRepo, oauthCfg, jwtSvc, "markpost").
+		WithOAuthStateStore(newInMemoryOAuthStateStore())
+}
+
+// inMemoryOAuthStateStore is a test OAuthStateStore backed by a map. It mirrors
+// the ristretto store's Save/Consume semantics (one-time consume via Get+Del)
+// so the OAuth flow can be exercised end-to-end without a real cache.
+type inMemoryOAuthStateStore struct {
+	entries map[string]oauthStateEntry
+}
+
+func newInMemoryOAuthStateStore() *inMemoryOAuthStateStore {
+	return &inMemoryOAuthStateStore{entries: make(map[string]oauthStateEntry)}
+}
+
+func (s *inMemoryOAuthStateStore) Save(state string, entry oauthStateEntry, _ time.Duration) {
+	s.entries[state] = entry
+}
+
+func (s *inMemoryOAuthStateStore) Consume(state string) (oauthStateEntry, bool) {
+	e, ok := s.entries[state]
+	if ok {
+		delete(s.entries, state)
+	}
+	return e, ok
+}
+
+// oauthStateForTest generates an auth URL, captures its state, and returns the
+// state so the caller can pass it to LoginWithGitHub. The PKCE verifier stored
+// against the state is what makes the Exchange succeed against the mock token
+// endpoint.
+func oauthStateForTest(t *testing.T, svc *Service) string {
+	t.Helper()
+	_, state, err := svc.GenerateGitHubAuthURL(context.Background())
+	if err != nil {
+		t.Fatalf("GenerateGitHubAuthURL: %v", err)
+	}
+	return state
 }
 
 func ctxWithGitHubTransport(mux *http.ServeMux) context.Context {
@@ -99,7 +136,7 @@ func ctxWithGitHubTransport(mux *http.ServeMux) context.Context {
 func TestGenerateGitHubAuthURL(t *testing.T) {
 	svc := setupGitHubAuthService(t, newGitHubMockMux())
 
-	url, err := svc.GenerateGitHubAuthURL(context.Background())
+	url, _, err := svc.GenerateGitHubAuthURL(context.Background())
 	if err != nil {
 		t.Fatalf("GenerateGitHubAuthURL error: %v", err)
 	}
@@ -113,7 +150,7 @@ func TestLoginWithGitHub(t *testing.T) {
 		svc := setupGitHubAuthService(t, newGitHubMockMux())
 		ctx := ctxWithGitHubTransport(newGitHubMockMux())
 
-		u, tokens, err := svc.LoginWithGitHub(ctx, "test-code")
+		u, tokens, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 		if err != nil {
 			t.Fatalf("LoginWithGitHub error: %v", err)
 		}
@@ -136,12 +173,12 @@ func TestLoginWithGitHub(t *testing.T) {
 		svc := setupGitHubAuthService(t, mux)
 		ctx := ctxWithGitHubTransport(mux)
 
-		u1, _, _ := svc.LoginWithGitHub(ctx, "test-code")
+		u1, _, _ := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 
 		// Delete existing refresh tokens to avoid unique constraint on token hash
-		_ = svc.tokens.DeleteRefreshTokensByUserID(ctx, u1.ID)
+		_ = svc.tokens.RevokeAllByUserID(ctx, u1.ID)
 
-		u2, _, err := svc.LoginWithGitHub(ctx, "test-code")
+		u2, _, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 		if err != nil {
 			t.Fatalf("LoginWithGitHub error: %v", err)
 		}
@@ -161,16 +198,16 @@ func TestLoginWithGitHub_InvalidCode(t *testing.T) {
 	svc := setupGitHubAuthService(t, mux)
 	ctx := ctxWithGitHubTransport(mux)
 
-	_, _, err := svc.LoginWithGitHub(ctx, "invalid-code")
+	_, _, err := svc.LoginWithGitHub(ctx, "invalid-code", oauthStateForTest(t, svc))
 	if err == nil {
 		t.Fatal("expected error for invalid code")
 	}
-	se, ok := service.AsServiceError(err)
+	se, ok := service.AsError(err)
 	if !ok {
 		t.Fatalf("expected service error, got %T", err)
 	}
-	if se.Code != service.ErrUnauthorized {
-		t.Errorf("expected code %q, got %q", service.ErrUnauthorized, se.Code)
+	if se.Code != ErrOAuthExchangeFailed {
+		t.Errorf("expected code %q, got %q", ErrOAuthExchangeFailed.Value, se.Code.Value)
 	}
 }
 
@@ -194,7 +231,7 @@ func TestGetGitHubUser_InvalidData(t *testing.T) {
 	svc := setupGitHubAuthService(t, mux)
 	ctx := ctxWithGitHubTransport(mux)
 
-	_, _, err := svc.LoginWithGitHub(ctx, "test-code")
+	_, _, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 	if err == nil {
 		t.Fatal("expected error for invalid GitHub user data")
 	}
@@ -228,7 +265,7 @@ func TestGetGitHubUserEmails_NoPrimary(t *testing.T) {
 	svc := setupGitHubAuthService(t, mux)
 	ctx := ctxWithGitHubTransport(mux)
 
-	u, _, err := svc.LoginWithGitHub(ctx, "test-code")
+	u, _, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 	if err != nil {
 		t.Fatalf("LoginWithGitHub error: %v", err)
 	}
@@ -262,7 +299,7 @@ func TestGetGitHubUserEmails_FetchError(t *testing.T) {
 	svc := setupGitHubAuthService(t, mux)
 	ctx := ctxWithGitHubTransport(mux)
 
-	_, _, err := svc.LoginWithGitHub(ctx, "test-code")
+	_, _, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 	if err == nil {
 		t.Fatal("expected error when GitHub emails API fails")
 	}
@@ -285,7 +322,7 @@ func TestGetGitHubUser_FetchError(t *testing.T) {
 	svc := setupGitHubAuthService(t, mux)
 	ctx := ctxWithGitHubTransport(mux)
 
-	_, _, err := svc.LoginWithGitHub(ctx, "test-code")
+	_, _, err := svc.LoginWithGitHub(ctx, "test-code", oauthStateForTest(t, svc))
 	if err == nil {
 		t.Fatal("expected error when GitHub user API fails")
 	}

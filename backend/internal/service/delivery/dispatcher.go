@@ -11,7 +11,6 @@ import (
 	"markpost/internal/domain/delivery"
 	domainpost "markpost/internal/domain/post"
 	"markpost/internal/service/delivery/filter"
-	"markpost/internal/service/post"
 
 	"github.com/alitto/pond/v2"
 )
@@ -53,7 +52,7 @@ type Sender interface {
 	Send(ctx context.Context, p *domainpost.Post, channel *delivery.Channel) error
 }
 
-// Dispatcher implements post.DeliveryEnqueuer on top of the persistent
+// Dispatcher implements domainpost.DeliveryEnqueuer on top of the persistent
 // best-effort delivery queue: a Postgres/MySQL/SQLite-backed attempt table,
 // drained by a ScanInterval-tick scheduler that claims due rows and dispatches
 // them to a bounded pond v2 worker pool. Delivery is at-least-once and
@@ -75,7 +74,7 @@ type Dispatcher struct {
 
 // NewDispatcher constructs a dispatcher over the given repos and sender. The
 // worker pool size and queue depth come from [delivery] config. It implements
-// post.DeliveryEnqueuer: Enqueue is synchronous, best-effort, and never
+// domainpost.DeliveryEnqueuer: Enqueue is synchronous, best-effort, and never
 // returns an error. Start must be called to launch the scheduler.
 func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo PostRepo, sender Sender) *Dispatcher {
 	cfg := config.Get().Delivery
@@ -112,7 +111,7 @@ func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo Po
 // filter runs before persistence, so only channels that actually match produce
 // attempt rows. Enqueue is best-effort: any error is logged and swallowed so a
 // delivery failure can never fail post creation.
-func (d *Dispatcher) Enqueue(job post.DeliveryJob) {
+func (d *Dispatcher) Enqueue(job domainpost.DeliveryJob) {
 	ctx := context.Background()
 	channels, err := d.channelRepo.GetByUserID(ctx, job.UserID)
 	if err != nil {
@@ -300,4 +299,4 @@ func truncateError(s string) string {
 	return s[:max]
 }
 
-var _ post.DeliveryEnqueuer = (*Dispatcher)(nil)
+var _ domainpost.DeliveryEnqueuer = (*Dispatcher)(nil)

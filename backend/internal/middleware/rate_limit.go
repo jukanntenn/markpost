@@ -19,11 +19,11 @@ func RateLimitByIP(lmt *limiter.Limiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if ip == "" {
-			abortWithError(c, service.NewServiceError(service.ErrRateLimited, "rate limit exceeded"))
+			abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 			return
 		}
 		if httpErr := tollbooth.LimitByKeys(lmt, []string{ip}); httpErr != nil {
-			abortWithError(c, service.NewServiceError(service.ErrRateLimited, "rate limit exceeded"))
+			abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 			return
 		}
 		c.Next()
@@ -43,12 +43,12 @@ func RateLimitByUserID(limiters ...*limiter.Limiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, ok := userIDFromContext(c)
 		if !ok {
-			abortWithError(c, service.NewServiceError(service.ErrRateLimited, "rate limit exceeded"))
+			abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 			return
 		}
 		for _, lmt := range limiters {
 			if httpErr := tollbooth.LimitByKeys(lmt, []string{userID}); httpErr != nil {
-				abortWithError(c, service.NewServiceError(service.ErrRateLimited, "rate limit exceeded"))
+				abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 				return
 			}
 		}

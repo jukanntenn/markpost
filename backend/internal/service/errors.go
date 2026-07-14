@@ -1,97 +1,73 @@
-// Package service provides service-level error types and interfaces.
+// Package service provides service-level error types and the shared error-code
+// definitions consumed across the application. Per-domain error codes live in
+// their own files (auth/errors.go, post/errors.go, ...); see error-handling.md.
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"strconv"
 
 	"markpost/internal/domain"
+
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 )
 
-// ErrCode represents a service-level error code.
-type ErrCode string
-
-// Predefined error codes used throughout the service layer.
-const (
-	ErrInvalidCredentials ErrCode = "invalid_credentials"
-	ErrInvalidPassword    ErrCode = "invalid_password"
-	ErrUnauthorized       ErrCode = "unauthorized"
-	ErrInternal           ErrCode = "internal"
-	ErrValidation         ErrCode = "validation"
-	ErrNotFound           ErrCode = "not_found"
-
-	ErrFailedGetUser ErrCode = "failed_get_user"
-
-	ErrMissingAuthorizationHeader ErrCode = "missing_authorization_header"
-	ErrInvalidToken               ErrCode = "invalid_token"
-	ErrInvalidPostKey             ErrCode = "invalid_post_key"
-	ErrUserDisabled               ErrCode = "user_disabled"
-
-	ErrForbidden ErrCode = "forbidden"
-
-	ErrRateLimited    ErrCode = "rate_limited"
-	ErrInvalidRequest ErrCode = "invalid_request"
-
-	ErrRequired       ErrCode = "required"
-	ErrMinLength      ErrCode = "min_length"
-	ErrFieldViolation ErrCode = "field_violation"
-)
-
-var httpStatuses = map[ErrCode]int{
-	ErrInvalidCredentials:         401,
-	ErrInvalidPassword:            400,
-	ErrNotFound:                   404,
-	ErrUnauthorized:               401,
-	ErrFailedGetUser:              500,
-	ErrInternal:                   500,
-	ErrValidation:                 400,
-	ErrInvalidRequest:             400,
-	ErrMissingAuthorizationHeader: 401,
-	ErrInvalidToken:               401,
-	ErrInvalidPostKey:             403,
-	ErrForbidden:                  403,
-	ErrRateLimited:                429,
-	ErrUserDisabled:               403,
-	ErrRequired:                   400,
-	ErrMinLength:                  400,
-	ErrFieldViolation:             400,
+// ErrCode is a self-carrying error-code singleton: it bundles the
+// machine-readable value, the HTTP status, the i18n message template (English
+// fallback), and optional validator placeholder/param-provider. Instances are
+// package-level vars passed by pointer; callers compare by .Value / .HTTP and
+// never copy them.
+type ErrCode struct {
+	Value         string
+	HTTP          int
+	Message       *i18n.Message
+	Placeholder   string
+	ParamProvider func() string
 }
 
-// String returns the string representation of the error code.
-func (c ErrCode) String() string { return string(c) }
-
-// HTTPStatus returns the HTTP status code associated with this error.
-func (e *Error) HTTPStatus() int {
-	if status, ok := httpStatuses[e.Code]; ok {
-		return status
+// MarshalJSON renders an ErrCode as its string value, so ErrorResponse.Code is
+// the machine-readable code regardless of how the ErrCode is embedded.
+func (c *ErrCode) MarshalJSON() ([]byte, error) {
+	if c == nil {
+		return []byte(`""`), nil
 	}
-	return 500
+	return jsonQuote(c.Value), nil
 }
 
-// FieldDetail describes a single field-level validation error.
+// FieldDetail describes a single field-level validation error. Field is the
+// JSON/form field name; Code is the field error code (required/min/...); Param
+// is the rule parameter (e.g. the min length) used by i18n template rendering.
 type FieldDetail struct {
-	Code        ErrCode
-	Description string
+	Field string
+	Code  *ErrCode
+	Param string
 }
 
-// Error represents a service-level error with an error code and optional details.
+// Error represents a service-level error. Code points at the authoritative
+// ErrCode singleton (carrying HTTP/i18n mapping); Description is developer
+// context (never sent to clients); Err is the wrapped underlying error; Details
+// holds field-level validation errors for form binding.
 type Error struct {
-	Code        ErrCode
+	Code        *ErrCode
 	Description string
 	Err         error
 	Details     []FieldDetail
 }
 
-// Error returns the error message, falling back to the wrapped error or error code.
+// Error returns the error message, preferring the description, then the wrapped
+// error, then the code value.
 func (e *Error) Error() string {
 	if e.Description != "" {
 		return e.Description
 	}
-
 	if e.Err != nil {
 		return e.Err.Error()
 	}
-
-	return e.Code.String()
+	if e.Code != nil {
+		return e.Code.Value
+	}
+	return ""
 }
 
 // Unwrap returns the underlying wrapped error.
@@ -99,8 +75,8 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// AsServiceError attempts to cast an error to an Error.
-func AsServiceError(err error) (*Error, bool) {
+// AsError attempts to cast an error to *Error.
+func AsError(err error) (*Error, bool) {
 	var se *Error
 	if errors.As(err, &se) {
 		return se, true
@@ -108,48 +84,134 @@ func AsServiceError(err error) (*Error, bool) {
 	return nil, false
 }
 
-// NewServiceError creates a new Error with the given code and description.
-func NewServiceError(code ErrCode, description string) *Error {
-	return &Error{
-		Code:        code,
-		Description: description,
-	}
+// New constructs an Error from a code and a developer description.
+func New(code *ErrCode, description string) *Error {
+	return &Error{Code: code, Description: description}
 }
 
-// NewServiceErrorWrap creates a new Error that wraps an existing error.
-func NewServiceErrorWrap(code ErrCode, description string, err error) *Error {
-	return &Error{
-		Code:        code,
-		Description: description,
-		Err:         err,
-	}
+// Wrap constructs an Error that carries an underlying error.
+func Wrap(code *ErrCode, description string, err error) *Error {
+	return &Error{Code: code, Description: description, Err: err}
 }
 
-// WrapNotFoundOrInternal wraps an error as either a not-found or internal service error.
+// WithDetails constructs an Error carrying field-level validation details.
+func WithDetails(code *ErrCode, description string, details []FieldDetail) *Error {
+	return &Error{Code: code, Description: description, Details: details}
+}
+
+// NewValidation is the convenience constructor for binding/validation errors:
+// Code is ErrValidation and the details carry per-field causes.
+func NewValidation(details []FieldDetail) *Error {
+	return &Error{Code: ErrValidation, Description: "request validation failed", Details: details}
+}
+
+// WrapNotFoundOrInternal classifies an error as not-found (when it wraps
+// domain.ErrNotFound) or internal otherwise.
 func WrapNotFoundOrInternal(err error, notFoundMsg, internalMsg string) error {
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, domain.ErrNotFound) {
-		return NewServiceErrorWrap(ErrNotFound, notFoundMsg, err)
+		return Wrap(ErrNotFound, notFoundMsg, err)
 	}
-	return NewServiceErrorWrap(ErrInternal, internalMsg, err)
+	return Wrap(ErrInternal, internalMsg, err)
 }
 
-// NewBindingError creates a validation ServiceError with the given field details.
-func NewBindingError(details []FieldDetail) *Error {
-	return &Error{
-		Code:        ErrValidation,
-		Description: "request validation failed",
-		Details:     details,
+// Shared error codes — common across all domains. Field-validation codes
+// (ErrRequired, ErrMinLength, ...) return HTTP 422 per api-design.md §3.1
+// (field validation failures are semantically "Unprocessable Entity").
+var (
+	ErrInternal = &ErrCode{
+		Value:   "internal",
+		HTTP:    500,
+		Message: &i18n.Message{ID: "error.internal", Other: "Internal server error"},
 	}
-}
+	ErrValidation = &ErrCode{
+		Value:   "validation",
+		HTTP:    422,
+		Message: &i18n.Message{ID: "error.validation_failed", Other: "Request validation failed"},
+	}
+	ErrInvalidRequest = &ErrCode{
+		Value:   "invalid_request",
+		HTTP:    400,
+		Message: &i18n.Message{ID: "error.invalid_request", Other: "Invalid request format"},
+	}
+	ErrNotFound = &ErrCode{
+		Value:   "not_found",
+		HTTP:    404,
+		Message: &i18n.Message{ID: "error.not_found", Other: "Not Found"},
+	}
+	ErrUnauthorized = &ErrCode{
+		Value:   "unauthorized",
+		HTTP:    401,
+		Message: &i18n.Message{ID: "error.unauthorized", Other: "Unauthorized"},
+	}
+	ErrForbidden = &ErrCode{
+		Value:   "forbidden",
+		HTTP:    403,
+		Message: &i18n.Message{ID: "error.forbidden", Other: "Forbidden"},
+	}
+	ErrConflict = &ErrCode{
+		Value:   "conflict",
+		HTTP:    409,
+		Message: &i18n.Message{ID: "error.conflict", Other: "Resource conflict"},
+	}
+	ErrRateLimited = &ErrCode{
+		Value:   "rate_limited",
+		HTTP:    429,
+		Message: &i18n.Message{ID: "error.rate_limited", Other: "Too many requests"},
+	}
 
-// NewServiceErrorDetails creates a new Error with the given code, description, and field details.
-func NewServiceErrorDetails(code ErrCode, description string, details []FieldDetail) *Error {
-	return &Error{
-		Code:        code,
-		Description: description,
-		Details:     details,
+	// Field-validation codes (all 422). Placeholder names the i18n template
+	// field carrying the rule parameter (e.g. {{.Min}}); ParamProvider is used
+	// by custom validators whose fe.Param() is empty.
+	ErrRequired = &ErrCode{
+		Value:   "required",
+		HTTP:    422,
+		Message: &i18n.Message{ID: "error.validation_required", Other: "{{.Field}} is required"},
 	}
+	ErrMinLength = &ErrCode{
+		Value:       "min_length",
+		HTTP:        422,
+		Message:     &i18n.Message{ID: "error.validation_min_length", Other: "{{.Field}} must be at least {{.Min}} characters"},
+		Placeholder: "Min",
+	}
+	ErrMaxLength = &ErrCode{
+		Value:       "max_length",
+		HTTP:        422,
+		Message:     &i18n.Message{ID: "error.validation_max_length", Other: "{{.Field}} must be at most {{.Max}} characters"},
+		Placeholder: "Max",
+	}
+	ErrLength = &ErrCode{
+		Value:       "length",
+		HTTP:        422,
+		Message:     &i18n.Message{ID: "error.validation_length", Other: "{{.Field}} must be {{.Len}} characters long"},
+		Placeholder: "Len",
+	}
+	ErrEmail = &ErrCode{
+		Value:   "invalid_email",
+		HTTP:    422,
+		Message: &i18n.Message{ID: "error.validation_email", Other: "{{.Field}} must be a valid email address"},
+	}
+	ErrOneOf = &ErrCode{
+		Value:       "not_one_of",
+		HTTP:        422,
+		Message:     &i18n.Message{ID: "error.validation_oneof", Other: "{{.Field}} must be one of: {{.OneOf}}"},
+		Placeholder: "OneOf",
+	}
+	ErrFieldViolation = &ErrCode{
+		Value:       "field_violation",
+		HTTP:        422,
+		Message:     &i18n.Message{ID: "error.validation_field_violation", Other: "{{.Field}} is invalid"},
+		Placeholder: "Param",
+	}
+)
+
+// jsonQuote returns the JSON string encoding of s, used by ErrCode.MarshalJSON.
+func jsonQuote(s string) []byte {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return []byte(strconv.Quote(s))
+	}
+	return b
 }

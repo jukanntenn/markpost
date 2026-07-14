@@ -26,11 +26,29 @@ type Repository interface {
 }
 
 // TokenRepository defines the interface for token data access.
+//
+// Refresh tokens are soft-revoked (Revoked=true) rather than physically deleted
+// so a reused token (revoked but resubmitted) can be detected as a theft
+// signal. GetRefreshToken returns only non-revoked tokens; IsRefreshTokenRevoked
+// checks the revoked set for reuse detection. See auth.md §2.2-2.4.
 type TokenRepository interface {
 	StoreRefreshToken(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error
+	// GetRefreshToken returns the active (non-revoked) refresh token for the
+	// hash, or domain.ErrNotFound when absent or already revoked.
 	GetRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)
-	DeleteRefreshToken(ctx context.Context, tokenHash string) error
-	DeleteRefreshTokensByUserID(ctx context.Context, userID int) error
+	// IsRefreshTokenRevoked reports whether a refresh token with the hash has
+	// been revoked (Revoked=true). Used by the reuse-detection path: a revoked
+	// token resubmitted means theft.
+	IsRefreshTokenRevoked(ctx context.Context, tokenHash string) (bool, error)
+	// GetRevokedRefreshToken returns the revoked refresh token row for the hash
+	// (for the reuse-detection path to read its UserID before revoking all of
+	// the user's tokens), or domain.ErrNotFound when absent.
+	GetRevokedRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)
+	// RevokeRefreshToken soft-revokes a single refresh token (sets Revoked=true).
+	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	// RevokeAllByUserID soft-revokes every active refresh token for the user.
+	// Called on logout and on detected token theft.
+	RevokeAllByUserID(ctx context.Context, userID int) error
 
 	StoreBlacklistedToken(ctx context.Context, tokenHash string, expiresAt time.Time) error
 	IsTokenBlacklisted(ctx context.Context, tokenHash string) (bool, error)

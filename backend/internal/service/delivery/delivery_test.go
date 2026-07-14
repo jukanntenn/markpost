@@ -93,9 +93,9 @@ func TestService_Create(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for empty name")
 		}
-		se, _ := service.AsServiceError(err)
+		se, _ := service.AsError(err)
 		if se.Code != service.ErrValidation {
-			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrValidation.Value, se.Code.Value)
 		}
 	})
 
@@ -144,9 +144,9 @@ func TestService_Create(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for unsupported kind")
 		}
-		se, _ := service.AsServiceError(err)
+		se, _ := service.AsError(err)
 		if se.Code != service.ErrValidation {
-			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrValidation.Value, se.Code.Value)
 		}
 	})
 }
@@ -173,9 +173,9 @@ func TestService_Update(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for non-existent channel")
 		}
-		se, _ := service.AsServiceError(err)
+		se, _ := service.AsError(err)
 		if se.Code != service.ErrNotFound {
-			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrNotFound.Value, se.Code.Value)
 		}
 	})
 
@@ -231,9 +231,9 @@ func TestService_Update(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for invalid keywords")
 		}
-		se, _ := service.AsServiceError(err)
+		se, _ := service.AsError(err)
 		if se.Code != service.ErrValidation {
-			t.Errorf("expected code %q, got %q", service.ErrValidation, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrValidation.Value, se.Code.Value)
 		}
 	})
 
@@ -272,9 +272,9 @@ func TestService_Delete(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for non-existent channel")
 		}
-		se, _ := service.AsServiceError(err)
+		se, _ := service.AsError(err)
 		if se.Code != service.ErrNotFound {
-			t.Errorf("expected code %q, got %q", service.ErrNotFound, se.Code)
+			t.Errorf("expected code %q, got %q", service.ErrNotFound.Value, se.Code.Value)
 		}
 	})
 }

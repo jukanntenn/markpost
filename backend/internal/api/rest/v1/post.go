@@ -9,7 +9,7 @@ import (
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/internal/web"
-	"markpost/pkg/apierr"
+	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )

@@ -277,7 +277,7 @@ func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error for wrong owner")
 		}
-		se, ok := service.AsServiceError(err)
+		se, ok := service.AsError(err)
 		if !ok || se.Code != service.ErrNotFound {
 			t.Errorf("expected not_found error, got %v", err)
 		}

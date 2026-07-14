@@ -24,27 +24,13 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// DeliveryEnqueuer defines the interface for enqueueing delivery jobs.
-type DeliveryEnqueuer interface {
-	Enqueue(job DeliveryJob)
-}
-
-// DeliveryJob represents a delivery job.
-type DeliveryJob struct {
-	UserID  int
-	PostID  int
-	PostQID string
-	Title   string
-	Body    string
-}
-
 // Service provides post-related business logic.
 type Service struct {
 	postRepo  post.Repository
 	md        goldmark.Markdown
 	sanitizer *bluemonday.Policy
 	minifier  *minify.M
-	delivery  DeliveryEnqueuer
+	delivery  post.DeliveryEnqueuer
 	cache     renderCache
 	group     singleflight.Group
 	purger    Purger
@@ -53,7 +39,7 @@ type Service struct {
 // NewService creates a new Service instance. The in-process render cache
 // (singleflight + ristretto) is built from the [render] config section; when
 // disabled the service behaves exactly as it did before caching.
-func NewService(postRepo post.Repository, delivery DeliveryEnqueuer) *Service {
+func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer) *Service {
 	return &Service{
 		postRepo:  postRepo,
 		md:        newGoldmark(),
@@ -141,11 +127,11 @@ func (s *Service) getPostByQID(ctx context.Context, qid string) (*post.Post, err
 func (s *Service) CreatePost(ctx context.Context, title, body string, userID int) (string, error) {
 	p, err := s.postRepo.Create(ctx, title, body, userID)
 	if err != nil {
-		return "", service.NewServiceErrorWrap(service.ErrInternal, "create post failed", err)
+		return "", service.Wrap(service.ErrInternal, "create post failed", err)
 	}
 
 	if s.delivery != nil {
-		s.delivery.Enqueue(DeliveryJob{
+		s.delivery.Enqueue(post.DeliveryJob{
 			UserID:  userID,
 			PostID:  p.ID,
 			PostQID: p.QID,
@@ -180,12 +166,12 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 		}
 		var buf bytes.Buffer
 		if err := s.md.Convert([]byte(p.Body), &buf); err != nil {
-			return nil, service.NewServiceErrorWrap(service.ErrInternal, "render post failed", err)
+			return nil, service.Wrap(service.ErrInternal, "render post failed", err)
 		}
 		sanitized := s.sanitizer.Sanitize(neutralizeRawHTMLElements(buf.String()))
 		minified, mErr := s.minifyHTML(sanitized)
 		if mErr != nil {
-			return nil, service.NewServiceErrorWrap(service.ErrInternal, "render post failed", mErr)
+			return nil, service.Wrap(service.ErrInternal, "render post failed", mErr)
 		}
 		result := renderResult{
 			title:     p.Title,
@@ -201,7 +187,7 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 	}
 	r, ok := v.(renderResult)
 	if !ok {
-		return "", "", "", time.Time{}, service.NewServiceError(service.ErrInternal, "render post failed")
+		return "", "", "", time.Time{}, service.New(service.ErrInternal, "render post failed")
 	}
 	return r.title, r.body, r.etag, r.createdAt, nil
 }
@@ -242,7 +228,7 @@ func (s *Service) GetPostMarkdown(ctx context.Context, qid string) (title, body,
 	}
 	r, ok := v.(renderResult)
 	if !ok {
-		return "", "", "", time.Time{}, service.NewServiceError(service.ErrInternal, "render post failed")
+		return "", "", "", time.Time{}, service.New(service.ErrInternal, "render post failed")
 	}
 	return r.title, r.body, r.etag, r.createdAt, nil
 }
@@ -297,7 +283,7 @@ func (s *Service) DeletePostByQID(ctx context.Context, qid string, ownerID int) 
 		return service.WrapNotFoundOrInternal(err, "post not found", "delete post failed")
 	}
 	if affected == 0 {
-		return service.NewServiceError(service.ErrNotFound, "post not found")
+		return service.New(service.ErrNotFound, "post not found")
 	}
 
 	s.invalidateCache(qid)
@@ -324,7 +310,7 @@ func (s *Service) invalidateCache(qid string) {
 // volume could be large.
 func (s *Service) PruneExpired(ctx context.Context, retentionDays, batchSize int) error {
 	if retentionDays <= 0 {
-		return service.NewServiceError(service.ErrValidation, "retention days must be positive")
+		return service.New(service.ErrValidation, "retention days must be positive")
 	}
 	if batchSize <= 0 {
 		batchSize = 99
@@ -332,7 +318,7 @@ func (s *Service) PruneExpired(ctx context.Context, retentionDays, batchSize int
 
 	qids, err := s.postRepo.PruneExpired(ctx, retentionDays, batchSize)
 	if err != nil {
-		return service.NewServiceErrorWrap(service.ErrInternal, "prune expired posts failed", err)
+		return service.Wrap(service.ErrInternal, "prune expired posts failed", err)
 	}
 
 	for _, qid := range qids {
@@ -345,12 +331,12 @@ func (s *Service) PruneExpired(ctx context.Context, retentionDays, batchSize int
 // CountExpired counts expired posts based on retention days.
 func (s *Service) CountExpired(ctx context.Context, retentionDays int) (int64, error) {
 	if retentionDays <= 0 {
-		return 0, service.NewServiceError(service.ErrValidation, "retention days must be positive")
+		return 0, service.New(service.ErrValidation, "retention days must be positive")
 	}
 
 	count, err := s.postRepo.CountExpired(ctx, retentionDays)
 	if err != nil {
-		return 0, service.NewServiceErrorWrap(service.ErrInternal, "count expired posts failed", err)
+		return 0, service.Wrap(service.ErrInternal, "count expired posts failed", err)
 	}
 
 	return count, nil

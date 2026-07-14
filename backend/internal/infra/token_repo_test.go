@@ -42,25 +42,40 @@ func TestTokenRepository_GetRefreshToken_NotFound(t *testing.T) {
 	}
 }
 
-func TestTokenRepository_DeleteRefreshToken(t *testing.T) {
+func TestTokenRepository_RevokeRefreshToken(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewTokenRepository(db)
 	ctx := context.Background()
 
 	_ = repo.StoreRefreshToken(ctx, 1, "hash123", time.Now().Add(time.Hour))
 
-	err := repo.DeleteRefreshToken(ctx, "hash123")
-	if err != nil {
+	if err := repo.RevokeRefreshToken(ctx, "hash123"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	_, err = repo.GetRefreshToken(ctx, "hash123")
-	if err == nil {
-		t.Fatal("expected error after deletion")
+	// A revoked token is no longer returned by GetRefreshToken (active set).
+	if _, err := repo.GetRefreshToken(ctx, "hash123"); err == nil {
+		t.Fatal("expected GetRefreshToken to fail for revoked token")
+	}
+	// But IsRefreshTokenRevoked sees it — the reuse-detection signal.
+	revoked, err := repo.IsRefreshTokenRevoked(ctx, "hash123")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !revoked {
+		t.Error("expected token to be revoked")
+	}
+	// And GetRevokedRefreshToken returns the row (for the user_id).
+	rt, err := repo.GetRevokedRefreshToken(ctx, "hash123")
+	if err != nil {
+		t.Fatalf("expected revoked row to be retrievable: %v", err)
+	}
+	if rt.UserID != 1 {
+		t.Errorf("user_id = %d, want 1", rt.UserID)
 	}
 }
 
-func TestTokenRepository_DeleteRefreshTokensByUserID(t *testing.T) {
+func TestTokenRepository_RevokeAllByUserID(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewTokenRepository(db)
 	ctx := context.Background()
@@ -69,18 +84,20 @@ func TestTokenRepository_DeleteRefreshTokensByUserID(t *testing.T) {
 	_ = repo.StoreRefreshToken(ctx, 1, "hash2", time.Now().Add(time.Hour))
 	_ = repo.StoreRefreshToken(ctx, 2, "hash3", time.Now().Add(time.Hour))
 
-	err := repo.DeleteRefreshTokensByUserID(ctx, 1)
-	if err != nil {
+	if err := repo.RevokeAllByUserID(ctx, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	_, err = repo.GetRefreshToken(ctx, "hash1")
-	if err == nil {
-		t.Error("expected hash1 to be deleted")
+	// User 1's tokens are revoked (not in the active set).
+	if _, err := repo.GetRefreshToken(ctx, "hash1"); err == nil {
+		t.Error("expected hash1 to be revoked")
 	}
-	_, err = repo.GetRefreshToken(ctx, "hash3")
-	if err != nil {
-		t.Errorf("expected hash3 to still exist: %v", err)
+	if _, err := repo.GetRefreshToken(ctx, "hash2"); err == nil {
+		t.Error("expected hash2 to be revoked")
+	}
+	// User 2's token is untouched.
+	if _, err := repo.GetRefreshToken(ctx, "hash3"); err != nil {
+		t.Errorf("expected hash3 to still be active: %v", err)
 	}
 }
 

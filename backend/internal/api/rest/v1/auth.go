@@ -8,14 +8,14 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/middleware"
 	"markpost/internal/service/auth"
-	"markpost/pkg/apierr"
+	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )
 
 // GitHubAuthURLGenerator defines the interface for generating GitHub OAuth authorization URLs.
 type GitHubAuthURLGenerator interface {
-	GenerateGitHubAuthURL(ctx context.Context) (string, error)
+	GenerateGitHubAuthURL(ctx context.Context) (url, state string, err error)
 }
 
 // GenerateGitHubOAuthURL godoc
@@ -27,18 +27,18 @@ type GitHubAuthURLGenerator interface {
 // @Router /api/v1/oauth/url [get]
 func GenerateGitHubOAuthURL(authSvc GitHubAuthURLGenerator) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		url, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
+		url, state, err := authSvc.GenerateGitHubAuthURL(c.Request.Context())
 		if err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
-		c.JSON(http.StatusOK, OAuthURLResponse{URL: url})
+		c.JSON(http.StatusOK, OAuthURLResponse{URL: url, State: state})
 	}
 }
 
 // AuthService defines the interface for authentication operations.
 type AuthService interface {
-	LoginWithGitHub(ctx context.Context, code string) (*user.User, *auth.JWTTokenPair, error)
+	LoginWithGitHub(ctx context.Context, code, state string) (*user.User, *auth.JWTTokenPair, error)
 	LoginWithEmail(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error)
 	Logout(ctx context.Context, accessToken string) error
@@ -69,7 +69,7 @@ func LoginGitHub(authSvc AuthService) gin.HandlerFunc {
 		if !bindJSON(c, &req) {
 			return
 		}
-		u, tokens, err := authSvc.LoginWithGitHub(c.Request.Context(), req.Code)
+		u, tokens, err := authSvc.LoginWithGitHub(c.Request.Context(), req.Code, req.State)
 		writeAuthResult(c, u, tokens, err)
 	}
 }

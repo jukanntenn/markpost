@@ -1,0 +1,108 @@
+# 日本語 locale
+
+# --- 共通エラーコード ---
+["error.internal"]
+other = "内部サーバーエラー"
+
+["error.validation_failed"]
+other = "リクエストの検証に失敗しました"
+
+["error.invalid_request"]
+other = "無効なリクエスト形式"
+
+["error.not_found"]
+other = "見つかりません"
+
+["error.unauthorized"]
+other = "認証が必要です"
+
+["error.forbidden"]
+other = "アクセスが禁止されています"
+
+["error.conflict"]
+other = "リソースの競合"
+
+["error.rate_limited"]
+other = "リクエストが多すぎます"
+
+# --- フィールド検証コード ---
+["error.validation_required"]
+other = "{{.Field}} は必須です"
+
+["error.validation_min_length"]
+other = "{{.Field}} は {{.Min}} 文字以上で入力してください"
+
+["error.validation_max_length"]
+other = "{{.Field}} は {{.Max}} 文字以下で入力してください"
+
+["error.validation_length"]
+other = "{{.Field}} は {{.Len}} 文字でなければなりません"
+
+["error.validation_email"]
+other = "{{.Field}} は有効なメールアドレスである必要があります"
+
+["error.validation_oneof"]
+other = "{{.Field}} は次のいずれかである必要があります：{{.OneOf}}"
+
+["error.validation_field_violation"]
+other = "{{.Field}} は無効です"
+
+["error.validation_titlesize"]
+other = "{{.Field}} は最大 {{.Max}} 文字を超えています"
+
+["error.validation_bodysize"]
+other = "{{.Field}} は最大 {{.Max}} バイトを超えています"
+
+# --- 認証ドメインコード ---
+["error.invalid_credentials"]
+other = "ユーザー名またはパスワードが正しくありません"
+
+["error.invalid_password"]
+other = "現在のパスワードが正しくありません"
+
+["error.user_disabled"]
+other = "ユーザーアカウントは無効化されています"
+
+["error.invalid_token"]
+other = "無効または期限切れのトークン"
+
+["error.invalid_post_key"]
+other = "無効な Post Key"
+
+["error.missing_state"]
+other = "OAuth state パラメータが不足しています"
+
+["error.missing_code"]
+other = "OAuth code パラメータが不足しています"
+
+["error.invalid_state"]
+other = "OAuth state が無効、期限切れ、または既に使用済みです"
+
+["error.oauth_exchange_failed"]
+other = "OAuth 認可交換に失敗しました"
+
+["error.github_user_fetch_failed"]
+other = "GitHub アカウント情報の取得に失敗しました"
+
+["error.password_too_short"]
+other = "パスワードは {{.Min}} 文字以上でなければなりません"
+
+["error.password_too_long"]
+other = "パスワードは {{.Max}} 文字を超えてはなりません"
+
+# --- 配信ドメインコード ---
+["error.unsupported_channel_kind"]
+other = "サポートされていないチャネル種別"
+
+# --- 成功/情報メッセージ ---
+["error.password_changed_success"]
+other = "パスワードが変更されました"
+
+["auth.logout_success"]
+other = "ログアウトしました"
+
+["delivery.channel_deleted"]
+other = "チャネルが削除されました"
+
+["health.running"]
+other = "markpost は実行中です"

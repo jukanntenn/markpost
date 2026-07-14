@@ -22,7 +22,7 @@ func getBearerToken(c *gin.Context) (string, bool) {
 func extractBearerToken(c *gin.Context) (string, bool) {
 	token, ok := getBearerToken(c)
 	if !ok {
-		abortWithError(c, service.NewServiceError(service.ErrMissingAuthorizationHeader, "missing Authorization header"))
+		abortWithError(c, service.New(service.ErrUnauthorized, "missing Authorization header"))
 		return "", false
 	}
 	return token, true
@@ -52,7 +52,7 @@ func setUserFields(c *gin.Context, u *user.User) {
 func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTService, users user.Repository) (*user.User, *auth.AccessClaims, error) {
 	claims, err := jwtSvc.ValidateAccess(tokenString)
 	if err != nil {
-		return nil, nil, service.NewServiceErrorWrap(service.ErrInvalidToken, "invalid token", err)
+		return nil, nil, service.Wrap(auth.ErrInvalidToken, "invalid token", err)
 	}
 
 	u, err := users.GetByID(c.Request.Context(), claims.UserID)
@@ -61,7 +61,7 @@ func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTSer
 	}
 
 	if !u.IsActive {
-		return nil, nil, service.NewServiceError(service.ErrUserDisabled, "user account is disabled")
+		return nil, nil, service.New(auth.ErrUserDisabled, "user account is disabled")
 	}
 
 	return u, claims, nil
@@ -89,11 +89,11 @@ func requireAuth(jwtSvc *auth.JWTService, users user.Repository, tokenRepo user.
 		if tokenRepo != nil {
 			blacklisted, err := tokenRepo.IsTokenBlacklisted(c.Request.Context(), utils.HashToken(tokenString))
 			if err != nil {
-				abortWithError(c, service.NewServiceErrorWrap(service.ErrInternal, "failed to check token blacklist", err))
+				abortWithError(c, service.Wrap(service.ErrInternal, "failed to check token blacklist", err))
 				return
 			}
 			if blacklisted {
-				abortWithError(c, service.NewServiceError(service.ErrInvalidToken, "token has been revoked"))
+				abortWithError(c, service.New(auth.ErrInvalidToken, "token has been revoked"))
 				return
 			}
 		}

@@ -51,7 +51,7 @@ func RunResetPassword(configPath, username, password string) error {
 		return fmt.Errorf("failed to reset password: %w", err)
 	}
 
-	if err := tokenRepo.DeleteRefreshTokensByUserID(context.Background(), u.ID); err != nil {
+	if err := tokenRepo.RevokeAllByUserID(context.Background(), u.ID); err != nil {
 		return fmt.Errorf("failed to revoke sessions: %w", err)
 	}
 

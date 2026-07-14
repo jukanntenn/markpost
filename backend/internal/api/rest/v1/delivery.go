@@ -7,7 +7,7 @@ import (
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/user"
 	delivery_svc "markpost/internal/service/delivery"
-	"markpost/pkg/apierr"
+	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )

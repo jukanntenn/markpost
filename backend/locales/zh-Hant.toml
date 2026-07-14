@@ -1,0 +1,108 @@
+# 繁體中文（台灣）locale
+
+# --- 共享錯誤碼 ---
+["error.internal"]
+other = "伺服器內部錯誤"
+
+["error.validation_failed"]
+other = "請求驗證失敗"
+
+["error.invalid_request"]
+other = "請求格式錯誤"
+
+["error.not_found"]
+other = "找不到"
+
+["error.unauthorized"]
+other = "未授權"
+
+["error.forbidden"]
+other = "禁止存取"
+
+["error.conflict"]
+other = "資源衝突"
+
+["error.rate_limited"]
+other = "請求過於頻繁"
+
+# --- 欄位驗證碼 ---
+["error.validation_required"]
+other = "{{.Field}} 為必填欄位"
+
+["error.validation_min_length"]
+other = "{{.Field}} 至少需要 {{.Min}} 個字元"
+
+["error.validation_max_length"]
+other = "{{.Field}} 最多 {{.Max}} 個字元"
+
+["error.validation_length"]
+other = "{{.Field}} 必須為 {{.Len}} 個字元"
+
+["error.validation_email"]
+other = "{{.Field}} 必須是有效的電子郵件地址"
+
+["error.validation_oneof"]
+other = "{{.Field}} 必須是以下之一：{{.OneOf}}"
+
+["error.validation_field_violation"]
+other = "{{.Field}} 無效"
+
+["error.validation_titlesize"]
+other = "{{.Field}} 超過最大 {{.Max}} 個字元"
+
+["error.validation_bodysize"]
+other = "{{.Field}} 超過最大 {{.Max}} 位元組"
+
+# --- 認證域碼 ---
+["error.invalid_credentials"]
+other = "使用者名稱或密碼錯誤"
+
+["error.invalid_password"]
+other = "目前密碼不正確"
+
+["error.user_disabled"]
+other = "使用者帳戶已被停用"
+
+["error.invalid_token"]
+other = "無效或過期的權杖"
+
+["error.invalid_post_key"]
+other = "無效的 Post Key"
+
+["error.missing_state"]
+other = "缺少 OAuth state 參數"
+
+["error.missing_code"]
+other = "缺少 OAuth code 參數"
+
+["error.invalid_state"]
+other = "OAuth state 無效、過期或已被使用"
+
+["error.oauth_exchange_failed"]
+other = "OAuth 授權交換失敗"
+
+["error.github_user_fetch_failed"]
+other = "無法取得 GitHub 帳戶資訊"
+
+["error.password_too_short"]
+other = "密碼至少需要 {{.Min}} 個字元"
+
+["error.password_too_long"]
+other = "密碼不得超過 {{.Max}} 個字元"
+
+# --- 投遞域碼 ---
+["error.unsupported_channel_kind"]
+other = "不支援的頻道類型"
+
+# --- 成功/提示訊息 ---
+["error.password_changed_success"]
+other = "密碼變更成功"
+
+["auth.logout_success"]
+other = "已成功登出"
+
+["delivery.channel_deleted"]
+other = "頻道刪除成功"
+
+["health.running"]
+other = "markpost 正在執行"

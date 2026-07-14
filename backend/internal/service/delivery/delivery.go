@@ -36,7 +36,7 @@ func NewService(repo delivery.Repository, attemptRepo delivery.AttemptRepository
 func normalizeAndValidateKind(kind string) (delivery.ChannelKind, error) {
 	normalized := delivery.ChannelKind(utils.Normalize(kind))
 	if !normalized.IsValid() {
-		return "", service.NewServiceError(service.ErrValidation, "unsupported channel kind: "+string(normalized))
+		return "", service.New(service.ErrValidation, "unsupported channel kind: "+string(normalized))
 	}
 	return normalized, nil
 }
@@ -44,25 +44,25 @@ func normalizeAndValidateKind(kind string) (delivery.ChannelKind, error) {
 func validateConfiguration(kind delivery.ChannelKind, raw json.RawMessage) (delivery.ChannelConfiguration, error) {
 	var config delivery.ChannelConfiguration
 	if err := json.Unmarshal(raw, &config); err != nil {
-		return nil, service.NewServiceError(service.ErrValidation, "invalid configuration JSON: "+err.Error())
+		return nil, service.New(service.ErrValidation, "invalid configuration JSON: "+err.Error())
 	}
 
 	switch kind {
 	case delivery.ChannelKindFeishu:
 		feishu := config.Feishu()
 		if strings.TrimSpace(feishu.WebhookURL) == "" {
-			return nil, service.NewServiceError(service.ErrValidation, "webhook URL is required")
+			return nil, service.New(service.ErrValidation, "webhook URL is required")
 		}
 		parsedURL, err := url.Parse(strings.TrimSpace(feishu.WebhookURL))
 		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") {
-			return nil, service.NewServiceError(service.ErrValidation, "invalid webhook URL: must be a valid HTTP or HTTPS URL")
+			return nil, service.New(service.ErrValidation, "invalid webhook URL: must be a valid HTTP or HTTPS URL")
 		}
 		config["webhook_url"] = strings.TrimSpace(feishu.WebhookURL)
 		if _, ok := config["card_link_url"]; !ok {
 			config["card_link_url"] = ""
 		}
 	default:
-		return nil, service.NewServiceError(service.ErrValidation, "unsupported channel kind: "+string(kind))
+		return nil, service.New(service.ErrValidation, "unsupported channel kind: "+string(kind))
 	}
 
 	return config, nil
@@ -72,7 +72,7 @@ func validateConfiguration(kind delivery.ChannelKind, raw json.RawMessage) (deli
 func (s *Service) ListByUserID(ctx context.Context, userID int) ([]delivery.Channel, error) {
 	channels, err := s.repo.GetByUserID(ctx, userID)
 	if err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "list channels failed", err)
+		return nil, service.Wrap(service.ErrInternal, "list channels failed", err)
 	}
 	return channels, nil
 }
@@ -81,7 +81,7 @@ func (s *Service) ListByUserID(ctx context.Context, userID int) ([]delivery.Chan
 func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelParams) (*delivery.Channel, error) {
 	cleanedName := strings.TrimSpace(params.Name)
 	if cleanedName == "" {
-		return nil, service.NewServiceError(service.ErrValidation, "channel name is required")
+		return nil, service.New(service.ErrValidation, "channel name is required")
 	}
 
 	kind, err := normalizeAndValidateKind(params.Kind)
@@ -90,7 +90,7 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 	}
 
 	if len(params.Configuration) == 0 {
-		return nil, service.NewServiceError(service.ErrValidation, "configuration is required")
+		return nil, service.New(service.ErrValidation, "configuration is required")
 	}
 	config, err := validateConfiguration(kind, params.Configuration)
 	if err != nil {
@@ -102,7 +102,7 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 		keywords = strings.TrimSpace(*params.Keywords)
 	}
 	if _, err := filter.Compile(keywords); err != nil {
-		return nil, service.NewServiceError(service.ErrValidation, "invalid keywords expression: "+err.Error())
+		return nil, service.New(service.ErrValidation, "invalid keywords expression: "+err.Error())
 	}
 
 	ch := &delivery.Channel{
@@ -115,7 +115,7 @@ func (s *Service) Create(ctx context.Context, userID int, params UpdateChannelPa
 	}
 
 	if err := s.repo.Create(ctx, ch); err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "create channel failed", err)
+		return nil, service.Wrap(service.ErrInternal, "create channel failed", err)
 	}
 
 	return ch, nil
@@ -145,7 +145,7 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 	if params.Keywords != nil {
 		normalized := strings.TrimSpace(*params.Keywords)
 		if _, err := filter.Compile(normalized); err != nil {
-			return nil, service.NewServiceError(service.ErrValidation, "invalid keywords expression: "+err.Error())
+			return nil, service.New(service.ErrValidation, "invalid keywords expression: "+err.Error())
 		}
 		ch.Keywords = normalized
 	}
@@ -155,7 +155,7 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 	}
 
 	if err := s.repo.Update(ctx, ch); err != nil {
-		return nil, service.NewServiceErrorWrap(service.ErrInternal, "update channel failed", err)
+		return nil, service.Wrap(service.ErrInternal, "update channel failed", err)
 	}
 
 	return ch, nil
@@ -165,11 +165,11 @@ func (s *Service) Update(ctx context.Context, userID int, id int, params UpdateC
 func (s *Service) Delete(ctx context.Context, userID int, id int) error {
 	affected, err := s.repo.DeleteByIDAndUserID(ctx, id, userID)
 	if err != nil {
-		return service.NewServiceErrorWrap(service.ErrInternal, "delete channel failed", err)
+		return service.Wrap(service.ErrInternal, "delete channel failed", err)
 	}
 
 	if affected == 0 {
-		return service.NewServiceError(service.ErrNotFound, "channel not found")
+		return service.New(service.ErrNotFound, "channel not found")
 	}
 
 	return nil

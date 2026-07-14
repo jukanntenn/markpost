@@ -14,7 +14,6 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/service/delivery/filter"
-	"markpost/internal/service/post"
 )
 
 func TestKeywordFilterMatch(t *testing.T) {
@@ -305,7 +304,7 @@ func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 	postRepo := infra.NewPostRepository(database.DB())
 
 	dispatcher := NewDispatcher(attemptRepo, channelRepo, postRepo, &recordingSender{})
-	dispatcher.Enqueue(post.DeliveryJob{
+	dispatcher.Enqueue(domainpost.DeliveryJob{
 		UserID:  uid,
 		PostID:  pid,
 		PostQID: "p-seed",

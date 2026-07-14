@@ -32,12 +32,12 @@ func TestValidatePagination(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
-				se, ok := AsServiceError(err)
+				se, ok := AsError(err)
 				if !ok {
 					t.Fatalf("expected *service.ServiceError, got %T", err)
 				}
 				if se.Code != ErrInvalidRequest {
-					t.Fatalf("expected code %s, got %s", ErrInvalidRequest, se.Code)
+					t.Fatalf("expected code %s, got %s", ErrInvalidRequest.Value, se.Code.Value)
 				}
 				return
 			}
@@ -110,12 +110,12 @@ func TestPaginate(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		se, ok := AsServiceError(err)
+		se, ok := AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != ErrInternal {
-			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+			t.Errorf("code = %q, want %q", se.Code.Value, ErrInternal.Value)
 		}
 	})
 
@@ -128,12 +128,12 @@ func TestPaginate(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error")
 		}
-		se, ok := AsServiceError(err)
+		se, ok := AsError(err)
 		if !ok {
 			t.Fatal("expected service error")
 		}
 		if se.Code != ErrInternal {
-			t.Errorf("code = %q, want %q", se.Code, ErrInternal)
+			t.Errorf("code = %q, want %q", se.Code.Value, ErrInternal.Value)
 		}
 	})
 }

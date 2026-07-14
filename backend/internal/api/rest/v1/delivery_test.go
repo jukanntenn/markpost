@@ -98,7 +98,7 @@ func (m *mockDeliveryService) Update(_ context.Context, userID int, id int, para
 	}
 	ch, ok := m.channels[id]
 	if !ok || ch.UserID != userID {
-		return nil, service.NewServiceError(service.ErrNotFound, "channel not found")
+		return nil, service.New(service.ErrNotFound, "channel not found")
 	}
 	if params.Kind != "" {
 		ch.Kind = delivery.ChannelKind(params.Kind)
@@ -127,7 +127,7 @@ func (m *mockDeliveryService) Delete(_ context.Context, userID int, id int) erro
 	}
 	ch, ok := m.channels[id]
 	if !ok || ch.UserID != userID {
-		return service.NewServiceError(service.ErrNotFound, "channel not found")
+		return service.New(service.ErrNotFound, "channel not found")
 	}
 	delete(m.channels, id)
 	return nil
@@ -229,7 +229,7 @@ func TestListDeliveryChannels_NoUser(t *testing.T) {
 
 func TestListDeliveryChannels_ServiceError(t *testing.T) {
 	mockSvc := newMockDeliveryService()
-	mockSvc.err = service.NewServiceError(service.ErrInternal, "db error")
+	mockSvc.err = service.New(service.ErrInternal, "db error")
 
 	router := newTestEngine()
 	router.GET("/channels", withTestUser(1), ListDeliveryChannels(mockSvc))
@@ -318,8 +318,8 @@ func TestCreateDeliveryChannel_MissingRequiredFields(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
 	}
 
 	var errResp map[string]interface{}
@@ -333,7 +333,7 @@ func TestCreateDeliveryChannel_MissingRequiredFields(t *testing.T) {
 
 func TestCreateDeliveryChannel_ServiceError(t *testing.T) {
 	mockSvc := newMockDeliveryService()
-	mockSvc.err = service.NewServiceError(service.ErrValidation, "unsupported channel kind")
+	mockSvc.err = service.New(service.ErrValidation, "unsupported channel kind")
 
 	router := newTestEngine()
 	router.POST("/channels", withTestUser(1), CreateDeliveryChannel(mockSvc))
@@ -351,8 +351,8 @@ func TestCreateDeliveryChannel_ServiceError(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Errorf("expected status %d, got %d", http.StatusUnprocessableEntity, w.Code)
 	}
 }
 

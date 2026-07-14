@@ -2,6 +2,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -92,12 +94,17 @@ func (s *JWTService) GenerateAccessToken(now time.Time, userID int, email, usern
 	return token.SignedString(s.accessSigningKey)
 }
 
-// GenerateRefreshToken generates a new refresh token for the user.
+// GenerateRefreshToken generates a new refresh token for the user. A random
+// jti (JWT ID) is embedded so each issued refresh token hashes to a unique
+// value — required for one-time rotation: without it, two token pairs issued
+// in the same second for the same user would collide on the token_hash unique
+// constraint.
 func (s *JWTService) GenerateRefreshToken(now time.Time, userID int, role string) (string, error) {
 	claims := RefreshClaims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        randomJTI(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.refreshTokenExpire)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
@@ -105,6 +112,13 @@ func (s *JWTService) GenerateRefreshToken(now time.Time, userID int, role string
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.refreshSigningKey)
+}
+
+// randomJTI returns a 16-byte hex-encoded random string for the JWT jti claim.
+func randomJTI() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 // ValidateAccess validates an access token and returns its claims.
@@ -131,9 +145,16 @@ func validateTokenClaims[T jwt.Claims](tokenString string, key []byte, newClaims
 }
 
 func validateToken(tokenString string, key []byte, newClaims func() jwt.Claims) (jwt.Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, newClaims(), func(_ *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, newClaims(), func(_ *jwt.Token) (any, error) {
 		return key, nil
-	})
+	},
+		// Security hardening (auth.md §1.3): lock the algorithm to HS256 to
+		// defeat alg:none / algorithm-confusion attacks, and require an exp
+		// claim so tokens without one are rejected even though we always sign
+		// with exp.
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
 		return nil, err
 	}

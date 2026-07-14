@@ -14,7 +14,7 @@ func Fallback() gin.HandlerFunc {
 		defer func() {
 			if r := recover(); r != nil {
 				slog.Error("panic recovered", "error", r, "path", c.Request.URL.Path)
-				abortWithError(c, service.NewServiceError(service.ErrInternal, "internal server error"))
+				abortWithError(c, service.New(service.ErrInternal, "internal server error"))
 			}
 		}()
 		c.Next()

@@ -4,11 +4,11 @@ package service
 func Paginate[T any](listFn func() ([]T, error), countFn func() (int64, error), label string) ([]T, int64, error) {
 	items, err := listFn()
 	if err != nil {
-		return nil, 0, NewServiceErrorWrap(ErrInternal, "get "+label+" failed", err)
+		return nil, 0, Wrap(ErrInternal, "get "+label+" failed", err)
 	}
 	total, err := countFn()
 	if err != nil {
-		return nil, 0, NewServiceErrorWrap(ErrInternal, "count "+label+" failed", err)
+		return nil, 0, Wrap(ErrInternal, "count "+label+" failed", err)
 	}
 	return items, total, nil
 }
@@ -16,7 +16,7 @@ func Paginate[T any](listFn func() ([]T, error), countFn func() (int64, error), 
 // ValidatePagination normalizes and validates pagination parameters, returning the offset and normalized values.
 func ValidatePagination(page, limit int) (offset, normPage, normLimit int, err error) {
 	if limit > 100 {
-		return 0, 0, 0, NewServiceError(ErrInvalidRequest, "invalid limit")
+		return 0, 0, 0, New(ErrInvalidRequest, "invalid limit")
 	}
 	if page < 1 {
 		page = 1

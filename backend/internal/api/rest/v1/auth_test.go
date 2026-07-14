@@ -233,8 +233,8 @@ func TestChangePassword_WrongCurrentPassword(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }
 
@@ -276,12 +276,13 @@ func TestLogout_NoAccessToken(t *testing.T) {
 }
 
 type mockGitHubAuthURLGenerator struct {
-	url string
-	err error
+	url   string
+	state string
+	err   error
 }
 
-func (m *mockGitHubAuthURLGenerator) GenerateGitHubAuthURL(_ context.Context) (string, error) {
-	return m.url, m.err
+func (m *mockGitHubAuthURLGenerator) GenerateGitHubAuthURL(_ context.Context) (string, string, error) {
+	return m.url, m.state, m.err
 }
 
 func TestGenerateGitHubOAuthURL_Success(t *testing.T) {
@@ -328,7 +329,7 @@ type mockAuthServiceForGitHub struct {
 	err    error
 }
 
-func (m *mockAuthServiceForGitHub) LoginWithGitHub(_ context.Context, _ string) (*user.User, *auth.JWTTokenPair, error) {
+func (m *mockAuthServiceForGitHub) LoginWithGitHub(_ context.Context, _, _ string) (*user.User, *auth.JWTTokenPair, error) {
 	return m.u, m.tokens, m.err
 }
 func (m *mockAuthServiceForGitHub) LoginWithEmail(_ context.Context, _, _ string) (*user.User, *auth.JWTTokenPair, error) {
@@ -396,7 +397,7 @@ func TestLoginGitHub_InvalidBody(t *testing.T) {
 
 func TestLoginGitHub_AuthError(t *testing.T) {
 	mock := &mockAuthServiceForGitHub{
-		err: service.NewServiceError(service.ErrUnauthorized, "oauth exchange failed"),
+		err: service.New(service.ErrUnauthorized, "oauth exchange failed"),
 	}
 
 	router := newTestEngine()

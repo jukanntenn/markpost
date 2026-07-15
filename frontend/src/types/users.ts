@@ -10,4 +10,4 @@ export interface AdminUser {
   created_at: string;
 }
 
-export type AdminUsersResponse = Paginated<AdminUser, "users">;
+export type AdminUsersResponse = Paginated<AdminUser>;

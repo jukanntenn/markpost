@@ -13,7 +13,6 @@ export function AdminChannelsPage() {
   const { items: channels, ...queryState } = useAdminTablePage({
     queryKey: adminKeys.channels.all(),
     queryFn: () => adminApi.listChannels(),
-    itemKey: "channels",
     t,
   });
 

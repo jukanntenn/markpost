@@ -43,5 +43,5 @@ export const authApi = {
     }),
 
   queryPostKey: () =>
-    request<PostKeyResponse>("/api/v1/post_key"),
+    request<PostKeyResponse>("/api/v1/post-key"),
 };

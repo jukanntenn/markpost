@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Source_Sans_3, Fira_Code } from "next/font/google";
-import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { LocaleProvider } from "@/components/providers/LocaleProvider";
@@ -30,22 +29,22 @@ export const metadata: Metadata = {
   description: "Markpost - A simple posting service",
 };
 
-export default async function RootLayout({
+// Static export: the root layout is a synchronous server component that does
+// NOT call getLocale()/getMessages() (server-only under static export).
+// LocaleProvider self-bootstraps client-side. See specs/frontend/build.md §3.
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
-
   return (
     <html
-      lang={locale}
+      lang="en"
       className={`${playfairDisplay.variable} ${sourceSans3.variable} ${firaCode.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-background font-body antialiased">
-        <LocaleProvider serverLocale={locale} serverMessages={messages}>
+        <LocaleProvider>
           <QueryProvider>
             <ThemeProvider
               attribute="class"

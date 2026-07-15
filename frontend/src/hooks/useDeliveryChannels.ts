@@ -16,7 +16,7 @@ export function useDeliveryChannels() {
   });
 
   return {
-    channels: data?.channels || [],
+    channels: data?.items || [],
     invalidate: () => invalidateDeliveryChannels(queryClient),
     ...rest,
   };

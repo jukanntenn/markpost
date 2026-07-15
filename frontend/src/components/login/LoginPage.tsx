@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
-import type { User } from "@/types/auth";
 import { authApi } from "@/lib/api";
 import { useGitHubOAuth } from "@/hooks/useGitHubOAuth";
 import { GithubIcon } from "lucide-react";
@@ -31,12 +30,7 @@ export function LoginPage() {
   });
   const setAuth = useAuthStore((state) => state.setAuth);
 
-  const onOAuthSuccess = (token: string, user: User, refreshToken: string) => {
-    setAuth(token, user, refreshToken);
-    router.push("/dashboard");
-  };
-
-  const { startOAuth: handleGitHubLogin, loading: loadingGitHub } = useGitHubOAuth(onOAuthSuccess);
+  const { startOAuth: handleGitHubLogin, loading: loadingGitHub } = useGitHubOAuth();
 
   function handleLoginError(err: unknown) {
     setError(err instanceof Error ? err.message : String(err));

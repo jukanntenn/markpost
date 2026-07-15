@@ -15,7 +15,6 @@ export function AdminUsersPage() {
   const { items: users, ...queryState } = useAdminTablePage({
     queryKey: adminKeys.users.all(),
     queryFn: () => adminApi.listUsers(),
-    itemKey: "users",
     t,
   });
 

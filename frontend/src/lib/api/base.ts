@@ -1,5 +1,6 @@
 import { authApi } from "./auth";
 import { useAuthStore } from "@/stores/auth";
+import { getCurrentLocale } from "@/i18n/current";
 import type { FieldError, ApiErrorResponse } from "@/types/api";
 
 export class ApiError extends Error {
@@ -111,7 +112,10 @@ export async function request<T>(
 
   const fullUrl = buildUrl("", url, params);
 
-  const headers: Record<string, string> = { ...optHeaders };
+  const headers: Record<string, string> = {
+    "Accept-Language": getCurrentLocale(),
+    ...optHeaders,
+  };
 
   if (json !== undefined) {
     fetchOptions.body = JSON.stringify(json);

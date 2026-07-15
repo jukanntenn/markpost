@@ -6,16 +6,15 @@ import { useAdminQuery } from "@/hooks/useAdminQuery";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import type { Paginated } from "@/types/pagination";
 
-export type SearchOptions<TItem, TKey extends string> = {
-  itemKey: TKey;
+export type SearchOptions<TItem> = {
   queryKeyBuilder: (search: string) => readonly unknown[];
-  queryFn: (search: string) => Promise<Paginated<TItem, TKey>>;
+  queryFn: (search: string) => Promise<Paginated<TItem>>;
   debounceMs?: number;
 };
 
-export function useAdminSearchQuery<TItem, TKey extends string>(
-  options: Omit<UseQueryOptions<Paginated<TItem, TKey>>, "select" | "queryKey" | "queryFn"> &
-    SearchOptions<TItem, TKey>,
+export function useAdminSearchQuery<TItem>(
+  options: Omit<UseQueryOptions<Paginated<TItem>>, "select" | "queryKey" | "queryFn"> &
+    SearchOptions<TItem>,
 ) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, options.debounceMs ?? 300);
@@ -23,7 +22,6 @@ export function useAdminSearchQuery<TItem, TKey extends string>(
   const { items, ...query } = useAdminQuery({
     queryKey: options.queryKeyBuilder(debouncedSearch),
     queryFn: () => options.queryFn(debouncedSearch),
-    itemKey: options.itemKey,
   });
 
   return { items, search, setSearch, ...query };

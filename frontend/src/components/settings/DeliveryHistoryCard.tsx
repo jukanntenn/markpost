@@ -40,8 +40,10 @@ export function DeliveryHistoryCard() {
     refetchOnWindowFocus: false,
   });
 
-  const history = data?.history ?? [];
-  const pagination = data?.pagination;
+  const history = data?.items ?? [];
+  const pagination = data
+    ? { page: data.page, limit: data.limit, total: data.total, total_pages: data.total_pages }
+    : undefined;
 
   return (
     <Card data-testid="delivery-history-card">

@@ -25,7 +25,6 @@ export function AdminDeliveryHistoryPage() {
   const { items: history, ...queryState } = useAdminTablePage({
     queryKey: adminKeys.history.all(),
     queryFn: () => adminApi.listDeliveryHistory(),
-    itemKey: "history",
     t,
   });
 

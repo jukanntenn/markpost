@@ -7,7 +7,7 @@ export interface PostListItem {
   created_at: string;
 }
 
-export type PostsPaginatedResponse = Paginated<PostListItem, "posts">;
+export type PostsPaginatedResponse = Paginated<PostListItem>;
 
 export interface CreateTestPostRequest {
   title: string;
@@ -26,4 +26,4 @@ export interface AdminPost {
   created_at: string;
 }
 
-export type AdminPostsResponse = Paginated<AdminPost, "posts">;
+export type AdminPostsResponse = Paginated<AdminPost>;

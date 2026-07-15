@@ -9,9 +9,9 @@ import {
 } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import type { AbstractIntlMessages } from "next-intl";
-import { availableLocales, type Locale } from "@/i18n/constants";
+import { availableLocales, defaultLocale, type Locale } from "@/i18n/constants";
+import { setCurrentLocale } from "@/i18n/current";
 import { getDefaultLocale, loadMessages, persistLocale } from "@/utils/i18n";
-import { setDefaultLocale } from "@/utils/time";
 
 interface LocaleContextValue {
   locale: Locale;
@@ -27,35 +27,24 @@ export function useLocaleContext() {
   return ctx;
 }
 
-export function LocaleProvider({
-  children,
-  serverLocale,
-  serverMessages,
-}: {
-  children: React.ReactNode;
-  serverLocale: string;
-  serverMessages: AbstractIntlMessages;
-}) {
-  const [locale, setLocaleState] = useState<Locale>(
-    availableLocales.includes(serverLocale as Locale)
-      ? (serverLocale as Locale)
-      : "en",
-  );
-  const [messages, setMessages] = useState(serverMessages);
-
-  useEffect(() => {
-    setDefaultLocale(locale);
-  }, [locale]);
+// LocaleProvider is a pure client-side provider (no server props). It boots
+// with the default locale (en) and, after hydration, reads the stored/browser
+// preference and dynamically loads the matching messages chunk. Under static
+// export the root layout cannot call getLocale()/getMessages() (server-only),
+// so this self-bootstraps instead. See specs/frontend/i18n.md.
+export function LocaleProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [messages, setMessages] = useState<AbstractIntlMessages>({});
 
   useEffect(() => {
     const stored = getDefaultLocale();
-    if (stored !== locale) {
-      loadMessages(stored).then((m) => {
-        setLocaleState(stored);
-        setMessages(m);
-      });
-    }
-  }, [locale]);
+    loadMessages(stored).then((m) => {
+      setLocaleState(stored);
+      setMessages(m);
+      document.documentElement.lang = stored;
+      setCurrentLocale(stored);
+    });
+  }, []);
 
   const setLocale = useCallback(async (newLocale: Locale) => {
     const m = await loadMessages(newLocale);
@@ -63,6 +52,7 @@ export function LocaleProvider({
     setMessages(m);
     persistLocale(newLocale);
     document.documentElement.lang = newLocale;
+    setCurrentLocale(newLocale);
   }, []);
 
   return (

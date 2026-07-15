@@ -5,9 +5,9 @@
   "packageManager": "pnpm@11.0.8",
   "type": "module",
   "scripts": {
-    "dev": "next dev --port ${FRONTEND_PORT:-3034} --turbopack",
+    "dev": "next dev --port ${FRONTEND_PORT:-3034}",
     "build": "next build",
-    "start": "next start --port ${FRONTEND_PORT:-3034}",
+    "serve": "npx serve out -p ${FRONTEND_PORT:-3034}",
     "lint": "eslint .",
     "test": "vitest",
     "test:ui": "vitest --ui",

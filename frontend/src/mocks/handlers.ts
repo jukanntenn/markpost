@@ -8,20 +8,26 @@ export const mockPostKey: PostKeyResponse = {
 };
 
 export const mockEmptyPosts: PostsPaginatedResponse = {
-  posts: [],
-  pagination: { page: 1, limit: 20, total: 0, total_pages: 0 },
+  items: [],
+  total: 0,
+  page: 1,
+  limit: 20,
+  total_pages: 0,
 };
 
 export const mockPosts: PostsPaginatedResponse = {
-  posts: [
+  items: [
     { id: 1, qid: "p-qid-1", title: "Test Post 1", created_at: "2024-01-01T12:00:00Z" },
     { id: 2, qid: "p-qid-2", title: "Test Post 2", created_at: "2024-01-02T13:00:00Z" },
   ],
-  pagination: { page: 1, limit: 20, total: 2, total_pages: 1 },
+  total: 2,
+  page: 1,
+  limit: 20,
+  total_pages: 1,
 };
 
 export const handlers = [
-  http.get("/api/v1/post_key", () => {
+  http.get("/api/v1/post-key", () => {
     return HttpResponse.json<PostKeyResponse>(mockPostKey);
   }),
 
@@ -31,19 +37,15 @@ export const handlers = [
 
     if (page === "2") {
       return HttpResponse.json<PostsPaginatedResponse>({
-        posts: [],
-        pagination: { page: 2, limit: 20, total: 2, total_pages: 1 },
+        items: [],
+        total: 2,
+        page: 2,
+        limit: 20,
+        total_pages: 1,
       });
     }
 
     return HttpResponse.json<PostsPaginatedResponse>(mockPosts);
-  }),
-
-  http.post("/api/v1/post_key", async () => {
-    return HttpResponse.json<PostKeyResponse>({
-      post_key: "new_key_abc123",
-      created_at: "2024-01-01T00:00:00Z",
-    });
   }),
 
   http.post("/api/v1/auth/change-password", async () => {
@@ -74,10 +76,13 @@ export const handlers = [
   }),
 
   http.post("/api/v1/auth/logout", async () => {
-    return HttpResponse.json({ message: "Logged out successfully" });
+    return new HttpResponse(null, { status: 204 });
   }),
 
   http.get("/api/v1/oauth/url", async () => {
-    return HttpResponse.json({ url: "https://github.com/login/oauth/authorize?mock=true" });
+    return HttpResponse.json({
+      url: "https://github.com/login/oauth/authorize?mock=true",
+      state: "mock-state",
+    });
   }),
 ];

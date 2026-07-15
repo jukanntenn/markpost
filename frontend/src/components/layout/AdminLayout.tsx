@@ -16,8 +16,8 @@ interface AdminNavItem {
 const adminNavItems: AdminNavItem[] = [
   { href: "/admin/users", labelKey: "nav.users", icon: UsersIcon },
   { href: "/admin/posts", labelKey: "nav.posts", icon: FileTextIcon },
-  { href: "/admin/channels", labelKey: "nav.channels", icon: RadioIcon },
-  { href: "/admin/delivery-history", labelKey: "nav.history", icon: SendIcon },
+  { href: "/admin/delivery/channels", labelKey: "nav.channels", icon: RadioIcon },
+  { href: "/admin/delivery/history", labelKey: "nav.history", icon: SendIcon },
 ];
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {

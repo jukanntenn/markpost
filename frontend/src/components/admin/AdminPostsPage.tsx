@@ -14,7 +14,6 @@ export function AdminPostsPage() {
   const { items: posts, search, setSearch, ...queryState } = useAdminSearchTablePage({
     queryKeyBuilder: adminKeys.posts.list,
     queryFn: adminApi.listPosts,
-    itemKey: "posts",
     t,
   });
 

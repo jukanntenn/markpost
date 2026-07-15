@@ -18,9 +18,7 @@ export interface DeliveryChannel {
   updated_at: string;
 }
 
-export interface DeliveryChannelsResponse {
-  channels: DeliveryChannel[];
-}
+export type DeliveryChannelsResponse = Paginated<DeliveryChannel>;
 
 export interface DeliveryChannelResponse {
   channel: DeliveryChannel;
@@ -36,7 +34,7 @@ export interface AdminChannel {
   created_at: string;
 }
 
-export type AdminChannelsResponse = Paginated<AdminChannel, "channels">;
+export type AdminChannelsResponse = Paginated<AdminChannel>;
 
 export type DeliveryStatus = "delivered" | "failed" | "expired";
 
@@ -51,7 +49,7 @@ export interface DeliveryHistoryItem {
   username: string | null;
 }
 
-export type DeliveryHistoryResponse = Paginated<DeliveryHistoryItem, "history">;
+export type DeliveryHistoryResponse = Paginated<DeliveryHistoryItem>;
 
 export interface CreateChannelPayload {
   kind: string;

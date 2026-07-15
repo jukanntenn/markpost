@@ -10,10 +10,9 @@ interface UsePostsOptions {
 }
 
 export function usePosts(page: number, limit: number = DEFAULT_PAGE_SIZE, options?: UsePostsOptions) {
-  const { items, ...rest } = useAdminQuery<PostListItem, "posts">({
+  const { items, ...rest } = useAdminQuery<PostListItem>({
     queryKey: postKeys.list(page, limit),
     queryFn: () => postsApi.list(page, limit),
-    itemKey: "posts",
     refetchInterval: options?.refetchInterval,
     refetchOnWindowFocus: false,
   });

@@ -170,7 +170,7 @@ internal/service/
 | ErrCode | Value | HTTP | 含义 |
 |---|---|---|---|
 | `ErrInternal` | `internal` | 500 | 意外的服务器内部错误 |
-| `ErrValidation` | `validation` | 400 | 请求参数校验失败（表单 binding） |
+| `ErrValidation` | `validation` | **422** | 请求参数校验失败（表单 binding）——字段校验失败是"语义上无法处理"（RFC 4918 422），见 [api-design.md](../api-design.md) §3.1 |
 | `ErrInvalidRequest` | `invalid_request` | 400 | 请求格式错误（JSON 反序列化失败、空 body 等） |
 | `ErrNotFound` | `not_found` | 404 | 资源不存在 |
 | `ErrUnauthorized` | `unauthorized` | 401 | 未认证 |
@@ -178,17 +178,17 @@ internal/service/
 | `ErrConflict` | `conflict` | 409 | 资源冲突（重复创建等） |
 | `ErrRateLimited` | `rate_limited` | 429 | 触发限流 |
 
-字段校验通用码：
+字段校验通用码（均 422，理由同 `ErrValidation`）：
 
 | ErrCode | Value | HTTP | Placeholder | 含义 |
 |---|---|---|---|---|
-| `ErrRequired` | `required` | 400 | — | 字段必填 |
-| `ErrMinLength` | `min_length` | 400 | `Min` | 未达最小长度 |
-| `ErrMaxLength` | `max_length` | 400 | `Max` | 超过最大长度 |
-| `ErrLength` | `length` | 400 | `Len` | 长度不符 |
-| `ErrEmail` | `invalid_email` | 400 | — | 邮箱格式错误 |
-| `ErrOneOf` | `not_one_of` | 400 | `OneOf` | 值不在允许范围内 |
-| `ErrFieldViolation` | `field_violation` | 400 | `Param` | 通用兜底（未知 validator tag） |
+| `ErrRequired` | `required` | 422 | — | 字段必填 |
+| `ErrMinLength` | `min_length` | 422 | `Min` | 未达最小长度 |
+| `ErrMaxLength` | `max_length` | 422 | `Max` | 超过最大长度 |
+| `ErrLength` | `length` | 422 | `Len` | 长度不符 |
+| `ErrEmail` | `invalid_email` | 422 | — | 邮箱格式错误 |
+| `ErrOneOf` | `not_one_of` | 422 | `OneOf` | 值不在允许范围内 |
+| `ErrFieldViolation` | `field_violation` | 422 | `Param` | 通用兜底（未知 validator tag） |
 
 ### 域专属码示例（service/auth/errors.go）
 
@@ -340,7 +340,7 @@ gin 的 `ShouldBindJSON`/`ShouldBindQuery`/`ShouldBindHeader` 等返回的 error
 | 阶段 | error 类型 | 处理 |
 |---|---|---|
 | **JSON 反序列化** | `*json.SyntaxError` / `*json.UnmarshalTypeError` / `io.EOF`（空 body） | → `ErrInvalidRequest`（400，无法定位字段，笼统"请求格式错误"） |
-| **结构体校验** | `validator.ValidationErrors`（`[]FieldError`） | → `ErrValidation`（400，带 `errors[]` 字段级详情） |
+| **结构体校验** | `validator.ValidationErrors`（`[]FieldError`） | → `ErrValidation`（422，带 `errors[]` 字段级详情） |
 | **切片校验** | `binding.SliceValidationError`（`[]error`） | → 递归扁平化为 `[]FieldDetail`（当前无数组 body 接口，保留防御） |
 
 **语义区分的理由**：`ErrInvalidRequest` 表示"整个请求体解析不了"（前端检查 Content-Type / body 构造）；`ErrValidation` 表示"能解析但字段值不合规"（前端回填表单标红）。

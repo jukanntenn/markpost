@@ -27,14 +27,14 @@ test("switches language to Chinese via select", async ({
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 
-  await settingsPage.selectLocale("zh");
+  await settingsPage.selectLocale("zh-Hans");
 
   await expect(authenticatedPage.getByText("应用设置", { exact: true })).toBeVisible();
   await expect(
     authenticatedPage.getByText("修改密码", { exact: true })
   ).toBeVisible();
   const lng = await authenticatedPage.evaluate(() => localStorage.getItem("locale"));
-  expect(lng).toBe("zh");
+  expect(lng).toBe("zh-Hans");
 });
 
 test("shows error on wrong current password", async ({

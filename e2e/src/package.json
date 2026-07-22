@@ -1,3 +1,8 @@
 {
-  "type": "module"
-,"dependencies":{"typescript":"5.9.3"}}
+  "name": "markpost-e2e",
+  "type": "module",
+  "dependencies": {
+    "@dagger.io/dagger": "^0.21.0",
+    "typescript": "^5.8.0"
+  }
+}

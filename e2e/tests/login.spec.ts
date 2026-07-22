@@ -33,7 +33,7 @@ test("logs in with valid credentials and redirects to dashboard", async ({
   loginPage,
   dashboardPage,
 }) => {
-  await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard", { timeout: 30000 });
@@ -41,7 +41,7 @@ test("logs in with valid credentials and redirects to dashboard", async ({
 });
 
 test("shows error on invalid credentials", async ({ page, loginPage }) => {
-  await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.login("markpost", "wrongpassword");
   const error = await loginPage.getErrorMessage();
@@ -49,7 +49,7 @@ test("shows error on invalid credentials", async ({ page, loginPage }) => {
 });
 
 test("clears error alert when inputs change", async ({ page, loginPage }) => {
-  await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.login("markpost", "wrongpassword");
   const error = await loginPage.getErrorMessage();
@@ -64,7 +64,7 @@ test("submits form when pressing Enter in password field", async ({
   loginPage,
   dashboardPage,
 }) => {
-  await page.evaluate(() => localStorage.setItem("i18nextLng", "en"));
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.usernameInput.fill("markpost");
   await loginPage.passwordInput.fill("markpost");

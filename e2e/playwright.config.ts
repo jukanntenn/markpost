@@ -1,16 +1,22 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+const baseURL = process.env.BASE_URL || "https://localhost:2053";
 
 export default defineConfig({
   testDir: "./tests",
-  timeout: 30000,
+  timeout: 180000,
+  expect: {
+    timeout: 15000,
+  },
   fullyParallel: false,
   workers: 1,
   retries: 0,
   reporter: [["list"]],
   use: {
-    baseURL: frontendUrl,
+    baseURL,
+    ignoreHTTPSErrors: true,
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
     trace: "on-first-retry",
   },
   projects: [

@@ -1,0 +1,13 @@
+{
+  "name": "oauth-mock",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx index.ts"
+  },
+  "dependencies": {
+    "oauth2-mock-server": "^9.1.0",
+    "tsx": "^4.0.0"
+  }
+}

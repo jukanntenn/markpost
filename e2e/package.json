@@ -1,5 +1,11 @@
 {
   "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:local": "BASE_URL=https://localhost:2053 BACKEND_URL=https://localhost:2053 playwright test",
+    "test:local:serial": "BASE_URL=https://localhost:2053 BACKEND_URL=https://localhost:2053 playwright test --workers=1",
+    "test:headed": "playwright test --headed"
+  },
   "dependencies": {
     "@playwright/test": "1.53.0"
   }

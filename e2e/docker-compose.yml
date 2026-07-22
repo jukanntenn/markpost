@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_DB=markpost_e2e
+      - POSTGRES_USER=markpost
+      - POSTGRES_PASSWORD=markpost
+    volumes:
+      - postgres-socket:/var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost -d markpost_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  oauth-mock:
+    build:
+      context: ./mock-services/oauth-mock
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3001
+      - MOCK_USER_ID=12345
+      - MOCK_USERNAME=testuser
+      - MOCK_EMAIL=test@example.com
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  webhook-mock:
+    build:
+      context: ./mock-services/webhook-mock
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oauth-mock:
+        condition: service_healthy
+      webhook-mock:
+        condition: service_healthy
+    volumes:
+      - postgres-socket:/var/run/postgresql
+    environment:
+      - MARKPOST_RATELIMIT__READ__PER_SECOND=100
+      - MARKPOST_RATELIMIT__READ__BURST=200
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__PER_SECOND=100
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__BURST=100
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_PER_SECOND=100
+      - MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_BURST=1000
+      - MARKPOST_RATELIMIT__AUTHED_WRITE__PER_SECOND=100
+      - MARKPOST_RATELIMIT__AUTHED_WRITE__BURST=100
+      - GIN_MODE=release
+      - MARKPOST_DB__DRIVER=postgresql
+      - MARKPOST_DB__DSN=host=/var/run/postgresql user=markpost password=markpost dbname=markpost_e2e sslmode=disable
+      - MARKPOST_OAUTH__GITHUB__CLIENT_ID=mock-client-id
+      - MARKPOST_OAUTH__GITHUB__CLIENT_SECRET=mock-client-secret
+      - MARKPOST_OAUTH__GITHUB__REDIRECT_URL=https://localhost:2053/auth/callback
+      - MARKPOST_OAUTH__GITHUB__AUTH_URL=http://localhost:3001/login/oauth/authorize
+      - MARKPOST_OAUTH__GITHUB__TOKEN_URL=http://oauth-mock:3001/login/oauth/access_token
+      - MARKPOST_OAUTH__GITHUB__USER_URL=http://oauth-mock:3001
+      - MARKPOST_SERVER__PUBLIC_URL=https://localhost:2053
+      - MARKPOST_JWT__ACCESS_SIGNING_KEY=e2e-access-secret-key-min-32-characters!!
+      - MARKPOST_JWT__REFRESH_SIGNING_KEY=e2e-refresh-secret-key-min-32-characters!!
+    ports:
+      - "2053:2053"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:2053/api/v1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  postgres-socket:

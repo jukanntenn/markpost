@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"markpost/internal/apierr"
 	"markpost/internal/domain/user"
 	"markpost/internal/middleware"
 	"markpost/internal/service"
 	"markpost/internal/service/post"
-	"markpost/internal/apierr"
 	"markpost/pkg/utils"
 
 	ginI18n "github.com/gin-contrib/i18n"
@@ -147,14 +147,14 @@ var tagRegistry = map[string]struct {
 	code        *service.ErrCode
 	placeholder string
 }{
-	"required":   {service.ErrRequired, ""},
-	"min":        {service.ErrMinLength, "Min"},
-	"max":        {service.ErrMaxLength, "Max"},
-	"len":        {service.ErrLength, "Len"},
-	"email":      {service.ErrEmail, ""},
-	"oneof":      {service.ErrOneOf, "OneOf"},
-	"titlesize":  {post.ErrTitleSize, "Max"},
-	"bodysize":   {post.ErrBodySize, "Max"},
+	"required":  {service.ErrRequired, ""},
+	"min":       {service.ErrMinLength, "Min"},
+	"max":       {service.ErrMaxLength, "Max"},
+	"len":       {service.ErrLength, "Len"},
+	"email":     {service.ErrEmail, ""},
+	"oneof":     {service.ErrOneOf, "OneOf"},
+	"titlesize": {post.ErrTitleSize, "Max"},
+	"bodysize":  {post.ErrBodySize, "Max"},
 }
 
 // fieldErrorToDetail maps a validator FieldError to a FieldDetail, resolving

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"markpost/internal/apierr"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/internal/web"
-	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )

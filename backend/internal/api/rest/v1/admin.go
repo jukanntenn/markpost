@@ -3,10 +3,10 @@ package v1
 import (
 	"context"
 
+	_ "markpost/internal/apierr"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
-	_ "markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )

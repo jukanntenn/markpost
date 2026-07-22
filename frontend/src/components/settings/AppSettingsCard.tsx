@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useLocaleContext } from "@/components/providers/LocaleProvider";
+import { localeNames } from "@/i18n/constants";
 import {
   Card,
   CardContent,
@@ -10,11 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-
-const localeLabels: Record<string, string> = {
-  en: "English",
-  zh: "中文",
-};
 
 export function AppSettingsCard() {
   const t = useTranslations("settings");
@@ -37,7 +33,7 @@ export function AppSettingsCard() {
           >
             {availableLocales.map((l) => (
               <option key={l} value={l}>
-                {localeLabels[l]}
+                {localeNames[l]}
               </option>
             ))}
           </select>

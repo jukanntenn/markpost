@@ -38,7 +38,6 @@ ARG CADDY_VERSION=v2.9.1
 RUN apk add --no-cache \
     ca-certificates \
     tzdata \
-    nodejs \
     curl
 
 ADD "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" /tmp/s6-overlay-noarch.tar.xz
@@ -63,9 +62,7 @@ COPY --from=go-build /app/markpost /usr/local/bin/markpost
 COPY --from=go-build /app/templates /app/templates
 COPY --from=go-build /app/locales /app/locales
 
-COPY --from=node-build /app/.next/standalone /app/frontend
-COPY --from=node-build /app/.next/static /app/frontend/.next/static
-COPY --from=node-build /app/public /app/frontend/public
+COPY --from=node-build /app/out /app/frontend
 
 RUN mkdir -p /app/data
 

@@ -26,6 +26,15 @@ markpost
 .idea/
 .local/
 .claude/
+.codex/
+.zcode/
+.fa/
+.agents/
+.github/
+.playwright-cli/
+
+# E2E tests (not needed in production image)
+e2e/
 
 # Logs
 *.log
@@ -51,3 +60,6 @@ docker/__pycache__/
 config.toml
 backend/config.toml
 backend/config.example.toml
+
+# Logs directory
+backend/logs/

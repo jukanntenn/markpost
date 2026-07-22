@@ -83,3 +83,4 @@ htmlcov/
 
 .local/
 .zcode/plans/
+frontend/out/

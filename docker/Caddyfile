@@ -1,32 +1,83 @@
-:7157 {
-	encode zstd gzip
+{
+    local_certs
+}
 
-	handle /api/v1/* {
-		reverse_proxy 127.0.0.1:7330
-	}
+localhost:2053, app:2053 {
+    tls internal
 
-	handle /static/* {
-		reverse_proxy 127.0.0.1:7330
-	}
+    encode zstd gzip
 
-	handle /swagger/* {
-		reverse_proxy 127.0.0.1:7330
-	}
+    handle /api/v1/* {
+        reverse_proxy 127.0.0.1:7330
+    }
 
-	handle /mpk-* {
-		reverse_proxy 127.0.0.1:7330
-	}
+    handle /static/* {
+        reverse_proxy 127.0.0.1:7330
+    }
 
-	handle /p-* {
-		reverse_proxy 127.0.0.1:7330
-	}
+    handle /swagger/* {
+        reverse_proxy 127.0.0.1:7330
+    }
 
-	handle {
-		reverse_proxy 127.0.0.1:3000
-	}
+    handle /mpk-* {
+        reverse_proxy 127.0.0.1:7330
+    }
 
-	log {
-		output stderr
-		format console
-	}
+    handle /p-* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle {
+        root * /app/frontend
+        @noExt {
+            not file
+            path_regexp ^/([^.]+)$
+        }
+        rewrite @noExt /{http.regexp.1}.html
+        file_server
+    }
+
+    log {
+        output stderr
+        format console
+    }
+}
+
+:8080 {
+    encode zstd gzip
+
+    handle /api/v1/* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle /static/* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle /swagger/* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle /mpk-* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle /p-* {
+        reverse_proxy 127.0.0.1:7330
+    }
+
+    handle {
+        root * /app/frontend
+        @noExt {
+            not file
+            path_regexp ^/([^.]+)$
+        }
+        rewrite @noExt /{http.regexp.1}.html
+        file_server
+    }
+
+    log {
+        output stderr
+        format console
+    }
 }

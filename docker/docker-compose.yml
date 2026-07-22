@@ -1,0 +1,83 @@
+# Acceptance / manual-verification compose.
+#
+# Mirrors the production topology (devops/ansible/templates/production/) but
+# builds the image from the local source tree instead of pulling a registry
+# tag, and uses Caddy's internal (self-signed) CA for TLS instead of a
+# Cloudflare Origin CA cert. Run before a release to hand-verify that the
+# production-shaped config actually boots and serves.
+#
+#   docker compose -f docker/docker-compose.yml up -d --build
+#   curl -k https://localhost:2053/api/v1/health
+#   docker compose -f docker/docker-compose.yml down -v
+#
+# Divergences from production (all intentional, all documented):
+#   - build: local context  vs.  image: <registry>/markpost:<tag>
+#   - public_url https://localhost:2053  vs.  the real domain
+#   - Caddy tls internal (self-signed)  vs.  Cloudflare Origin CA cert
+#   - Caddyfile reused from docker/Caddyfile (serves the static frontend
+#     directly, since this image has no Next.js server)  vs.  production
+#     Caddyfile reverse-proxying :3000
+# Everything else — Postgres sibling, Unix-socket connection, GUC tuning,
+# healthchecks — matches production exactly.
+
+services:
+  markpost:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: markpost-acceptance
+    ports:
+      - "2053:2053"
+    volumes:
+      - ./config.acceptance.toml:/app/config.toml:ro
+      - acceptance-data:/app/data
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - postgres-socket:/var/run/postgresql
+    environment:
+      - MARKPOST_DEBUG=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:2053/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: markpost-acceptance-postgres
+    environment:
+      - POSTGRES_DB=markpost
+      - POSTGRES_USER=markpost
+      - POSTGRES_PASSWORD=markpost
+    # Same 5 GUC overrides as production, applied as -c flags so the image
+    # default postgresql.conf is left untouched (see production template).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - synchronous_commit=off
+    volumes:
+      - acceptance-pgdata:/var/lib/postgresql/data
+      - postgres-socket:/var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  acceptance-data:
+  acceptance-pgdata:
+  postgres-socket:

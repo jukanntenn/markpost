@@ -12,9 +12,10 @@ trusted_proxies = {{ trusted_proxies }}
 
 [db]
 driver = "postgresql"
-# Unix-socket connection to the sibling postgres container. The socket dir
-# /var/run/postgres is a shared named volume (see docker-compose.yml).
-dsn = "host=/var/run/postgres user={{ db_user | default('markpost') }} password={{ db_password }} dbname=markpost sslmode=disable"
+# Unix-socket connection to the sibling postgres container over the shared
+# postgres-socket named volume. The path must match postgres's default
+# unix_socket_directories (/var/run/postgresql) — see docker-compose.yml.
+dsn = "host=/var/run/postgresql user={{ db_user | default('markpost') }} password={{ db_password }} dbname=markpost sslmode=disable"
 
 [jwt]
 access_signing_key = "{{ jwt_access_signing_key }}"

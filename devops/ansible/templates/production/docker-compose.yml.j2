@@ -9,7 +9,7 @@ services:
       - {{ app_path }}/data:/app/data
       - {{ app_path }}/Caddyfile:/etc/caddy/Caddyfile:ro
       - {{ app_path }}/certs:/app/certs:ro
-      - postgres-socket:/var/run/postgres
+      - postgres-socket:/var/run/postgresql
     environment:
       - MARKPOST_DEBUG=false
     depends_on:
@@ -30,13 +30,26 @@ services:
       - POSTGRES_DB=markpost
       - POSTGRES_USER={{ db_user | default('markpost') }}
       - POSTGRES_PASSWORD={{ db_password }}
-    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    # -c flags layer only the 5 tuned GUCs on top of the image default
+    # postgresql.conf (Decision 22; 2-core/2 GB box). The socket dir is left at
+    # the image default /var/run/postgresql so the entrypoint owns its perms.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - synchronous_commit=off
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - {{ app_path }}/postgresql.conf:/etc/postgresql/postgresql.conf:ro
-      - postgres-socket:/var/run/postgres
+      - postgres-socket:/var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ db_user | default('markpost') }}"]
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U {{ db_user | default('markpost') }}"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -438,18 +438,18 @@ Cloudflare edge ──HTTPS──► Host :443 ─► markpost container (s6-ove
                                            - ./data:/app/data
                                            - ./config.toml:/app/config.toml:ro
                                            - ./certs:/app/certs:ro   (Origin CA cert + key)
-                                           - /var/run/postgres:/var/run/postgres  (shared socket dir)
+                                           - /var/run/postgresql:/var/run/postgresql  (shared socket dir)
 
                                      ─► postgres container (separate)
                                          volume:
                                            - pgdata:/var/lib/postgresql/data
                                          exposes:
-                                           - Unix socket at /var/run/postgres  (bind-mounted into markpost container)
+                                           - Unix socket at /var/run/postgresql  (bind-mounted into markpost container)
 ```
 
 TLS is split into two segments: the visitor↔edge leg (TLS-A) is terminated by Cloudflare with an automatically managed certificate; the edge↔origin leg (TLS-B) is terminated by Caddy presenting a Cloudflare Origin CA certificate, under the **Full (strict)** SSL mode. The earlier "TLS-less Caddy" design (equivalent to Flexible mode) is superseded — Flexible is explicitly discouraged for applications with user login. The SaaS onboarding, Origin CA steps, port selection (443), origin protection, and client-IP detection are specified in detail in [`cloudflare.md`](./cloudflare.md).
 
-**Caddy terminates inbound traffic and routes to three loopback services.** Only one NAT hop exists (host `:8089` → container `:7157`); everything inside the markpost container runs on `127.0.0.1`. The Go↔Postgres path uses a **Unix domain socket** via a shared `/var/run/postgres` bind mount, eliminating the TCP/NAT overhead that a cross-container TCP connection would add. Postgres data lives on a named volume (`pgdata`) that bypasses the container's overlay2 writable layer, so writes hit the host filesystem directly.
+**Caddy terminates inbound traffic and routes to three loopback services.** Only one NAT hop exists (host `:8089` → container `:7157`); everything inside the markpost container runs on `127.0.0.1`. The Go↔Postgres path uses a **Unix domain socket** via a shared `/var/run/postgresql` named volume, eliminating the TCP/NAT overhead that a cross-container TCP connection would add. The path matches the postgres image's default `unix_socket_directories`, so the entrypoint owns the directory's permissions. Postgres data lives on a named volume (`pgdata`) that bypasses the container's overlay2 writable layer, so writes hit the host filesystem directly.
 
 ### Docker vs. bare metal — quantified
 
@@ -632,7 +632,7 @@ Organized by priority. P0 is the highest-ROI, lowest-risk work; later phases dep
    ```
    *Verification:* unit test (SQLite path) confirms the SQLite `MaxOpenConns(1)` invariant is unchanged; the Postgres path is verified by `go build` and integration.
 
-7. **Apply Postgres GUC tuning.** Update `devops/ansible/templates/{production,staging,dev}/postgresql.conf` (or the equivalent `postgresql.conf.j2`) with: `shared_buffers = 256MB`, `effective_cache_size = 1GB`, `maintenance_work_mem = 128MB`, `max_connections = 50`, `synchronous_commit = off`. These require a Postgres restart (`shared_buffers`, `max_connections` are `postmaster`-context; the rest are reloadable). *Verification:* manual — after restart, `SHOW shared_buffers;` etc. confirm the values. These are not Go code and cannot be unit-tested.
+7. **Apply Postgres GUC tuning.** The 5 tuned GUCs (`shared_buffers = 256MB`, `effective_cache_size = 1GB`, `maintenance_work_mem = 128MB`, `max_connections = 50`, `synchronous_commit = off`) are applied as `-c` flags on the postgres service command in `devops/ansible/templates/production/docker-compose.yml.j2`, layering only the overrides on top of the image's default `postgresql.conf` (initdb-generated) rather than replacing it. These require a Postgres restart (`shared_buffers`, `max_connections` are `postmaster`-context; the rest are reloadable). *Verification:* manual — after restart, `SHOW shared_buffers;` etc. confirm the values; `pg_settings.source` reports `command line` for the overrides and `configuration file` for everything else. These are not Go code and cannot be unit-tested.
 
 8. **Switch TOAST compression to lz4 (automated on startup).** The `ALTER TABLE posts ALTER COLUMN body SET COMPRESSION lz4` runs automatically on every Postgres startup via `Database.migratePostBodyCompressionLZ4` in `internal/infra/db.go` (the SQLite path is skipped — SQLite has no TOAST). The migration is **guarded**: it first checks `pg_attribute.attcompression` and only issues the `ALTER` on the first startup after the upgrade; once the column is lz4, every subsequent boot runs only a cheap catalog read and skips the DDL, so the `AccessExclusiveLock` that `SET COMPRESSION` takes is acquired exactly once, not on every restart. `SET COMPRESSION` is metadata-only (idempotent in effect; it does not rewrite rows), so even an unguarded re-run is safe — the guard exists only to avoid needlessly reacquiring the lock. Existing rows keep their old compression until rewritten, so a one-time `VACUUM FULL posts` is recommended in a maintenance window to retrofit them — that is intentionally **not** done automatically because it takes a long-lived `AccessExclusiveLock`. *Verification:* integration — `\d+ posts` shows `compression: lz4` after first startup; a second startup runs the catalog check and issues no `ALTER`. Cannot be unit-tested (SQLite has no TOAST); the guard query and the skip-on-idempotent path are verified against a real Postgres.
 

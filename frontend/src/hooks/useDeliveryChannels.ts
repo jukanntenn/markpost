@@ -2,6 +2,7 @@
 
 import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deliveryApi, deliveryKeys, invalidateKey } from "@/lib/api";
+import type { DeliveryChannel } from "@/types/delivery";
 
 export function invalidateDeliveryChannels(queryClient: QueryClient) {
   return invalidateKey(queryClient, deliveryKeys.channels());
@@ -16,7 +17,7 @@ export function useDeliveryChannels() {
   });
 
   return {
-    channels: data?.items || [],
+    channels: (data?.items || []) as DeliveryChannel[],
     invalidate: () => invalidateDeliveryChannels(queryClient),
     ...rest,
   };

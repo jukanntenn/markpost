@@ -205,11 +205,11 @@ func TestListDeliveryChannels_Success(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
-	if len(resp.Channels) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(resp.Channels))
+	if len(resp.Items) != 1 {
+		t.Fatalf("expected 1 channel, got %d", len(resp.Items))
 	}
-	if resp.Channels[0].Name != "Test Channel" {
-		t.Errorf("expected name 'Test Channel', got %q", resp.Channels[0].Name)
+	if resp.Items[0].Name != "Test Channel" {
+		t.Errorf("expected name 'Test Channel', got %q", resp.Items[0].Name)
 	}
 }
 

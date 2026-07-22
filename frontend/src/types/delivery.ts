@@ -18,7 +18,7 @@ export interface DeliveryChannel {
   updated_at: string;
 }
 
-export type DeliveryChannelsResponse = Paginated<DeliveryChannel>;
+export interface DeliveryChannelsResponse { items: DeliveryChannel[]; }
 
 export interface DeliveryChannelResponse {
   channel: DeliveryChannel;

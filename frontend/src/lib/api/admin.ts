@@ -15,12 +15,12 @@ export const adminApi = {
     }),
 
   listChannels: (page?: number, limit?: number) =>
-    request<AdminChannelsResponse>("/api/v1/admin/channels", {
+    request<AdminChannelsResponse>("/api/v1/admin/delivery/channels", {
       params: paginationParams(page, limit),
     }),
 
   listDeliveryHistory: (page?: number, limit?: number) =>
-    request<DeliveryHistoryResponse>("/api/v1/admin/delivery-history", {
+    request<DeliveryHistoryResponse>("/api/v1/admin/delivery/history", {
       params: paginationParams(page, limit),
     }),
 };

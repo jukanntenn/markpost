@@ -13,7 +13,7 @@ export const deliveryApi = {
 
   update: (id: number, data: UpdateChannelPayload) =>
     request<DeliveryChannelResponse>(`/api/v1/delivery/channels/${id}`, {
-      method: "PUT",
+      method: "PATCH",
       json: data,
     }),
 

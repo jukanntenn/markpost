@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	"markpost/internal/apierr"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/user"
 	delivery_svc "markpost/internal/service/delivery"
-	"markpost/internal/apierr"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,7 +40,7 @@ func ListDeliveryChannels(deliverySvc DeliveryService) gin.HandlerFunc {
 
 			writeList(c, channels, newChannelResponse,
 				func(items []ChannelResponse) any {
-					return ChannelsListResponse{Channels: items}
+					return ChannelsListResponse{Items: items}
 				},
 			)
 		})

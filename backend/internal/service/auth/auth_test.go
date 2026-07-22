@@ -262,6 +262,27 @@ func TestService_ChangePassword(t *testing.T) {
 			t.Fatal("expected error for non-existent user")
 		}
 	})
+
+	t.Run("sets password for OAuth user with empty current password", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		created, _ := userRepo.CreateFromGitHub(ctx, &user.GitHubUser{
+			ID:    12345,
+			Login: "ghuser",
+			Email: "gh@example.com",
+		})
+
+		err := svc.ChangePassword(ctx, created.ID, "", "newpassword")
+		if err != nil {
+			t.Fatalf("expected no error for passwordless user, got: %v", err)
+		}
+
+		_, _, err = svc.LoginWithEmail(ctx, "ghuser", "newpassword")
+		if err != nil {
+			t.Fatalf("expected login with new password to work, got: %v", err)
+		}
+	})
 }
 
 func TestService_InitializeFirstAdmin(t *testing.T) {

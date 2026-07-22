@@ -14,19 +14,19 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Debug         bool             `mapstructure:"debug"`
-	PostKeyLength int              `mapstructure:"post_key_length" validate:"gte=12"`
-	Server        ServerConfig     `mapstructure:"server"`
-	DB            DBConfig         `mapstructure:"db"`
-	Admin         AdminConfig      `mapstructure:"admin"`
-	Post          PostConfig       `mapstructure:"post"`
-	CORS          CORSConfig       `mapstructure:"cors"`
-	OAuth         OAuthConfig      `mapstructure:"oauth"`
-	JWT           JWTConfig        `mapstructure:"jwt"`
-	Ratelimit     RatelimitConfig  `mapstructure:"ratelimit"`
-	Delivery      DeliveryConfig   `mapstructure:"delivery"`
-	Render        RenderConfig       `mapstructure:"render"`
-	Cloudflare    CloudflareConfig   `mapstructure:"cloudflare"`
+	Debug         bool                `mapstructure:"debug"`
+	PostKeyLength int                 `mapstructure:"post_key_length" validate:"gte=12"`
+	Server        ServerConfig        `mapstructure:"server"`
+	DB            DBConfig            `mapstructure:"db"`
+	Admin         AdminConfig         `mapstructure:"admin"`
+	Post          PostConfig          `mapstructure:"post"`
+	CORS          CORSConfig          `mapstructure:"cors"`
+	OAuth         OAuthConfig         `mapstructure:"oauth"`
+	JWT           JWTConfig           `mapstructure:"jwt"`
+	Ratelimit     RatelimitConfig     `mapstructure:"ratelimit"`
+	Delivery      DeliveryConfig      `mapstructure:"delivery"`
+	Render        RenderConfig        `mapstructure:"render"`
+	Cloudflare    CloudflareConfig    `mapstructure:"cloudflare"`
 	Observability ObservabilityConfig `mapstructure:"observability"`
 }
 
@@ -74,6 +74,9 @@ type GitHubOAuthConfig struct {
 	ClientID     string `mapstructure:"client_id"`
 	ClientSecret string `mapstructure:"client_secret"`
 	RedirectURL  string `mapstructure:"redirect_url" validate:"omitempty,url"`
+	AuthURL      string `mapstructure:"auth_url" validate:"omitempty,url"`
+	TokenURL     string `mapstructure:"token_url" validate:"omitempty,url"`
+	UserURL      string `mapstructure:"user_url" validate:"omitempty,url"`
 }
 
 // JWTConfig holds JWT-related configuration.
@@ -260,6 +263,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("oauth.github.client_id", "")
 	v.SetDefault("oauth.github.client_secret", "")
 	v.SetDefault("oauth.github.redirect_url", "")
+	v.SetDefault("oauth.github.auth_url", "")
+	v.SetDefault("oauth.github.token_url", "")
+	v.SetDefault("oauth.github.user_url", "")
 	v.SetDefault("jwt.access_signing_key", "")
 	v.SetDefault("jwt.refresh_signing_key", "")
 	v.SetDefault("jwt.access_token_expire", "24h")

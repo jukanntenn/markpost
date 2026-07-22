@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"markpost/internal/domain"
@@ -49,12 +50,13 @@ func (noopOAuthStateStore) Consume(string) (oauthStateEntry, bool) {
 // Service handles authentication operations including OAuth, JWT token management,
 // and user session handling.
 type Service struct {
-	users     user.Repository      // User data repository
-	tokens    user.TokenRepository // Token storage and blacklist management
-	oauth     *oauth2.Config       // OAuth2 configuration for GitHub
-	jwt       *JWTService          // JWT token generation and validation
-	issuer    string               // Token issuer identifier
-	stateStore OAuthStateStore    // OAuth state→verifier store (PKCE + CSRF)
+	users      user.Repository      // User data repository
+	tokens     user.TokenRepository // Token storage and blacklist management
+	oauth      *oauth2.Config       // OAuth2 configuration for GitHub
+	jwt        *JWTService          // JWT token generation and validation
+	issuer     string               // Token issuer identifier
+	stateStore OAuthStateStore      // OAuth state→verifier store (PKCE + CSRF)
+	userURL    string               // Override for GitHub user API URL (for testing)
 }
 
 // NewService creates a new Service instance with the provided dependencies.
@@ -75,6 +77,14 @@ func (s *Service) WithOAuthStateStore(store OAuthStateStore) *Service {
 	if store != nil {
 		s.stateStore = store
 	}
+	return s
+}
+
+// WithUserURL overrides the GitHub user API base URL. When set, getGitHubUser
+// and getGitHubUserEmails use this URL instead of api.github.com. Intended
+// for E2E testing with a mock OAuth server.
+func (s *Service) WithUserURL(url string) *Service {
+	s.userURL = strings.TrimRight(url, "/")
 	return s
 }
 
@@ -136,8 +146,13 @@ func (s *Service) LoginWithGitHub(ctx context.Context, code, state string) (*use
 func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user.GitHubUser, error) {
 	client := s.oauth.Client(ctx, token)
 
+	userURL := "https://api.github.com/user"
+	if s.userURL != "" {
+		userURL = s.userURL + "/user"
+	}
+
 	var githubUser user.GitHubUser
-	if err := httputil.FetchAndDecodeJSON(client, "https://api.github.com/user", &githubUser); err != nil {
+	if err := httputil.FetchAndDecodeJSON(client, userURL, &githubUser); err != nil {
 		return nil, service.Wrap(ErrGitHubUserFetch, "failed to get GitHub user", err)
 	}
 
@@ -162,7 +177,13 @@ func (s *Service) getGitHubUserEmails(client *http.Client) (string, error) {
 		Primary  bool   `json:"primary"`
 		Verified bool   `json:"verified"`
 	}
-	if err := httputil.FetchAndDecodeJSON(client, "https://api.github.com/user/emails", &emails); err != nil {
+
+	emailsURL := "https://api.github.com/user/emails"
+	if s.userURL != "" {
+		emailsURL = s.userURL + "/user/emails"
+	}
+
+	if err := httputil.FetchAndDecodeJSON(client, emailsURL, &emails); err != nil {
 		return "", service.Wrap(ErrGitHubUserFetch, "failed to get GitHub user emails", err)
 	}
 

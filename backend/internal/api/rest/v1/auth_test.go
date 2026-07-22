@@ -238,6 +238,36 @@ func TestChangePassword_WrongCurrentPassword(t *testing.T) {
 	}
 }
 
+func TestChangePassword_EmptyCurrentForOAuthUser(t *testing.T) {
+	svc, userRepo := setupRealAuthService(t)
+	ctx := t.Context()
+	created, _ := userRepo.CreateFromGitHub(ctx, &user.GitHubUser{
+		ID:    67890,
+		Login: "ghuser",
+		Email: "gh@example.com",
+	})
+
+	router := newTestEngine()
+	router.POST("/change-password", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: created.ID, Email: "gh@example.com", Username: "ghuser", Role: user.RoleUser})
+		c.Next()
+	}, ChangePassword(svc))
+
+	jsonBody, _ := json.Marshal(map[string]string{
+		"current_password": "",
+		"new_password":     "newpassword123",
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/change-password", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d for passwordless OAuth user, got %d (body: %s)", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
 func TestLogout_Success(t *testing.T) {
 	svc, _ := setupRealAuthService(t)
 

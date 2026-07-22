@@ -162,6 +162,21 @@
 # [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__REDIRECT_URL  Default: ""
 # redirect_url = ""
 
+# Override the OAuth authorization URL. Leave empty to use the real GitHub
+# endpoint. Set to a mock server URL for E2E testing.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__AUTH_URL  Default: ""
+# auth_url = ""
+
+# Override the OAuth token exchange URL. Leave empty to use the real GitHub
+# endpoint. Set to a mock server URL for E2E testing.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__TOKEN_URL  Default: ""
+# token_url = ""
+
+# Override the GitHub user API base URL (e.g. "http://mock:3001"). When set,
+# /user and /user/emails are fetched from this URL instead of api.github.com.
+# [OPTIONAL]  Env: MARKPOST_OAUTH__GITHUB__USER_URL  Default: ""
+# user_url = ""
+
 
 # --- JWT -----------------------------------------------------------------------
 #

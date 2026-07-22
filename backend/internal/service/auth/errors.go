@@ -3,7 +3,6 @@ package auth
 import (
 	"strconv"
 
-	"markpost/internal/config"
 	"markpost/internal/service"
 
 	"github.com/nicksnyder/go-i18n/v2/i18n"
@@ -91,7 +90,3 @@ var (
 		},
 	}
 )
-
-// configGet is a tiny indirection so tests can stub config.Get(); it returns
-// the package config value.
-var configGet = config.Get

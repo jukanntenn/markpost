@@ -249,6 +249,14 @@ func serve(configPath string) {
 		cfg.JWT.RefreshTokenExpire,
 	)
 
+	oauthEndpoint := github.Endpoint
+	if cfg.OAuth.GitHub.AuthURL != "" {
+		oauthEndpoint.AuthURL = cfg.OAuth.GitHub.AuthURL
+	}
+	if cfg.OAuth.GitHub.TokenURL != "" {
+		oauthEndpoint.TokenURL = cfg.OAuth.GitHub.TokenURL
+	}
+
 	authSvc = auth.NewService(
 		userRepo,
 		tokenRepo,
@@ -257,11 +265,11 @@ func serve(configPath string) {
 			ClientSecret: cfg.OAuth.GitHub.ClientSecret,
 			RedirectURL:  cfg.OAuth.GitHub.RedirectURL,
 			Scopes:       []string{"user:email"},
-			Endpoint:     github.Endpoint,
+			Endpoint:     oauthEndpoint,
 		},
 		jwtSvc,
 		"markpost",
-	)
+	).WithUserURL(cfg.OAuth.GitHub.UserURL)
 	if stateStore, err := auth.NewRistrettoOAuthStateStore(); err == nil {
 		authSvc = authSvc.WithOAuthStateStore(stateStore)
 	} else {
@@ -395,7 +403,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	jwtAuth := apiV1.Group("")
 	jwtAuth.Use(middleware.AuthWithBlacklist(jwtSvc, userRepo, tokenRepo))
 	{
-		jwtAuth.GET("/post_key", v1.QueryPostKey(authSvc))
+		jwtAuth.GET("/post-key", v1.QueryPostKey(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
 
 		// L3: authenticated state changes keyed on user_id (from JWT). Reads

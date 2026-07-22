@@ -90,7 +90,6 @@ export function PasswordChangeCard() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               placeholder={t("currentPasswordPlaceholder")}
-              required
             />
           </div>
 

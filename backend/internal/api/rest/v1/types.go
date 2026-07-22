@@ -82,8 +82,11 @@ type RefreshTokenRequest struct {
 }
 
 // PasswordChangeRequest represents the request body for changing a user's password.
+// CurrentPassword is optional: users created via OAuth without a local password
+// may leave it empty; the service layer validates it against the stored hash and
+// skips verification when no password is set.
 type PasswordChangeRequest struct {
-	CurrentPassword string `json:"current_password" binding:"required"`
+	CurrentPassword string `json:"current_password"`
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 }
 
@@ -146,7 +149,7 @@ func newChannelResponse(ch delivery.Channel) ChannelResponse {
 
 // ChannelsListResponse represents a list of delivery channels.
 type ChannelsListResponse struct {
-	Channels []ChannelResponse `json:"channels"`
+	Items []ChannelResponse `json:"items"`
 }
 
 // SingleChannelResponse represents a response containing a single delivery channel.

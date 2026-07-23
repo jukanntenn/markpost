@@ -14,7 +14,6 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // sqliteModels is the per-table model set used to scan the source SQLite file,
@@ -94,6 +93,9 @@ func RunMigrateSqliteToPostgres(configPath, sqlitePath string, dryRun bool) erro
 
 // migrateTable copies one model's rows from source to tx. Tables missing from
 // the source are reported and skipped.
+//
+// Target tables are cleared before copying so that rows inserted by
+// infra.New (e.g. seedAdminUser) do not conflict with the source data.
 func migrateTable(ctx context.Context, source, tx *gorm.DB, model any, dryRun bool) error {
 	table := tableName(model)
 
@@ -109,6 +111,12 @@ func migrateTable(ctx context.Context, source, tx *gorm.DB, model any, dryRun bo
 	if total == 0 {
 		log.Printf("skip %s: source has 0 rows", table)
 		return nil
+	}
+
+	if !dryRun {
+		if err := tx.Exec(fmt.Sprintf("DELETE FROM %s", table)).Error; err != nil {
+			return fmt.Errorf("clear target %s: %w", table, err)
+		}
 	}
 
 	rows, err := source.Model(model).Rows()
@@ -127,7 +135,7 @@ func migrateTable(ctx context.Context, source, tx *gorm.DB, model any, dryRun bo
 			copied++
 			continue
 		}
-		if err := tx.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(dst).Error; err != nil {
+		if err := tx.WithContext(ctx).Create(dst).Error; err != nil {
 			return fmt.Errorf("insert row into %s: %w", table, err)
 		}
 		copied++

@@ -1,3 +1,19 @@
+# markpost Caddyfile — image-baked default (e2e / local acceptance).
+#
+# This file is baked into the image at /etc/caddy/Caddyfile and used as-is by
+# the e2e suite and local acceptance verification (docker/docker-compose.yml).
+# Both use Caddy's internal (self-signed) CA so the Go backend is reached over
+# the same HTTPS path production uses, just with a locally-trusted cert.
+#
+# For dev / staging / production, Ansible renders templates/Caddyfile.j2 and
+# mounts it over /etc/caddy/Caddyfile, replacing this file. The two share the
+# same routing logic (same reverse_proxy handles, same static frontend
+# serving); only the TLS layer and trusted_proxies differ.
+#
+# Internal layout (identical across every environment):
+#   :2053  Caddy (this file)        — published on the host
+#   7330   Go backend (127.0.0.1)   — never published, Caddy proxies to it
+
 {
     local_certs
 }
@@ -29,45 +45,10 @@ localhost:2053, app:2053 {
 
     handle {
         root * /app/frontend
-        @noExt {
-            not file
-            path_regexp ^/([^.]+)$
-        }
-        rewrite @noExt /{http.regexp.1}.html
-        file_server
-    }
 
-    log {
-        output stderr
-        format console
-    }
-}
+        @immutable path /_next/static/*
+        header @immutable Cache-Control "public, max-age=31536000, immutable"
 
-:8080 {
-    encode zstd gzip
-
-    handle /api/v1/* {
-        reverse_proxy 127.0.0.1:7330
-    }
-
-    handle /static/* {
-        reverse_proxy 127.0.0.1:7330
-    }
-
-    handle /swagger/* {
-        reverse_proxy 127.0.0.1:7330
-    }
-
-    handle /mpk-* {
-        reverse_proxy 127.0.0.1:7330
-    }
-
-    handle /p-* {
-        reverse_proxy 127.0.0.1:7330
-    }
-
-    handle {
-        root * /app/frontend
         @noExt {
             not file
             path_regexp ^/([^.]+)$

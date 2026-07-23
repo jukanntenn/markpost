@@ -44,8 +44,10 @@ e2e/
 Thumbs.db
 
 # Frontend dev artifacts
+# Frontend is built inside Docker (node-build stage produces out/); host out/ is excluded.
 frontend/node_modules/
 frontend/.next/
+frontend/out/
 
 # Backend dev artifacts
 backend/markpost

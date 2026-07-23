@@ -1,5 +1,0 @@
-1:"$Sreact.fragment"
-2:I[13013,["/_next/static/chunks/c322b8005eebc0d8.js","/_next/static/chunks/c1cb5cdbbfdb9ffb.js"],"ViewportBoundary"]
-3:I[13013,["/_next/static/chunks/c322b8005eebc0d8.js","/_next/static/chunks/c1cb5cdbbfdb9ffb.js"],"MetadataBoundary"]
-4:"$Sreact.suspense"
-0:{"buildId":"ZyLRMne9O-moewRYhx6eF","rsc":["$","$1","h",{"children":[null,["$","$L2",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L3",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Posts - Admin | Markpost"}],["$","meta","1",{"name":"description","content":"Markpost - A simple posting service"}]]}]}]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"loading":null,"isPartial":false}

@@ -10,13 +10,16 @@
 #   curl -k https://localhost:2053/api/v1/health
 #   docker compose -f docker/docker-compose.yml down -v
 #
+# Like e2e, local acceptance uses no persistent data volumes: the app data
+# dir and Postgres data live entirely inside the ephemeral containers, and
+# `down -v` (or a plain `down` now that there are no named data volumes)
+# yields a clean slate on every run. Only the postgres-socket IPC volume
+# (required for the Unix-socket DB connection) is shared between services.
+#
 # Divergences from production (all intentional, all documented):
 #   - build: local context  vs.  image: <registry>/markpost:<tag>
 #   - public_url https://localhost:2053  vs.  the real domain
 #   - Caddy tls internal (self-signed)  vs.  Cloudflare Origin CA cert
-#   - Caddyfile reused from docker/Caddyfile (serves the static frontend
-#     directly, since this image has no Next.js server)  vs.  production
-#     Caddyfile reverse-proxying :3000
 # Everything else — Postgres sibling, Unix-socket connection, GUC tuning,
 # healthchecks — matches production exactly.
 
@@ -29,8 +32,7 @@ services:
     ports:
       - "2053:2053"
     volumes:
-      - ./config.acceptance.toml:/app/config.toml:ro
-      - acceptance-data:/app/data
+      - ../.local/config.acceptance.toml:/app/config.toml:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - postgres-socket:/var/run/postgresql
     environment:
@@ -68,7 +70,6 @@ services:
       - -c
       - synchronous_commit=off
     volumes:
-      - acceptance-pgdata:/var/lib/postgresql/data
       - postgres-socket:/var/run/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost"]
@@ -78,6 +79,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  acceptance-data:
-  acceptance-pgdata:
   postgres-socket:

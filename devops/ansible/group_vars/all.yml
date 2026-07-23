@@ -1,0 +1,21 @@
+---
+# Shared variables for every markpost environment. Per-environment overrides
+# live in group_vars/<env>.yml; per-host facts (user, home) in host_vars/.
+
+app_name: markpost
+apps_path: "{{ home }}/docker"
+app_path: "{{ apps_path }}/{{ app_name }}"
+compose_file: "{{ app_path }}/docker-compose.yml"
+config_file: "{{ app_path }}/config.toml"
+caddyfile: "{{ app_path }}/Caddyfile"
+
+# Internal ports are identical across every environment:
+#   - Go backend listens on 7330 (server.port default, never published).
+#   - Caddy listens on 2053 inside the container and is the only published port.
+go_port: 7330
+caddy_port: 2053
+
+# Postgres is a sibling container in every environment, reached over the shared
+# postgres-socket named volume (Unix socket) — never published on the host.
+postgres_db: markpost
+postgres_user: markpost

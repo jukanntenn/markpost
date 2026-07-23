@@ -1,0 +1,28 @@
+---
+# dev (fn @ 192.168.5.200) — remote fast-iteration environment. Self-hosted,
+# mirrors production topology as closely as possible but without Cloudflare and
+# without HTTPS. Caddy serves plain HTTP. Crashing it is acceptable.
+
+env: dev
+image_tag: dev
+registry: "192.168.5.50:5000"
+image: "{{ registry }}/markpost:{{ image_tag }}"
+
+# Host port 8089 is fixed for backward compatibility (existing reverse proxies
+# / bookmarks point at it). The container-side port is the shared caddy_port.
+host_port: 8089
+
+# TLS profile for the rendered Caddyfile: http = plain HTTP, auto_https off.
+tls_profile: http
+
+# Template source for the Caddyfile (dev/staging are static files, production is
+# a .j2 that needs cloudflare_cidrs interpolation).
+caddyfile_template: Caddyfile.dev
+
+debug: true
+
+# Directories to create on the host. dev keeps its postgres data in the named
+# pgdata volume; no bind-mounted app data dir is needed.
+app_dirs:
+  - "{{ apps_path }}"
+  - "{{ app_path }}"

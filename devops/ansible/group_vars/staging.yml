@@ -1,0 +1,24 @@
+---
+# staging (oect @ 192.168.5.50) — treated as production-grade self-hosted.
+# Mirrors production topology (Postgres via Unix socket) but without Cloudflare
+# and without HTTPS. Always pulls the `dev` tag; promoted to production only
+# after validation here.
+
+env: staging
+image_tag: dev
+registry: "192.168.5.50:5000"
+image: "{{ registry }}/markpost:{{ image_tag }}"
+
+public_url: "https://markpost.bytehome.fun"
+trusted_proxies: '["127.0.0.1", "::1"]'
+
+host_port: 8089
+tls_profile: http
+caddyfile_template: Caddyfile.staging
+debug: false
+
+# staging's postgres data lives in the named pgdata volume (no host bind mount
+# for app data, matching dev and the ephemeral acceptance topology).
+app_dirs:
+  - "{{ apps_path }}"
+  - "{{ app_path }}"

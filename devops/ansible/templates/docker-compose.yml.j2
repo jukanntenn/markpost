@@ -1,0 +1,74 @@
+# {{ ansible_managed }}
+# markpost docker-compose (rendered for {{ env }}).
+#
+# Topology is identical across dev / staging / production: the markpost
+# container (Caddy + Go backend via s6-overlay) plus a sibling postgres reached
+# over a shared Unix-socket volume. Per-environment differences are confined to
+# the published host port and whether the certs directory is bind-mounted
+# (production only, for the Cloudflare Origin CA cert).
+#
+# Postgres is never published on the host — it is reachable only from the app
+# container over the shared postgres-socket volume.
+
+services:
+  markpost:
+    image: {{ image }}
+    container_name: {{ app_name }}
+    ports:
+      - "{{ host_port }}:{{ caddy_port }}"
+    volumes:
+      - {{ config_file }}:/app/config.toml:ro
+{% if env == 'production' %}
+      - {{ app_path }}/data:/app/data
+      - {{ app_path }}/certs:/app/certs:ro
+{% endif %}
+      - {{ caddyfile }}:/etc/caddy/Caddyfile:ro
+      - postgres-socket:/var/run/postgresql
+    environment:
+      - MARKPOST_DEBUG={{ debug | lower }}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:{{ caddy_port }}/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: always
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: {{ app_name }}-postgres
+    environment:
+      - POSTGRES_DB={{ postgres_db }}
+      - POSTGRES_USER={{ postgres_user }}
+      - POSTGRES_PASSWORD={{ db_password }}
+    # The 5 tuned GUCs layer on top of the image default postgresql.conf. The
+    # socket dir stays at the image default /var/run/postgresql so the
+    # entrypoint owns its perms; the app connects via the shared volume.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - synchronous_commit=off
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - postgres-socket:/var/run/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U {{ postgres_user }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata:
+  postgres-socket:

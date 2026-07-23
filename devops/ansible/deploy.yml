@@ -1,0 +1,59 @@
+---
+# markpost unified deployment playbook.
+#
+# A single playbook serves dev / staging / production. The target environment
+# is selected with --limit (mandatory), and per-environment differences live in
+# group_vars/<env>.yml. Usage:
+#
+#   ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
+#       -l dev --vault-password-file ~/.ansible-vault/markpost-dev.pwd
+#   ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
+#       -l staging --vault-password-file ~/.ansible-vault/markpost-staging.pwd
+#   ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
+#       -l production --vault-password-file ~/.ansible-vault/markpost-production.pwd
+
+- name: Deploy markpost
+  hosts: all
+  user: "{{ user }}"
+  gather_facts: false
+  vars_files:
+    - "vars/{{ env }}/vault.yml"
+
+  tasks:
+    - name: Require --limit so a single environment is targeted
+      ansible.builtin.assert:
+        that: ansible_limit is defined
+        fail_msg: >-
+          Refusing to run without --limit. Specify the environment explicitly,
+          e.g. -l production, to avoid deploying to every host at once.
+
+    - name: Ensure application directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ app_dirs }}"
+
+    - name: Template docker-compose.yml
+      ansible.builtin.template:
+        src: docker-compose.yml.j2
+        dest: "{{ compose_file }}"
+        mode: "0644"
+
+    - name: Template config.toml
+      ansible.builtin.template:
+        src: config.toml.j2
+        dest: "{{ config_file }}"
+        mode: "0600"
+
+    - name: Template Caddyfile
+      ansible.builtin.template:
+        src: "{{ caddyfile_template }}"
+        dest: "{{ caddyfile }}"
+        mode: "0644"
+
+    - name: Pull image and recreate containers on change
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
+        pull: always
+        state: present

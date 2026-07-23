@@ -1,0 +1,81 @@
+# {{ ansible_managed }}
+# markpost Caddyfile (production).
+#
+# Cloudflare Origin CA certificate (Full strict mode). Cloudflare terminates
+# visitor-side TLS at the edge; Caddy terminates the edge→origin leg. The cert
+# is mounted at /app/certs/ from the host certs/ directory.
+#
+# trusted_proxies: Cloudflare's published CIDR ranges so only Cloudflare (a
+# trusted peer) may prepend to X-Forwarded-For. Direct connections have their
+# XFF overwritten by Caddy, closing the spoofing gap.
+# Source: https://www.cloudflare.com/ips/ — sync when Cloudflare updates.
+# Internal layout: Caddy :2053, Go backend 127.0.0.1:7330.
+
+{
+	auto_https off
+}
+
+:2053 {
+	tls /app/certs/origin.pem /app/certs/origin.key
+
+	header {
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	encode zstd gzip
+
+	handle /api/v1/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs }}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle /static/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs }}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle /swagger/* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs }}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle /mpk-* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs }}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle /p-* {
+		reverse_proxy 127.0.0.1:7330 {
+			trusted_proxies {{ cloudflare_cidrs }}
+			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+		}
+	}
+
+	handle {
+		root * /app/frontend
+
+		@immutable path /_next/static/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		@noExt {
+			not file
+			path_regexp ^/([^.]+)$
+		}
+		rewrite @noExt /{http.regexp.1}.html
+		file_server
+	}
+
+	log {
+		output stderr
+		format console
+	}
+}

@@ -1,0 +1,84 @@
+# {{ ansible_managed }}
+# markpost config (rendered for {{ env }}).
+#
+# The full section set matches production; dev/staging omit Cloudflare OAuth
+# and cache-purge credentials by leaving them unset (Viper applies defaults).
+
+debug = {{ debug | lower }}
+post_key_length = 16
+
+[server]
+host = "127.0.0.1"
+port = {{ go_port }}
+{% if public_url is defined %}
+public_url = "{{ public_url }}"
+{% endif %}
+trusted_proxies = {{ trusted_proxies | default('["127.0.0.1", "::1"]') }}
+
+[db]
+driver = "postgresql"
+# Unix-socket connection to the sibling postgres container over the shared
+# postgres-socket named volume. The path must match postgres's default
+# unix_socket_directories (/var/run/postgresql).
+dsn = "host=/var/run/postgresql user={{ postgres_user }} password={{ db_password }} dbname={{ postgres_db }} sslmode=disable"
+
+[jwt]
+access_signing_key = "{{ jwt_access_signing_key }}"
+refresh_signing_key = "{{ jwt_refresh_signing_key }}"
+access_token_expire = "24h"
+refresh_token_expire = "720h"
+
+[admin]
+initial_username = "markpost"
+initial_password = "{{ admin_password }}"
+
+[post]
+title_max_length = 500
+body_max_bytes = 1048576
+retention_days = {{ retention_days | default(7) }}
+
+[cors]
+allow_origins = [{% if public_url is defined %}"{{ public_url }}"{% else %}"*"{% endif %}]
+allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
+
+[oauth.github]
+{% if github_client_id is defined and github_client_id | length > 0 %}
+client_id = "{{ github_client_id }}"
+client_secret = "{{ github_client_secret }}"
+redirect_url = "{{ public_url }}/auth/callback"
+{% else %}
+# GitHub OAuth disabled (no client_id in vault).
+client_id = ""
+client_secret = ""
+{% endif %}
+
+[ratelimit]
+[ratelimit.read]
+per_second = 100
+burst = 200
+[ratelimit.public_write]
+per_second = 0.1666666667
+burst = 20
+daily_per_second = 0.0115740741
+daily_burst = 1000
+[ratelimit.authed_write]
+per_second = 0.5
+burst = 60
+
+[render]
+enabled = true
+cache_size_bytes = 134217728
+
+{% if cloudflare_api_token is defined and cloudflare_api_token | length > 0 %}
+[cloudflare]
+api_token = "{{ cloudflare_api_token }}"
+zone_id = "{{ cloudflare_zone_id }}"
+{% endif %}
+
+[delivery]
+body_preview_chars = 200
+request_timeout = "5s"
+workers = 32
+queue_size = 1024
+scan_interval = "1s"
+history_retention = "{{ delivery_history_retention | default('168h') }}"

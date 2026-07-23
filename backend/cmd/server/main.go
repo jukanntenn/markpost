@@ -121,6 +121,24 @@ func main() {
 				},
 			},
 			{
+				Name:  "migrate-sqlite-to-postgres",
+				Usage: "Copy rows from a SQLite database file into the configured Postgres database (one-shot migration)",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "sqlite",
+						Usage:    "Path to the source SQLite database file",
+						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:  "dry-run",
+						Usage: "Scan and report row counts without writing to the target",
+					},
+				},
+				Action: func(c *cli.Context) error {
+					return cmd.RunMigrateSqliteToPostgres(c.String("config"), c.String("sqlite"), c.Bool("dry-run"))
+				},
+			},
+			{
 				Name:  "seed-users",
 				Usage: "Create test users with post_keys (and optional delivery channels) for load testing",
 				Flags: []cli.Flag{

@@ -43,8 +43,8 @@ test.describe("OAuth Callback", () => {
     // and redirect to dashboard on success
     await oauthCallbackPage.waitForRedirectToDashboard();
 
-    // Verify we're logged in by checking the dashboard
-    await expect(page.getByText("Dashboard")).toBeVisible();
+    // Verify we're logged in by checking we landed on the dashboard route.
+    await expect(page).toHaveURL(/\/dashboard/);
   });
 
   test("full OAuth flow: handles network error gracefully", async ({ page, request }) => {

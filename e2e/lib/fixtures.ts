@@ -3,6 +3,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PostsPage } from "./pages/PostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { DeliveryPage } from "./pages/DeliveryPage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminPostsPage } from "./pages/AdminPostsPage";
 import { AdminChannelsPage } from "./pages/AdminChannelsPage";
@@ -15,6 +16,7 @@ type TestFixtures = {
   dashboardPage: DashboardPage;
   postsPage: PostsPage;
   settingsPage: SettingsPage;
+  deliveryPage: DeliveryPage;
   adminUsersPage: AdminUsersPage;
   adminPostsPage: AdminPostsPage;
   adminChannelsPage: AdminChannelsPage;
@@ -39,6 +41,10 @@ export const test = base.extend<TestFixtures>({
 
   settingsPage: async ({ page }, use) => {
     await use(new SettingsPage(page));
+  },
+
+  deliveryPage: async ({ page }, use) => {
+    await use(new DeliveryPage(page));
   },
 
   adminUsersPage: async ({ page }, use) => {

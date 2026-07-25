@@ -15,20 +15,23 @@ test("admin user can access /admin and is redirected to /admin/users", async ({
 });
 
 test("admin navigation links work correctly", async ({
-  authenticatedPage,
+  authenticatedPage: page,
 }) => {
-  await authenticatedPage.goto("/admin/users");
-  await authenticatedPage.waitForURL("**/admin/users");
+  await page.goto("/admin/users");
+  await page.waitForURL("**/admin/users");
 
-  await authenticatedPage.getByRole("link", { name: "Posts" }).click();
-  await authenticatedPage.waitForURL("**/admin/posts");
+  // Scope link lookups to the admin sidebar so they don't match the top nav.
+  const sidebar = page.locator("aside");
 
-  await authenticatedPage.getByRole("link", { name: "Channels" }).click();
-  await authenticatedPage.waitForURL("**/admin/delivery/channels");
+  await sidebar.getByRole("link", { name: "Posts" }).click();
+  await page.waitForURL("**/admin/posts");
 
-  await authenticatedPage.getByRole("link", { name: "Delivery History" }).click();
-  await authenticatedPage.waitForURL("**/admin/delivery/history");
+  await sidebar.getByRole("link", { name: "Channels" }).click();
+  await page.waitForURL("**/admin/delivery/channels");
 
-  await authenticatedPage.getByRole("link", { name: "Users" }).click();
-  await authenticatedPage.waitForURL("**/admin/users");
+  await sidebar.getByRole("link", { name: "Delivery History" }).click();
+  await page.waitForURL("**/admin/delivery/history");
+
+  await sidebar.getByRole("link", { name: "Users" }).click();
+  await page.waitForURL("**/admin/users");
 });

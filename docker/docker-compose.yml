@@ -1,82 +1,60 @@
-# Acceptance / manual-verification compose.
+# Markpost — Docker Compose Quick Start
 #
-# Mirrors the production topology (devops/ansible/templates/production/) but
-# builds the image from the local source tree instead of pulling a registry
-# tag, and uses Caddy's internal (self-signed) CA for TLS instead of a
-# Cloudflare Origin CA cert. Run before a release to hand-verify that the
-# production-shaped config actually boots and serves.
+# 1. Copy .env.example to .env and edit the values
+# 2. docker compose up -d
+# 3. Open http://<your-ip>:2053
 #
-#   docker compose -f docker/docker-compose.yml up -d --build
-#   curl -k https://localhost:2053/api/v1/health
-#   docker compose -f docker/docker-compose.yml down -v
-#
-# Like e2e, local acceptance uses no persistent data volumes: the app data
-# dir and Postgres data live entirely inside the ephemeral containers, and
-# `down -v` (or a plain `down` now that there are no named data volumes)
-# yields a clean slate on every run. Only the postgres-socket IPC volume
-# (required for the Unix-socket DB connection) is shared between services.
-#
-# Divergences from production (all intentional, all documented):
-#   - build: local context  vs.  image: <registry>/markpost:<tag>
-#   - public_url https://localhost:2053  vs.  the real domain
-#   - Caddy tls internal (self-signed)  vs.  Cloudflare Origin CA cert
-# Everything else — Postgres sibling, Unix-socket connection, GUC tuning,
-# healthchecks — matches production exactly.
+# For the full list of environment variables, see .env.example
 
 services:
   markpost:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    container_name: markpost-acceptance
+    image: jukanntenn/markpost:latest
+    container_name: markpost
     ports:
       - "2053:2053"
     volumes:
-      - ../.local/config.acceptance.toml:/app/config.toml:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - postgres-socket:/var/run/postgresql
     environment:
-      - MARKPOST_DEBUG=false
+      # Admin credentials (only effective on first boot)
+      - MARKPOST_ADMIN__INITIAL_USERNAME=${MARKPOST_ADMIN__INITIAL_USERNAME:-markpost}
+      - MARKPOST_ADMIN__INITIAL_PASSWORD=${MARKPOST_ADMIN__INITIAL_PASSWORD:-markpost}
+      # JWT signing keys (change these!)
+      - MARKPOST_JWT__ACCESS_SIGNING_KEY=${MARKPOST_JWT__ACCESS_SIGNING_KEY:-change-me}
+      - MARKPOST_JWT__REFRESH_SIGNING_KEY=${MARKPOST_JWT__REFRESH_SIGNING_KEY:-change-me}
+      # Public URL (optional, e.g. https://markpost.example.com)
+      - MARKPOST_SERVER__PUBLIC_URL=${MARKPOST_SERVER__PUBLIC_URL:-}
+      # PostgreSQL DSN (password must match POSTGRES_PASSWORD below)
+      - MARKPOST_DB__DRIVER=postgresql
+      - MARKPOST_DB__DSN=host=/var/run/postgresql user=${POSTGRES_USER:-markpost} password=${POSTGRES_PASSWORD:-markpost} dbname=${POSTGRES_DB:-markpost} sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "https://localhost:2053/api/v1/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:2053/api/v1/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
       start_period: 30s
     restart: unless-stopped
 
   postgres:
     image: postgres:17-alpine
-    container_name: markpost-acceptance-postgres
+    container_name: markpost-postgres
     environment:
-      - POSTGRES_DB=markpost
-      - POSTGRES_USER=markpost
-      - POSTGRES_PASSWORD=markpost
-    # Same 5 GUC overrides as production, applied as -c flags so the image
-    # default postgresql.conf is left untouched (see production template).
-    command:
-      - postgres
-      - -c
-      - shared_buffers=256MB
-      - -c
-      - max_connections=50
-      - -c
-      - effective_cache_size=1GB
-      - -c
-      - maintenance_work_mem=128MB
-      - -c
-      - synchronous_commit=off
+      - POSTGRES_DB=${POSTGRES_DB:-markpost}
+      - POSTGRES_USER=${POSTGRES_USER:-markpost}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-markpost}
     volumes:
+      - pgdata:/var/lib/postgresql/data
       - postgres-socket:/var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U ${POSTGRES_USER:-markpost}"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
     restart: unless-stopped
 
 volumes:
+  pgdata:
   postgres-socket:

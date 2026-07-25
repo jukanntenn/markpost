@@ -89,6 +89,10 @@ async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     await throwApiError(response);
   }
+  // 204 No Content (and any other empty body) has no JSON to parse.
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
   return response.json();
 }
 

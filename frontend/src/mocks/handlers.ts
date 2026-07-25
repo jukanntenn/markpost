@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import type { PostsPaginatedResponse } from "@/types/posts";
 import type { PostKeyResponse } from "@/types/auth";
+import type { DeliveryChannel, DeliveryHistoryItem } from "@/types/delivery";
 
 export const mockPostKey: PostKeyResponse = {
   post_key: "test_key_abc123",
@@ -85,4 +86,75 @@ export const handlers = [
       state: "mock-state",
     });
   }),
+
+  http.get("/api/v1/delivery/channels", async () => {
+    return HttpResponse.json({ items: mockDeliveryChannels });
+  }),
+
+  http.post("/api/v1/delivery/channels", async ({ request }) => {
+    const body = (await request.json()) as Partial<DeliveryChannel>;
+    const created: DeliveryChannel = {
+      id: nextDeliveryChannelId++,
+      kind: body.kind ?? "feishu",
+      name: body.name ?? "",
+      enabled: true,
+      configuration: body.configuration ?? { webhook_url: "", card_link_url: "" },
+      keywords: body.keywords ?? "",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    mockDeliveryChannels.push(created);
+    return HttpResponse.json({ channel: created }, { status: 201 });
+  }),
+
+  http.patch("/api/v1/delivery/channels/:id", async ({ request, params }) => {
+    const id = Number(params.id);
+    const body = (await request.json()) as Partial<DeliveryChannel>;
+    const channel = mockDeliveryChannels.find((c) => c.id === id);
+    if (!channel) {
+      return HttpResponse.json({ message: "not found" }, { status: 404 });
+    }
+    Object.assign(channel, body, { updated_at: new Date().toISOString() });
+    return HttpResponse.json({ channel });
+  }),
+
+  http.delete("/api/v1/delivery/channels/:id", async ({ params }) => {
+    const id = Number(params.id);
+    const index = mockDeliveryChannels.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return HttpResponse.json({ message: "not found" }, { status: 404 });
+    }
+    mockDeliveryChannels.splice(index, 1);
+    return HttpResponse.json({ message: "deleted" });
+  }),
+
+  http.post("/api/v1/delivery/channels/:id/test", async () => {
+    return HttpResponse.json({ message: "test message sent" });
+  }),
+
+  http.get("/api/v1/delivery/latest", async () => {
+    return HttpResponse.json({ items: mockDeliveryLatest });
+  }),
+
+  http.get("/api/v1/delivery/history", async () => {
+    return HttpResponse.json({
+      items: mockDeliveryHistory,
+      total: mockDeliveryHistory.length,
+      page: 1,
+      limit: 10,
+      total_pages: 1,
+    });
+  }),
 ];
+
+export const mockDeliveryChannels: DeliveryChannel[] = [];
+export const mockDeliveryHistory: DeliveryHistoryItem[] = [];
+export const mockDeliveryLatest: DeliveryHistoryItem[] = [];
+let nextDeliveryChannelId = 1;
+
+export function resetDeliveryMocks() {
+  mockDeliveryChannels.length = 0;
+  mockDeliveryHistory.length = 0;
+  mockDeliveryLatest.length = 0;
+  nextDeliveryChannelId = 1;
+}

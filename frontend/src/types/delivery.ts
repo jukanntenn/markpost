@@ -43,6 +43,7 @@ export interface DeliveryHistoryItem {
   status: DeliveryStatus;
   last_error: string;
   created_at: string;
+  channel_id: number | null;
   post_title: string | null;
   post_qid: string | null;
   channel_name: string | null;
@@ -50,6 +51,10 @@ export interface DeliveryHistoryItem {
 }
 
 export type DeliveryHistoryResponse = Paginated<DeliveryHistoryItem>;
+
+export interface LatestDeliveryResponse {
+  items: DeliveryHistoryItem[];
+}
 
 export interface CreateChannelPayload {
   kind: string;

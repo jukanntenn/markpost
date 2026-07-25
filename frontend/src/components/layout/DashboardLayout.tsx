@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useAuthStore } from "@/stores/auth";
 import { useAuthReady } from "@/hooks/useAuthReady";
@@ -11,6 +11,7 @@ import { authApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Menu } from "@/components/ui/menu";
+import { cn } from "@/lib/utils";
 import {
   ChevronDownIcon,
   LogOutIcon,
@@ -19,8 +20,15 @@ import {
   UserIcon,
 } from "lucide-react";
 
+const mainNavItems = [
+  { href: "/dashboard", labelKey: "dashboard" },
+  { href: "/posts", labelKey: "posts" },
+  { href: "/delivery/channels", labelKey: "delivery" },
+] as const;
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const t = useTranslations("navigation");
   const tCommon = useTranslations("common");
   const user = useAuthStore((state) => state.user);
@@ -58,6 +66,24 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <Link href="/dashboard" className={buttonVariants({ variant: "ghost", className: "h-9 px-2" })}>
             <Image src="/markpost.svg" alt="Markpost" className="h-6 w-auto" width={24} height={24} />
           </Link>
+          <nav className="flex items-center gap-1">
+            {mainNavItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(`${item.href}/`));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    buttonVariants({ variant: "ghost" }),
+                    "h-9 px-3 text-sm font-medium",
+                    isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {t(item.labelKey)}
+                </Link>
+              );
+            })}
+          </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             {isAuthenticated && (

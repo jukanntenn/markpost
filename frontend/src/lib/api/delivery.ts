@@ -1,5 +1,5 @@
 import { request, paginationParams } from "./base";
-import type { DeliveryChannelsResponse, DeliveryChannelResponse, CreateChannelPayload, UpdateChannelPayload, DeliveryHistoryResponse } from "@/types/delivery";
+import type { DeliveryChannelsResponse, DeliveryChannelResponse, CreateChannelPayload, UpdateChannelPayload, DeliveryHistoryResponse, LatestDeliveryResponse } from "@/types/delivery";
 
 export const deliveryApi = {
   list: () =>
@@ -22,8 +22,16 @@ export const deliveryApi = {
       method: "DELETE",
     }),
 
-  listHistory: (page: number, limit: number) =>
-    request<DeliveryHistoryResponse>("/api/v1/delivery/history", {
-      params: paginationParams(page, limit),
+  test: (id: number) =>
+    request<{ message: string }>(`/api/v1/delivery/channels/${id}/test`, {
+      method: "POST",
     }),
+
+  listHistory: (page: number, limit: number, channelId?: number) =>
+    request<DeliveryHistoryResponse>("/api/v1/delivery/history", {
+      params: { ...paginationParams(page, limit), ...(channelId ? { channel_id: channelId } : {}) },
+    }),
+
+  latestPerChannel: () =>
+    request<LatestDeliveryResponse>("/api/v1/delivery/latest"),
 };

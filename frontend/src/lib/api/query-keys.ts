@@ -30,7 +30,9 @@ export const deliveryKeys = {
   all: () => ["delivery"] as const,
   channels: () => [...deliveryKeys.all(), "channels"] as const,
   detail: (id: number) => [...deliveryKeys.all(), "detail", id] as const,
-  history: (page: number, limit: number) => [...deliveryKeys.all(), "history", { page, limit }] as const,
+  history: (page: number, limit: number, channelId?: number) =>
+    [...deliveryKeys.all(), "history", { page, limit, channel_id: channelId ?? null }] as const,
+  latest: () => [...deliveryKeys.all(), "latest"] as const,
 };
 
 export const postKeyKeys = {

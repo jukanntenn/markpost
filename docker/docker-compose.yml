@@ -8,6 +8,7 @@
 
 services:
   markpost:
+    # Available tags: latest, v0.2.0-rc.1, v0.1.0 (https://hub.docker.com/r/jukanntenn/markpost/tags)
     image: jukanntenn/markpost:latest
     container_name: markpost
     ports:

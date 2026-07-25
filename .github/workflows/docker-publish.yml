@@ -57,7 +57,7 @@ jobs:
           push: true
           tags: |
             jukanntenn/markpost:${{ env.TAG }}-${{ matrix.arch }}
-            jukanntenn/markpost:latest-${{ matrix.arch }}
+            ${{ !contains(env.TAG, '-') && format('jukanntenn/markpost:latest-{0}', matrix.arch) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -86,6 +86,7 @@ jobs:
             jukanntenn/markpost:${TAG}-arm64
 
       - name: Create & push manifest (latest)
+        if: ${{ !contains(env.TAG, '-') }}
         run: |
           docker buildx imagetools create \
             -t jukanntenn/markpost:latest \

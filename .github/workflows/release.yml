@@ -35,5 +35,5 @@ jobs:
       with:
         body_path: ${{ steps.changelog.outputs.path }}
         draft: false
-        prerelease: false
-        make_latest: true
+        prerelease: ${{ contains(github.ref, '-rc') }}
+        make_latest: ${{ !contains(github.ref, '-rc') }}

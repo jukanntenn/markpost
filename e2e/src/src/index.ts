@@ -197,6 +197,7 @@ echo "Starting Caddy..."
 exec caddy run --config /etc/caddy/Caddyfile
 `
     return this.appContainer(source)
+      .withMountedFile("/etc/caddy/Caddyfile", source.file("docker/Caddyfile.local"))
       .withServiceBinding("postgres", postgres)
       .withServiceBinding("webhook-mock", webhookMock)
       .withServiceBinding("oauth-mock", oauthMock)

@@ -357,3 +357,79 @@ func TestAttemptRepository_ListHistoryByChannel(t *testing.T) {
 		t.Errorf("all rows = %d, want 3", len(allRows))
 	}
 }
+
+func TestAttemptRepository_LatestPerChannel(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewAttemptRepository(db).(*AttemptRepository)
+	ctx := context.Background()
+
+	u := &user.User{Email: "lp@b.c", Username: "lpuser", Password: "x", PostKey: "lpk"}
+	if err := db.Create(u).Error; err != nil {
+		t.Fatalf("seed user: %v", err)
+	}
+	other := &user.User{Email: "o@b.c", Username: "ouser", Password: "x", PostKey: "opk"}
+	if err := db.Create(other).Error; err != nil {
+		t.Fatalf("seed other user: %v", err)
+	}
+	ch1 := &delivery.Channel{UserID: u.ID, Kind: delivery.ChannelKindFeishu, Name: "ch1", Configuration: delivery.ChannelConfiguration{}}
+	ch2 := &delivery.Channel{UserID: u.ID, Kind: delivery.ChannelKindFeishu, Name: "ch2", Configuration: delivery.ChannelConfiguration{}}
+	// ch3 has no history; it must NOT appear in the result (only 2 rows expected).
+	ch3 := &delivery.Channel{UserID: u.ID, Kind: delivery.ChannelKindFeishu, Name: "ch3", Configuration: delivery.ChannelConfiguration{}}
+	if err := db.Create([]*delivery.Channel{ch1, ch2, ch3}).Error; err != nil {
+		t.Fatalf("seed channels: %v", err)
+	}
+
+	// Insert with explicit created_at via raw SQL so ordering is deterministic
+	// (GORM autoCreateTime would stamp everything to now).
+	insertHistory := func(channelID, userID *int, status delivery.Status, when time.Time) {
+		if err := db.Exec(
+			"INSERT INTO delivery_history (status, last_error, user_id, channel_id, created_at) VALUES (?, '', ?, ?, ?)",
+			status, userID, channelID, when,
+		).Error; err != nil {
+			t.Fatalf("seed history: %v", err)
+		}
+	}
+	old := time.Now().Add(-2 * time.Hour)
+	recent := time.Now().Add(-10 * time.Minute)
+	ch1ID, ch2ID, uID := ch1.ID, ch2.ID, u.ID
+	// ch1: two rows, the newer one (failed) should win.
+	insertHistory(&ch1ID, &uID, delivery.StatusDelivered, old)
+	insertHistory(&ch1ID, &uID, delivery.StatusFailed, recent)
+	// ch2: one delivered row.
+	insertHistory(&ch2ID, &uID, delivery.StatusDelivered, recent)
+	// A row for the other user on ch1 — must NOT leak into u's result.
+	insertHistory(&ch1ID, &other.ID, delivery.StatusDelivered, time.Now())
+
+	rows, err := repo.LatestPerChannel(ctx, u.ID)
+	if err != nil {
+		t.Fatalf("LatestPerChannel: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows (one per channel with history), got %d", len(rows))
+	}
+
+	byChannel := make(map[int]*delivery.HistoryRow, len(rows))
+	for _, r := range rows {
+		if r.ChannelID == nil {
+			t.Fatal("channel_id must be non-nil for a per-channel row")
+		}
+		byChannel[*r.ChannelID] = r
+	}
+	ch1Row, ok1 := byChannel[ch1.ID]
+	if !ok1 {
+		t.Fatal("missing ch1 row")
+	}
+	if ch1Row.Status != delivery.StatusFailed {
+		t.Errorf("ch1 status = %d, want %d (the newer failed row)", ch1Row.Status, delivery.StatusFailed)
+	}
+	if ch1Row.ChannelName == nil || *ch1Row.ChannelName != "ch1" {
+		t.Errorf("ch1 channel_name = %v, want ch1", ch1Row.ChannelName)
+	}
+	ch2Row, ok2 := byChannel[ch2.ID]
+	if !ok2 {
+		t.Fatal("missing ch2 row")
+	}
+	if ch2Row.Status != delivery.StatusDelivered {
+		t.Errorf("ch2 status = %d, want %d", ch2Row.Status, delivery.StatusDelivered)
+	}
+}

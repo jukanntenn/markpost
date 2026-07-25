@@ -210,7 +210,7 @@ func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Dur
 // result (see delivery.HistoryFilter).
 func (r *AttemptRepository) ListHistory(ctx context.Context, filter delivery.HistoryFilter, offset, limit int) ([]*delivery.HistoryRow, error) {
 	q := r.db.WithContext(ctx).Table("delivery_history AS h").
-		Select(`h.id, h.status, h.last_error, h.created_at,
+		Select(`h.id, h.status, h.last_error, h.created_at, h.channel_id,
 		        p.title AS post_title, p.qid AS post_qid,
 		        c.name AS channel_name,
 		        u.username AS username`).
@@ -246,6 +246,37 @@ func (r *AttemptRepository) CountHistory(ctx context.Context, filter delivery.Hi
 		return 0, fmt.Errorf("AttemptRepository.CountHistory: %w", err)
 	}
 	return count, nil
+}
+
+// LatestPerChannel returns the most recent delivery_history row per channel for
+// the user (one row per channel_id). It uses a correlated subquery so the same
+// statement runs unchanged on Postgres, MySQL, and SQLite (a window-function
+// form would need a wrapping subquery and is dialect-heavier). The data volume
+// is small — a user's 7-day retention window, typically well under a thousand
+// rows — so the correlated MAX lookup is effectively index-backed by the
+// channel_id index and resolves in milliseconds.
+func (r *AttemptRepository) LatestPerChannel(ctx context.Context, userID int) ([]*delivery.HistoryRow, error) {
+	const sql = `SELECT h.id, h.status, h.last_error, h.created_at, h.channel_id,
+	                    p.title AS post_title, p.qid AS post_qid,
+	                    c.name AS channel_name,
+	                    u.username AS username
+	               FROM delivery_history AS h
+	               LEFT JOIN posts p             ON p.id = h.post_id
+	               LEFT JOIN delivery_channels c ON c.id = h.channel_id
+	               LEFT JOIN users u             ON u.id = h.user_id
+	              WHERE h.user_id = ?
+	                AND h.created_at = (
+	                    SELECT MAX(h2.created_at)
+	                      FROM delivery_history h2
+	                     WHERE h2.channel_id = h.channel_id
+	                       AND h2.user_id = h.user_id
+	                )
+	              ORDER BY h.channel_id`
+	var rows []*delivery.HistoryRow
+	if err := r.db.WithContext(ctx).Raw(sql, userID).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("AttemptRepository.LatestPerChannel: %w", err)
+	}
+	return rows, nil
 }
 
 // rowLockingDialect reports whether the active DB dialect supports

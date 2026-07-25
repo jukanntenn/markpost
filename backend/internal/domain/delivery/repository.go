@@ -54,6 +54,11 @@ type AttemptRepository interface {
 	// CountHistory returns the total row count matching the same filter as
 	// ListHistory, for pagination.
 	CountHistory(ctx context.Context, filter HistoryFilter) (int64, error)
+	// LatestPerChannel returns the most recent history row for each of the
+	// user's channels (one row per channel_id), used to render the per-channel
+	// delivery-health overview on the channel list. Channels with no history
+	// are absent from the result.
+	LatestPerChannel(ctx context.Context, userID int) ([]*HistoryRow, error)
 }
 
 // HistoryFilter scopes a delivery_history read. A zero value selects every row

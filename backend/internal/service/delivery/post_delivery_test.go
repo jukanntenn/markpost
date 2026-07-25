@@ -2,6 +2,8 @@ package delivery
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -436,6 +438,70 @@ func TestDispatcher_MarkRetryAdvancesNextAt(t *testing.T) {
 	if got.LastError != "boom" {
 		t.Errorf("last_error = %q, want %q", got.LastError, "boom")
 	}
+}
+
+func TestPostDeliveryService_SendTest(t *testing.T) {
+	t.Run("sends test card to feishu webhook", func(t *testing.T) {
+		var receivedBody map[string]any
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			_ = json.Unmarshal(body, &receivedBody)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		channel := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "Test",
+			Enabled:       true,
+			Configuration: makeFeishuChannelConfig(server.URL),
+		}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		if err := svc.SendTest(context.Background(), channel); err != nil {
+			t.Fatalf("SendTest error: %v", err)
+		}
+
+		if receivedBody["msg_type"] != "interactive" {
+			t.Errorf("msg_type = %v, want %q", receivedBody["msg_type"], "interactive")
+		}
+		card, _ := receivedBody["card"].(map[string]any)
+		header, _ := card["header"].(map[string]any)
+		title, _ := header["title"].(map[string]any)
+		if title["content"] != testCardTitle {
+			t.Errorf("card title = %v, want %q", title["content"], testCardTitle)
+		}
+	})
+
+	t.Run("returns error on feishu failure", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer server.Close()
+
+		channel := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Configuration: makeFeishuChannelConfig(server.URL),
+		}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		if err := svc.SendTest(context.Background(), channel); err == nil {
+			t.Fatal("expected error from failed webhook")
+		}
+	})
+
+	t.Run("returns error for unsupported channel kind", func(t *testing.T) {
+		channel := &delivery.Channel{UserID: 1, Kind: "unknown"}
+
+		svc := &PostDeliveryService{feishu: NewFeishuClient(5 * time.Second)}
+		err := svc.SendTest(context.Background(), channel)
+		if err == nil {
+			t.Fatal("expected error for unsupported kind")
+		}
+	})
 }
 
 type recordingSender struct{}

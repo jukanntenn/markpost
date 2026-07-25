@@ -110,6 +110,7 @@ type HistoryRow struct {
 	Status      Status    `json:"status" gorm:"column:status"`
 	LastError   string    `json:"last_error" gorm:"column:last_error"`
 	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
+	ChannelID   *int      `json:"channel_id" gorm:"column:channel_id"`
 	PostTitle   *string   `json:"post_title" gorm:"column:post_title"`
 	PostQID     *string   `json:"post_qid" gorm:"column:post_qid"`
 	ChannelName *string   `json:"channel_name" gorm:"column:channel_name"`

@@ -37,9 +37,10 @@ func newTestChannel(overrides ...func(*delivery.Channel)) *delivery.Channel {
 }
 
 type mockDeliveryService struct {
-	channels map[int]*delivery.Channel
-	nextID   int
-	err      error
+	channels   map[int]*delivery.Channel
+	nextID     int
+	err        error
+	latestRows []*delivery.HistoryRow
 }
 
 func newMockDeliveryService() *mockDeliveryService {
@@ -131,6 +132,23 @@ func (m *mockDeliveryService) Delete(_ context.Context, userID int, id int) erro
 	}
 	delete(m.channels, id)
 	return nil
+}
+
+func (m *mockDeliveryService) SendTest(_ context.Context, userID int, id int) error {
+	if m.err != nil {
+		return m.err
+	}
+	if ch, ok := m.channels[id]; !ok || ch.UserID != userID {
+		return service.New(service.ErrNotFound, "channel not found")
+	}
+	return nil
+}
+
+func (m *mockDeliveryService) LatestPerChannel(_ context.Context, userID int) ([]*delivery.HistoryRow, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.latestRows, nil
 }
 
 func TestParsePathID(t *testing.T) {
@@ -494,6 +512,145 @@ func TestDeleteDeliveryChannel_NoUser(t *testing.T) {
 	router.DELETE("/channels/:id", DeleteDeliveryChannel(mockSvc))
 
 	req := httptest.NewRequest(http.MethodDelete, "/channels/1", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	}
+}
+
+func TestTestDeliveryChannel_Success(t *testing.T) {
+	mockSvc := newMockDeliveryService()
+	mockSvc.channels[1] = newTestChannel()
+
+	router := newTestEngine()
+	router.POST("/channels/:id/test", withTestUser(1), TestDeliveryChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodPost, "/channels/1/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	var resp MessageResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp.Message == "" {
+		t.Error("expected non-empty message")
+	}
+}
+
+func TestTestDeliveryChannel_NotFound(t *testing.T) {
+	mockSvc := newMockDeliveryService()
+	router := newTestEngine()
+	router.POST("/channels/:id/test", withTestUser(1), TestDeliveryChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodPost, "/channels/999/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestLatestDeliveryPerChannel_Success(t *testing.T) {
+	mockSvc := newMockDeliveryService()
+
+	router := newTestEngine()
+	router.GET("/latest", withTestUser(1), LatestDeliveryPerChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodGet, "/latest", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	var resp struct {
+		Items []DeliveryHistoryItem `json:"items"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if resp.Items == nil {
+		t.Error("expected items field to be present (empty array, not null)")
+	}
+}
+
+func TestLatestDeliveryPerChannel_WithData(t *testing.T) {
+	channelID := 7
+	postTitle := "Delivered Post"
+	mockSvc := newMockDeliveryService()
+	mockSvc.latestRows = []*delivery.HistoryRow{
+		{
+			ID:        100,
+			Status:    delivery.StatusDelivered,
+			LastError: "",
+			ChannelID: &channelID,
+			PostTitle: &postTitle,
+		},
+	}
+
+	router := newTestEngine()
+	router.GET("/latest", withTestUser(1), LatestDeliveryPerChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodGet, "/latest", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	var resp struct {
+		Items []DeliveryHistoryItem `json:"items"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if len(resp.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(resp.Items))
+	}
+	item := resp.Items[0]
+	if item.Status != "delivered" {
+		t.Errorf("status = %q, want %q", item.Status, "delivered")
+	}
+	if item.ChannelID == nil || *item.ChannelID != channelID {
+		t.Errorf("channel_id = %v, want %d", item.ChannelID, channelID)
+	}
+	if item.PostTitle == nil || *item.PostTitle != postTitle {
+		t.Errorf("post_title = %v, want %q", item.PostTitle, postTitle)
+	}
+}
+
+func TestLatestDeliveryPerChannel_ServiceError(t *testing.T) {
+	mockSvc := newMockDeliveryService()
+	mockSvc.err = service.New(service.ErrInternal, "db error")
+
+	router := newTestEngine()
+	router.GET("/latest", withTestUser(1), LatestDeliveryPerChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodGet, "/latest", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected status %d, got %d", http.StatusInternalServerError, w.Code)
+	}
+}
+
+func TestTestDeliveryChannel_ServiceError(t *testing.T) {
+	mockSvc := newMockDeliveryService()
+	mockSvc.channels[1] = newTestChannel()
+	mockSvc.err = service.New(service.ErrInternal, "webhook unreachable")
+
+	router := newTestEngine()
+	router.POST("/channels/:id/test", withTestUser(1), TestDeliveryChannel(mockSvc))
+
+	req := httptest.NewRequest(http.MethodPost, "/channels/1/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

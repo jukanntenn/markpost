@@ -18,7 +18,9 @@ type DeliveryService interface {
 	Create(ctx context.Context, userID int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
 	Update(ctx context.Context, userID int, id int, params delivery_svc.UpdateChannelParams) (*delivery.Channel, error)
 	Delete(ctx context.Context, userID int, id int) error
+	SendTest(ctx context.Context, userID, id int) error
 	ListHistory(ctx context.Context, userID, channelID, offset, limit int) ([]*delivery.HistoryRow, int64, error)
+	LatestPerChannel(ctx context.Context, userID int) ([]*delivery.HistoryRow, error)
 }
 
 // ListDeliveryChannels godoc
@@ -129,6 +131,52 @@ func DeleteDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
 
 			// 204 No Content (no body) per api-design.md §2 (DELETE → 204).
 			c.Status(http.StatusNoContent)
+		})
+	}
+}
+
+// TestDeliveryChannel godoc
+// @Summary Send a test message to a delivery channel
+// @Tags delivery
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} MessageResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Failure 502 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/channels/{id}/test [post]
+func TestDeliveryChannel(deliverySvc DeliveryService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUserAndID(c, func(u *user.User, id int) {
+			if err := deliverySvc.SendTest(c.Request.Context(), u.ID, id); err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, MessageResponse{Message: "test message sent"})
+		})
+	}
+}
+
+// LatestDeliveryPerChannel godoc
+// @Summary List the most recent delivery per channel for the current user
+// @Tags delivery
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} DeliveryLatestListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/delivery/latest [get]
+func LatestDeliveryPerChannel(deliverySvc DeliveryService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUser(c, func(u *user.User) {
+			rows, err := deliverySvc.LatestPerChannel(c.Request.Context(), u.ID)
+			if err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			writeList(c, rows, newDeliveryHistoryItem, func(items []DeliveryHistoryItem) any {
+				return DeliveryLatestListResponse{Items: items}
+			})
 		})
 	}
 }

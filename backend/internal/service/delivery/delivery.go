@@ -194,3 +194,30 @@ func (s *Service) ListHistory(ctx context.Context, userID, channelID, offset, li
 		"delivery history",
 	)
 }
+
+// LatestPerChannel returns the most recent delivery_history row for each of the
+// user's channels, for the per-channel delivery-health overview.
+func (s *Service) LatestPerChannel(ctx context.Context, userID int) ([]*delivery.HistoryRow, error) {
+	rows, err := s.attemptRepo.LatestPerChannel(ctx, userID)
+	if err != nil {
+		return nil, service.Wrap(service.ErrInternal, "load latest per channel failed", err)
+	}
+	return rows, nil
+}
+
+// SendTest sends a diagnostic card to the channel to verify its webhook
+// configuration. It does not enter the retry queue and writes no history.
+func (s *Service) SendTest(ctx context.Context, userID, id int) error {
+	ch, err := s.repo.GetByIDAndUserID(ctx, id, userID)
+	if err != nil {
+		return service.WrapNotFoundOrInternal(err, "channel not found", "get channel failed")
+	}
+	// The sender holds only an HTTP client keyed by the configured request
+	// timeout; constructing it per call is cheap and keeps this method
+	// independent of dispatcher wiring.
+	sender := NewPostDeliveryService()
+	if err := sender.SendTest(ctx, ch); err != nil {
+		return service.Wrap(service.ErrInternal, "send test message failed", err)
+	}
+	return nil
+}

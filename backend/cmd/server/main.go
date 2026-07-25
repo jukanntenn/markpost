@@ -441,8 +441,10 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			deliveryGroup.POST("", middleware.RateLimitByUserID(l3Write), v1.CreateDeliveryChannel(deliverySvc))
 			deliveryGroup.PATCH("/:id", middleware.RateLimitByUserID(l3Write), v1.UpdateDeliveryChannel(deliverySvc))
 			deliveryGroup.DELETE("/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteDeliveryChannel(deliverySvc))
+			deliveryGroup.POST("/:id/test", middleware.RateLimitByUserID(l3Write), v1.TestDeliveryChannel(deliverySvc))
 		}
 		jwtAuth.GET("/delivery/history", v1.ListDeliveryHistory(deliverySvc))
+		jwtAuth.GET("/delivery/latest", v1.LatestDeliveryPerChannel(deliverySvc))
 
 		adminGroup := jwtAuth.Group("/admin")
 		adminGroup.Use(middleware.RequireAdmin())

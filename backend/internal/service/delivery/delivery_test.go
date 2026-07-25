@@ -3,11 +3,17 @@ package delivery
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"markpost/internal/domain/delivery"
 	"markpost/internal/infra"
 	"markpost/internal/service"
+
+	"gorm.io/gorm"
 )
 
 func setupDeliveryService(t *testing.T) (*Service, delivery.Repository) {
@@ -16,6 +22,17 @@ func setupDeliveryService(t *testing.T) (*Service, delivery.Repository) {
 	repo := infra.NewDeliveryChannelRepository(db)
 	svc := NewService(repo, nil)
 	return svc, repo
+}
+
+// setupDeliveryServiceWithHistory builds a Service whose attemptRepo is wired
+// to the same in-memory DB, so LatestPerChannel can be exercised end-to-end.
+func setupDeliveryServiceWithHistory(t *testing.T) (*Service, delivery.Repository, delivery.AttemptRepository, *gorm.DB) {
+	t.Helper()
+	db := infra.SetupTestDB(t)
+	repo := infra.NewDeliveryChannelRepository(db)
+	attemptRepo := infra.NewAttemptRepository(db)
+	svc := NewService(repo, attemptRepo)
+	return svc, repo, attemptRepo, db
 }
 
 func feishuConfigJSON(webhookURL, cardLinkURL string) json.RawMessage {
@@ -389,6 +406,149 @@ func TestValidateConfiguration(t *testing.T) {
 		feishu := config.Feishu()
 		if feishu.WebhookURL != "https://example.com/hook" {
 			t.Errorf("webhook_url = %q, want %q", feishu.WebhookURL, "https://example.com/hook")
+		}
+	})
+}
+
+func TestService_LatestPerChannel(t *testing.T) {
+	ctx := context.Background()
+	svc, repo, _, db := setupDeliveryServiceWithHistory(t)
+
+	ch1 := &delivery.Channel{
+		UserID:        1,
+		Kind:          delivery.ChannelKindFeishu,
+		Name:          "ch1",
+		Enabled:       true,
+		Configuration: delivery.ChannelConfiguration{"webhook_url": "https://example.com/h1", "card_link_url": ""},
+	}
+	if err := repo.Create(ctx, ch1); err != nil {
+		t.Fatalf("create ch1: %v", err)
+	}
+	ch2 := &delivery.Channel{
+		UserID:        1,
+		Kind:          delivery.ChannelKindFeishu,
+		Name:          "ch2",
+		Enabled:       true,
+		Configuration: delivery.ChannelConfiguration{"webhook_url": "https://example.com/h2", "card_link_url": ""},
+	}
+	if err := repo.Create(ctx, ch2); err != nil {
+		t.Fatalf("create ch2: %v", err)
+	}
+
+	older := time.Now().Add(-2 * time.Hour)
+	recent := time.Now().Add(-1 * time.Minute)
+	ch1ID, ch2ID, uID := ch1.ID, ch2.ID, 1
+	insertHistory := func(channelID, userID int, status delivery.Status, when time.Time) {
+		if err := db.Exec(
+			"INSERT INTO delivery_history (status, last_error, user_id, channel_id, created_at) VALUES (?, '', ?, ?, ?)",
+			status, userID, channelID, when,
+		).Error; err != nil {
+			t.Fatalf("seed history: %v", err)
+		}
+	}
+	insertHistory(ch1ID, uID, delivery.StatusDelivered, older)
+	insertHistory(ch1ID, uID, delivery.StatusFailed, recent)
+	insertHistory(ch2ID, uID, delivery.StatusDelivered, recent)
+
+	rows, err := svc.LatestPerChannel(ctx, uID)
+	if err != nil {
+		t.Fatalf("LatestPerChannel: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 rows, got %d", len(rows))
+	}
+
+	byChannel := make(map[int]delivery.Status, len(rows))
+	for _, r := range rows {
+		if r.ChannelID == nil {
+			t.Fatal("channel_id must be set")
+		}
+		byChannel[*r.ChannelID] = r.Status
+	}
+	if byChannel[ch1ID] != delivery.StatusFailed {
+		t.Errorf("ch1 latest status = %d, want %d (failed, the newer row)", byChannel[ch1ID], delivery.StatusFailed)
+	}
+	if byChannel[ch2ID] != delivery.StatusDelivered {
+		t.Errorf("ch2 latest status = %d, want %d", byChannel[ch2ID], delivery.StatusDelivered)
+	}
+}
+
+func TestService_SendTest(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("sends test card to configured webhook", func(t *testing.T) {
+		var receivedTitle string
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			var payload map[string]any
+			_ = json.Unmarshal(body, &payload)
+			card, _ := payload["card"].(map[string]any)
+			header, _ := card["header"].(map[string]any)
+			titleObj, _ := header["title"].(map[string]any)
+			receivedTitle, _ = titleObj["content"].(string)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"code":0}`))
+		}))
+		defer server.Close()
+
+		svc, repo, _, _ := setupDeliveryServiceWithHistory(t)
+		ch := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "test",
+			Enabled:       true,
+			Configuration: delivery.ChannelConfiguration{"webhook_url": server.URL, "card_link_url": ""},
+		}
+		if err := repo.Create(ctx, ch); err != nil {
+			t.Fatalf("create channel: %v", err)
+		}
+
+		if err := svc.SendTest(ctx, 1, ch.ID); err != nil {
+			t.Fatalf("SendTest: %v", err)
+		}
+		if receivedTitle != testCardTitle {
+			t.Errorf("received card title = %q, want %q", receivedTitle, testCardTitle)
+		}
+	})
+
+	t.Run("returns not found for missing channel", func(t *testing.T) {
+		svc, _, _, _ := setupDeliveryServiceWithHistory(t)
+		err := svc.SendTest(ctx, 1, 9999)
+		if err == nil {
+			t.Fatal("expected error for missing channel")
+		}
+		se, ok := service.AsError(err)
+		if !ok {
+			t.Fatalf("expected service error, got %T: %v", err, err)
+		}
+		if se.Code != service.ErrNotFound {
+			t.Errorf("code = %v, want %v", se.Code, service.ErrNotFound)
+		}
+	})
+
+	t.Run("wraps webhook failure as internal error", func(t *testing.T) {
+		svc, repo, _, _ := setupDeliveryServiceWithHistory(t)
+		ch := &delivery.Channel{
+			UserID:        1,
+			Kind:          delivery.ChannelKindFeishu,
+			Name:          "bad",
+			Enabled:       true,
+			Configuration: delivery.ChannelConfiguration{"webhook_url": "http://192.0.2.1:1/unreachable", "card_link_url": ""},
+		}
+		if err := repo.Create(ctx, ch); err != nil {
+			t.Fatalf("create channel: %v", err)
+		}
+
+		err := svc.SendTest(ctx, 1, ch.ID)
+		if err == nil {
+			t.Fatal("expected error for unreachable webhook")
+		}
+		se, ok := service.AsError(err)
+		if !ok {
+			t.Fatalf("expected service error, got %T: %v", err, err)
+		}
+		if se.Code != service.ErrInternal {
+			t.Errorf("code = %v, want %v", se.Code, service.ErrInternal)
 		}
 	})
 }

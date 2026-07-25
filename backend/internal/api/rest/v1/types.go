@@ -204,6 +204,7 @@ type DeliveryHistoryItem struct {
 	Status      string    `json:"status"`
 	LastError   string    `json:"last_error"`
 	CreatedAt   time.Time `json:"created_at"`
+	ChannelID   *int      `json:"channel_id"`
 	PostTitle   *string   `json:"post_title"`
 	PostQID     *string   `json:"post_qid"`
 	ChannelName *string   `json:"channel_name"`
@@ -216,6 +217,7 @@ func newDeliveryHistoryItem(h *delivery.HistoryRow) DeliveryHistoryItem {
 		Status:      deliveryStatusName(h.Status),
 		LastError:   h.LastError,
 		CreatedAt:   h.CreatedAt,
+		ChannelID:   h.ChannelID,
 		PostTitle:   h.PostTitle,
 		PostQID:     h.PostQID,
 		ChannelName: h.ChannelName,
@@ -240,6 +242,12 @@ func deliveryStatusName(s delivery.Status) string {
 type DeliveryHistoryListResponse struct {
 	History    []DeliveryHistoryItem `json:"history"`
 	Pagination Pagination            `json:"pagination"`
+}
+
+// DeliveryLatestListResponse represents the most recent delivery per channel
+// (one item per channel that has any history).
+type DeliveryLatestListResponse struct {
+	Items []DeliveryHistoryItem `json:"items"`
 }
 
 // --- Admin types ---

@@ -4,8 +4,6 @@ import { useTranslations } from "next-intl";
 
 import { PageHeading } from "@/components/ui/page-heading";
 import { AppSettingsCard } from "./AppSettingsCard";
-import { DeliveryChannelsCard } from "./DeliveryChannelsCard";
-import { DeliveryHistoryCard } from "./DeliveryHistoryCard";
 import { PasswordChangeCard } from "./PasswordChangeCard";
 
 export function SettingsPage() {
@@ -18,10 +16,6 @@ export function SettingsPage() {
       <AppSettingsCard />
 
       <PasswordChangeCard />
-
-      <DeliveryChannelsCard />
-
-      <DeliveryHistoryCard />
     </div>
   );
 }

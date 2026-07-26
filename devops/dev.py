@@ -1,26 +1,22 @@
 #!/usr/bin/env python3
 """Markpost development environment manager.
 
-Manages backend (Docker Compose) and frontend (local pnpm) for local development.
-
+All services (backend, frontend, postgres) run in Docker Compose.
 Usage:
     python devops/dev.py start    # Start all services (default)
     python devops/dev.py stop     # Stop all services
+    python devops/dev.py logs [svc]  # Tail logs (svc: backend|frontend|postgres|'')
 """
 
 import argparse
 import logging
-import signal
 import subprocess
 import sys
-import os
 import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-PID_FILE = SCRIPT_DIR / "frontend.pid"
-LOG_FILE = SCRIPT_DIR / "frontend.log"
 COMPOSE_FILE = SCRIPT_DIR / "docker-compose.yml"
 
 BACKEND_PORT = 7330
@@ -32,11 +28,9 @@ logger = logging.getLogger("dev")
 def setup_logging():
     handler_out = logging.StreamHandler(sys.stdout)
     handler_out.setLevel(logging.INFO)
-    handler_out.addFilter(lambda record: record.levelno <= logging.INFO)
-
+    handler_out.add_filter(lambda record: record.levelno <= logging.INFO)
     handler_err = logging.StreamHandler(sys.stderr)
     handler_err.setLevel(logging.WARNING)
-
     logging.basicConfig(level=logging.INFO, handlers=[handler_out, handler_err])
 
 
@@ -47,6 +41,10 @@ def parse_args():
     sub = parser.add_subparsers(dest="command")
     sub.add_parser("start", help="Start all services (default)")
     sub.add_parser("stop", help="Stop all services")
+    logs = sub.add_parser("logs", help="Tail service logs")
+    logs.add_argument(
+        "service", nargs="?", default="", help="backend|frontend|postgres (empty=all)"
+    )
     args = parser.parse_args()
     if not args.command:
         args.command = "start"
@@ -71,6 +69,10 @@ def run_check(name, *args, **kwargs):
     return result
 
 
+def compose(*args):
+    return run_check("docker", "compose", "-f", str(COMPOSE_FILE), *args)
+
+
 def wait_for(url, name, timeout=120):
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -87,64 +89,30 @@ def wait_for(url, name, timeout=120):
 
 
 def start():
-    logger.info("Starting backend (Docker Compose)...")
-    run_check("docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--build")
-    logger.info("Docker services started")
-
+    logger.info("Starting all services (backend + frontend + postgres)...")
+    compose("up", "-d", "--build")
     wait_for(f"http://localhost:{BACKEND_PORT}/api/v1/health", "Backend")
-
-    frontend_dir = PROJECT_ROOT / "frontend"
-    if not (frontend_dir / "node_modules").exists():
-        logger.info("Installing frontend dependencies...")
-        run("pnpm", "install", cwd=str(frontend_dir))
-
-    logger.info("Starting frontend (pnpm dev)...")
-    with open(LOG_FILE, "w") as log:
-        proc = subprocess.Popen(
-            ["pnpm", "dev"],
-            cwd=str(frontend_dir),
-            stdout=log,
-            stderr=log,
-            start_new_session=True,
-        )
-    PID_FILE.write_text(str(proc.pid))
-
     wait_for(f"http://localhost:{FRONTEND_PORT}", "Frontend", timeout=60)
-
     logger.info("Services:")
     logger.info("  Frontend:     http://localhost:%d", FRONTEND_PORT)
     logger.info("  Backend API:  http://localhost:%d/api/v1", BACKEND_PORT)
     logger.info("  Swagger Docs: http://localhost:%d/swagger", BACKEND_PORT)
-    logger.info("Admin:")
-    logger.info("  Username:     markpost")
-    logger.info("  Password:     markpost")
+    logger.info("  Logs:         devops/data/logs/  (host mount)")
+    logger.info("Admin: username=markpost password=markpost")
     logger.info("Stop: python devops/dev.py stop")
 
 
 def stop():
-    logger.info("Stopping backend...")
-    run("docker", "compose", "-f", str(COMPOSE_FILE), "down")
-    logger.info("Docker services stopped")
+    logger.info("Stopping all services...")
+    compose("down")
+    logger.info("Stopped.")
 
-    if PID_FILE.exists():
-        pid = int(PID_FILE.read_text().strip())
-        try:
-            os.killpg(pid, signal.SIGTERM)
-            time.sleep(1)
-            os.killpg(pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError):
-            pass
-        PID_FILE.unlink()
 
-    logger.info("Stopping frontend...")
-    try:
-        result = run("lsof", "-ti", f":{FRONTEND_PORT}")
-        if result.stdout.strip():
-            for pid_str in result.stdout.strip().splitlines():
-                subprocess.run(["kill", "-9", pid_str], capture_output=True)
-    except Exception:
-        pass
-    logger.info("Frontend stopped")
+def logs(service):
+    args = ["logs", "-f"]
+    if service:
+        args.append(service)
+    subprocess.run(["docker", "compose", "-f", str(COMPOSE_FILE), *args])
 
 
 def main():
@@ -154,6 +122,8 @@ def main():
         start()
     elif args.command == "stop":
         stop()
+    elif args.command == "logs":
+        logs(args.service)
 
 
 if __name__ == "__main__":

@@ -1,104 +1,113 @@
-# CLAUDE.md
+# AGENTS.md
 
 ## Identity
 
-You are a senior pair-programming partner specializing in React/TypeScript frontends and Go backends. Write secure, maintainable, and performant code that adheres to framework best practices.
+You are a senior pair-programming partner for the markpost codebase: a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. Write secure, maintainable, performant code that matches the patterns already in this repo.
 
 ## Commands
 
-**Backend** (in `backend/`):
+All commands assume the working directory noted in each section. Prefer running the dev environment in containers (see DevOps) over running services on the host.
 
-- `go test ./...` — Run tests
-- `golangci-lint run` — Run linter
-- `swag init -g main.go -d cmd/server,internal/api/rest/v1 -o docs --parseDependency --parseInternal` — Generate Swagger docs
+**Backend** (`backend/`):
+- `go test ./...` — run tests (uses testcontainers-go; requires a running Docker daemon)
+- `go build ./...` — compile
+- `golangci-lint run ./...` — lint
+- `golangci-lint fmt` — format all Go files (gofmt + goimports)
+- `go run ./cmd/server migrate up` — apply database migrations (run before serve on deploys)
+- `swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal` — regenerate Swagger docs
 
-**Frontend** (in `frontend/`):
+**Frontend** (`frontend/`):
+- `pnpm dev` — dev server (port 3034)
+- `pnpm build` — production build (static export to `out/`)
+- `pnpm lint` — ESLint
+- `pnpm format` / `pnpm format:check` — Prettier write / check
+- `pnpm test` — Vitest watch; `pnpm test:run` — run once
 
-- `pnpm dev` — Start dev server (port 3034)
-- `pnpm build` — Production build
-- `pnpm lint` — ESLint check
-- `pnpm test` — Vitest unit tests
-- `pnpm test:run` — Run tests once (no watch)
-- `pnpm test:e2e` — Playwright E2E tests
+**E2E** (`e2e/`, separate workspace):
+- `pnpm test` — Playwright (chromium only)
+- `dagger -c e2e call all --source ..` — full e2e via dagger (from repo root)
 
-**DevOps** (project root):
+**DevOps** (repo root):
+- `python3 devops/dev.py start` — start backend + frontend + postgres in Docker Compose
+- `python3 devops/dev.py stop`
+- `python3 devops/dev.py logs [backend|frontend|postgres]`
+- `docker exec markpost-postgres psql -U markpost` — inspect dev DB (postgres has no published port)
 
-- `python3 devops/dev.py start` — Start dev environment
-- `python3 devops/dev.py stop` — Stop dev environment
-- `python3 docker/build.py` — Build Docker images
-- `python3 docker/build.py --push` — Build and push Docker images
+## Tech Stack
 
-## Technology Stack
-
-- **Frontend**: Next.js 16 (middleware → proxy convention), React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react
-- **Backend**: Go 1.26, Gin, GORM, JWT, Swagger, Viper
-- **Database**: PostgreSQL, SQLite
-- **Testing**: Vitest, Playwright, MSW, Testing Library
+- **Frontend**: Next.js 16 (`output: "export"` static export), React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react, Prettier
+- **Backend**: Go 1.26, Gin, GORM, JWT, Swagger (swag), Viper, OpenTelemetry
+- **Database**: PostgreSQL 17 (the only supported driver; sqlite/mysql were removed)
+- **Testing**: Vitest (frontend unit), testcontainers-go + postgres (backend), Playwright chromium (e2e)
+- **Tooling**: golangci-lint v2 (lint+format), prek (pre-commit), air (Go hot reload)
 
 ## Project Structure
 
-**Root**:
+```
+backend/
+  cmd/server/        HTTP server entry + CLI subcommands (serve, migrate, reset-password, ...)
+  cmd/<sub>.go       one Run* func per subcommand
+  internal/api/rest/v1/  REST handlers
+  internal/config/   Viper + TOML config (validate tags)
+  internal/domain/   domain models + repository interfaces (post/, user/, delivery/)
+  internal/infra/    GORM repos + migrations/ (embedded SQL) + migrate.go + testdb.go
+  internal/middleware/  auth, CORS, rate limiting
+  internal/service/  business logic (auth/, post/, delivery/, admin/)
+  pkg/               shared packages (apierr/, auth/, crypto/, i18n/, utils/)
+  docs/              generated Swagger (DO NOT edit)
+frontend/
+  src/app/           App Router ((auth), (dashboard): admin/dashboard/posts/settings)
+  src/components/    ui/ (shadcn-style), auth/, layout/, dashboard/, admin/, posts/
+  src/lib/           utils.ts, api/ fetchers
+  src/i18n/          next-intl + locales (en, zh)
+  src/stores/        Zustand
+  next.config.ts     output: "export" + dev-only rewrites (proxy /api/v1 to backend)
+e2e/                 Playwright workspace (separate package.json, chromium only)
+devops/              dev.py, docker-compose.yml, *.Dockerfile, ansible/
+docker/              production Dockerfile (s6 multi-process), build.py
+.github/workflows/   CI (lint/test/build/e2e with path filters)
+```
 
-- `specs/` — Design and architecture specifications
-- `devops/` — Dev environment (`dev.py`, Docker Compose, Ansible playbooks)
-- `docker/` — Production Dockerfiles and multi-arch build script (`build.py`)
-- `scripts/` — Utility scripts
+## Database Migrations (important)
 
-**Frontend** (`frontend/`):
+Schema changes go through `golang-migrate` with versioned SQL files in `backend/internal/infra/migrations/` (embedded in the binary). Rules:
+- To change schema: create `NNNNNN_description.up.sql` + `.down.sql`, run `markpost migrate up`.
+- Migrations are PostgreSQL-only (the only supported driver).
+- Never edit a migration file after it's applied to any shared DB; write a new one instead.
+- `infra.New` only opens the connection; it does NOT migrate. Migrations run via the `migrate` subcommand, called by the deploy pipeline before `serve`.
 
-- `src/app/` — App Router pages, grouped by `(auth)` and `(dashboard)` (admin, dashboard, posts, settings)
-- `src/components/` — React components organized by feature (`ui/`, `auth/`, `layout/`, `login/`, `dashboard/`, `admin/`, `posts/`)
-- `src/hooks/` — Custom React hooks
-- `src/lib/` — Core utilities (`utils.ts`, `api/` fetchers)
-- `src/proxy.ts` — Next.js 16 Proxy (see Proxy Rules below)
-- `src/stores/` — Zustand state management
-- `src/types/` — TypeScript type definitions
-- `src/i18n/` — next-intl configuration and locale files (`en`, `zh`)
-- `src/mocks/` — MSW mock handlers
-- `src/test/` — Test setup and utilities
+## Code Style
 
-**Backend** (`backend/`):
+- **Go**: golangci-lint handles format (gofmt + goimports, `local-prefixes: markpost`) and lint. No standalone gofmt/goimports calls. Self-documenting code; comments only to explain *why*, never *what*.
+- **Frontend**: Prettier for formatting (`.prettierrc.json`), eslint-config-next for correctness. Function components + hooks only, never class components. PascalCase component files (`PostList.tsx`).
+- **No comments unless explaining a non-obvious *why*.** Prefer clear names.
+- **Never edit generated files**: `backend/docs/` (Swagger), lock files (`pnpm-lock.yaml`, `go.sum`).
 
-- `cmd/server/` — HTTP server entry point
-- `internal/api/rest/v1/` — REST API handlers
-- `internal/config/` — Configuration loading (Viper, TOML)
-- `internal/domain/` — Domain models and repository interfaces (`post/`, `user/`, `delivery/`)
-- `internal/infra/database/` — GORM database repositories
-- `internal/middleware/` — Gin middlewares (auth, CORS, rate limiting)
-- `internal/service/` — Business logic (`auth/`, `post/`)
-- `pkg/` — Shared packages (`apierr/`, `auth/`, `crypto/`, `i18n/`, `utils/`)
-- `docs/` — Generated Swagger docs
-- `tools/` — Dev tools (fake data generator)
+## Git Workflow
 
-## Proxy Rules (Next.js 16)
-
-`middleware.ts` is **deprecated** in Next.js 16. The file convention is now `proxy.ts`.
-
-- **File**: `src/proxy.ts` (or project root), only one per project
-- **Exports**: named `proxy` function or default export; optional `config` object with `matcher`
-- **Runtime**: Node.js (default, no `runtime` config option)
-- **Execution order**: headers → redirects → **proxy** → beforeFiles rewrites → filesystem → afterFiles → dynamic routes → fallback
-- **Matcher**: values must be compile-time constants (statically analyzed); use regex for negative matching
-- **Do not**: use proxy for slow data fetching, full session management, or as a replacement for Server Functions
-- **Env**: `BACKEND_URL` defaults to `http://127.0.0.1:7330` in code; override via `.env.local` in dev or Docker env vars in production
+- **Conventional Commits** (match existing history): `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `style:`. Optional scope: `fix(test): ...`.
+- Examples from this repo: `fix(test): relax singleflight burst assertion`, `chore(devops): fix ansible warnings`.
+- Commits are signed off by the author; do not commit on behalf of others.
+- `prek` runs on pre-commit (format + lint + AGENTS sync) and pre-push (tests); a `commit-msg` hook checks the Conventional Commits format.
 
 ## Testing
 
-**Frontend**:
-
-- Unit tests: `src/**/*.{test,spec}.{ts,tsx}`, run with Vitest (jsdom, V8 coverage)
-- E2E tests: `tests/`, run with Playwright (Chromium, Firefox, WebKit)
-- API mocking: MSW
-- Component testing: Testing Library
-
-**Backend**:
-
-- Tests alongside source files (`*_test.go`), run with `go test ./...`
+- **Backend**: `go test ./...` in `backend/`. Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable.
+- **Frontend**: `pnpm test:run` — Vitest with jsdom + v8 coverage.
+- **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger -c e2e call all --source ..`.
 
 ## Boundaries
 
-- **Always**: Read a file in full before editing it
-- **Ask first**: Modifying database schemas, adding new dependencies
+- **Always**:
+  - Read a file in full before editing it.
+  - Run the relevant formatter/linter before finishing (golangci-lint for Go, pnpm format+lint for frontend).
+  - Pair every GORM struct tag change with a new migration file.
+- **Ask first**:
+  - Modifying database schema / writing migrations.
+  - Adding a new dependency (go get / pnpm add).
+  - Changes to CI workflows or Docker images.
 - **Never**:
-  - Write comments — use self-documenting code; when necessary, only explain why, not what
-  - Edit generated files (Swagger docs, lock files, etc.)
+  - Edit generated files (Swagger docs in `backend/docs/`, lock files).
+  - Commit secrets or `.env` files.
+  - Reintroduce sqlite/mysql database drivers — PostgreSQL is the only supported DB.
+  - Add a `middleware.ts`/`proxy.ts` to the frontend — it is a static export; dev `/api` proxying is via `rewrites` in `next.config.ts`, prod via Caddy.

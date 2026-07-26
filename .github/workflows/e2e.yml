@@ -1,0 +1,45 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+paths-ignore:
+  - '**/*.md'
+  - 'docs/**'
+  - '.gitignore'
+  - 'LICENSE'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.f.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: f
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        with:
+          filters: |
+            run:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'docker/**'
+              - 'e2e/**'
+
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Dagger
+        run: |
+          cd /usr/local
+          curl -fsSL https://dl.dagger.io/dagger/install.sh | sh
+          dagger version
+      - name: Run E2E
+        run: dagger -c e2e call all --source .

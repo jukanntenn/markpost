@@ -35,8 +35,8 @@ test("webhook is called with correct payload when post is created", async ({
   const webhooks = await getWebhooks(request);
   expect(webhooks.length).toBeGreaterThan(0);
 
-  const webhook = webhooks.find((w: any) => 
-    w.body?.msg_type === "interactive" || 
+  const webhook = webhooks.find((w: any) =>
+    w.body?.msg_type === "interactive" ||
     w.body?.content?.includes(postTitle) ||
     JSON.stringify(w.body).includes(postTitle)
   );

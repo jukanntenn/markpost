@@ -103,12 +103,12 @@
             "color": "orange", // 图标颜色。仅在 tag 为 standard_icon 时生效。
             "img_key": "img_v2_38811724" // 图片的 key。仅在 tag 为 custom_icon 时生效。
         },
-        "padding": "12px 8px 12px 8px" // 标题组件的内边距。JSON 2.0 新增属性。默认值 "12px"，支持范围 [0,99]px。    
+        "padding": "12px 8px 12px 8px" // 标题组件的内边距。JSON 2.0 新增属性。默认值 "12px"，支持范围 [0,99]px。
     },
     "body": { // 卡片正文。
         // JSON 2.0 新增布局类属性，用于控制子元素排列：
         "direction": "vertical", // 正文或容器内组件的排列方向。可选值："vertical"（垂直排列）、"horizontal"（水平排列）。默认为 "vertical"。
-        "padding": "12px 8px 12px 8px", // 正文或容器内组件的内边距，支持范围 [0,99]px。    
+        "padding": "12px 8px 12px 8px", // 正文或容器内组件的内边距，支持范围 [0,99]px。
         "horizontal_spacing": "3px", // 正文或容器内组件的水平间距，可选值："small"(4px)、"medium"(8px)、"large"(12px)、"extra_large"(16px)或[0,99]px。
         "horizontal_align": "left", // 正文或容器内组件的水平对齐方式，可选值："left"、"center"、"right"。默认值为 "left"。
         "vertical_spacing": "4px", // 正文或容器内组件的垂直间距，可选值："small"(4px)、"medium"(8px)、"large"(12px)、"extra_large"(16px)或[0,99]px。

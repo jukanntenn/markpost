@@ -50,24 +50,26 @@ func (noopOAuthStateStore) Consume(string) (oauthStateEntry, bool) {
 // Service handles authentication operations including OAuth, JWT token management,
 // and user session handling.
 type Service struct {
-	users      user.Repository      // User data repository
-	tokens     user.TokenRepository // Token storage and blacklist management
-	oauth      *oauth2.Config       // OAuth2 configuration for GitHub
-	jwt        *JWTService          // JWT token generation and validation
-	issuer     string               // Token issuer identifier
-	stateStore OAuthStateStore      // OAuth state→verifier store (PKCE + CSRF)
-	userURL    string               // Override for GitHub user API URL (for testing)
+	users           user.Repository      // User data repository
+	tokens          user.TokenRepository // Token storage and blacklist management
+	oauth           *oauth2.Config       // OAuth2 configuration for GitHub
+	jwt             *JWTService          // JWT token generation and validation
+	issuer          string               // Token issuer identifier
+	stateStore      OAuthStateStore      // OAuth state→verifier store (PKCE + CSRF)
+	userURL         string               // Override for GitHub user API URL (for testing)
+	initialPassword string               // Password for the initial admin user (created on first startup)
 }
 
 // NewService creates a new Service instance with the provided dependencies.
-func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth2.Config, jwt *JWTService, issuer string) *Service {
+func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth2.Config, jwt *JWTService, issuer string, initialPassword string) *Service {
 	return &Service{
-		users:      users,
-		tokens:     tokens,
-		oauth:      oauth,
-		jwt:        jwt,
-		issuer:     issuer,
-		stateStore: noopOAuthStateStore{},
+		users:           users,
+		tokens:          tokens,
+		oauth:           oauth,
+		jwt:             jwt,
+		issuer:          issuer,
+		stateStore:      noopOAuthStateStore{},
+		initialPassword: initialPassword,
 	}
 }
 
@@ -388,11 +390,15 @@ func (s *Service) QueryPostKey(ctx context.Context, userID int) (string, time.Ti
 	return u.PostKey, u.CreatedAt, nil
 }
 
-// InitializeFirstAdmin promotes the specified user to admin role if not already an admin.
+// InitializeFirstAdmin creates (if absent) and promotes the specified user to admin role.
 func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername string) error {
 	u, err := s.users.GetByUsername(ctx, initialUsername)
 	if err != nil {
-		return service.New(service.ErrNotFound, fmt.Sprintf("initial admin user '%s' not found", initialUsername))
+		created, cerr := s.users.Create(ctx, initialUsername+"@localhost", initialUsername, s.initialPassword)
+		if cerr != nil {
+			return service.Wrap(service.ErrInternal, fmt.Sprintf("create initial admin '%s'", initialUsername), cerr)
+		}
+		u = created
 	}
 
 	if u.IsAdmin() {
@@ -400,7 +406,7 @@ func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername stri
 	}
 
 	if err := s.users.SetRole(ctx, u.ID, user.RoleAdmin); err != nil {
-		return service.Wrap(service.ErrInternal, fmt.Sprintf("failed to promote user '%s' to admin", initialUsername), err)
+		return service.Wrap(service.ErrInternal, fmt.Sprintf("promote '%s' to admin", initialUsername), err)
 	}
 
 	return nil

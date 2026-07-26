@@ -132,14 +132,8 @@ func TestAttemptRepository_PruneHistorySubqueryLimit(t *testing.T) {
 
 func TestAttemptRepository_ClaimDueDialect(t *testing.T) {
 	repo, _ := setupAttemptRepoTestDB(t)
-	name := repo.db.Dialector.Name()
-	rl := repo.rowLockingDialect()
-	if name == "sqlite" {
-		if rl {
-			t.Error("sqlite should NOT advertise row locking")
-		}
-	} else if !rl {
-		t.Errorf("dialect %s should advertise row locking", name)
+	if !repo.rowLockingDialect() {
+		t.Error("postgres should advertise row locking")
 	}
 }
 

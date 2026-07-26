@@ -10,9 +10,9 @@ import _ "embed"
 
 // CSSHash is the xxhash64 of the minified CSS, used in the asset URL
 // (/static/post.<CSSHash>.css) for cache busting.
-var CSSHash = "8957c7305ed33f00"
+var CSSHash = "3a2ebf1033fafbae"
 
-//go:embed post.8957c7305ed33f00.css
+//go:embed post.3a2ebf1033fafbae.css
 var cssBytes []byte
 
 // CSSBytes returns the minified CSS asset bytes.

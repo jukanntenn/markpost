@@ -29,9 +29,10 @@ func TestDeliveryChannelRepository_Create(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	ch := &delivery.Channel{
-		UserID:  1,
+		UserID:  uid,
 		Kind:    delivery.ChannelKindFeishu,
 		Name:    "Test Channel",
 		Enabled: true,
@@ -55,12 +56,14 @@ func TestDeliveryChannelRepository_GetByUserID(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch1")
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch2")
-	_ = createTestDeliveryChannel(ctx, repo, 2, "Ch3")
+	_ = createTestDeliveryChannel(ctx, repo, uid1, "Ch1")
+	_ = createTestDeliveryChannel(ctx, repo, uid1, "Ch2")
+	_ = createTestDeliveryChannel(ctx, repo, uid2, "Ch3")
 
-	channels, err := repo.GetByUserID(ctx, 1)
+	channels, err := repo.GetByUserID(ctx, uid1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -73,12 +76,14 @@ func TestDeliveryChannelRepository_GetByIDAndUserID(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch1")
-	_ = createTestDeliveryChannel(ctx, repo, 2, "Ch2")
+	ch1 := createTestDeliveryChannel(ctx, repo, uid1, "Ch1")
+	_ = createTestDeliveryChannel(ctx, repo, uid2, "Ch2")
 
 	t.Run("finds own channel", func(t *testing.T) {
-		ch, err := repo.GetByIDAndUserID(ctx, 1, 1)
+		ch, err := repo.GetByIDAndUserID(ctx, ch1.ID, uid1)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -88,7 +93,7 @@ func TestDeliveryChannelRepository_GetByIDAndUserID(t *testing.T) {
 	})
 
 	t.Run("returns not found for other user's channel", func(t *testing.T) {
-		_, err := repo.GetByIDAndUserID(ctx, 1, 2)
+		_, err := repo.GetByIDAndUserID(ctx, ch1.ID, uid2)
 		if !errors.Is(err, domain.ErrNotFound) {
 			t.Errorf("expected ErrNotFound, got: %v", err)
 		}
@@ -99,11 +104,12 @@ func TestDeliveryChannelRepository_Update(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Old")
+	existing := createTestDeliveryChannel(ctx, repo, uid, "Old")
 
 	ch := &delivery.Channel{
-		ID:      1,
+		ID:      existing.ID,
 		Kind:    delivery.ChannelKindFeishu,
 		Name:    "New",
 		Enabled: false,
@@ -119,7 +125,7 @@ func TestDeliveryChannelRepository_Update(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	fetched, _ := repo.GetByIDAndUserID(ctx, 1, 1)
+	fetched, _ := repo.GetByIDAndUserID(ctx, existing.ID, uid)
 	if fetched.Name != "New" {
 		t.Errorf("name = %q, want %q", fetched.Name, "New")
 	}
@@ -136,11 +142,12 @@ func TestDeliveryChannelRepository_DeleteByIDAndUserID(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch")
+	ch := createTestDeliveryChannel(ctx, repo, uid, "Ch")
 
 	t.Run("deletes own channel", func(t *testing.T) {
-		affected, err := repo.DeleteByIDAndUserID(ctx, 1, 1)
+		affected, err := repo.DeleteByIDAndUserID(ctx, ch.ID, uid)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -150,7 +157,7 @@ func TestDeliveryChannelRepository_DeleteByIDAndUserID(t *testing.T) {
 	})
 
 	t.Run("returns 0 for non-existent", func(t *testing.T) {
-		affected, err := repo.DeleteByIDAndUserID(ctx, 999, 1)
+		affected, err := repo.DeleteByIDAndUserID(ctx, 999, uid)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -164,9 +171,11 @@ func TestDeliveryChannelRepository_ListAll(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch1")
-	_ = createTestDeliveryChannel(ctx, repo, 2, "Ch2")
+	_ = createTestDeliveryChannel(ctx, repo, uid1, "Ch1")
+	_ = createTestDeliveryChannel(ctx, repo, uid2, "Ch2")
 
 	channels, err := repo.ListAll(ctx, 0, 10)
 	if err != nil {
@@ -181,9 +190,11 @@ func TestDeliveryChannelRepository_CountAll(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewDeliveryChannelRepository(db)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_ = createTestDeliveryChannel(ctx, repo, 1, "Ch1")
-	_ = createTestDeliveryChannel(ctx, repo, 2, "Ch2")
+	_ = createTestDeliveryChannel(ctx, repo, uid1, "Ch1")
+	_ = createTestDeliveryChannel(ctx, repo, uid2, "Ch2")
 
 	count, err := repo.CountAll(ctx)
 	if err != nil {

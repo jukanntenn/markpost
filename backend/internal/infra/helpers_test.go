@@ -3,28 +3,38 @@ package infra
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"markpost/internal/domain"
 	"markpost/internal/domain/post"
 
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
+func createTestUser(t *testing.T, db *gorm.DB, idx ...int) int {
+	t.Helper()
+	i := 0
+	if len(idx) > 0 {
+		i = idx[0]
+	}
+	userRepo := NewUserRepository(db, 16)
+	u, err := userRepo.Create(context.Background(), fmt.Sprintf("user%d@example.com", i), fmt.Sprintf("user%d", i), "password")
+	if err != nil {
+		t.Fatalf("createTestUser(%d): %v", i, err)
+	}
+	return u.ID
+}
+
 func setupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open test db: %v", err)
-	}
-	if err := db.AutoMigrate(&post.Post{}); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
-	db.Create(&post.Post{QID: "p-1", Title: "a", Body: "body", UserID: 1})
-	db.Create(&post.Post{QID: "p-2", Title: "b", Body: "body", UserID: 1})
-	db.Create(&post.Post{QID: "p-3", Title: "c", Body: "body", UserID: 2})
+	db := SetupTestDB(t)
+	u1 := createTestUser(t, db, 0)
+	u2 := createTestUser(t, db, 1)
+	db.Create(&post.Post{QID: "p-1", Title: "a", Body: "body", UserID: u1})
+	db.Create(&post.Post{QID: "p-2", Title: "b", Body: "body", UserID: u1})
+	db.Create(&post.Post{QID: "p-3", Title: "c", Body: "body", UserID: u2})
 	return db
 }
 

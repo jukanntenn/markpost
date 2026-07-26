@@ -129,10 +129,12 @@ func TestAdminListUsers_WithPagination(t *testing.T) {
 }
 
 func TestAdminListPosts_Success(t *testing.T) {
-	svc, _, postRepo, _ := setupAdminHandlerDeps(t)
+	svc, userRepo, postRepo, _ := setupAdminHandlerDeps(t)
 	ctx := t.Context()
-	_, _ = postRepo.Create(ctx, "Post 1", "Body 1", 1)
-	_, _ = postRepo.Create(ctx, "Post 2", "Body 2", 2)
+	u1, _ := userRepo.Create(ctx, "user1@example.com", "user1", "password")
+	u2, _ := userRepo.Create(ctx, "user2@example.com", "user2", "password")
+	_, _ = postRepo.Create(ctx, "Post 1", "Body 1", u1.ID)
+	_, _ = postRepo.Create(ctx, "Post 2", "Body 2", u2.ID)
 
 	router := newTestEngine()
 	router.GET("/admin/posts", func(c *gin.Context) {
@@ -160,10 +162,12 @@ func TestAdminListPosts_Success(t *testing.T) {
 }
 
 func TestAdminListPosts_WithSearch(t *testing.T) {
-	svc, _, postRepo, _ := setupAdminHandlerDeps(t)
+	svc, userRepo, postRepo, _ := setupAdminHandlerDeps(t)
 	ctx := t.Context()
-	_, _ = postRepo.Create(ctx, "Alert Post", "Body", 1)
-	_, _ = postRepo.Create(ctx, "Normal Post", "Body", 2)
+	u1, _ := userRepo.Create(ctx, "user1@example.com", "user1", "password")
+	u2, _ := userRepo.Create(ctx, "user2@example.com", "user2", "password")
+	_, _ = postRepo.Create(ctx, "Alert Post", "Body", u1.ID)
+	_, _ = postRepo.Create(ctx, "Normal Post", "Body", u2.ID)
 
 	router := newTestEngine()
 	router.GET("/admin/posts", func(c *gin.Context) {
@@ -188,10 +192,12 @@ func TestAdminListPosts_WithSearch(t *testing.T) {
 }
 
 func TestAdminListChannels_Success(t *testing.T) {
-	svc, _, _, channelRepo := setupAdminHandlerDeps(t)
+	svc, userRepo, _, channelRepo := setupAdminHandlerDeps(t)
 	ctx := t.Context()
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
+	u1, _ := userRepo.Create(ctx, "user1@example.com", "user1", "password")
+	u2, _ := userRepo.Create(ctx, "user2@example.com", "user2", "password")
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: u1.ID, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: u2.ID, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
 
 	router := newTestEngine()
 	router.GET("/admin/channels", func(c *gin.Context) {

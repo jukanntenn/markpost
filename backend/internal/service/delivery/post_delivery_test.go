@@ -16,6 +16,8 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/service/delivery/filter"
+
+	"gorm.io/gorm"
 )
 
 func TestKeywordFilterMatch(t *testing.T) {
@@ -155,8 +157,8 @@ func loadDeliveryTestConfig(t *testing.T) {
 server.host = "127.0.0.1"
 server.port = 7330
 [db]
-driver = "sqlite"
-dsn = ":memory:"
+driver = "postgresql"
+dsn = "placeholder"
 [admin]
 initial_username = "markpost"
 initial_password = "markpost"
@@ -250,7 +252,7 @@ func TestNewPostDeliveryService(t *testing.T) {
 
 // seedUserPostChannel inserts a user, a post owned by that user, and a feishu
 // delivery channel for the user, returning their IDs for attempt setup.
-func seedUserPostChannel(t *testing.T, db *infra.Database) (userID, postID, channelID int) {
+func seedUserPostChannel(t *testing.T, db *gorm.DB) (userID, postID, channelID int) {
 	t.Helper()
 
 	u := &user.User{
@@ -259,12 +261,12 @@ func seedUserPostChannel(t *testing.T, db *infra.Database) (userID, postID, chan
 		Password: "x",
 		PostKey:  "pk-seed",
 	}
-	if err := db.DB().Create(u).Error; err != nil {
+	if err := db.Create(u).Error; err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
 
 	p := &domainpost.Post{QID: "p-seed", Title: "Server Alert", Body: "boom", UserID: u.ID}
-	if err := db.DB().Create(p).Error; err != nil {
+	if err := db.Create(p).Error; err != nil {
 		t.Fatalf("seed post: %v", err)
 	}
 
@@ -276,7 +278,7 @@ func seedUserPostChannel(t *testing.T, db *infra.Database) (userID, postID, chan
 		Configuration: makeFeishuChannelConfig("https://example.com/webhook"),
 		Keywords:      "alert",
 	}
-	if err := db.DB().Create(ch).Error; err != nil {
+	if err := db.Create(ch).Error; err != nil {
 		t.Fatalf("seed channel: %v", err)
 	}
 	return u.ID, p.ID, ch.ID
@@ -284,15 +286,11 @@ func seedUserPostChannel(t *testing.T, db *infra.Database) (userID, postID, chan
 
 func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 	loadDeliveryTestConfig(t)
-	database, err := infra.NewTestDatabase()
-	if err != nil {
-		t.Fatalf("NewTestDatabase: %v", err)
-	}
-	defer func() { _ = database.Close() }()
+	database := infra.SetupTestDB(t)
 
 	uid, pid, cid := seedUserPostChannel(t, database)
 	// also seed a non-matching channel to confirm it produces no attempt.
-	_ = database.DB().Create(&delivery.Channel{
+	_ = database.Create(&delivery.Channel{
 		UserID:        uid,
 		Kind:          delivery.ChannelKindFeishu,
 		Name:          "no-match",
@@ -301,9 +299,9 @@ func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 		Keywords:      "nomatch",
 	}).Error
 
-	channelRepo := infra.NewDeliveryChannelRepository(database.DB())
-	attemptRepo := infra.NewAttemptRepository(database.DB())
-	postRepo := infra.NewPostRepository(database.DB())
+	channelRepo := infra.NewDeliveryChannelRepository(database)
+	attemptRepo := infra.NewAttemptRepository(database)
+	postRepo := infra.NewPostRepository(database)
 
 	dispatcher := NewDispatcher(attemptRepo, channelRepo, postRepo, &recordingSender{})
 	dispatcher.Enqueue(domainpost.DeliveryJob{
@@ -315,7 +313,7 @@ func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 	})
 
 	var attempts []delivery.Attempt
-	if err := database.DB().Find(&attempts).Error; err != nil {
+	if err := database.Find(&attempts).Error; err != nil {
 		t.Fatalf("find attempts: %v", err)
 	}
 	if len(attempts) != 1 {
@@ -335,11 +333,7 @@ func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 
 func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
 	loadDeliveryTestConfig(t)
-	database, err := infra.NewTestDatabase()
-	if err != nil {
-		t.Fatalf("NewTestDatabase: %v", err)
-	}
-	defer func() { _ = database.Close() }()
+	database := infra.SetupTestDB(t)
 
 	uid, pid, cid := seedUserPostChannel(t, database)
 
@@ -354,7 +348,7 @@ func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	attemptRepo := infra.NewAttemptRepository(database.DB())
+	attemptRepo := infra.NewAttemptRepository(database)
 	if err := attemptRepo.Create(ctx, []*delivery.Attempt{attempt}); err != nil {
 		t.Fatalf("create attempt: %v", err)
 	}
@@ -386,12 +380,12 @@ func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
 	}
 
 	var remaining []delivery.Attempt
-	database.DB().Find(&remaining)
+	database.Find(&remaining)
 	if len(remaining) != 0 {
 		t.Errorf("expected attempt deleted, %d remain", len(remaining))
 	}
 	var history []delivery.History
-	database.DB().Find(&history)
+	database.Find(&history)
 	if len(history) != 1 || history[0].Status != delivery.StatusDelivered {
 		t.Errorf("expected 1 delivered history row, got %+v", history)
 	}
@@ -399,11 +393,7 @@ func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
 
 func TestDispatcher_MarkRetryAdvancesNextAt(t *testing.T) {
 	loadDeliveryTestConfig(t)
-	database, err := infra.NewTestDatabase()
-	if err != nil {
-		t.Fatalf("NewTestDatabase: %v", err)
-	}
-	defer func() { _ = database.Close() }()
+	database := infra.SetupTestDB(t)
 
 	uid, pid, cid := seedUserPostChannel(t, database)
 	ctx := context.Background()
@@ -417,7 +407,7 @@ func TestDispatcher_MarkRetryAdvancesNextAt(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	attemptRepo := infra.NewAttemptRepository(database.DB())
+	attemptRepo := infra.NewAttemptRepository(database)
 	if err := attemptRepo.Create(ctx, []*delivery.Attempt{attempt}); err != nil {
 		t.Fatalf("create attempt: %v", err)
 	}
@@ -428,7 +418,7 @@ func TestDispatcher_MarkRetryAdvancesNextAt(t *testing.T) {
 	}
 
 	var got delivery.Attempt
-	database.DB().First(&got, attempt.ID)
+	database.First(&got, attempt.ID)
 	if got.Attempts != 1 {
 		t.Errorf("attempts = %d, want 1", got.Attempts)
 	}

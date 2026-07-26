@@ -213,11 +213,13 @@ func TestRenderPost_CacheHeadersAnd304(t *testing.T) {
 
 func TestRenderPost_HTMLIsSanitized(t *testing.T) {
 	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	u, _ := userRepo.Create(context.Background(), "user1@example.com", "user1", "password")
 	repo := infra.NewPostRepository(db)
 	svc := postsvc.NewService(repo, nil)
 
 	body := "<script>alert(1)</script>\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
-	qid, err := svc.CreatePost(context.Background(), "Sanitized", body, 1)
+	qid, err := svc.CreatePost(context.Background(), "Sanitized", body, u.ID)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}

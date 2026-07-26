@@ -2,6 +2,7 @@ package post
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -10,12 +11,28 @@ import (
 	"markpost/internal/domain/post"
 	"markpost/internal/infra"
 	"markpost/internal/service"
+
+	"gorm.io/gorm"
 )
+
+func createCacheTestUser(t *testing.T, db *gorm.DB, idx ...int) int {
+	t.Helper()
+	i := 0
+	if len(idx) > 0 {
+		i = idx[0]
+	}
+	userRepo := infra.NewUserRepository(db, 16)
+	u, err := userRepo.Create(context.Background(), fmt.Sprintf("user%d@example.com", i), fmt.Sprintf("user%d", i), "password")
+	if err != nil {
+		t.Fatalf("createCacheTestUser(%d): %v", i, err)
+	}
+	return u.ID
+}
 
 // newServiceWithCache builds a post.Service wired to a real ristretto cache so
 // the hit/miss/singleflight paths are exercised against the production cache
 // implementation rather than the noop fallback used when config is unloaded.
-func newServiceWithCache(t *testing.T) (*Service, *infra.PostRepository, *ristrettoCache) {
+func newServiceWithCache(t *testing.T) (*Service, *infra.PostRepository, *ristrettoCache, *gorm.DB) {
 	t.Helper()
 	db := infra.SetupTestDB(t)
 	repo := infra.NewPostRepository(db)
@@ -32,13 +49,14 @@ func newServiceWithCache(t *testing.T) (*Service, *infra.PostRepository, *ristre
 		cache:     cache,
 		purger:    noopPurger{},
 	}
-	return svc, repo.(*infra.PostRepository), cache
+	return svc, repo.(*infra.PostRepository), cache, db
 }
 
 func TestRenderCache_HitReturnsStoredValue(t *testing.T) {
-	svc, repo, _ := newServiceWithCache(t)
+	svc, repo, _, db := newServiceWithCache(t)
+	uid := createCacheTestUser(t, db)
 	ctx := context.Background()
-	created, _ := repo.Create(ctx, "Cached", "# Hello\n\nworld", 1)
+	created, _ := repo.Create(ctx, "Cached", "# Hello\n\nworld", uid)
 
 	title1, html1, etag1, created1, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
@@ -58,9 +76,10 @@ func TestRenderCache_HitReturnsStoredValue(t *testing.T) {
 }
 
 func TestRenderCache_RawVariantSeparateFromHTML(t *testing.T) {
-	svc, repo, _ := newServiceWithCache(t)
+	svc, repo, _, db := newServiceWithCache(t)
+	uid := createCacheTestUser(t, db)
 	ctx := context.Background()
-	created, _ := repo.Create(ctx, "T", "# Heading\n\npara", 1)
+	created, _ := repo.Create(ctx, "T", "# Heading\n\npara", uid)
 
 	_, htmlContent, htmlEtag, _, err := svc.RenderPostHTML(ctx, created.QID)
 	if err != nil {
@@ -90,9 +109,10 @@ func TestRenderCache_RawVariantSeparateFromHTML(t *testing.T) {
 }
 
 func TestRenderCache_DeletionInvalidatesBothVariants(t *testing.T) {
-	svc, repo, _ := newServiceWithCache(t)
+	svc, repo, _, db := newServiceWithCache(t)
+	uid := createCacheTestUser(t, db)
 	ctx := context.Background()
-	created, _ := repo.Create(ctx, "Doomed", "# bye", 1)
+	created, _ := repo.Create(ctx, "Doomed", "# bye", uid)
 
 	if _, _, _, _, err := svc.RenderPostHTML(ctx, created.QID); err != nil {
 		t.Fatalf("render html: %v", err)
@@ -120,8 +140,9 @@ func TestRenderCache_SingleflightCollapsesBurst(t *testing.T) {
 	// Rendering is wrapped in singleflight, so N concurrent calls for the same
 	// cold QID must issue exactly one DB read. A counting wrapper asserts this.
 	db := infra.SetupTestDB(t)
+	uid := createCacheTestUser(t, db)
 	realRepo := infra.NewPostRepository(db)
-	created, _ := realRepo.Create(context.Background(), "SF", "# concurrency", 1)
+	created, _ := realRepo.Create(context.Background(), "SF", "# concurrency", uid)
 	counting := &countingRepo{Repository: realRepo, qid: created.QID}
 
 	cache, err := newRistrettoCache(1<<20, 10000, 64)
@@ -216,6 +237,7 @@ func waitFor(t *testing.T, cond func() bool, timeout time.Duration) {
 func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 	t.Run("owner deletes: removes row, invalidates cache, purges once", func(t *testing.T) {
 		db := infra.SetupTestDB(t)
+		uid := createCacheTestUser(t, db, 7)
 		repo := infra.NewPostRepository(db)
 		cache, err := newRistrettoCache(1<<20, 10000, 64)
 		if err != nil {
@@ -232,13 +254,13 @@ func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 			purger:    purger,
 		}
 		ctx := context.Background()
-		created, _ := repo.Create(ctx, "T", "# bye", 7)
+		created, _ := repo.Create(ctx, "T", "# bye", uid)
 
 		if _, _, _, _, err := svc.RenderPostHTML(ctx, created.QID); err != nil {
 			t.Fatalf("render: %v", err)
 		}
 
-		if err := svc.DeletePostByQID(ctx, created.QID, 7); err != nil {
+		if err := svc.DeletePostByQID(ctx, created.QID, uid); err != nil {
 			t.Fatalf("delete: %v", err)
 		}
 		if _, err := repo.GetByQID(ctx, created.QID); err == nil {
@@ -258,6 +280,7 @@ func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 
 	t.Run("wrong owner returns NotFound and does not delete or purge", func(t *testing.T) {
 		db := infra.SetupTestDB(t)
+		uid := createCacheTestUser(t, db, 7)
 		repo := infra.NewPostRepository(db)
 		cache, err := newRistrettoCache(1<<20, 10000, 64)
 		if err != nil {
@@ -274,7 +297,7 @@ func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 			purger:    purger,
 		}
 		ctx := context.Background()
-		created, _ := repo.Create(ctx, "T", "# bye", 7)
+		created, _ := repo.Create(ctx, "T", "# bye", uid)
 
 		err = svc.DeletePostByQID(ctx, created.QID, 999) // wrong owner
 		if err == nil {
@@ -295,6 +318,7 @@ func TestDeletePostByQID_OwnerScopedAndPurges(t *testing.T) {
 
 func TestPruneExpired_InvalidatesCacheWithoutPurging(t *testing.T) {
 	db := infra.SetupTestDB(t)
+	uid := createCacheTestUser(t, db)
 	repo := infra.NewPostRepository(db)
 	cache, err := newRistrettoCache(1<<20, 10000, 64)
 	if err != nil {
@@ -311,7 +335,7 @@ func TestPruneExpired_InvalidatesCacheWithoutPurging(t *testing.T) {
 		purger:    purger,
 	}
 	ctx := context.Background()
-	old, _ := repo.Create(ctx, "Old", "# old", 1)
+	old, _ := repo.Create(ctx, "Old", "# old", uid)
 	// Backdate its created_at past the retention window.
 	if err := db.Model(&post.Post{}).Where("id = ?", old.ID).
 		Update("created_at", time.Now().AddDate(0, 0, -10)).Error; err != nil {

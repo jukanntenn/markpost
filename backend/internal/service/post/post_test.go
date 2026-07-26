@@ -2,28 +2,46 @@ package post
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
 	"markpost/internal/domain/post"
 	"markpost/internal/infra"
 	"markpost/internal/service"
+
+	"gorm.io/gorm"
 )
 
-func setupPostService(t *testing.T) (*Service, *infra.PostRepository) {
+func createTestUser(t *testing.T, db *gorm.DB, idx ...int) int {
+	t.Helper()
+	i := 0
+	if len(idx) > 0 {
+		i = idx[0]
+	}
+	userRepo := infra.NewUserRepository(db, 16)
+	u, err := userRepo.Create(context.Background(), fmt.Sprintf("user%d@example.com", i), fmt.Sprintf("user%d", i), "password")
+	if err != nil {
+		t.Fatalf("createTestUser(%d): %v", i, err)
+	}
+	return u.ID
+}
+
+func setupPostService(t *testing.T) (*Service, *infra.PostRepository, *gorm.DB) {
 	t.Helper()
 	db := infra.SetupTestDB(t)
 	repo := infra.NewPostRepository(db)
 	svc := NewService(repo, nil)
-	return svc, repo.(*infra.PostRepository)
+	return svc, repo.(*infra.PostRepository), db
 }
 
 func TestService_CreatePost(t *testing.T) {
 	t.Run("creates post successfully", func(t *testing.T) {
-		svc, _ := setupPostService(t)
+		svc, _, db := setupPostService(t)
 		ctx := context.Background()
+		uid := createTestUser(t, db)
 
-		qid, err := svc.CreatePost(ctx, "Test Title", "Test Body", 1)
+		qid, err := svc.CreatePost(ctx, "Test Title", "Test Body", uid)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -34,12 +52,13 @@ func TestService_CreatePost(t *testing.T) {
 
 	t.Run("creates post with delivery enqueuer", func(t *testing.T) {
 		db := infra.SetupTestDB(t)
+		uid := createTestUser(t, db)
 		repo := infra.NewPostRepository(db)
 		enqueuer := &mockEnqueuer{}
 		svc := NewService(repo, enqueuer)
 		ctx := context.Background()
 
-		qid, err := svc.CreatePost(ctx, "Title", "Body", 1)
+		qid, err := svc.CreatePost(ctx, "Title", "Body", uid)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -64,10 +83,11 @@ func (m *mockEnqueuer) Enqueue(job post.DeliveryJob) {
 }
 
 func TestService_GetPostMarkdown(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	created, _ := repo.Create(ctx, "Test Title", "Test Body", 1)
+	created, _ := repo.Create(ctx, "Test Title", "Test Body", uid)
 
 	t.Run("returns markdown for valid post", func(t *testing.T) {
 		title, body, _, _, err := svc.GetPostMarkdown(ctx, created.QID)
@@ -91,10 +111,11 @@ func TestService_GetPostMarkdown(t *testing.T) {
 }
 
 func TestService_RenderPostHTML(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	created, _ := repo.Create(ctx, "Test Title", "# Heading\n\nParagraph", 1)
+	created, _ := repo.Create(ctx, "Test Title", "# Heading\n\nParagraph", uid)
 
 	t.Run("renders HTML for valid post", func(t *testing.T) {
 		title, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
@@ -118,8 +139,9 @@ func TestService_RenderPostHTML(t *testing.T) {
 }
 
 func TestService_RenderPostHTML_GFM(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	body := "| h1 | h2 |\n|----|----|\n| a  | b  |\n\n" +
 		"<details>\n<summary>more</summary>\n\n" +
@@ -127,7 +149,7 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 		"~~strike~~\n\n" +
 		"https://example.com\n"
 
-	created, err := repo.Create(ctx, "T", body, 1)
+	created, err := repo.Create(ctx, "T", body, uid)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}
@@ -153,12 +175,13 @@ func TestService_RenderPostHTML_GFM(t *testing.T) {
 }
 
 func TestService_RenderPostHTML_HardWraps(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	body := "line one\nline two\nline three\n"
 
-	created, err := repo.Create(ctx, "T", body, 1)
+	created, err := repo.Create(ctx, "T", body, uid)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}
@@ -177,15 +200,16 @@ func TestService_RenderPostHTML_HardWraps(t *testing.T) {
 }
 
 func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	body := "https://example.com\n\n" +
 		"<script>alert(1)</script>\n\n" +
 		"<img src=x onerror=alert(1)>\n\n" +
 		"<a href=\"javascript:alert(1)\">x</a>\n"
 
-	created, err := repo.Create(ctx, "T", body, 1)
+	created, err := repo.Create(ctx, "T", body, uid)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}
@@ -214,11 +238,12 @@ func TestService_RenderPostHTML_SanitizesDangerousHTML(t *testing.T) {
 }
 
 func TestService_RenderPostHTML_UnclosedScriptKeepsContent(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	body := "before <script> after\n\n## survived\n\ntail text"
-	created, err := repo.Create(ctx, "T", body, 1)
+	created, err := repo.Create(ctx, "T", body, uid)
 	if err != nil {
 		t.Fatalf("create post: %v", err)
 	}
@@ -239,15 +264,17 @@ func TestService_RenderPostHTML_UnclosedScriptKeepsContent(t *testing.T) {
 }
 
 func TestService_GetUserPosts(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_, _ = repo.Create(ctx, "Title 1", "Body 1", 1)
-	_, _ = repo.Create(ctx, "Title 2", "Body 2", 1)
-	_, _ = repo.Create(ctx, "Title 3", "Body 3", 2)
+	_, _ = repo.Create(ctx, "Title 1", "Body 1", uid1)
+	_, _ = repo.Create(ctx, "Title 2", "Body 2", uid1)
+	_, _ = repo.Create(ctx, "Title 3", "Body 3", uid2)
 
 	t.Run("returns posts for user", func(t *testing.T) {
-		posts, total, err := svc.GetUserPosts(ctx, 1, 0, 10)
+		posts, total, err := svc.GetUserPosts(ctx, uid1, 0, 10)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -274,11 +301,13 @@ func TestService_GetUserPosts(t *testing.T) {
 }
 
 func TestService_GetAllPosts(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_, _ = repo.Create(ctx, "Alpha", "Body", 1)
-	_, _ = repo.Create(ctx, "Beta", "Body", 2)
+	_, _ = repo.Create(ctx, "Alpha", "Body", uid1)
+	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
 	posts, total, err := svc.GetAllPosts(ctx, "", 0, 10)
 	if err != nil {
@@ -293,10 +322,11 @@ func TestService_GetAllPosts(t *testing.T) {
 }
 
 func TestService_DeletePost(t *testing.T) {
-	svc, repo := setupPostService(t)
+	svc, repo, db := setupPostService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	created, _ := repo.Create(ctx, "Title", "Body", 1)
+	created, _ := repo.Create(ctx, "Title", "Body", uid)
 
 	t.Run("deletes post successfully", func(t *testing.T) {
 		err := svc.DeletePost(ctx, created.ID)
@@ -314,7 +344,7 @@ func TestService_DeletePost(t *testing.T) {
 }
 
 func TestService_PruneExpired(t *testing.T) {
-	svc, _ := setupPostService(t)
+	svc, _, _ := setupPostService(t)
 	ctx := context.Background()
 
 	t.Run("returns error for non-positive retention days", func(t *testing.T) {
@@ -340,7 +370,7 @@ func TestService_PruneExpired(t *testing.T) {
 }
 
 func TestService_CountExpired(t *testing.T) {
-	svc, _ := setupPostService(t)
+	svc, _, _ := setupPostService(t)
 	ctx := context.Background()
 
 	t.Run("returns error for non-positive retention days", func(t *testing.T) {

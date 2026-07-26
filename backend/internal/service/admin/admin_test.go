@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"markpost/internal/domain/delivery"
@@ -9,6 +10,15 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 )
+
+func createAdminTestUser(t *testing.T, userRepo user.Repository, idx int) int {
+	t.Helper()
+	u, err := userRepo.Create(context.Background(), fmt.Sprintf("user%d@example.com", idx), fmt.Sprintf("user%d", idx), "password")
+	if err != nil {
+		t.Fatalf("createAdminTestUser(%d): %v", idx, err)
+	}
+	return u.ID
+}
 
 func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository, delivery.Repository) {
 	t.Helper()
@@ -79,11 +89,13 @@ func TestListAllUsers(t *testing.T) {
 }
 
 func TestListAllPosts(t *testing.T) {
-	svc, _, postRepo, _ := setupAdminService(t)
+	svc, userRepo, postRepo, _ := setupAdminService(t)
+	uid1 := createAdminTestUser(t, userRepo, 0)
+	uid2 := createAdminTestUser(t, userRepo, 1)
 	ctx := context.Background()
 
-	_, _ = postRepo.Create(ctx, "First", "Body", 1)
-	_, _ = postRepo.Create(ctx, "Second", "Body", 2)
+	_, _ = postRepo.Create(ctx, "First", "Body", uid1)
+	_, _ = postRepo.Create(ctx, "Second", "Body", uid2)
 
 	result, total, err := svc.ListAllPosts(ctx, "", 0, 10)
 	if err != nil {
@@ -98,11 +110,13 @@ func TestListAllPosts(t *testing.T) {
 }
 
 func TestListAllDeliveryChannels(t *testing.T) {
-	svc, _, _, channelRepo := setupAdminService(t)
+	svc, userRepo, _, channelRepo := setupAdminService(t)
+	uid1 := createAdminTestUser(t, userRepo, 0)
+	uid2 := createAdminTestUser(t, userRepo, 1)
 	ctx := context.Background()
 
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
-	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: uid1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = channelRepo.Create(ctx, &delivery.Channel{UserID: uid2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
 
 	result, total, err := svc.ListAllDeliveryChannels(ctx, 0, 10)
 	if err != nil {

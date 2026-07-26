@@ -24,7 +24,7 @@ func setupRealAuthService(t *testing.T) (*auth.Service, user.Repository) {
 	userRepo := infra.NewUserRepository(db, 16)
 	tokenRepo := infra.NewTokenRepository(db)
 	jwtSvc := auth.NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
-	svc := auth.NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+	svc := auth.NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
 	return svc, userRepo
 }
 

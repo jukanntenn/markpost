@@ -121,21 +121,43 @@ func main() {
 				},
 			},
 			{
-				Name:  "migrate-sqlite-to-postgres",
-				Usage: "Copy rows from a SQLite database file into the configured Postgres database (one-shot migration)",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "sqlite",
-						Usage:    "Path to the source SQLite database file",
-						Required: true,
+				Name:  "migrate",
+				Usage: "Run database migrations (postgres)",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "up",
+						Usage: "Apply all pending migrations",
+						Action: func(c *cli.Context) error {
+							return cmd.RunMigrateUp(c.String("config"))
+						},
 					},
-					&cli.BoolFlag{
-						Name:  "dry-run",
-						Usage: "Scan and report row counts without writing to the target",
+					{
+						Name:  "down",
+						Usage: "Roll back N migrations",
+						Flags: []cli.Flag{
+							&cli.IntFlag{Name: "steps", Value: 1, Usage: "Number of migrations to roll back"},
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.RunMigrateDown(c.String("config"), c.Int("steps"))
+						},
 					},
-				},
-				Action: func(c *cli.Context) error {
-					return cmd.RunMigrateSqliteToPostgres(c.String("config"), c.String("sqlite"), c.Bool("dry-run"))
+					{
+						Name:  "force",
+						Usage: "Force-set migration version (for baselining an existing DB)",
+						Flags: []cli.Flag{
+							&cli.IntFlag{Name: "version", Required: true, Usage: "Target version"},
+						},
+						Action: func(c *cli.Context) error {
+							return cmd.RunMigrateForce(c.String("config"), c.Int("version"))
+						},
+					},
+					{
+						Name:  "version",
+						Usage: "Print current migration version",
+						Action: func(c *cli.Context) error {
+							return cmd.RunMigrateVersion(c.String("config"))
+						},
+					},
 				},
 			},
 			{
@@ -287,6 +309,7 @@ func serve(configPath string) {
 		},
 		jwtSvc,
 		"markpost",
+		cfg.Admin.InitialPassword,
 	).WithUserURL(cfg.OAuth.GitHub.UserURL)
 	if stateStore, err := auth.NewRistrettoOAuthStateStore(); err == nil {
 		authSvc = authSvc.WithOAuthStateStore(stateStore)

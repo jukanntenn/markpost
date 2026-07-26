@@ -280,10 +280,7 @@ func (r *AttemptRepository) LatestPerChannel(ctx context.Context, userID int) ([
 }
 
 // rowLockingDialect reports whether the active DB dialect supports
-// FOR UPDATE SKIP LOCKED. Postgres and MySQL 8.0+ do; SQLite does not (it is a
-// parse-time syntax error), and its production pool pins MaxOpenConns(1) so
-// the clause is unnecessary anyway.
+// FOR UPDATE SKIP LOCKED. PostgreSQL supports it natively.
 func (r *AttemptRepository) rowLockingDialect() bool {
-	name := r.db.Name()
-	return name == "postgres" || name == "mysql"
+	return r.db.Name() == "postgres"
 }

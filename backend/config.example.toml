@@ -64,19 +64,17 @@
 
 [db]
 
-# Database driver. Supported: "sqlite", "mysql", "postgresql".
-# [REQUIRED]  Env: MARKPOST_DB__DRIVER  Default: "sqlite"
-# driver = "sqlite"
+# Database driver. Supported: "postgresql".
+# [REQUIRED]  Env: MARKPOST_DB__DRIVER  Default: "postgresql"
+# driver = "postgresql"
 
 # Data Source Name (connection string).
 #
-#   SQLite:       "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
-#   MySQL:        "user:pass@tcp(127.0.0.1:3306)/markpost?charset=utf8mb4&parseTime=True"
 #   PostgreSQL:   "host=127.0.0.1 user=markpost password=secret dbname=markpost sslmode=disable"
 #
 # [REQUIRED]  Env: MARKPOST_DB__DSN
-# Default: "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
-# dsn = "file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL"
+# Default: "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable"
+# dsn = "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable"
 
 
 # --- Admin ---------------------------------------------------------------------

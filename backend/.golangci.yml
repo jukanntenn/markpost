@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
 # golangci-lint configuration
 # Documentation: https://golangci-lint.run/usage/configuration/
 
@@ -57,6 +58,9 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    goimports:
+      local-prefixes: markpost
 
 issues:
   max-issues-per-linter: 0

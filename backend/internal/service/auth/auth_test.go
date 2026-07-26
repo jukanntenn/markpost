@@ -17,7 +17,7 @@ func setupAuthService(t *testing.T) (*Service, user.Repository, user.TokenReposi
 	userRepo := infra.NewUserRepository(db, 16)
 	tokenRepo := infra.NewTokenRepository(db)
 	jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
-	svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+	svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
 	return svc, userRepo, tokenRepo
 }
 
@@ -80,7 +80,7 @@ func TestService_LoginWithEmail(t *testing.T) {
 		userRepo := infra.NewUserRepository(db, 16)
 		tokenRepo := infra.NewTokenRepository(db)
 		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
-		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
 		ctx := context.Background()
 
 		u, _ := userRepo.Create(ctx, "test@example.com", "testuser", "password")
@@ -173,7 +173,7 @@ func TestService_RefreshToken(t *testing.T) {
 		userRepo := infra.NewUserRepository(db, 16)
 		tokenRepo := infra.NewTokenRepository(db)
 		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, -time.Hour)
-		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost")
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
 		ctx := context.Background()
 
 		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
@@ -303,20 +303,17 @@ func TestService_InitializeFirstAdmin(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error for non-existent user", func(t *testing.T) {
-		svc, _, _ := setupAuthService(t)
+	t.Run("creates user if non-existent", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		err := svc.InitializeFirstAdmin(ctx, "nonexistent")
-		if err == nil {
-			t.Fatal("expected error for non-existent user")
+		err := svc.InitializeFirstAdmin(ctx, "newadmin")
+		if err != nil {
+			t.Fatalf("expected creation, got: %v", err)
 		}
-		se, ok := service.AsError(err)
-		if !ok {
-			t.Fatal("expected service error")
-		}
-		if se.Code != service.ErrNotFound {
-			t.Errorf("expected code %q, got %q", service.ErrNotFound.Value, se.Code.Value)
+		u, _ := userRepo.GetByUsername(ctx, "newadmin")
+		if u == nil || !u.IsAdmin() {
+			t.Fatal("expected new admin created and promoted")
 		}
 	})
 

@@ -10,7 +10,7 @@ const testConfigToml = `
 server.host = "127.0.0.1"
 server.port = 7330
 [db]
-driver = "sqlite"
+driver = "postgresql"
 dsn = ":memory:"
 [admin]
 initial_username = "markpost"
@@ -151,7 +151,7 @@ post_key_length = 20
 host = "0.0.0.0"
 port = 8080
 [db]
-driver = "sqlite"
+driver = "postgresql"
 dsn = ":memory:"
 [admin]
 initial_username = "admin"

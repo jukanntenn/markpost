@@ -83,7 +83,7 @@ func setupGitHubAuthService(t *testing.T, mux *http.ServeMux) *Service {
 		Scopes:      []string{"user:email"},
 	}
 
-	return NewService(userRepo, tokenRepo, oauthCfg, jwtSvc, "markpost").
+	return NewService(userRepo, tokenRepo, oauthCfg, jwtSvc, "markpost", "testpassword").
 		WithOAuthStateStore(newInMemoryOAuthStateStore())
 }
 

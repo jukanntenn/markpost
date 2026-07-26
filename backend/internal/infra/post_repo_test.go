@@ -12,10 +12,11 @@ import (
 
 func TestPostRepository_Create(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	p, err := repo.Create(ctx, "Test Title", "Test Body", 1)
+	p, err := repo.Create(ctx, "Test Title", "Test Body", uid)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -28,17 +29,18 @@ func TestPostRepository_Create(t *testing.T) {
 	if p.Body != "Test Body" {
 		t.Errorf("body = %q, want %q", p.Body, "Test Body")
 	}
-	if p.UserID != 1 {
-		t.Errorf("user_id = %d, want 1", p.UserID)
+	if p.UserID != uid {
+		t.Errorf("user_id = %d, want %d", p.UserID, uid)
 	}
 }
 
 func TestPostRepository_GetByQID(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, "Title", "Body", 1)
+	created, _ := repo.Create(ctx, "Title", "Body", uid)
 
 	t.Run("finds existing post", func(t *testing.T) {
 		p, err := repo.GetByQID(ctx, created.QID)
@@ -60,10 +62,11 @@ func TestPostRepository_GetByQID(t *testing.T) {
 
 func TestPostRepository_GetByID(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, "Title", "Body", 1)
+	created, _ := repo.Create(ctx, "Title", "Body", uid)
 
 	p, err := repo.GetByID(ctx, created.ID)
 	if err != nil {
@@ -76,14 +79,16 @@ func TestPostRepository_GetByID(t *testing.T) {
 
 func TestPostRepository_CountByUserID(t *testing.T) {
 	db := SetupTestDB(t)
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	_, _ = repo.Create(ctx, "T1", "B1", 1)
-	_, _ = repo.Create(ctx, "T2", "B2", 1)
-	_, _ = repo.Create(ctx, "T3", "B3", 2)
+	_, _ = repo.Create(ctx, "T1", "B1", uid1)
+	_, _ = repo.Create(ctx, "T2", "B2", uid1)
+	_, _ = repo.Create(ctx, "T3", "B3", uid2)
 
-	count, err := repo.CountByUserID(ctx, 1)
+	count, err := repo.CountByUserID(ctx, uid1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -94,14 +99,16 @@ func TestPostRepository_CountByUserID(t *testing.T) {
 
 func TestPostRepository_GetByUserID(t *testing.T) {
 	db := SetupTestDB(t)
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	_, _ = repo.Create(ctx, "T1", "B1", 1)
-	_, _ = repo.Create(ctx, "T2", "B2", 1)
-	_, _ = repo.Create(ctx, "T3", "B3", 2)
+	_, _ = repo.Create(ctx, "T1", "B1", uid1)
+	_, _ = repo.Create(ctx, "T2", "B2", uid1)
+	_, _ = repo.Create(ctx, "T3", "B3", uid2)
 
-	posts, err := repo.GetByUserID(ctx, 1, 0, 10)
+	posts, err := repo.GetByUserID(ctx, uid1, 0, 10)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -112,11 +119,13 @@ func TestPostRepository_GetByUserID(t *testing.T) {
 
 func TestPostRepository_ListAll(t *testing.T) {
 	db := SetupTestDB(t)
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	_, _ = repo.Create(ctx, "Alpha", "Body", 1)
-	_, _ = repo.Create(ctx, "Beta", "Body", 2)
+	_, _ = repo.Create(ctx, "Alpha", "Body", uid1)
+	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
 	t.Run("returns all posts", func(t *testing.T) {
 		posts, err := repo.ListAll(ctx, "", 0, 10)
@@ -141,11 +150,13 @@ func TestPostRepository_ListAll(t *testing.T) {
 
 func TestPostRepository_CountAll(t *testing.T) {
 	db := SetupTestDB(t)
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	_, _ = repo.Create(ctx, "Alpha", "Body", 1)
-	_, _ = repo.Create(ctx, "Beta", "Body", 2)
+	_, _ = repo.Create(ctx, "Alpha", "Body", uid1)
+	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
 	count, err := repo.CountAll(ctx, "")
 	if err != nil {
@@ -158,10 +169,11 @@ func TestPostRepository_CountAll(t *testing.T) {
 
 func TestPostRepository_DeleteByID(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	created, _ := repo.Create(ctx, "Title", "Body", 1)
+	created, _ := repo.Create(ctx, "Title", "Body", uid)
 
 	affected, err := repo.DeleteByID(ctx, created.ID)
 	if err != nil {
@@ -180,11 +192,12 @@ func TestPostRepository_DeleteByID(t *testing.T) {
 func TestPostRepository_DeleteByQID(t *testing.T) {
 	t.Run("owner-scoped delete by correct owner removes the row", func(t *testing.T) {
 		db := SetupTestDB(t)
+		uid := createTestUser(t, db)
 		repo := NewPostRepository(db)
 		ctx := context.Background()
 
-		created, _ := repo.Create(ctx, "Title", "Body", 1)
-		affected, err := repo.DeleteByQID(ctx, created.QID, 1)
+		created, _ := repo.Create(ctx, "Title", "Body", uid)
+		affected, err := repo.DeleteByQID(ctx, created.QID, uid)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -198,11 +211,12 @@ func TestPostRepository_DeleteByQID(t *testing.T) {
 
 	t.Run("owner-scoped delete by wrong owner affects 0 rows", func(t *testing.T) {
 		db := SetupTestDB(t)
+		uid := createTestUser(t, db)
 		repo := NewPostRepository(db)
 		ctx := context.Background()
 
-		created, _ := repo.Create(ctx, "Title", "Body", 1)
-		affected, err := repo.DeleteByQID(ctx, created.QID, 2)
+		created, _ := repo.Create(ctx, "Title", "Body", uid)
+		affected, err := repo.DeleteByQID(ctx, created.QID, uid+999)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -216,10 +230,11 @@ func TestPostRepository_DeleteByQID(t *testing.T) {
 
 	t.Run("admin delete (ownerID=0) removes any owner's row", func(t *testing.T) {
 		db := SetupTestDB(t)
+		uid := createTestUser(t, db)
 		repo := NewPostRepository(db)
 		ctx := context.Background()
 
-		created, _ := repo.Create(ctx, "Title", "Body", 1)
+		created, _ := repo.Create(ctx, "Title", "Body", uid)
 		affected, err := repo.DeleteByQID(ctx, created.QID, 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -249,13 +264,14 @@ func TestPostRepository_DeleteByQID(t *testing.T) {
 
 func TestPostRepository_CreateBatch(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
 	t.Run("creates multiple posts", func(t *testing.T) {
 		posts := []post.Post{
-			{QID: "p-batch1", Title: "T1", Body: "B1", UserID: 1},
-			{QID: "p-batch2", Title: "T2", Body: "B2", UserID: 1},
+			{QID: "p-batch1", Title: "T1", Body: "B1", UserID: uid},
+			{QID: "p-batch2", Title: "T2", Body: "B2", UserID: uid},
 		}
 		count, err := repo.CreateBatch(ctx, posts)
 		if err != nil {
@@ -279,14 +295,15 @@ func TestPostRepository_CreateBatch(t *testing.T) {
 
 func TestPostRepository_PruneExpired(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
 	// Create a post with an old timestamp
-	p, _ := repo.Create(ctx, "Old Post", "Body", 1)
+	p, _ := repo.Create(ctx, "Old Post", "Body", uid)
 	db.Model(&p).Update("created_at", time.Now().AddDate(0, 0, -10))
 
-	_, _ = repo.Create(ctx, "New Post", "Body", 1)
+	_, _ = repo.Create(ctx, "New Post", "Body", uid)
 
 	pruned, err := repo.PruneExpired(ctx, 7, 100)
 	if err != nil {
@@ -304,13 +321,14 @@ func TestPostRepository_PruneExpired(t *testing.T) {
 
 func TestPostRepository_CountExpired(t *testing.T) {
 	db := SetupTestDB(t)
+	uid := createTestUser(t, db)
 	repo := NewPostRepository(db)
 	ctx := context.Background()
 
-	p, _ := repo.Create(ctx, "Old Post", "Body", 1)
+	p, _ := repo.Create(ctx, "Old Post", "Body", uid)
 	db.Model(&p).Update("created_at", time.Now().AddDate(0, 0, -10))
 
-	_, _ = repo.Create(ctx, "New Post", "Body", 1)
+	_, _ = repo.Create(ctx, "New Post", "Body", uid)
 
 	count, err := repo.CountExpired(ctx, 7)
 	if err != nil {

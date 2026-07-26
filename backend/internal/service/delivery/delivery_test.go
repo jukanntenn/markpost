@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,12 +17,26 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupDeliveryService(t *testing.T) (*Service, delivery.Repository) {
+func createTestUser(t *testing.T, db *gorm.DB, idx ...int) int {
+	t.Helper()
+	i := 0
+	if len(idx) > 0 {
+		i = idx[0]
+	}
+	userRepo := infra.NewUserRepository(db, 16)
+	u, err := userRepo.Create(context.Background(), fmt.Sprintf("user%d@example.com", i), fmt.Sprintf("user%d", i), "password")
+	if err != nil {
+		t.Fatalf("createTestUser(%d): %v", i, err)
+	}
+	return u.ID
+}
+
+func setupDeliveryService(t *testing.T) (*Service, delivery.Repository, *gorm.DB) {
 	t.Helper()
 	db := infra.SetupTestDB(t)
 	repo := infra.NewDeliveryChannelRepository(db)
 	svc := NewService(repo, nil)
-	return svc, repo
+	return svc, repo, db
 }
 
 // setupDeliveryServiceWithHistory builds a Service whose attemptRepo is wired
@@ -45,14 +60,16 @@ func feishuConfigJSON(webhookURL, cardLinkURL string) json.RawMessage {
 }
 
 func TestService_ListByUserID(t *testing.T) {
-	svc, repo := setupDeliveryService(t)
+	svc, repo, db := setupDeliveryService(t)
 	ctx := context.Background()
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch3", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://c.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: uid1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: uid1, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: uid2, Kind: delivery.ChannelKindFeishu, Name: "Ch3", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://c.com", "card_link_url": ""}})
 
-	channels, err := svc.ListByUserID(ctx, 1)
+	channels, err := svc.ListByUserID(ctx, uid1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,11 +79,12 @@ func TestService_ListByUserID(t *testing.T) {
 }
 
 func TestService_Create(t *testing.T) {
-	svc, _ := setupDeliveryService(t)
+	svc, _, db := setupDeliveryService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
 	t.Run("creates channel successfully", func(t *testing.T) {
-		ch, err := svc.Create(ctx, 1, UpdateChannelParams{
+		ch, err := svc.Create(ctx, uid, UpdateChannelParams{
 			Kind:          "feishu",
 			Name:          "My Channel",
 			Configuration: feishuConfigJSON("https://example.com/webhook", ""),
@@ -91,7 +109,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("creates channel with card_link_url", func(t *testing.T) {
-		ch, err := svc.Create(ctx, 1, UpdateChannelParams{
+		ch, err := svc.Create(ctx, uid, UpdateChannelParams{
 			Kind:          "feishu",
 			Name:          "Card Link Channel",
 			Configuration: feishuConfigJSON("https://example.com/webhook", "https://custom.example.com/{{.QID}}"),
@@ -106,7 +124,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("rejects empty name", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", Configuration: feishuConfigJSON("https://example.com", "")})
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{Kind: "feishu", Configuration: feishuConfigJSON("https://example.com", "")})
 		if err == nil {
 			t.Fatal("expected error for empty name")
 		}
@@ -117,14 +135,14 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("rejects empty configuration", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "feishu", Name: "Test"})
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{Kind: "feishu", Name: "Test"})
 		if err == nil {
 			t.Fatal("expected error for empty configuration")
 		}
 	})
 
 	t.Run("rejects missing webhook URL", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{
 			Kind:          "feishu",
 			Name:          "Test",
 			Configuration: feishuConfigJSON("", ""),
@@ -135,7 +153,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("rejects invalid webhook URL", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{
 			Kind:          "feishu",
 			Name:          "Test",
 			Configuration: feishuConfigJSON("ftp://invalid", ""),
@@ -146,7 +164,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("rejects invalid configuration JSON", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{
 			Kind:          "feishu",
 			Name:          "Test",
 			Configuration: json.RawMessage(`{invalid`),
@@ -157,7 +175,7 @@ func TestService_Create(t *testing.T) {
 	})
 
 	t.Run("rejects unsupported kind", func(t *testing.T) {
-		_, err := svc.Create(ctx, 1, UpdateChannelParams{Kind: "slack", Name: "Test", Configuration: feishuConfigJSON("https://example.com", "")})
+		_, err := svc.Create(ctx, uid, UpdateChannelParams{Kind: "slack", Name: "Test", Configuration: feishuConfigJSON("https://example.com", "")})
 		if err == nil {
 			t.Fatal("expected error for unsupported kind")
 		}
@@ -169,14 +187,16 @@ func TestService_Create(t *testing.T) {
 }
 
 func TestService_Update(t *testing.T) {
-	svc, repo := setupDeliveryService(t)
+	svc, repo, db := setupDeliveryService(t)
 	ctx := context.Background()
+	uid := createTestUser(t, db)
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Old", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://old.com", "card_link_url": ""}, Keywords: "old"})
+	ch := &delivery.Channel{UserID: uid, Kind: delivery.ChannelKindFeishu, Name: "Old", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://old.com", "card_link_url": ""}, Keywords: "old"}
+	_ = repo.Create(ctx, ch)
 
 	t.Run("updates channel name successfully", func(t *testing.T) {
 		newName := "New Name"
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Name: newName})
+		ch, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Name: newName})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -186,7 +206,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent channel", func(t *testing.T) {
-		_, err := svc.Update(ctx, 1, 999, UpdateChannelParams{Name: "New"})
+		_, err := svc.Update(ctx, uid, 999, UpdateChannelParams{Name: "New"})
 		if err == nil {
 			t.Fatal("expected error for non-existent channel")
 		}
@@ -197,7 +217,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("updates configuration", func(t *testing.T) {
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{
+		ch, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{
 			Configuration: feishuConfigJSON("https://new.com/webhook", "https://custom.com/{{.QID}}"),
 		})
 		if err != nil {
@@ -214,7 +234,7 @@ func TestService_Update(t *testing.T) {
 
 	t.Run("updates enabled status", func(t *testing.T) {
 		enabled := false
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Enabled: &enabled})
+		ch, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Enabled: &enabled})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -224,7 +244,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("updates keywords", func(t *testing.T) {
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("new,keywords")})
+		ch, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Keywords: ptrTo("new,keywords")})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -234,7 +254,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("clears keywords with empty string", func(t *testing.T) {
-		ch, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("")})
+		ch, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Keywords: ptrTo("")})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -244,7 +264,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("rejects invalid keywords on update", func(t *testing.T) {
-		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Keywords: ptrTo("a,,b")})
+		_, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Keywords: ptrTo("a,,b")})
 		if err == nil {
 			t.Fatal("expected error for invalid keywords")
 		}
@@ -255,7 +275,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("rejects invalid webhook URL on update", func(t *testing.T) {
-		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{
+		_, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{
 			Configuration: feishuConfigJSON("ftp://invalid", ""),
 		})
 		if err == nil {
@@ -264,7 +284,7 @@ func TestService_Update(t *testing.T) {
 	})
 
 	t.Run("rejects invalid kind on update", func(t *testing.T) {
-		_, err := svc.Update(ctx, 1, 1, UpdateChannelParams{Kind: "slack"})
+		_, err := svc.Update(ctx, uid, ch.ID, UpdateChannelParams{Kind: "slack"})
 		if err == nil {
 			t.Fatal("expected error for invalid kind")
 		}
@@ -272,20 +292,22 @@ func TestService_Update(t *testing.T) {
 }
 
 func TestService_Delete(t *testing.T) {
-	svc, repo := setupDeliveryService(t)
+	svc, repo, db := setupDeliveryService(t)
+	uid := createTestUser(t, db)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	ch := &delivery.Channel{UserID: uid, Kind: delivery.ChannelKindFeishu, Name: "Ch", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}}
+	_ = repo.Create(ctx, ch)
 
 	t.Run("deletes channel successfully", func(t *testing.T) {
-		err := svc.Delete(ctx, 1, 1)
+		err := svc.Delete(ctx, uid, ch.ID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("returns error for non-existent channel", func(t *testing.T) {
-		err := svc.Delete(ctx, 1, 999)
+		err := svc.Delete(ctx, uid, 999)
 		if err == nil {
 			t.Fatal("expected error for non-existent channel")
 		}
@@ -297,11 +319,13 @@ func TestService_Delete(t *testing.T) {
 }
 
 func TestService_ListAll(t *testing.T) {
-	svc, repo := setupDeliveryService(t)
+	svc, repo, db := setupDeliveryService(t)
+	uid1 := createTestUser(t, db, 0)
+	uid2 := createTestUser(t, db, 1)
 	ctx := context.Background()
 
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
-	_ = repo.Create(ctx, &delivery.Channel{UserID: 2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: uid1, Kind: delivery.ChannelKindFeishu, Name: "Ch1", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""}})
+	_ = repo.Create(ctx, &delivery.Channel{UserID: uid2, Kind: delivery.ChannelKindFeishu, Name: "Ch2", Configuration: delivery.ChannelConfiguration{"webhook_url": "https://b.com", "card_link_url": ""}})
 
 	channels, total, err := svc.ListAll(ctx, 0, 10)
 	if err != nil {
@@ -413,9 +437,10 @@ func TestValidateConfiguration(t *testing.T) {
 func TestService_LatestPerChannel(t *testing.T) {
 	ctx := context.Background()
 	svc, repo, _, db := setupDeliveryServiceWithHistory(t)
+	uid := createTestUser(t, db)
 
 	ch1 := &delivery.Channel{
-		UserID:        1,
+		UserID:        uid,
 		Kind:          delivery.ChannelKindFeishu,
 		Name:          "ch1",
 		Enabled:       true,
@@ -425,7 +450,7 @@ func TestService_LatestPerChannel(t *testing.T) {
 		t.Fatalf("create ch1: %v", err)
 	}
 	ch2 := &delivery.Channel{
-		UserID:        1,
+		UserID:        uid,
 		Kind:          delivery.ChannelKindFeishu,
 		Name:          "ch2",
 		Enabled:       true,
@@ -437,7 +462,7 @@ func TestService_LatestPerChannel(t *testing.T) {
 
 	older := time.Now().Add(-2 * time.Hour)
 	recent := time.Now().Add(-1 * time.Minute)
-	ch1ID, ch2ID, uID := ch1.ID, ch2.ID, 1
+	ch1ID, ch2ID, uID := ch1.ID, ch2.ID, uid
 	insertHistory := func(channelID, userID int, status delivery.Status, when time.Time) {
 		if err := db.Exec(
 			"INSERT INTO delivery_history (status, last_error, user_id, channel_id, created_at) VALUES (?, '', ?, ?, ?)",
@@ -491,9 +516,10 @@ func TestService_SendTest(t *testing.T) {
 		}))
 		defer server.Close()
 
-		svc, repo, _, _ := setupDeliveryServiceWithHistory(t)
+		svc, repo, _, db := setupDeliveryServiceWithHistory(t)
+		uid := createTestUser(t, db)
 		ch := &delivery.Channel{
-			UserID:        1,
+			UserID:        uid,
 			Kind:          delivery.ChannelKindFeishu,
 			Name:          "test",
 			Enabled:       true,
@@ -503,7 +529,7 @@ func TestService_SendTest(t *testing.T) {
 			t.Fatalf("create channel: %v", err)
 		}
 
-		if err := svc.SendTest(ctx, 1, ch.ID); err != nil {
+		if err := svc.SendTest(ctx, uid, ch.ID); err != nil {
 			t.Fatalf("SendTest: %v", err)
 		}
 		if receivedTitle != testCardTitle {
@@ -512,8 +538,9 @@ func TestService_SendTest(t *testing.T) {
 	})
 
 	t.Run("returns not found for missing channel", func(t *testing.T) {
-		svc, _, _, _ := setupDeliveryServiceWithHistory(t)
-		err := svc.SendTest(ctx, 1, 9999)
+		svc, _, _, db := setupDeliveryServiceWithHistory(t)
+		uid := createTestUser(t, db)
+		err := svc.SendTest(ctx, uid, 9999)
 		if err == nil {
 			t.Fatal("expected error for missing channel")
 		}
@@ -527,9 +554,10 @@ func TestService_SendTest(t *testing.T) {
 	})
 
 	t.Run("wraps webhook failure as internal error", func(t *testing.T) {
-		svc, repo, _, _ := setupDeliveryServiceWithHistory(t)
+		svc, repo, _, db := setupDeliveryServiceWithHistory(t)
+		uid := createTestUser(t, db)
 		ch := &delivery.Channel{
-			UserID:        1,
+			UserID:        uid,
 			Kind:          delivery.ChannelKindFeishu,
 			Name:          "bad",
 			Enabled:       true,
@@ -539,7 +567,7 @@ func TestService_SendTest(t *testing.T) {
 			t.Fatalf("create channel: %v", err)
 		}
 
-		err := svc.SendTest(ctx, 1, ch.ID)
+		err := svc.SendTest(ctx, uid, ch.ID)
 		if err == nil {
 			t.Fatal("expected error for unreachable webhook")
 		}

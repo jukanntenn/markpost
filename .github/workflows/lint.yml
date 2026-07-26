@@ -3,17 +3,19 @@ name: Lint
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
-
-# Skip pure-noise paths so docs-only changes don't trigger the workflow.
-# Note: paths filters do not apply to tag pushes or workflow_dispatch.
-paths-ignore:
-  - '**/*.md'
-  - 'docs/**'
-  - '.gitignore'
-  - 'LICENSE'
 
 jobs:
   changes:

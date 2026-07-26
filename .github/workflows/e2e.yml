@@ -3,15 +3,19 @@ name: E2E
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
-
-paths-ignore:
-  - '**/*.md'
-  - 'docs/**'
-  - '.gitignore'
-  - 'LICENSE'
 
 jobs:
   changes:

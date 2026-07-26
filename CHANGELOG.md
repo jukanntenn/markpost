@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.0-rc.2] - 2026-07-26
+
+### Changed
+- Docker image now defaults to plain HTTP on port 2053; self-hosted deployments work out of the box without built-in TLS
+
 ## [0.2.0-rc.1] - 2026-07-25
 
 ### Added

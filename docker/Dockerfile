@@ -56,7 +56,7 @@ COPY docker/s6/cont-init.d /etc/cont-init.d
 COPY docker/s6/s6-rc.d /etc/s6-overlay/s6-rc.d
 RUN chmod +x /etc/cont-init.d/*.sh
 
-COPY docker/Caddyfile.local /etc/caddy/Caddyfile
+COPY docker/Caddyfile /etc/caddy/Caddyfile
 
 COPY --from=go-build /app/markpost /usr/local/bin/markpost
 COPY --from=go-build /app/templates /app/templates

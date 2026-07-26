@@ -1,9 +1,11 @@
 # markpost Caddyfile — image-baked default (e2e / local acceptance).
 #
-# This file is baked into the image at /etc/caddy/Caddyfile and used as-is by
-# the e2e suite and local acceptance verification (docker/docker-compose.yml).
-# Both use Caddy's internal (self-signed) CA so the Go backend is reached over
-# the same HTTPS path production uses, just with a locally-trusted cert.
+# This file is mounted into the container by e2e (e2e/docker-compose.yml,
+# Dagger) and local acceptance (docker/docker-compose.local.yml).  The
+# image-baked default is the plain-HTTP docker/Caddyfile; this TLS variant
+# is selected at runtime via a volume mount.  Both use Caddy's internal
+# (self-signed) CA so the Go backend is reached over the same HTTPS path
+# production uses, just with a locally-trusted cert.
 #
 # For dev / staging / production, Ansible renders templates/Caddyfile.j2 and
 # mounts it over /etc/caddy/Caddyfile, replacing this file. The two share the

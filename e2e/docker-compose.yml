@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     volumes:
       - postgres-socket:/var/run/postgresql
+      - ../docker/Caddyfile.local:/etc/caddy/Caddyfile:ro
     environment:
       - MARKPOST_RATELIMIT__READ__PER_SECOND=100
       - MARKPOST_RATELIMIT__READ__BURST=200

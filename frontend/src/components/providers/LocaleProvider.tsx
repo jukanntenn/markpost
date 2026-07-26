@@ -1,4 +1,4 @@
-"use client";
+'use client'
 
 import {
   createContext,
@@ -7,25 +7,26 @@ import {
   useEffect,
   useRef,
   useState,
-} from "react";
-import { NextIntlClientProvider, type IntlError } from "next-intl";
-import type { AbstractIntlMessages } from "next-intl";
-import { availableLocales, defaultLocale, type Locale } from "@/i18n/constants";
-import { setCurrentLocale } from "@/i18n/current";
-import { getDefaultLocale, loadMessages, persistLocale } from "@/utils/i18n";
+} from 'react'
+import { NextIntlClientProvider, type IntlError } from 'next-intl'
+import type { AbstractIntlMessages } from 'next-intl'
+import { availableLocales, defaultLocale, type Locale } from '@/i18n/constants'
+import { setCurrentLocale } from '@/i18n/current'
+import { getDefaultLocale, loadMessages, persistLocale } from '@/utils/i18n'
 
 interface LocaleContextValue {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  availableLocales: readonly Locale[];
+  locale: Locale
+  setLocale: (locale: Locale) => void
+  availableLocales: readonly Locale[]
 }
 
-const LocaleContext = createContext<LocaleContextValue | null>(null);
+const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 export function useLocaleContext() {
-  const ctx = useContext(LocaleContext);
-  if (!ctx) throw new Error("useLocaleContext must be used within LocaleProvider");
-  return ctx;
+  const ctx = useContext(LocaleContext)
+  if (!ctx)
+    throw new Error('useLocaleContext must be used within LocaleProvider')
+  return ctx
 }
 
 // LocaleProvider is a pure client-side provider (no server props). It boots
@@ -41,48 +42,52 @@ export function useLocaleContext() {
 // chunk has loaded, real missing-key errors surface normally. See
 // specs/frontend/i18n.md.
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(defaultLocale);
-  const [messages, setMessages] = useState<AbstractIntlMessages>({});
+  const [locale, setLocaleState] = useState<Locale>(defaultLocale)
+  const [messages, setMessages] = useState<AbstractIntlMessages>({})
 
-  const messagesLoaded = useRef(false);
+  const messagesLoaded = useRef(false)
 
   const applyMessages = useCallback(
     (newLocale: Locale, m: AbstractIntlMessages) => {
-      setLocaleState(newLocale);
-      setMessages(m);
-      messagesLoaded.current = true;
-      document.documentElement.lang = newLocale;
-      setCurrentLocale(newLocale);
+      setLocaleState(newLocale)
+      setMessages(m)
+      messagesLoaded.current = true
+      document.documentElement.lang = newLocale
+      setCurrentLocale(newLocale)
     },
-    [],
-  );
+    []
+  )
 
   useEffect(() => {
-    const stored = getDefaultLocale();
-    loadMessages(stored).then((m) => applyMessages(stored, m));
-  }, [applyMessages]);
+    const stored = getDefaultLocale()
+    loadMessages(stored).then((m) => applyMessages(stored, m))
+  }, [applyMessages])
 
   const setLocale = useCallback(
     async (newLocale: Locale) => {
-      const m = await loadMessages(newLocale);
-      applyMessages(newLocale, m);
-      persistLocale(newLocale);
+      const m = await loadMessages(newLocale)
+      applyMessages(newLocale, m)
+      persistLocale(newLocale)
     },
-    [applyMessages],
-  );
+    [applyMessages]
+  )
 
   const onError = useCallback((error: IntlError) => {
-    if (error.code === "MISSING_MESSAGE" && !messagesLoaded.current) {
-      return;
+    if (error.code === 'MISSING_MESSAGE' && !messagesLoaded.current) {
+      return
     }
-    console.error(error);
-  }, []);
+    console.error(error)
+  }, [])
 
   return (
     <LocaleContext.Provider value={{ locale, setLocale, availableLocales }}>
-      <NextIntlClientProvider locale={locale} messages={messages} onError={onError}>
+      <NextIntlClientProvider
+        locale={locale}
+        messages={messages}
+        onError={onError}
+      >
         {children}
       </NextIntlClientProvider>
     </LocaleContext.Provider>
-  );
+  )
 }

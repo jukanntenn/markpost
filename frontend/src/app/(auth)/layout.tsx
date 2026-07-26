@@ -1,13 +1,9 @@
-import { PublicRoute } from "@/components/auth/PublicRoute";
+import { PublicRoute } from '@/components/auth/PublicRoute'
 
 export default function AuthLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  return (
-    <PublicRoute>
-      {children}
-    </PublicRoute>
-  );
+  return <PublicRoute>{children}</PublicRoute>
 }

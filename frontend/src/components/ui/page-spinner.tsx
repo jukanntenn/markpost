@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from '@/components/ui/spinner'
 
 export function PageSpinner() {
   return (
@@ -8,5 +8,5 @@ export function PageSpinner() {
       <Spinner className="size-6" />
       <span className="sr-only">Loading...</span>
     </div>
-  );
+  )
 }

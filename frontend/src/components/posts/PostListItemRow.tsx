@@ -1,18 +1,22 @@
-"use client";
+'use client'
 
-import { buildPostUrl } from "@/utils/url";
-import { formatToLocalTime } from "@/utils/time";
-import type { PostListItem } from "@/types/posts";
+import { buildPostUrl } from '@/utils/url'
+import { formatToLocalTime } from '@/utils/time'
+import type { PostListItem } from '@/types/posts'
 
 interface PostListItemRowProps {
-  post: PostListItem;
-  className?: string;
-  showSeconds?: boolean;
+  post: PostListItem
+  className?: string
+  showSeconds?: boolean
 }
 
-export function PostListItemRow({ post, className, showSeconds = true }: PostListItemRowProps) {
+export function PostListItemRow({
+  post,
+  className,
+  showSeconds = true,
+}: PostListItemRowProps) {
   return (
-    <li className={className ?? "py-3"}>
+    <li className={className ?? 'py-3'}>
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <a
           href={buildPostUrl(post.qid)}
@@ -27,5 +31,5 @@ export function PostListItemRow({ post, className, showSeconds = true }: PostLis
         </span>
       </div>
     </li>
-  );
+  )
 }

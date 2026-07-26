@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next'
 
 // buildPageMetadata returns a static build-time title for a route. Under static
 // export the locale is resolved client-side (no server getTranslations), so the
@@ -6,20 +6,20 @@ import type { Metadata } from "next";
 // document.title per-locale via useTranslations + useEffect where localized
 // titles matter (e.g. LoginPage).
 const PAGE_TITLES: Record<string, string> = {
-  login: "Login | Markpost",
-  dashboard: "Dashboard | Markpost",
-  settings: "Settings | Markpost",
-  allPosts: "All Posts | Markpost",
-  deliveryChannels: "Delivery Channels | Markpost",
-  deliveryChannelDetail: "Delivery Channel | Markpost",
-  deliveryHistory: "Delivery History | Markpost",
-  adminUsers: "Users - Admin | Markpost",
-  adminPosts: "Posts - Admin | Markpost",
-  adminChannels: "Channels - Admin | Markpost",
-  adminDeliveryHistory: "Delivery History - Admin | Markpost",
-};
+  login: 'Login | Markpost',
+  dashboard: 'Dashboard | Markpost',
+  settings: 'Settings | Markpost',
+  allPosts: 'All Posts | Markpost',
+  deliveryChannels: 'Delivery Channels | Markpost',
+  deliveryChannelDetail: 'Delivery Channel | Markpost',
+  deliveryHistory: 'Delivery History | Markpost',
+  adminUsers: 'Users - Admin | Markpost',
+  adminPosts: 'Posts - Admin | Markpost',
+  adminChannels: 'Channels - Admin | Markpost',
+  adminDeliveryHistory: 'Delivery History - Admin | Markpost',
+}
 
 export function buildPageMetadata(key: string) {
-  const title = PAGE_TITLES[key] ?? "Markpost";
-  return (): Metadata => ({ title });
+  const title = PAGE_TITLES[key] ?? 'Markpost'
+  return (): Metadata => ({ title })
 }

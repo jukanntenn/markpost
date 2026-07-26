@@ -1,10 +1,10 @@
-import { Metadata } from "next";
-import LoginPage from "@/components/login/LoginPage";
+import { Metadata } from 'next'
+import LoginPage from '@/components/login/LoginPage'
 
 export const metadata: Metadata = {
-  title: "Login - Markpost",
-};
+  title: 'Login - Markpost',
+}
 
 export default function Login() {
-  return <LoginPage />;
+  return <LoginPage />
 }

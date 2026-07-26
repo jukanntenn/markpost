@@ -1,18 +1,15 @@
-"use client";
+'use client'
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react'
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button'
 
 interface PaginationControlsProps {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-  prevLabel: string;
-  nextLabel: string;
+  page: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  prevLabel: string
+  nextLabel: string
 }
 
 export function PaginationControls({
@@ -22,7 +19,7 @@ export function PaginationControls({
   prevLabel,
   nextLabel,
 }: PaginationControlsProps) {
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) return null
 
   return (
     <div className="mt-4 flex items-center justify-between border-t pt-4">
@@ -48,5 +45,5 @@ export function PaginationControls({
         <ChevronRightIcon className="ml-1 size-4" />
       </Button>
     </div>
-  );
+  )
 }

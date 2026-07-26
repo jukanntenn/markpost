@@ -1,87 +1,104 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { useRouter, usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { useAuthStore } from "@/stores/auth";
-import { useAuthReady } from "@/hooks/useAuthReady";
-import { authApi } from "@/lib/api";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Menu } from "@/components/ui/menu";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { useRouter, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { useAuthStore } from '@/stores/auth'
+import { useAuthReady } from '@/hooks/useAuthReady'
+import { authApi } from '@/lib/api'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Menu } from '@/components/ui/menu'
+import { cn } from '@/lib/utils'
 import {
   ChevronDownIcon,
   LogOutIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
-} from "lucide-react";
+} from 'lucide-react'
 
 const mainNavItems = [
-  { href: "/dashboard", labelKey: "dashboard" },
-  { href: "/posts", labelKey: "posts" },
-  { href: "/delivery/channels", labelKey: "delivery" },
-] as const;
+  { href: '/dashboard', labelKey: 'dashboard' },
+  { href: '/posts', labelKey: 'posts' },
+  { href: '/delivery/channels', labelKey: 'delivery' },
+] as const
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const t = useTranslations("navigation");
-  const tCommon = useTranslations("common");
-  const user = useAuthStore((state) => state.user);
-  const { isAuthenticated, isAdmin } = useAuthReady();
-  const logout = useAuthStore((state) => state.logout);
+  const router = useRouter()
+  const pathname = usePathname()
+  const t = useTranslations('navigation')
+  const tCommon = useTranslations('common')
+  const user = useAuthStore((state) => state.user)
+  const { isAuthenticated, isAdmin } = useAuthReady()
+  const logout = useAuthStore((state) => state.logout)
 
-  const [scrolled, setScrolled] = useState(false);
-  const mainRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false)
+  const mainRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 0);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+      setScrolled(window.scrollY > 0)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const handleLogout = async () => {
     try {
-      await authApi.logout();
+      await authApi.logout()
     } catch {
     } finally {
-      logout();
-      router.replace("/login");
+      logout()
+      router.replace('/login')
     }
-  };
+  }
 
   return (
     <>
       <header
-        className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur transition-[border-color] duration-150 ${scrolled ? "border-b" : ""}`}
+        className={`sticky top-0 z-50 w-full bg-background/80 backdrop-blur transition-[border-color] duration-150 ${scrolled ? 'border-b' : ''}`}
       >
         <div className="mx-auto flex h-14 max-w-[1200px] items-center justify-between px-6">
-          <Link href="/dashboard" className={buttonVariants({ variant: "ghost", className: "h-9 px-2" })}>
-            <Image src="/markpost.svg" alt="Markpost" className="h-6 w-auto" width={24} height={24} />
+          <Link
+            href="/dashboard"
+            className={buttonVariants({
+              variant: 'ghost',
+              className: 'h-9 px-2',
+            })}
+          >
+            <Image
+              src="/markpost.svg"
+              alt="Markpost"
+              className="h-6 w-auto"
+              width={24}
+              height={24}
+            />
           </Link>
           <nav className="flex items-center gap-1">
             {mainNavItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname?.startsWith(`${item.href}/`));
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/dashboard' &&
+                  pathname?.startsWith(`${item.href}/`))
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "h-9 px-3 text-sm font-medium",
-                    isActive ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+                    buttonVariants({ variant: 'ghost' }),
+                    'h-9 px-3 text-sm font-medium',
+                    isActive
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   {t(item.labelKey)}
                 </Link>
-              );
+              )
             })}
           </nav>
           <div className="flex items-center gap-2">
@@ -95,31 +112,29 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 >
                   <UserIcon className="size-4" />
                   <span className="hidden sm:inline">
-                    {user?.username || tCommon("user")}
+                    {user?.username || tCommon('user')}
                   </span>
                   <ChevronDownIcon className="size-4 text-muted-foreground" />
                 </Menu.Trigger>
                 <Menu.Popup>
                   <Menu.Group>
-                    <Menu.Label>
-                      {user?.username || tCommon("user")}
-                    </Menu.Label>
+                    <Menu.Label>{user?.username || tCommon('user')}</Menu.Label>
                   </Menu.Group>
                   <Menu.Separator />
                   {isAdmin && (
-                    <Menu.Item onClick={() => router.push("/admin")}>
+                    <Menu.Item onClick={() => router.push('/admin')}>
                       <ShieldIcon className="size-4" />
-                      {t("userMenu.admin")}
+                      {t('userMenu.admin')}
                     </Menu.Item>
                   )}
-                  <Menu.Item onClick={() => router.push("/settings")}>
+                  <Menu.Item onClick={() => router.push('/settings')}>
                     <SettingsIcon className="size-4" />
-                    {t("userMenu.settings")}
+                    {t('userMenu.settings')}
                   </Menu.Item>
                   <Menu.Separator />
                   <Menu.Item variant="destructive" onClick={handleLogout}>
                     <LogOutIcon className="size-4" />
-                    {t("userMenu.logout")}
+                    {t('userMenu.logout')}
                   </Menu.Item>
                 </Menu.Popup>
               </Menu.Root>
@@ -127,9 +142,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main ref={mainRef} className="mx-auto w-full max-w-[1200px] px-6 py-6 md:py-8 lg:py-12">
+      <main
+        ref={mainRef}
+        className="mx-auto w-full max-w-[1200px] px-6 py-6 md:py-8 lg:py-12"
+      >
         {children}
       </main>
     </>
-  );
+  )
 }

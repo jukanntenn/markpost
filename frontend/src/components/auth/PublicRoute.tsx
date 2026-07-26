@@ -1,7 +1,7 @@
-"use client";
+'use client'
 
-import { AuthGate } from "@/components/auth/AuthGate";
-import { publicRoute } from "@/components/auth/route-configs";
+import { AuthGate } from '@/components/auth/AuthGate'
+import { publicRoute } from '@/components/auth/route-configs'
 
 export function PublicRoute({ children }: { children: React.ReactNode }) {
   return (
@@ -12,5 +12,5 @@ export function PublicRoute({ children }: { children: React.ReactNode }) {
     >
       {children}
     </AuthGate>
-  );
+  )
 }

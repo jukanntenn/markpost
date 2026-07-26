@@ -1,37 +1,37 @@
-import "@testing-library/jest-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import CreateTestPostModal from "./CreateTestPostModal";
-import { ThemeProvider } from "../components/theme-provider";
-import { setMockAuth, renderWithProviders, mockMatchMedia } from "../test/utils";
-import { server } from "../mocks/server";
-import { http, HttpResponse } from "msw";
+import '@testing-library/jest-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import CreateTestPostModal from './CreateTestPostModal'
+import { ThemeProvider } from '../components/theme-provider'
+import { setMockAuth, renderWithProviders, mockMatchMedia } from '../test/utils'
+import { server } from '../mocks/server'
+import { http, HttpResponse } from 'msw'
 
-vi.mock("@/stores/toast", () => ({
+vi.mock('@/stores/toast', () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
   },
-}));
+}))
 
-const mockOnHide = vi.fn();
-const mockOnSuccess = vi.fn();
+const mockOnHide = vi.fn()
+const mockOnSuccess = vi.fn()
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.clearAllMocks()
   setMockAuth({
-    token: "test_token",
-    refresh_token: "test_refresh",
+    token: 'test_token',
+    refresh_token: 'test_refresh',
     expires_in: 86400,
-    user: { id: 1, username: "testuser", email: "test@example.com" },
-  });
-  mockMatchMedia();
-});
+    user: { id: 1, username: 'testuser', email: 'test@example.com' },
+  })
+  mockMatchMedia()
+})
 
-describe("CreateTestPostModal", () => {
-  it("renders modal when show is true", () => {
+describe('CreateTestPostModal', () => {
+  it('renders modal when show is true', () => {
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -40,12 +40,12 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    expect(screen.getByRole("dialog")).toBeVisible();
-  });
+    expect(screen.getByRole('dialog')).toBeVisible()
+  })
 
-  it("does not render modal when show is false", () => {
+  it('does not render modal when show is false', () => {
     renderWithProviders(
       <CreateTestPostModal
         show={false}
@@ -54,12 +54,12 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 
-  it("disables submit button when body is empty", () => {
+  it('disables submit button when body is empty', () => {
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -68,14 +68,14 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    const createButton = screen.getByRole("button", { name: /create/i });
-    expect(createButton).toBeDisabled();
-  });
+    const createButton = screen.getByRole('button', { name: /create/i })
+    expect(createButton).toBeDisabled()
+  })
 
-  it("enables submit button when body is not empty", async () => {
-    const user = userEvent.setup();
+  it('enables submit button when body is not empty', async () => {
+    const user = userEvent.setup()
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -84,17 +84,17 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
-    await user.type(bodyTextarea, "Test content");
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
+    await user.type(bodyTextarea, 'Test content')
 
-    const createButton = screen.getByRole("button", { name: /create/i });
-    expect(createButton).toBeEnabled();
-  });
+    const createButton = screen.getByRole('button', { name: /create/i })
+    expect(createButton).toBeEnabled()
+  })
 
-  it("submits form successfully", async () => {
-    const user = userEvent.setup();
+  it('submits form successfully', async () => {
+    const user = userEvent.setup()
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -103,24 +103,24 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    const titleInput = screen.getByPlaceholderText(/title/i);
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
+    const titleInput = screen.getByPlaceholderText(/title/i)
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
 
-    await user.type(titleInput, "Test Title");
-    await user.type(bodyTextarea, "Test content");
+    await user.type(titleInput, 'Test Title')
+    await user.type(bodyTextarea, 'Test content')
 
-    const createButton = screen.getByRole("button", { name: /create/i });
-    await user.click(createButton);
+    const createButton = screen.getByRole('button', { name: /create/i })
+    await user.click(createButton)
 
     await waitFor(() => {
-      expect(mockOnSuccess).toHaveBeenCalled();
-    });
-  });
+      expect(mockOnSuccess).toHaveBeenCalled()
+    })
+  })
 
-  it("closes modal when cancel is clicked", async () => {
-    const user = userEvent.setup();
+  it('closes modal when cancel is clicked', async () => {
+    const user = userEvent.setup()
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -129,22 +129,22 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    await user.click(cancelButton);
+    const cancelButton = screen.getByRole('button', { name: /cancel/i })
+    await user.click(cancelButton)
 
-    expect(mockOnHide).toHaveBeenCalled();
-  });
+    expect(mockOnHide).toHaveBeenCalled()
+  })
 
-  it("handles server error", async () => {
+  it('handles server error', async () => {
     server.use(
-      http.post("/:postKey", () => {
-        return HttpResponse.json({ message: "Server error" }, { status: 500 });
+      http.post('/:postKey', () => {
+        return HttpResponse.json({ message: 'Server error' }, { status: 500 })
       })
-    );
+    )
 
-    const user = userEvent.setup();
+    const user = userEvent.setup()
     renderWithProviders(
       <CreateTestPostModal
         show
@@ -153,16 +153,16 @@ describe("CreateTestPostModal", () => {
         onSuccess={mockOnSuccess}
       />,
       { wrapper: ThemeProvider }
-    );
+    )
 
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i);
-    await user.type(bodyTextarea, "Test content");
+    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
+    await user.type(bodyTextarea, 'Test content')
 
-    const createButton = screen.getByRole("button", { name: /create/i });
-    await user.click(createButton);
+    const createButton = screen.getByRole('button', { name: /create/i })
+    await user.click(createButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/server error/i)).toBeInTheDocument();
-    });
-  });
-});
+      expect(screen.getByText(/server error/i)).toBeInTheDocument()
+    })
+  })
+})

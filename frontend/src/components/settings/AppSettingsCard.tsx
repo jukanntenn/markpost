@@ -1,30 +1,30 @@
-"use client";
+'use client'
 
-import { useTranslations } from "next-intl";
-import { useLocaleContext } from "@/components/providers/LocaleProvider";
-import { localeNames } from "@/i18n/constants";
+import { useTranslations } from 'next-intl'
+import { useLocaleContext } from '@/components/providers/LocaleProvider'
+import { localeNames } from '@/i18n/constants'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 export function AppSettingsCard() {
-  const t = useTranslations("settings");
-  const { locale, setLocale, availableLocales } = useLocaleContext();
+  const t = useTranslations('settings')
+  const { locale, setLocale, availableLocales } = useLocaleContext()
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("applicationSettings")}</CardTitle>
-        <CardDescription>{t("languageDescription")}</CardDescription>
+        <CardTitle>{t('applicationSettings')}</CardTitle>
+        <CardDescription>{t('languageDescription')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-4">
-          <Label htmlFor="locale-select">{t("language")}</Label>
+          <Label htmlFor="locale-select">{t('language')}</Label>
           <select
             id="locale-select"
             value={locale}
@@ -40,5 +40,5 @@ export function AppSettingsCard() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

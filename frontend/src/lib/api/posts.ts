@@ -1,7 +1,9 @@
-import { request, paginationParams } from "./base";
-import type { PostsPaginatedResponse } from "@/types/posts";
+import { request, paginationParams } from './base'
+import type { PostsPaginatedResponse } from '@/types/posts'
 
 export const postsApi = {
   list: (page: number, limit: number) =>
-    request<PostsPaginatedResponse>("/api/v1/posts", { params: paginationParams(page, limit) }),
-};
+    request<PostsPaginatedResponse>('/api/v1/posts', {
+      params: paginationParams(page, limit),
+    }),
+}

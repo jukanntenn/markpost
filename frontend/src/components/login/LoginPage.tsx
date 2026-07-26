@@ -1,74 +1,75 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { useAuthStore } from "@/stores/auth";
-import { authApi } from "@/lib/api";
-import { useGitHubOAuth } from "@/hooks/useGitHubOAuth";
-import { GithubIcon } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { useAuthStore } from '@/stores/auth'
+import { authApi } from '@/lib/api'
+import { useGitHubOAuth } from '@/hooks/useGitHubOAuth'
+import { GithubIcon } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 
-import { FormAlert } from "@/components/ui/form-alert";
-import { Button } from "@/components/ui/button";
-import { LoadingButton } from "@/components/ui/loading-button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import LoginTitle from "./LoginTitle";
-import LoginDivider from "./LoginDivider";
+import { FormAlert } from '@/components/ui/form-alert'
+import { Button } from '@/components/ui/button'
+import { LoadingButton } from '@/components/ui/loading-button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import LoginTitle from './LoginTitle'
+import LoginDivider from './LoginDivider'
 
 export function LoginPage() {
-  const router = useRouter();
-  const t = useTranslations("login");
-  const tCommon = useTranslations("common");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const router = useRouter()
+  const t = useTranslations('login')
+  const tCommon = useTranslations('common')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    username: "",
-    password: "",
-  });
-  const setAuth = useAuthStore((state) => state.setAuth);
+    username: '',
+    password: '',
+  })
+  const setAuth = useAuthStore((state) => state.setAuth)
 
-  const { startOAuth: handleGitHubLogin, loading: loadingGitHub } = useGitHubOAuth();
+  const { startOAuth: handleGitHubLogin, loading: loadingGitHub } =
+    useGitHubOAuth()
 
   function handleLoginError(err: unknown) {
-    setError(err instanceof Error ? err.message : String(err));
+    setError(err instanceof Error ? err.message : String(err))
   }
 
   useEffect(() => {
-    document.title = tCommon("pageTitle.login");
-  }, [tCommon]);
+    document.title = tCommon('pageTitle.login')
+  }, [tCommon])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }));
+    }))
 
-    setError("");
-  };
+    setError('')
+  }
 
   async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setLoading(true)
 
     try {
-      const data = await authApi.login(formData.username, formData.password);
+      const data = await authApi.login(formData.username, formData.password)
 
-      setAuth(data.token, data.user, data.refresh_token);
-      router.push("/dashboard");
+      setAuth(data.token, data.user, data.refresh_token)
+      router.push('/dashboard')
     } catch (err: unknown) {
-      handleLoginError(err);
+      handleLoginError(err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   const gitHubButtonText = loadingGitHub
-    ? t("processingGitHubLogin")
-    : t("githubLogin");
+    ? t('processingGitHubLogin')
+    : t('githubLogin')
 
   return (
     <div className="flex min-h-svh items-center justify-center p-4">
@@ -81,14 +82,14 @@ export function LoginPage() {
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-username">{t("username")}</Label>
+                <Label htmlFor="login-username">{t('username')}</Label>
                 <Input
                   id="login-username"
                   type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
-                  placeholder={t("usernamePlaceholder")}
+                  placeholder={t('usernamePlaceholder')}
                   required
                   disabled={loading}
                   autoComplete="username"
@@ -96,14 +97,14 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="login-password">{t("password")}</Label>
+                <Label htmlFor="login-password">{t('password')}</Label>
                 <Input
                   id="login-password"
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  placeholder={t("passwordPlaceholder")}
+                  placeholder={t('passwordPlaceholder')}
                   required
                   disabled={loading}
                   autoComplete="current-password"
@@ -115,9 +116,9 @@ export function LoginPage() {
                 className="w-full"
                 disabled={!formData.username || !formData.password}
                 loading={loading}
-                loadingText={t("signingIn")}
+                loadingText={t('signingIn')}
               >
-                {t("loginButton")}
+                {t('loginButton')}
               </LoadingButton>
             </form>
 
@@ -129,9 +130,9 @@ export function LoginPage() {
               className="w-full"
               onClick={async () => {
                 try {
-                  await handleGitHubLogin();
+                  await handleGitHubLogin()
                 } catch (err: unknown) {
-                  handleLoginError(err);
+                  handleLoginError(err)
                 }
               }}
               disabled={loadingGitHub}
@@ -144,7 +145,7 @@ export function LoginPage() {
               ) : (
                 <span className="inline-flex items-center gap-2">
                   <GithubIcon className="size-4" />
-                  {t("githubLogin")}
+                  {t('githubLogin')}
                 </span>
               )}
             </Button>
@@ -152,7 +153,7 @@ export function LoginPage() {
         </Card>
       </div>
     </div>
-  );
+  )
 }
 
-export default LoginPage;
+export default LoginPage

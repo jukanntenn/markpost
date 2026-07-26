@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import { useTranslations } from "next-intl";
+import { useTranslations } from 'next-intl'
 
 function LoginDivider() {
-  const t = useTranslations("login");
+  const t = useTranslations('login')
 
   return (
     <div className="relative my-6">
@@ -12,11 +12,11 @@ function LoginDivider() {
       </div>
       <div className="relative flex justify-center text-xs uppercase">
         <span className="bg-background px-2 text-muted-foreground">
-          {t("or")}
+          {t('or')}
         </span>
       </div>
     </div>
-  );
+  )
 }
 
-export default LoginDivider;
+export default LoginDivider

@@ -1,19 +1,19 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { cn } from "@/lib/utils";
+import * as React from 'react'
+import { Menu as MenuPrimitive } from '@base-ui/react/menu'
+import { cn } from '@/lib/utils'
 
 function MenuRoot({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Root>) {
-  return <MenuPrimitive.Root data-slot="menu" {...props} />;
+  return <MenuPrimitive.Root data-slot="menu" {...props} />
 }
 
 function MenuTrigger({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Trigger>) {
-  return <MenuPrimitive.Trigger data-slot="menu-trigger" {...props} />;
+  return <MenuPrimitive.Trigger data-slot="menu-trigger" {...props} />
 }
 
 function MenuPopup({
@@ -26,28 +26,28 @@ function MenuPopup({
         <MenuPrimitive.Popup
           data-slot="menu-popup"
           className={cn(
-            "z-[100] min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95",
+            'z-[100] min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg outline-none transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95',
             className
           )}
           {...props}
         />
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
-  );
+  )
 }
 
 function MenuGroup({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Group>) {
-  return <MenuPrimitive.Group data-slot="menu-group" {...props} />;
+  return <MenuPrimitive.Group data-slot="menu-group" {...props} />
 }
 
 function MenuItem({
   className,
-  variant = "default",
+  variant = 'default',
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Item> & {
-  variant?: "default" | "destructive";
+  variant?: 'default' | 'destructive'
 }) {
   return (
     <MenuPrimitive.Item
@@ -55,22 +55,20 @@ function MenuItem({
       data-variant={variant}
       className={cn(
         "relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-        variant === "destructive"
+        variant === 'destructive'
           ? "text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive [&_svg:not([class*='text-'])]:text-destructive"
           : "data-[highlighted]:bg-muted data-[highlighted]:text-foreground [&_svg:not([class*='text-'])]:text-muted-foreground",
         className
       )}
       {...props}
     />
-  );
+  )
 }
 
 function MenuRadioGroup({
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.RadioGroup>) {
-  return (
-    <MenuPrimitive.RadioGroup data-slot="menu-radio-group" {...props} />
-  );
+  return <MenuPrimitive.RadioGroup data-slot="menu-radio-group" {...props} />
 }
 
 function MenuRadioItem({
@@ -94,7 +92,7 @@ function MenuRadioItem({
       </span>
       {children}
     </MenuPrimitive.RadioItem>
-  );
+  )
 }
 
 function MenuLabel({
@@ -104,10 +102,10 @@ function MenuLabel({
   return (
     <MenuPrimitive.GroupLabel
       data-slot="menu-label"
-      className={cn("px-2 py-1.5 text-sm font-semibold", className)}
+      className={cn('px-2 py-1.5 text-sm font-semibold', className)}
       {...props}
     />
-  );
+  )
 }
 
 function MenuSeparator({
@@ -117,10 +115,10 @@ function MenuSeparator({
   return (
     <MenuPrimitive.Separator
       data-slot="menu-separator"
-      className={cn("bg-border -mx-1 my-1 h-px", className)}
+      className={cn('bg-border -mx-1 my-1 h-px', className)}
       {...props}
     />
-  );
+  )
 }
 
 export const Menu = Object.assign(MenuRoot, {
@@ -133,4 +131,4 @@ export const Menu = Object.assign(MenuRoot, {
   RadioItem: MenuRadioItem,
   Label: MenuLabel,
   Separator: MenuSeparator,
-});
+})

@@ -1,4 +1,4 @@
-echo "=== 即将删除的空目录 ===" 
+echo "=== 即将删除的空目录 ==="
 find . -type d -empty ! -path "*/.git*" ! -path "*/node_modules*" ! -path "*/.next*" | head -20
 echo "..."
 find . -type d -empty ! -path "*/.git*" ! -path "*/node_modules*" ! -path "*/.next*" | wc -l

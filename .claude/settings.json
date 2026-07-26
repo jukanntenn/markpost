@@ -7,10 +7,17 @@
           {
             "type": "command",
             "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/format.py"
-          },
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
           {
             "type": "command",
-            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/lint.py"
+            "command": "python3 $CLAUDE_PROJECT_DIR/.claude/hooks/lint_stop.py"
           }
         ]
       }

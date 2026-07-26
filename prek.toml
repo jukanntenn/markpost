@@ -1,0 +1,79 @@
+# prek configuration — see https://prek.j178.dev
+# Install: prek install
+
+default_install_hook_types = ["pre-commit", "pre-push", "commit-msg"]
+
+# ---- Generic checks (prek builtin: zero network, zero Python) ----
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml" },
+  { id = "check-toml" },
+  { id = "check-json" },
+  { id = "check-merge-conflict" },
+  { id = "check-added-large-files" },
+  { id = "detect-private-key" },
+  { id = "mixed-line-ending", args = ["--fix=lf"] },
+]
+
+# ---- Go: golangci-lint (format via `fmt`, lint via `run`) ----
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "golangci-fmt"
+name = "golangci-lint fmt (backend)"
+language = "system"
+entry = "bash -c 'cd backend && golangci-lint fmt'"
+files = "^backend/.*\\.go$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "agents-sync"
+name = "AGENTS.md == CLAUDE.md"
+language = "system"
+entry = "bash -c 'diff -q AGENTS.md CLAUDE.md || { echo \"AGENTS.md != CLAUDE.md — run scripts/sync-agents.sh\"; exit 1; }'"
+files = "^(AGENTS|CLAUDE)\\.md$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- Frontend: prettier ----
+[[repos.hooks]]
+id = "prettier"
+name = "prettier (frontend)"
+language = "system"
+entry = "bash -c 'cd frontend && npx prettier --write .'"
+files = "^frontend/.*\\.(ts|tsx|js|jsx|json|css|md)$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- pre-push: run tests ----
+[[repos.hooks]]
+id = "backend-test"
+name = "go test (backend, pre-push)"
+language = "system"
+entry = "bash -c 'cd backend && go test ./...'"
+files = "^backend/.*\\.go$"
+pass_filenames = false
+stages = ["pre-push"]
+
+[[repos.hooks]]
+id = "frontend-test"
+name = "vitest (frontend, pre-push)"
+language = "system"
+entry = "bash -c 'cd frontend && pnpm test:run'"
+files = "^frontend/"
+pass_filenames = false
+stages = ["pre-push"]
+
+# ---- commit-msg: Conventional Commits ----
+[[repos.hooks]]
+id = "conventional-commits"
+name = "commit message format"
+language = "system"
+entry = "scripts/check-commit-msg.sh"
+pass_filenames = false
+stages = ["commit-msg"]

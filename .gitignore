@@ -64,6 +64,7 @@ blob-report/
 # === DevOps / Runtime ===
 frontend.log
 devops/frontend.pid
+devops/data/
 .codex
 
 # === Python ===

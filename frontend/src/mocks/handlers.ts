@@ -158,6 +158,63 @@ export const handlers = [
       total_pages: 1,
     })
   }),
+
+  // Admin endpoints
+  http.get('/api/v1/admin/users', () => {
+    return HttpResponse.json({
+      items: mockAdminUsers,
+      total: mockAdminUsers.length,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    })
+  }),
+
+  http.get('/api/v1/admin/posts', ({ request }) => {
+    const url = new URL(request.url)
+    const search = url.searchParams.get('search')
+    const filtered = search
+      ? mockAdminPosts.filter((p) => p.title.includes(search))
+      : mockAdminPosts
+    return HttpResponse.json({
+      items: filtered,
+      total: filtered.length,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    })
+  }),
+
+  http.get('/api/v1/admin/delivery/channels', () => {
+    return HttpResponse.json({
+      items: mockAdminChannels,
+      total: mockAdminChannels.length,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+    })
+  }),
+
+  http.get('/api/v1/admin/delivery/history', () => {
+    return HttpResponse.json({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      total_pages: 0,
+    })
+  }),
+
+  http.get('/api/v1/admin/stats', () => {
+    return HttpResponse.json({
+      counts: {
+        users: mockAdminUsers.length,
+        posts: mockAdminPosts.length,
+        channels: mockAdminChannels.length,
+        history: 0,
+      },
+    })
+  }),
 ]
 
 export const mockDeliveryChannels: DeliveryChannel[] = []
@@ -171,3 +228,51 @@ export function resetDeliveryMocks() {
   mockDeliveryLatest.length = 0
   nextDeliveryChannelId = 1
 }
+
+// Admin mock data
+export const mockAdminUsers = [
+  {
+    id: 1,
+    email: 'admin@example.com',
+    username: 'admin',
+    role: 'admin',
+    is_active: true,
+    created_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: 2,
+    email: 'user@example.com',
+    username: 'user1',
+    role: 'user',
+    is_active: true,
+    created_at: '2024-01-02T00:00:00Z',
+  },
+]
+
+export const mockAdminPosts = [
+  {
+    id: 1,
+    qid: 'p-1',
+    title: 'First Post',
+    created_at: '2024-01-01T00:00:00Z',
+    username: 'admin',
+  },
+  {
+    id: 2,
+    qid: 'p-2',
+    title: 'Second Post',
+    created_at: '2024-01-02T00:00:00Z',
+    username: 'user1',
+  },
+]
+
+export const mockAdminChannels = [
+  {
+    id: 1,
+    kind: 'feishu',
+    name: 'Alert Channel',
+    enabled: true,
+    username: 'admin',
+    created_at: '2024-01-01T00:00:00Z',
+  },
+]

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
@@ -27,12 +28,14 @@ func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
 	attemptRepo := infra.NewAttemptRepository(db)
+	auditRecorder := &mockAuditRecorder{}
 
 	svc := NewService(
 		userRepo.(*infra.UserRepository),
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
+		auditRecorder,
 	)
 	return svc, userRepo, postRepo, channelRepo
 }
@@ -67,6 +70,32 @@ func (a *channelListerAdapter) ListAll(ctx context.Context, offset, limit int) (
 		return nil, 0, err
 	}
 	return items, count, nil
+}
+
+type mockAuditRecorder struct {
+	logs []audit.Log
+}
+
+func (m *mockAuditRecorder) Record(ctx context.Context, e audit.Entry) error {
+	m.logs = append(m.logs, audit.Log{
+		ActorID:    e.ActorID,
+		Action:     e.Action,
+		TargetType: e.TargetType,
+		TargetID:   e.TargetID,
+	})
+	return nil
+}
+
+func (m *mockAuditRecorder) List(ctx context.Context, offset, limit int) ([]audit.Log, int64, error) {
+	total := int64(len(m.logs))
+	if offset >= len(m.logs) {
+		return nil, total, nil
+	}
+	end := offset + limit
+	if end > len(m.logs) {
+		end = len(m.logs)
+	}
+	return m.logs[offset:end], total, nil
 }
 
 func TestListAllUsers(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
@@ -352,4 +353,37 @@ type PaginatedChannels struct {
 // HealthResponse represents the health check response.
 type HealthResponse struct {
 	Status string `json:"status"`
+}
+
+// --- Audit types ---
+
+// AdminAuditLogItem represents an audit log entry in the admin audit log list.
+type AdminAuditLogItem struct {
+	ID         int64           `json:"id"`
+	ActorID    int             `json:"actor_id"`
+	Action     string          `json:"action"`
+	TargetType string          `json:"target_type"`
+	TargetID   string          `json:"target_id"`
+	Metadata   json.RawMessage `json:"metadata"`
+	IP         string          `json:"ip"`
+	CreatedAt  time.Time       `json:"created_at"`
+}
+
+func newAdminAuditLogItem(log audit.Log) AdminAuditLogItem {
+	return AdminAuditLogItem{
+		ID:         log.ID,
+		ActorID:    log.ActorID,
+		Action:     log.Action,
+		TargetType: log.TargetType,
+		TargetID:   log.TargetID,
+		Metadata:   log.Metadata,
+		IP:         log.IP,
+		CreatedAt:  log.CreatedAt,
+	}
+}
+
+// PaginatedAuditLogs represents a paginated list of admin audit log items.
+type PaginatedAuditLogs struct {
+	AuditLogs  []AdminAuditLogItem `json:"audit_logs"`
+	Pagination Pagination          `json:"pagination"`
 }

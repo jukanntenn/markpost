@@ -4,6 +4,7 @@ package admin
 import (
 	"context"
 
+	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
@@ -32,22 +33,41 @@ type HistoryLister interface {
 	CountHistory(ctx context.Context, filter delivery.HistoryFilter) (int64, error)
 }
 
+// AuditRecorder defines the interface for recording audit logs.
+type AuditRecorder interface {
+	Record(ctx context.Context, e audit.Entry) error
+	List(ctx context.Context, offset, limit int) ([]audit.Log, int64, error)
+}
+
 // Service provides admin-level business logic.
 type Service struct {
 	userLister    UserLister
 	postLister    PostLister
 	channelLister ChannelLister
 	historyLister HistoryLister
+	auditRecorder AuditRecorder
 }
 
 // NewService creates a new admin Service instance.
-func NewService(userLister UserLister, postLister PostLister, channelLister ChannelLister, historyLister HistoryLister) *Service {
+func NewService(
+	userLister UserLister,
+	postLister PostLister,
+	channelLister ChannelLister,
+	historyLister HistoryLister,
+	auditRecorder AuditRecorder,
+) *Service {
 	return &Service{
 		userLister:    userLister,
 		postLister:    postLister,
 		channelLister: channelLister,
 		historyLister: historyLister,
+		auditRecorder: auditRecorder,
 	}
+}
+
+// RecordAudit records an admin write operation for audit purposes.
+func (s *Service) RecordAudit(ctx context.Context, e audit.Entry) error {
+	return s.auditRecorder.Record(ctx, e)
 }
 
 // ListAllUsers retrieves all users with pagination.
@@ -78,4 +98,9 @@ func (s *Service) ListAllDeliveryHistory(ctx context.Context, offset, limit int)
 		func() (int64, error) { return s.historyLister.CountHistory(ctx, filter) },
 		"delivery history",
 	)
+}
+
+// ListAuditLogs retrieves audit logs with pagination.
+func (s *Service) ListAuditLogs(ctx context.Context, offset, limit int) ([]audit.Log, int64, error) {
+	return s.auditRecorder.List(ctx, offset, limit)
 }

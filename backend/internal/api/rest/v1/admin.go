@@ -4,6 +4,7 @@ import (
 	"context"
 
 	_ "markpost/internal/apierr"
+	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
@@ -17,6 +18,7 @@ type AdminService interface {
 	ListAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
 	ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
 	ListAllDeliveryHistory(ctx context.Context, offset, limit int) ([]*delivery.HistoryRow, int64, error)
+	ListAuditLogs(ctx context.Context, offset, limit int) ([]audit.Log, int64, error)
 }
 
 // AdminListUsers godoc
@@ -104,6 +106,28 @@ func AdminListDeliveryHistory(adminSvc AdminService) gin.HandlerFunc {
 			adminSvc.ListAllDeliveryHistory,
 			newDeliveryHistoryItem,
 			paginatedWrap[DeliveryHistoryItem]("history"),
+		)
+	}
+}
+
+// AdminListAuditLogs godoc
+// @Summary List audit logs (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (min 1)" default(1)
+// @Param limit query int false "Items per page (min 1)" default(20)
+// @Success 200 {object} v1.PaginatedAuditLogs
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/audit-logs [get]
+func AdminListAuditLogs(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		handlePaginatedQuery(c,
+			bindPaginationQuery,
+			adminSvc.ListAuditLogs,
+			newAdminAuditLogItem,
+			paginatedWrap[AdminAuditLogItem]("audit_logs"),
 		)
 	}
 }

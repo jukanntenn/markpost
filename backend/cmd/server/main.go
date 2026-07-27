@@ -341,6 +341,7 @@ func serve(configPath string) {
 	auditRepo := infra.NewAuditRepository(dbInstance.DB())
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, auditRepo)
 	adminSvc.SetUserMutator(userRepo)
+	adminSvc.SetChannelMutator(deliveryRepo)
 
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
@@ -482,6 +483,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.DELETE("/users/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteUser(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
 			adminGroup.GET("/delivery/channels", v1.AdminListChannels(adminSvc))
+			adminGroup.POST("/delivery/channels", middleware.RateLimitByUserID(l3Write), v1.AdminCreateChannel(adminSvc))
 			adminGroup.GET("/delivery/history", v1.AdminListDeliveryHistory(adminSvc))
 			adminGroup.GET("/audit-logs", v1.AdminListAuditLogs(adminSvc))
 			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))

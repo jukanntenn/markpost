@@ -27,6 +27,14 @@ type UserMutator interface {
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 }
 
+// ChannelMutator defines the interface for modifying delivery channels.
+type ChannelMutator interface {
+	Create(ctx context.Context, channel *delivery.Channel) error
+	GetByIDAndUserID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
+	Update(ctx context.Context, channel *delivery.Channel) error
+	DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error)
+}
+
 // PostLister defines the interface for retrieving posts.
 type PostLister interface {
 	GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
@@ -51,12 +59,13 @@ type AuditRecorder interface {
 
 // Service provides admin-level business logic.
 type Service struct {
-	userLister    UserLister
-	userMutator   UserMutator
-	postLister    PostLister
-	channelLister ChannelLister
-	historyLister HistoryLister
-	auditRecorder AuditRecorder
+	userLister     UserLister
+	userMutator    UserMutator
+	postLister     PostLister
+	channelLister  ChannelLister
+	channelMutator ChannelMutator
+	historyLister  HistoryLister
+	auditRecorder  AuditRecorder
 }
 
 // NewService creates a new admin Service instance.
@@ -79,6 +88,11 @@ func NewService(
 // SetUserMutator sets the user mutator for write operations.
 func (s *Service) SetUserMutator(mutator UserMutator) {
 	s.userMutator = mutator
+}
+
+// SetChannelMutator sets the channel mutator for write operations.
+func (s *Service) SetChannelMutator(mutator ChannelMutator) {
+	s.channelMutator = mutator
 }
 
 // RecordAudit records an admin write operation for audit purposes.
@@ -149,4 +163,24 @@ func (s *Service) DeleteUser(ctx context.Context, userID int) (int64, error) {
 // GetUserByID retrieves a user by ID (admin operation).
 func (s *Service) GetUserByID(ctx context.Context, userID int) (*user.User, error) {
 	return s.userMutator.GetByID(ctx, userID)
+}
+
+// CreateChannel creates a new delivery channel (admin operation).
+func (s *Service) CreateChannel(ctx context.Context, channel *delivery.Channel) error {
+	return s.channelMutator.Create(ctx, channel)
+}
+
+// GetChannelByID retrieves a channel by ID (admin operation).
+func (s *Service) GetChannelByID(ctx context.Context, id int, userID int) (*delivery.Channel, error) {
+	return s.channelMutator.GetByIDAndUserID(ctx, id, userID)
+}
+
+// UpdateChannel updates a delivery channel (admin operation).
+func (s *Service) UpdateChannel(ctx context.Context, channel *delivery.Channel) error {
+	return s.channelMutator.Update(ctx, channel)
+}
+
+// DeleteChannel deletes a delivery channel (admin operation).
+func (s *Service) DeleteChannel(ctx context.Context, id int, userID int) (int64, error) {
+	return s.channelMutator.DeleteByIDAndUserID(ctx, id, userID)
 }

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -27,6 +28,10 @@ type AdminService interface {
 	SetUserActive(ctx context.Context, userID int, active bool) error
 	DeleteUser(ctx context.Context, userID int) (int64, error)
 	GetUserByID(ctx context.Context, userID int) (*user.User, error)
+	CreateChannel(ctx context.Context, channel *delivery.Channel) error
+	GetChannelByID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
+	UpdateChannel(ctx context.Context, channel *delivery.Channel) error
+	DeleteChannel(ctx context.Context, id int, userID int) (int64, error)
 	RecordAudit(ctx context.Context, e audit.Entry) error
 }
 
@@ -378,5 +383,65 @@ func AdminDeleteUser(adminSvc AdminService) gin.HandlerFunc {
 		})
 
 		c.JSON(http.StatusOK, gin.H{"deleted": deleted})
+	}
+}
+
+// AdminCreateChannelRequest represents the request body for creating a channel (admin).
+type AdminCreateChannelRequest struct {
+	UserID        int             `json:"user_id" binding:"required"`
+	Kind          string          `json:"kind" binding:"required"`
+	Name          string          `json:"name" binding:"required"`
+	Configuration json.RawMessage `json:"configuration" binding:"required"`
+	Keywords      string          `json:"keywords"`
+}
+
+// AdminCreateChannel godoc
+// @Summary Create a delivery channel (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body AdminCreateChannelRequest true "Channel details"
+// @Success 201 {object} v1.AdminChannelItem
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/delivery/channels [post]
+func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req AdminCreateChannelRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			respondValidationError(c, err)
+			return
+		}
+
+		var config delivery.ChannelConfiguration
+		if err := json.Unmarshal(req.Configuration, &config); err != nil {
+			respondValidationError(c, err)
+			return
+		}
+
+		ch := &delivery.Channel{
+			UserID:        req.UserID,
+			Kind:          delivery.ChannelKind(req.Kind),
+			Name:          req.Name,
+			Configuration: config,
+			Keywords:      req.Keywords,
+			Enabled:       true,
+		}
+
+		if err := adminSvc.CreateChannel(c.Request.Context(), ch); err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "channel.create",
+			TargetType: "channel",
+			TargetID:   fmt.Sprintf("%d", ch.ID),
+		})
+
+		c.JSON(http.StatusCreated, newAdminChannelItem(*ch))
 	}
 }

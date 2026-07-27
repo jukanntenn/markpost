@@ -9,9 +9,12 @@ import (
 type Repository interface {
 	GetByUserID(ctx context.Context, userID int) ([]Channel, error)
 	GetByIDAndUserID(ctx context.Context, id int, userID int) (*Channel, error)
+	GetByID(ctx context.Context, id int) (*Channel, error)
 	Create(ctx context.Context, channel *Channel) error
 	Update(ctx context.Context, channel *Channel) error
+	SetEnabled(ctx context.Context, id int, enabled bool) error
 	DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error)
+	DeleteByID(ctx context.Context, id int) (int64, error)
 	ListAll(ctx context.Context, offset, limit int) ([]Channel, error)
 	CountAll(ctx context.Context) (int64, error)
 }

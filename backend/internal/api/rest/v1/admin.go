@@ -31,7 +31,9 @@ type AdminService interface {
 	CreateChannel(ctx context.Context, channel *delivery.Channel) error
 	GetChannelByID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
 	UpdateChannel(ctx context.Context, channel *delivery.Channel) error
+	SetChannelEnabled(ctx context.Context, id int, enabled bool) error
 	DeleteChannel(ctx context.Context, id int, userID int) (int64, error)
+	DeleteChannelByID(ctx context.Context, id int) (int64, error)
 	ListUserSessions(ctx context.Context, userID int) ([]user.RefreshToken, error)
 	RevokeUserSessions(ctx context.Context, userID int) error
 	RecordAudit(ctx context.Context, e audit.Entry) error
@@ -171,7 +173,7 @@ func AdminCreateUser(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AdminCreateUserRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
@@ -220,7 +222,7 @@ func AdminSetUserRole(adminSvc AdminService) gin.HandlerFunc {
 
 		var req AdminSetUserRoleRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
@@ -274,7 +276,7 @@ func AdminResetUserPassword(adminSvc AdminService) gin.HandlerFunc {
 
 		var req AdminResetUserPasswordRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
@@ -327,7 +329,7 @@ func AdminSetUserActive(adminSvc AdminService) gin.HandlerFunc {
 
 		var req AdminSetUserActiveRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
@@ -413,13 +415,13 @@ func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AdminCreateChannelRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
 		var config delivery.ChannelConfiguration
 		if err := json.Unmarshal(req.Configuration, &config); err != nil {
-			respondValidationError(c, err)
+			writeBindingError(c, &req, err)
 			return
 		}
 
@@ -445,6 +447,89 @@ func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
 		})
 
 		c.JSON(http.StatusCreated, newAdminChannelItem(*ch))
+	}
+}
+
+// AdminSetChannelEnabledRequest represents the request body for enabling/disabling a channel.
+type AdminSetChannelEnabledRequest struct {
+	Enabled bool `json:"enabled"`
+}
+
+// AdminSetChannelEnabled godoc
+// @Summary Enable or disable a delivery channel (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Param body body AdminSetChannelEnabledRequest true "Enabled status"
+// @Success 200 {object} v1.MessageResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/delivery/channels/{id}/enabled [patch]
+func AdminSetChannelEnabled(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		channelID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		var req AdminSetChannelEnabledRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			writeBindingError(c, &req, err)
+			return
+		}
+
+		if err := adminSvc.SetChannelEnabled(c.Request.Context(), channelID, req.Enabled); err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "channel.set_enabled",
+			TargetType: "channel",
+			TargetID:   fmt.Sprintf("%d", channelID),
+			Metadata:   map[string]any{"enabled": req.Enabled},
+		})
+
+		c.JSON(http.StatusOK, MessageResponse{Message: "Channel updated"})
+	}
+}
+
+// AdminDeleteChannel godoc
+// @Summary Delete a delivery channel (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Channel ID"
+// @Success 200 {object} map[string]int64
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/delivery/channels/{id} [delete]
+func AdminDeleteChannel(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		channelID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		deleted, err := adminSvc.DeleteChannelByID(c.Request.Context(), channelID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "channel.delete",
+			TargetType: "channel",
+			TargetID:   fmt.Sprintf("%d", channelID),
+		})
+
+		c.JSON(http.StatusOK, gin.H{"deleted": deleted})
 	}
 }
 

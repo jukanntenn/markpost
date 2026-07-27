@@ -300,17 +300,23 @@ type AdminChannelItem struct {
 	Kind          string                        `json:"kind"`
 	Enabled       bool                          `json:"enabled"`
 	UserID        int                           `json:"user_id"`
+	Username      string                        `json:"username"`
 	Configuration delivery.ChannelConfiguration `json:"configuration"`
 	CreatedAt     time.Time                     `json:"created_at"`
 }
 
 func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
+	username := ""
+	if ch.User.ID > 0 {
+		username = ch.User.Username
+	}
 	return AdminChannelItem{
 		ID:            ch.ID,
 		Name:          ch.Name,
 		Kind:          string(ch.Kind),
 		Enabled:       ch.Enabled,
 		UserID:        ch.UserID,
+		Username:      username,
 		Configuration: ch.Configuration,
 		CreatedAt:     ch.CreatedAt,
 	}

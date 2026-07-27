@@ -389,10 +389,6 @@ func parseIDParam(c *gin.Context, name string) (int, error) {
 	return id, nil
 }
 
-func respondValidationError(c *gin.Context, err error) {
-	writeBindingError(c, nil, err)
-}
-
 func respondError(c *gin.Context, err error) {
 	apierr.RespondError(c, err)
 }

@@ -30,9 +30,12 @@ type UserMutator interface {
 // ChannelMutator defines the interface for modifying delivery channels.
 type ChannelMutator interface {
 	Create(ctx context.Context, channel *delivery.Channel) error
+	GetByID(ctx context.Context, id int) (*delivery.Channel, error)
 	GetByIDAndUserID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
 	Update(ctx context.Context, channel *delivery.Channel) error
+	SetEnabled(ctx context.Context, id int, enabled bool) error
 	DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error)
+	DeleteByID(ctx context.Context, id int) (int64, error)
 }
 
 // SessionLister defines the interface for listing user sessions.
@@ -189,9 +192,19 @@ func (s *Service) UpdateChannel(ctx context.Context, channel *delivery.Channel) 
 	return s.channelMutator.Update(ctx, channel)
 }
 
+// SetChannelEnabled enables or disables a delivery channel (admin operation).
+func (s *Service) SetChannelEnabled(ctx context.Context, id int, enabled bool) error {
+	return s.channelMutator.SetEnabled(ctx, id, enabled)
+}
+
 // DeleteChannel deletes a delivery channel (admin operation).
 func (s *Service) DeleteChannel(ctx context.Context, id int, userID int) (int64, error) {
 	return s.channelMutator.DeleteByIDAndUserID(ctx, id, userID)
+}
+
+// DeleteChannelByID deletes a delivery channel by ID (admin operation).
+func (s *Service) DeleteChannelByID(ctx context.Context, id int) (int64, error) {
+	return s.channelMutator.DeleteByID(ctx, id)
 }
 
 // ListUserSessions lists all refresh tokens for a user (admin operation).

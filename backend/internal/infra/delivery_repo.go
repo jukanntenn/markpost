@@ -38,6 +38,15 @@ func (r *DeliveryChannelRepository) GetByIDAndUserID(ctx context.Context, id int
 	return ch, nil
 }
 
+// GetByID retrieves a delivery channel by ID.
+func (r *DeliveryChannelRepository) GetByID(ctx context.Context, id int) (*delivery.Channel, error) {
+	ch, err := findFirst[delivery.Channel](ctx, r.db.Where("id = ?", id), domain.ErrNotFound)
+	if err != nil {
+		return nil, fmt.Errorf("GetByID: %w", err)
+	}
+	return ch, nil
+}
+
 // Create creates a new delivery channel.
 func (r *DeliveryChannelRepository) Create(ctx context.Context, channel *delivery.Channel) error {
 	if err := r.db.WithContext(ctx).Create(channel).Error; err != nil {
@@ -58,6 +67,11 @@ func (r *DeliveryChannelRepository) Update(ctx context.Context, channel *deliver
 	return updateByID[delivery.Channel](ctx, r.db, channel.ID, updates, "Update")
 }
 
+// SetEnabled updates the enabled status of a delivery channel.
+func (r *DeliveryChannelRepository) SetEnabled(ctx context.Context, id int, enabled bool) error {
+	return updateByID[delivery.Channel](ctx, r.db, id, map[string]any{"enabled": enabled}, "SetEnabled")
+}
+
 // DeleteByIDAndUserID deletes a delivery channel by ID and user ID.
 func (r *DeliveryChannelRepository) DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error) {
 	n, err := deleteWhere[delivery.Channel](ctx, scopedByIDAndUserID(r.db, id, userID))
@@ -67,9 +81,18 @@ func (r *DeliveryChannelRepository) DeleteByIDAndUserID(ctx context.Context, id 
 	return n, nil
 }
 
+// DeleteByID deletes a delivery channel by ID (admin operation).
+func (r *DeliveryChannelRepository) DeleteByID(ctx context.Context, id int) (int64, error) {
+	n, err := deleteWhere[delivery.Channel](ctx, r.db.Where("id = ?", id))
+	if err != nil {
+		return 0, fmt.Errorf("DeleteByID: %w", err)
+	}
+	return n, nil
+}
+
 // ListAll retrieves all delivery channels with pagination.
 func (r *DeliveryChannelRepository) ListAll(ctx context.Context, offset, limit int) ([]delivery.Channel, error) {
-	return findMany[delivery.Channel](ctx, r.db.Order("id asc"), offset, limit, "ListAll")
+	return findMany[delivery.Channel](ctx, r.db.Preload("User").Order("id asc"), offset, limit, "ListAll")
 }
 
 // CountAll returns the total number of delivery channels.

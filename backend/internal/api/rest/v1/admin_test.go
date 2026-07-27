@@ -3,8 +3,10 @@ package v1
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"markpost/internal/domain/audit"
@@ -262,5 +264,500 @@ func TestAdminListChannels_Success(t *testing.T) {
 	}
 	if len(channels) != 2 {
 		t.Errorf("expected 2 channels, got %d", len(channels))
+	}
+}
+
+func setupAdminHandlerWithMutators(t *testing.T) (*admin.Service, user.Repository, delivery.Repository) {
+	t.Helper()
+	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	postRepo := infra.NewPostRepository(db)
+	channelRepo := infra.NewDeliveryChannelRepository(db)
+	attemptRepo := infra.NewAttemptRepository(db)
+	sessionLister := &mockSessionLister{}
+	auditRecorder := &mockAuditRecorder{}
+
+	svc := admin.NewService(
+		userRepo.(*infra.UserRepository),
+		&postListerAdapter{repo: postRepo},
+		&channelListerAdapter{repo: channelRepo},
+		attemptRepo,
+		sessionLister,
+		auditRecorder,
+	)
+	svc.SetUserMutator(userRepo.(*infra.UserRepository))
+	svc.SetChannelMutator(channelRepo)
+	return svc, userRepo, channelRepo
+}
+
+func TestAdminCreateUser_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.POST("/admin/users", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminCreateUser(svc))
+
+	body := `{"email":"new@example.com","username":"newuser","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var resp AdminUserItem
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Email != "new@example.com" {
+		t.Errorf("email = %q, want %q", resp.Email, "new@example.com")
+	}
+}
+
+func TestAdminCreateUser_InvalidBody(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.POST("/admin/users", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminCreateUser(svc))
+
+	t.Run("missing email", func(t *testing.T) {
+		body := `{"username":"user","password":"password123"}`
+		req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			t.Errorf("expected 422 or 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("short password", func(t *testing.T) {
+		body := `{"email":"test@example.com","username":"user","password":"ab"}`
+		req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			t.Errorf("expected 422 or 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid email", func(t *testing.T) {
+		body := `{"email":"not-an-email","username":"user","password":"password123"}`
+		req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			t.Errorf("expected 422 or 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("empty body", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(""))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest && w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected 400 or 422, got %d", w.Code)
+		}
+	})
+}
+
+func TestAdminSetUserRole_Success(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "role@example.com", "roleuser", "pass")
+
+	router := newTestEngine()
+	router.PATCH("/admin/users/:id/role", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminSetUserRole(svc))
+
+	body := `{"role":"admin"}`
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/users/%d/role", u.ID), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+func TestAdminSetUserRole_InvalidRole(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "role@example.com", "roleuser", "pass")
+
+	router := newTestEngine()
+	router.PATCH("/admin/users/:id/role", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminSetUserRole(svc))
+
+	body := `{"role":"superadmin"}`
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/users/%d/role", u.ID), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+		t.Errorf("expected 422 or 400, got %d", w.Code)
+	}
+}
+
+func TestAdminSetUserRole_InvalidID(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.PATCH("/admin/users/:id/role", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminSetUserRole(svc))
+
+	body := `{"role":"admin"}`
+	req := httptest.NewRequest(http.MethodPatch, "/admin/users/abc/role", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestAdminResetUserPassword_Success(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "pw@example.com", "pwuser", "oldpass")
+
+	router := newTestEngine()
+	router.POST("/admin/users/:id/password", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminResetUserPassword(svc))
+
+	body := `{"password":"newpassword123"}`
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/users/%d/password", u.ID), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+func TestAdminResetUserPassword_ShortPassword(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "pw@example.com", "pwuser", "oldpass")
+
+	router := newTestEngine()
+	router.POST("/admin/users/:id/password", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminResetUserPassword(svc))
+
+	body := `{"password":"ab"}`
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/users/%d/password", u.ID), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+		t.Errorf("expected 422 or 400, got %d", w.Code)
+	}
+}
+
+func TestAdminSetUserActive_Success(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "active@example.com", "activeuser", "pass")
+
+	router := newTestEngine()
+	router.PATCH("/admin/users/:id/active", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminSetUserActive(svc))
+
+	body := `{"active":false}`
+	req := httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/admin/users/%d/active", u.ID), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+}
+
+func TestAdminDeleteUser_Success(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "delete@example.com", "deleteuser", "pass")
+
+	router := newTestEngine()
+	router.DELETE("/admin/users/:id", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminDeleteUser(svc))
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/users/%d", u.ID), nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["deleted"].(float64) != 1 {
+		t.Errorf("expected deleted=1, got %v", resp["deleted"])
+	}
+}
+
+func TestAdminDeleteUser_InvalidID(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.DELETE("/admin/users/:id", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminDeleteUser(svc))
+
+	req := httptest.NewRequest(http.MethodDelete, "/admin/users/abc", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestAdminCreateChannel_Success(t *testing.T) {
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	u, _ := userRepo.Create(t.Context(), "ch@example.com", "chuser", "pass")
+
+	router := newTestEngine()
+	router.POST("/admin/channels", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminCreateChannel(svc))
+
+	body := fmt.Sprintf(`{"user_id":%d,"kind":"feishu","name":"Test Channel","configuration":{"webhook_url":"https://example.com","card_link_url":""}}`, u.ID)
+	req := httptest.NewRequest(http.MethodPost, "/admin/channels", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+}
+
+func TestAdminCreateChannel_InvalidBody(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.POST("/admin/channels", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminCreateChannel(svc))
+
+	t.Run("missing required fields", func(t *testing.T) {
+		body := `{"name":"Test"}`
+		req := httptest.NewRequest(http.MethodPost, "/admin/channels", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
+			t.Errorf("expected 422 or 400, got %d", w.Code)
+		}
+	})
+
+	t.Run("invalid configuration JSON", func(t *testing.T) {
+		body := `{"user_id":1,"kind":"feishu","name":"Test","configuration":"not-json"}`
+		req := httptest.NewRequest(http.MethodPost, "/admin/channels", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest && w.Code != http.StatusUnprocessableEntity {
+			t.Errorf("expected 400 or 422, got %d", w.Code)
+		}
+	})
+}
+
+func TestAdminGetStats_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.GET("/admin/stats", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminGetStats(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/stats", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	counts, ok := resp["counts"].(map[string]interface{})
+	if !ok {
+		t.Fatal("expected counts in response")
+	}
+	if _, ok := counts["users"]; !ok {
+		t.Error("expected users count")
+	}
+	if _, ok := counts["posts"]; !ok {
+		t.Error("expected posts count")
+	}
+	if _, ok := counts["channels"]; !ok {
+		t.Error("expected channels count")
+	}
+	if _, ok := counts["history"]; !ok {
+		t.Error("expected history count")
+	}
+}
+
+func TestAdminListSessions_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.GET("/admin/users/:id/sessions", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminListSessions(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/users/1/sessions", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if _, ok := resp["sessions"]; !ok {
+		t.Error("expected sessions in response")
+	}
+}
+
+func TestAdminListSessions_InvalidID(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.GET("/admin/users/:id/sessions", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminListSessions(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/users/abc/sessions", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestAdminRevokeUserSessions_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.DELETE("/admin/users/:id/sessions", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminRevokeUserSessions(svc))
+
+	req := httptest.NewRequest(http.MethodDelete, "/admin/users/1/sessions", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["revoked"] != true {
+		t.Errorf("expected revoked=true, got %v", resp["revoked"])
+	}
+}
+
+func TestAdminRevokeUserSessions_InvalidID(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.DELETE("/admin/users/:id/sessions", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminRevokeUserSessions(svc))
+
+	req := httptest.NewRequest(http.MethodDelete, "/admin/users/abc/sessions", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestAdminListAuditLogs_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.GET("/admin/audit-logs", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminListAuditLogs(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/audit-logs", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if _, ok := resp["items"]; !ok {
+		t.Error("expected items in response")
+	}
+	if _, ok := resp["total"]; !ok {
+		t.Error("expected total in response")
+	}
+}
+
+func TestAdminListDeliveryHistory_Success(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.GET("/admin/delivery-history", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminListDeliveryHistory(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/delivery-history", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if _, ok := resp["items"]; !ok {
+		t.Error("expected items in response")
 	}
 }

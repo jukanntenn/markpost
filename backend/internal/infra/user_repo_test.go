@@ -355,6 +355,44 @@ func TestUserRepository_UpdateLastLoginAt(t *testing.T) {
 	}
 }
 
+func TestUserRepository_SetActive(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewUserRepository(db, 16)
+	ctx := context.Background()
+
+	u, _ := repo.Create(ctx, "active@example.com", "activeuser", "pass")
+
+	t.Run("deactivates user", func(t *testing.T) {
+		if err := repo.SetActive(ctx, u.ID, false); err != nil {
+			t.Fatalf("SetActive(false): %v", err)
+		}
+		got, _ := repo.GetByID(ctx, u.ID)
+		if got.IsActive {
+			t.Error("expected user to be inactive after SetActive(false)")
+		}
+	})
+
+	t.Run("reactivates user", func(t *testing.T) {
+		if err := repo.SetActive(ctx, u.ID, true); err != nil {
+			t.Fatalf("SetActive(true): %v", err)
+		}
+		got, _ := repo.GetByID(ctx, u.ID)
+		if !got.IsActive {
+			t.Error("expected user to be active after SetActive(true)")
+		}
+	})
+
+	t.Run("returns not found for nonexistent user", func(t *testing.T) {
+		err := repo.SetActive(ctx, 99999, true)
+		if err == nil {
+			t.Fatal("expected error for nonexistent user")
+		}
+		if !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("expected ErrNotFound, got: %v", err)
+		}
+	})
+}
+
 func timeNow() time.Time {
 	return time.Now().Truncate(time.Second)
 }

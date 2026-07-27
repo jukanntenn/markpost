@@ -176,6 +176,59 @@ func TestTokenRepository_CleanupExpiredTokens(t *testing.T) {
 	}
 }
 
+func TestTokenRepository_ListByUserID(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewTokenRepository(db)
+	ctx := context.Background()
+
+	_ = repo.StoreRefreshToken(ctx, 1, "hash1", time.Now().Add(time.Hour))
+	_ = repo.StoreRefreshToken(ctx, 1, "hash2", time.Now().Add(time.Hour))
+	_ = repo.StoreRefreshToken(ctx, 2, "hash3", time.Now().Add(time.Hour))
+
+	t.Run("returns all tokens for user", func(t *testing.T) {
+		tokens, err := repo.ListByUserID(ctx, 1)
+		if err != nil {
+			t.Fatalf("ListByUserID: %v", err)
+		}
+		if len(tokens) != 2 {
+			t.Errorf("expected 2 tokens, got %d", len(tokens))
+		}
+	})
+
+	t.Run("returns empty for user with no tokens", func(t *testing.T) {
+		tokens, err := repo.ListByUserID(ctx, 999)
+		if err != nil {
+			t.Fatalf("ListByUserID: %v", err)
+		}
+		if len(tokens) != 0 {
+			t.Errorf("expected 0 tokens, got %d", len(tokens))
+		}
+	})
+
+	t.Run("includes revoked tokens", func(t *testing.T) {
+		_ = repo.RevokeRefreshToken(ctx, "hash1")
+		tokens, err := repo.ListByUserID(ctx, 1)
+		if err != nil {
+			t.Fatalf("ListByUserID: %v", err)
+		}
+		if len(tokens) != 2 {
+			t.Errorf("expected 2 tokens (including revoked), got %d", len(tokens))
+		}
+	})
+
+	t.Run("orders by created_at DESC", func(t *testing.T) {
+		tokens, err := repo.ListByUserID(ctx, 1)
+		if err != nil {
+			t.Fatalf("ListByUserID: %v", err)
+		}
+		for i := 1; i < len(tokens); i++ {
+			if tokens[i-1].CreatedAt.Before(tokens[i].CreatedAt) {
+				t.Errorf("tokens not ordered DESC")
+			}
+		}
+	})
+}
+
 func TestRefreshToken_IsExpired(t *testing.T) {
 	t.Run("expired token", func(t *testing.T) {
 		token := user.RefreshToken{ExpiresAt: time.Now().Add(-time.Hour)}

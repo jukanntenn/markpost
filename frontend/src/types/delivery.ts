@@ -32,6 +32,7 @@ export interface AdminChannel {
   kind: string
   enabled: boolean
   user_id: number
+  username: string
   configuration: ChannelConfiguration
   created_at: string
 }

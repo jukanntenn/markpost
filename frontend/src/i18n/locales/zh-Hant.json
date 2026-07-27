@@ -249,7 +249,8 @@
       "users": "使用者",
       "posts": "Posts",
       "channels": "頻道",
-      "history": "投遞歷史"
+      "history": "投遞歷史",
+      "dashboard": "儀表盤"
     },
     "errors": {
       "forbidden": "無權限存取",
@@ -262,18 +263,18 @@
     "users": {
       "title": "使用者管理",
       "actions": "操作",
-      "changeRole": "修改角色",
+      "changeRole": "變更角色",
       "changeRoleFor": "修改 {{username}} 的角色",
       "roleUpdated": "角色已更新",
       "addUser": "新增使用者",
-      "addUserDescription": "使用使用者名稱和密碼建立新使用者",
-      "usernamePlaceholder": "請輸入使用者名稱",
-      "passwordPlaceholder": "請輸入密碼（至少 6 位）",
+      "addUserDescription": "建立新用戶帳戶",
+      "usernamePlaceholder": "請輸入用戶名",
+      "passwordPlaceholder": "至少 6 個字元",
       "confirmPasswordPlaceholder": "再次輸入密碼",
       "passwordsNotMatch": "兩次密碼不一致",
-      "passwordMinLength": "密碼至少需要 6 位",
-      "usernameRequired": "使用者名稱不能為空",
-      "userCreated": "使用者建立成功",
+      "passwordMinLength": "密碼至少需要 6 個字元",
+      "usernameRequired": "用戶名不能為空",
+      "userCreated": "用戶建立成功",
       "resetPassword": "重設密碼",
       "resetPasswordFor": "為 {{username}} 重設密碼",
       "setPassword": "設定密碼",
@@ -284,10 +285,27 @@
       "passwordGenerated": "密碼已產生",
       "passwordCopied": "密碼已複製到剪貼簿",
       "delete": "刪除",
-      "deleteTitle": "刪除使用者",
-      "deleteConfirm": "確認刪除使用者 {{username}}？該使用者的 Posts 和頻道也會被刪除。",
+      "deleteTitle": "刪除用戶",
+      "deleteConfirm": "刪除用戶 {username}？這將同時刪除其文章和渠道。",
       "deleteConfirmEmpty": "確認刪除該使用者？該使用者的 Posts 和頻道也會被刪除。",
-      "deleted": "使用者已刪除"
+      "deleted": "用戶已刪除",
+      "email": "郵箱",
+      "emailPlaceholder": "user@example.com",
+      "emailRequired": "郵箱不能為空",
+      "emailInvalid": "郵箱格式無效",
+      "password": "密碼",
+      "passwordRequired": "密碼不能為空",
+      "cancel": "取消",
+      "create": "建立",
+      "creating": "建立中...",
+      "changeRoleConfirm": "將 {username} 的角色變更為 {role}？",
+      "enableUser": "啟用用戶",
+      "disableUser": "停用用戶",
+      "enableUserConfirm": "啟用用戶 {username}？",
+      "disableUserConfirm": "停用用戶 {username}？該用戶將無法登入。",
+      "roleChanged": "角色變更成功",
+      "activeChanged": "用戶狀態已更新",
+      "confirm": "確認"
     },
     "posts": {
       "title": "Posts 管理",
@@ -331,10 +349,19 @@
       "enabledHelp": "開關投遞",
       "updated": "頻道已更新",
       "delete": "刪除",
-      "deleteTitle": "刪除頻道",
-      "deleteConfirm": "確認刪除頻道「{{name}}」？",
+      "deleteTitle": "刪除渠道",
+      "deleteConfirm": "刪除渠道 {name}？此操作不可撤銷。",
       "deleteConfirmEmpty": "確認刪除該頻道？",
-      "deleted": "頻道已刪除"
+      "deleted": "渠道已刪除",
+      "enableTitle": "啟用渠道",
+      "disableTitle": "停用渠道",
+      "enableConfirm": "啟用渠道 {name}？",
+      "disableConfirm": "停用渠道 {name}？新的投遞將暫停。",
+      "enabledChanged": "渠道狀態已更新",
+      "active": "活躍",
+      "inactive": "停用",
+      "confirm": "確認",
+      "cancel": "取消"
     },
     "history": {
       "title": "投遞歷史",
@@ -351,6 +378,13 @@
       "status_failed": "失敗",
       "status_expired": "已過期",
       "empty": "暫無投遞歷史"
+    },
+    "dashboard": {
+      "title": "儀表盤",
+      "users": "用戶",
+      "posts": "文章",
+      "channels": "通道",
+      "history": "投遞歷史"
     }
   },
   "notFound": {

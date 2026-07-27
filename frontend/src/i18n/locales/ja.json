@@ -249,7 +249,8 @@
       "users": "ユーザー",
       "posts": "Posts",
       "channels": "チャネル",
-      "history": "配信履歴"
+      "history": "配信履歴",
+      "dashboard": "ダッシュボード"
     },
     "errors": {
       "forbidden": "アクセス権限がありません",
@@ -262,16 +263,16 @@
     "users": {
       "title": "ユーザー管理",
       "actions": "操作",
-      "changeRole": "ロール変更",
+      "changeRole": "役割変更",
       "changeRoleFor": "{{username}} のロールを変更",
       "roleUpdated": "ロールが更新されました",
       "addUser": "ユーザー追加",
-      "addUserDescription": "ユーザー名とパスワードで新規ユーザーを作成",
+      "addUserDescription": "新しいユーザーアカウントを作成",
       "usernamePlaceholder": "ユーザー名を入力",
-      "passwordPlaceholder": "パスワードを入力（6 文字以上）",
+      "passwordPlaceholder": "6文字以上",
       "confirmPasswordPlaceholder": "パスワードを再入力",
       "passwordsNotMatch": "パスワードが一致しません",
-      "passwordMinLength": "パスワードは 6 文字以上必要です",
+      "passwordMinLength": "パスワードは6文字以上必要です",
       "usernameRequired": "ユーザー名は必須です",
       "userCreated": "ユーザーが作成されました",
       "resetPassword": "パスワードリセット",
@@ -285,9 +286,26 @@
       "passwordCopied": "パスワードがクリップボードにコピーされました",
       "delete": "削除",
       "deleteTitle": "ユーザーを削除",
-      "deleteConfirm": "ユーザー {{username}} を削除しますか？このユーザーの Posts とチャネルも削除されます。",
+      "deleteConfirm": "ユーザー {username} を削除しますか？投稿とチャンネルも削除されます。",
       "deleteConfirmEmpty": "このユーザーを削除しますか？このユーザーの Posts とチャネルも削除されます。",
-      "deleted": "ユーザーが削除されました"
+      "deleted": "ユーザーが削除されました",
+      "email": "メールアドレス",
+      "emailPlaceholder": "user@example.com",
+      "emailRequired": "メールアドレスは必須です",
+      "emailInvalid": "メールアドレスの形式が無効です",
+      "password": "パスワード",
+      "passwordRequired": "パスワードは必須です",
+      "cancel": "キャンセル",
+      "create": "作成",
+      "creating": "作成中...",
+      "changeRoleConfirm": "{username} の役割を {role} に変更しますか？",
+      "enableUser": "ユーザーを有効化",
+      "disableUser": "ユーザーを無効化",
+      "enableUserConfirm": "ユーザー {username} を有効化しますか？",
+      "disableUserConfirm": "ユーザー {username} を無効化しますか？ログインできなくなります。",
+      "roleChanged": "役割が変更されました",
+      "activeChanged": "ユーザーのステータスが更新されました",
+      "confirm": "確認"
     },
     "posts": {
       "title": "Posts 管理",
@@ -331,10 +349,19 @@
       "enabledHelp": "配信のオン/オフ",
       "updated": "チャネルが更新されました",
       "delete": "削除",
-      "deleteTitle": "チャネルを削除",
-      "deleteConfirm": "チャネル「{{name}}」を削除しますか？",
+      "deleteTitle": "チャンネルを削除",
+      "deleteConfirm": "チャンネル {name} を削除しますか？この操作は元に戻せません。",
       "deleteConfirmEmpty": "このチャネルを削除しますか？",
-      "deleted": "チャネルが削除されました"
+      "deleted": "チャンネルが削除されました",
+      "enableTitle": "チャンネルを有効化",
+      "disableTitle": "チャンネルを無効化",
+      "enableConfirm": "チャンネル {name} を有効化しますか？",
+      "disableConfirm": "チャンネル {name} を無効化しますか？新しい配信が一時停止されます。",
+      "enabledChanged": "チャンネルのステータスが更新されました",
+      "active": "有効",
+      "inactive": "無効",
+      "confirm": "確認",
+      "cancel": "キャンセル"
     },
     "history": {
       "title": "配信履歴",
@@ -351,6 +378,13 @@
       "status_failed": "失敗",
       "status_expired": "期限切れ",
       "empty": "配信履歴はまだありません"
+    },
+    "dashboard": {
+      "title": "ダッシュボード",
+      "users": "ユーザー",
+      "posts": "投稿",
+      "channels": "チャンネル",
+      "history": "配信履歴"
     }
   },
   "notFound": {

@@ -249,7 +249,8 @@
       "users": "用户",
       "posts": "Posts",
       "channels": "渠道",
-      "history": "投递历史"
+      "history": "投递历史",
+      "dashboard": "仪表盘"
     },
     "errors": {
       "forbidden": "无权限访问",
@@ -262,16 +263,16 @@
     "users": {
       "title": "用户管理",
       "actions": "操作",
-      "changeRole": "修改角色",
+      "changeRole": "更改角色",
       "changeRoleFor": "修改 {{username}} 的角色",
       "roleUpdated": "角色已更新",
       "addUser": "添加用户",
-      "addUserDescription": "使用用户名和密码创建新用户",
+      "addUserDescription": "创建新用户账户",
       "usernamePlaceholder": "请输入用户名",
-      "passwordPlaceholder": "请输入密码（至少 6 位）",
+      "passwordPlaceholder": "至少 6 个字符",
       "confirmPasswordPlaceholder": "再次输入密码",
       "passwordsNotMatch": "两次密码不一致",
-      "passwordMinLength": "密码至少需要 6 位",
+      "passwordMinLength": "密码至少需要 6 个字符",
       "usernameRequired": "用户名不能为空",
       "userCreated": "用户创建成功",
       "resetPassword": "重置密码",
@@ -285,9 +286,26 @@
       "passwordCopied": "密码已复制到剪贴板",
       "delete": "删除",
       "deleteTitle": "删除用户",
-      "deleteConfirm": "确认删除用户 {{username}}？该用户的 Posts 和渠道也会被删除。",
+      "deleteConfirm": "删除用户 {username}？这将同时删除其文章和渠道。",
       "deleteConfirmEmpty": "确认删除该用户？该用户的 Posts 和渠道也会被删除。",
-      "deleted": "用户已删除"
+      "deleted": "用户已删除",
+      "email": "邮箱",
+      "emailPlaceholder": "user@example.com",
+      "emailRequired": "邮箱不能为空",
+      "emailInvalid": "邮箱格式无效",
+      "password": "密码",
+      "passwordRequired": "密码不能为空",
+      "cancel": "取消",
+      "create": "创建",
+      "creating": "创建中...",
+      "changeRoleConfirm": "将 {username} 的角色更改为 {role}？",
+      "enableUser": "启用用户",
+      "disableUser": "禁用用户",
+      "enableUserConfirm": "启用用户 {username}？",
+      "disableUserConfirm": "禁用用户 {username}？该用户将无法登录。",
+      "roleChanged": "角色更改成功",
+      "activeChanged": "用户状态已更新",
+      "confirm": "确认"
     },
     "posts": {
       "title": "Posts 管理",
@@ -332,9 +350,18 @@
       "updated": "渠道已更新",
       "delete": "删除",
       "deleteTitle": "删除渠道",
-      "deleteConfirm": "确认删除渠道「{{name}}」？",
+      "deleteConfirm": "删除渠道 {name}？此操作不可撤销。",
       "deleteConfirmEmpty": "确认删除该渠道？",
-      "deleted": "渠道已删除"
+      "deleted": "渠道已删除",
+      "enableTitle": "启用渠道",
+      "disableTitle": "禁用渠道",
+      "enableConfirm": "启用渠道 {name}？",
+      "disableConfirm": "禁用渠道 {name}？新的投递将暂停。",
+      "enabledChanged": "渠道状态已更新",
+      "active": "活跃",
+      "inactive": "停用",
+      "confirm": "确认",
+      "cancel": "取消"
     },
     "history": {
       "title": "投递历史",
@@ -351,6 +378,13 @@
       "status_failed": "失败",
       "status_expired": "已过期",
       "empty": "暂无投递历史"
+    },
+    "dashboard": {
+      "title": "仪表盘",
+      "users": "用户",
+      "posts": "文章",
+      "channels": "通道",
+      "history": "投递历史"
     }
   },
   "notFound": {

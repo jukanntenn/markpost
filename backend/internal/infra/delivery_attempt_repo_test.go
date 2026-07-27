@@ -130,13 +130,6 @@ func TestAttemptRepository_PruneHistorySubqueryLimit(t *testing.T) {
 	}
 }
 
-func TestAttemptRepository_ClaimDueDialect(t *testing.T) {
-	repo, _ := setupAttemptRepoTestDB(t)
-	if !repo.rowLockingDialect() {
-		t.Error("postgres should advertise row locking")
-	}
-}
-
 func TestAttemptRepository_ListHistoryJoinsAndNulls(t *testing.T) {
 	db := SetupTestDB(t)
 	repo := NewAttemptRepository(db).(*AttemptRepository)

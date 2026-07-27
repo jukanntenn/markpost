@@ -17,16 +17,15 @@ type Repository interface {
 }
 
 // AttemptRepository defines persistence for the delivery best-effort retry
-// queue. All batch/claim methods use the dialect-safe subquery-LIMIT form so
-// they are valid across Postgres, MySQL, and SQLite (bare DELETE/UPDATE ...
-// LIMIT is a Postgres syntax error).
+// queue. All batch/claim methods use the subquery-LIMIT form (bare
+// DELETE/UPDATE ... LIMIT is a PostgreSQL syntax error).
 type AttemptRepository interface {
 	// Create inserts one or more pending attempts.
 	Create(ctx context.Context, attempts []*Attempt) error
 	// ClaimDue atomically claims up to limit due attempts (status=pending and
 	// next_at <= now) and reserves each past the request timeout by advancing
-	// next_at. FOR UPDATE SKIP LOCKED is used on Postgres/MySQL; on SQLite it
-	// is omitted (single-connection serialization prevents double-claim).
+	// next_at. FOR UPDATE SKIP LOCKED lets concurrent claimers pick disjoint
+	// rows without blocking.
 	ClaimDue(ctx context.Context, now, reserveUntilMs int64, limit int) ([]*Attempt, error)
 	// MarkRetry records a failed (non-terminal) attempt: bumps the attempt
 	// count, sets last_error, and schedules the next attempt at nextAtMs.

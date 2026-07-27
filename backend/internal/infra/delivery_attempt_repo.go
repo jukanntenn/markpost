@@ -40,23 +40,18 @@ func (r *AttemptRepository) Create(ctx context.Context, attempts []*delivery.Att
 // next_at to reserveUntilMs. This makes in-flight rows invisible to the next
 // scheduler tick, preventing double-claim.
 //
-// The claim body (UPDATE ... WHERE id IN (SELECT ... LIMIT) RETURNING *) is
-// identical across dialects; only the locking clause differs:
-//   - Postgres/MySQL: FOR UPDATE SKIP LOCKED lets concurrent claimers (or
-//     scheduler ticks) claim disjoint rows without blocking.
-//   - SQLite: the clause is omitted because SQLite has no row-level locking
-//     (it is a parse-time syntax error). Production SQLite pins
-//     SetMaxOpenConns(1), so writes serialize through one connection and there
-//     is no concurrent claimer to exclude.
+// The claim body (UPDATE ... WHERE id IN (SELECT ... LIMIT) RETURNING *)
+// reserves rows by advancing next_at to reserveUntilMs, making in-flight rows
+// invisible to the next scheduler tick (preventing double-claim). FOR UPDATE
+// SKIP LOCKED lets concurrent claimers pick disjoint rows without blocking.
 func (r *AttemptRepository) ClaimDue(ctx context.Context, nowMs, reserveUntilMs int64, limit int) ([]*delivery.Attempt, error) {
 	if limit <= 0 {
 		return nil, nil
 	}
 
-	selectClause := "SELECT id FROM delivery_attempts WHERE status = ? AND next_at <= ? ORDER BY next_at LIMIT ?"
-	if r.rowLockingDialect() {
-		selectClause += " FOR UPDATE SKIP LOCKED"
-	}
+	// PostgreSQL supports FOR UPDATE SKIP LOCKED, letting concurrent claimers
+	// (or scheduler ticks) claim disjoint rows without blocking.
+	selectClause := "SELECT id FROM delivery_attempts WHERE status = ? AND next_at <= ? ORDER BY next_at LIMIT ? FOR UPDATE SKIP LOCKED"
 
 	sql := fmt.Sprintf(
 		"UPDATE delivery_attempts SET next_at = ? WHERE id IN (%s) RETURNING *",
@@ -102,10 +97,8 @@ func (r *AttemptRepository) MarkExpired(ctx context.Context, wallBeforeMs int64,
 
 	// created_at is a timestamp column. Compare against a time value in the same
 	// form GORM stores (the driver's default location) rather than forcing UTC,
-	// so the comparison is correct across dialects: Postgres/MySQL timestamps
-	// are timezone-aware (any zone compares correctly), while SQLite stores a
-	// formatted string and only compares correctly when the bound value uses the
-	// same offset the stored rows use.
+	// so the comparison is correct: PostgreSQL timestamps are timezone-aware
+	// (any zone compares correctly).
 	wallBefore := time.UnixMilli(wallBeforeMs)
 
 	sql := `UPDATE delivery_attempts SET status = ?, updated_at = ?
@@ -177,9 +170,8 @@ func (r *AttemptRepository) CountByStatus(ctx context.Context) (map[delivery.Sta
 }
 
 // PruneHistory deletes delivery_history rows older than the retention window
-// in batches of batchSize, returning the total deleted. It uses the portable
-// subquery-LIMIT form (bare DELETE ... LIMIT is a Postgres syntax error;
-// SQLite supports it only when the driver is compiled with the right flag).
+// in batches of batchSize, returning the total deleted. It uses the
+// subquery-LIMIT form (bare DELETE ... LIMIT is a PostgreSQL syntax error).
 func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Duration, batchSize int) (int64, error) {
 	if batchSize <= 0 {
 		batchSize = 1000
@@ -249,12 +241,11 @@ func (r *AttemptRepository) CountHistory(ctx context.Context, filter delivery.Hi
 }
 
 // LatestPerChannel returns the most recent delivery_history row per channel for
-// the user (one row per channel_id). It uses a correlated subquery so the same
-// statement runs unchanged on Postgres, MySQL, and SQLite (a window-function
-// form would need a wrapping subquery and is dialect-heavier). The data volume
-// is small — a user's 7-day retention window, typically well under a thousand
-// rows — so the correlated MAX lookup is effectively index-backed by the
-// channel_id index and resolves in milliseconds.
+// the user (one row per channel_id). It uses a correlated subquery so the
+// statement is simple and portable. The data volume is small - a user's 7-day
+// retention window, typically well under a thousand rows - so the correlated
+// MAX lookup is effectively index-backed by the channel_id index and resolves
+// in milliseconds.
 func (r *AttemptRepository) LatestPerChannel(ctx context.Context, userID int) ([]*delivery.HistoryRow, error) {
 	const sql = `SELECT h.id, h.status, h.last_error, h.created_at, h.channel_id,
 	                    p.title AS post_title, p.qid AS post_qid,
@@ -277,10 +268,4 @@ func (r *AttemptRepository) LatestPerChannel(ctx context.Context, userID int) ([
 		return nil, fmt.Errorf("AttemptRepository.LatestPerChannel: %w", err)
 	}
 	return rows, nil
-}
-
-// rowLockingDialect reports whether the active DB dialect supports
-// FOR UPDATE SKIP LOCKED. PostgreSQL supports it natively.
-func (r *AttemptRepository) rowLockingDialect() bool {
-	return r.db.Name() == "postgres"
 }

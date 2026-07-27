@@ -32,12 +32,10 @@ func (k ChannelKind) IsValid() bool {
 }
 
 // Status is the lifecycle state of a delivery attempt or history row. It is an
-// int8 (not a string) so the column maps to the smallest integer type on each
-// dialect via GORM's size-based logic: tinyint on MySQL (1B), smallint on
-// Postgres (2B, its floor), integer on SQLite (value-width). StatusPending is 0
-// so the database default (default:0) lands on the pending state. The numeric
-// mapping is append-only forever: inserting a state in the middle would
-// renumber every later state and corrupt existing rows.
+// int8 so the column maps to PostgreSQL's smallint (2B). StatusPending is 0 so
+// the database default (default:0) lands on the pending state. The numeric
+// mapping is append-only forever: inserting a state in the middle would renumber
+// every later state and corrupt existing rows.
 type Status int8
 
 // Delivery attempt/history statuses. Order is significant and must stay

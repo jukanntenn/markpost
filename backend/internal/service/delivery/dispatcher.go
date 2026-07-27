@@ -53,7 +53,7 @@ type Sender interface {
 }
 
 // Dispatcher implements domainpost.DeliveryEnqueuer on top of the persistent
-// best-effort delivery queue: a Postgres/MySQL/SQLite-backed attempt table,
+// best-effort delivery queue: a PostgreSQL-backed attempt table,
 // drained by a ScanInterval-tick scheduler that claims due rows and dispatches
 // them to a bounded pond v2 worker pool. Delivery is at-least-once and
 // survives process restarts — all pending state lives in the database.

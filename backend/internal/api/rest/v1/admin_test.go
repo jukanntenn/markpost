@@ -24,6 +24,7 @@ func setupAdminHandlerDeps(t *testing.T) (*admin.Service, user.Repository, post.
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
 	attemptRepo := infra.NewAttemptRepository(db)
+	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
 	svc := admin.NewService(
@@ -31,6 +32,7 @@ func setupAdminHandlerDeps(t *testing.T) (*admin.Service, user.Repository, post.
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
+		sessionLister,
 		auditRecorder,
 	)
 	return svc, userRepo, postRepo, channelRepo
@@ -92,6 +94,16 @@ func (m *mockAuditRecorder) List(ctx context.Context, offset, limit int) ([]audi
 		end = len(m.logs)
 	}
 	return m.logs[offset:end], total, nil
+}
+
+type mockSessionLister struct{}
+
+func (m *mockSessionLister) ListByUserID(ctx context.Context, userID int) ([]user.RefreshToken, error) {
+	return nil, nil
+}
+
+func (m *mockSessionLister) RevokeAllByUserID(ctx context.Context, userID int) error {
+	return nil
 }
 
 func TestAdminListUsers_Success(t *testing.T) {

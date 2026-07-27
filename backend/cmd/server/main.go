@@ -339,7 +339,7 @@ func serve(configPath string) {
 	postSvc = postsvc.NewService(postRepo, deliveryDispatcher)
 
 	auditRepo := infra.NewAuditRepository(dbInstance.DB())
-	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, auditRepo)
+	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, tokenRepo, auditRepo)
 	adminSvc.SetUserMutator(userRepo)
 	adminSvc.SetChannelMutator(deliveryRepo)
 
@@ -481,6 +481,8 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.POST("/users/:id/password", middleware.RateLimitByUserID(l3Write), v1.AdminResetUserPassword(adminSvc))
 			adminGroup.PATCH("/users/:id/active", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserActive(adminSvc))
 			adminGroup.DELETE("/users/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteUser(adminSvc))
+			adminGroup.GET("/users/:id/sessions", v1.AdminListSessions(adminSvc))
+			adminGroup.DELETE("/users/:id/sessions", middleware.RateLimitByUserID(l3Write), v1.AdminRevokeUserSessions(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
 			adminGroup.GET("/delivery/channels", v1.AdminListChannels(adminSvc))
 			adminGroup.POST("/delivery/channels", middleware.RateLimitByUserID(l3Write), v1.AdminCreateChannel(adminSvc))

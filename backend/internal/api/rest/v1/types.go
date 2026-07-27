@@ -387,3 +387,17 @@ type PaginatedAuditLogs struct {
 	AuditLogs  []AdminAuditLogItem `json:"audit_logs"`
 	Pagination Pagination          `json:"pagination"`
 }
+
+// AdminSessionItem represents a user session in the admin session list.
+type AdminSessionItem struct {
+	ID        int64     `json:"id"`
+	TokenHash string    `json:"token_hash"`
+	Revoked   bool      `json:"revoked"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// AdminSessionsResponse represents a list of user sessions.
+type AdminSessionsResponse struct {
+	Sessions []AdminSessionItem `json:"sessions"`
+}

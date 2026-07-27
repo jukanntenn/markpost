@@ -104,6 +104,18 @@ func (r *TokenRepository) RevokeAllByUserID(ctx context.Context, userID int) err
 	return nil
 }
 
+// ListByUserID returns all refresh tokens for a user (for session management).
+func (r *TokenRepository) ListByUserID(ctx context.Context, userID int) ([]user.RefreshToken, error) {
+	var tokens []user.RefreshToken
+	if err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&tokens).Error; err != nil {
+		return nil, fmt.Errorf("ListByUserID: %w", err)
+	}
+	return tokens, nil
+}
+
 // StoreBlacklistedToken adds a token to the blacklist.
 func (r *TokenRepository) StoreBlacklistedToken(ctx context.Context, tokenHash string, expiresAt time.Time) error {
 	blacklist := user.TokenBlacklist{

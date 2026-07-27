@@ -32,6 +32,8 @@ type AdminService interface {
 	GetChannelByID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
 	UpdateChannel(ctx context.Context, channel *delivery.Channel) error
 	DeleteChannel(ctx context.Context, id int, userID int) (int64, error)
+	ListUserSessions(ctx context.Context, userID int) ([]user.RefreshToken, error)
+	RevokeUserSessions(ctx context.Context, userID int) error
 	RecordAudit(ctx context.Context, e audit.Entry) error
 }
 
@@ -489,5 +491,78 @@ func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
 				"history":  len(history),
 			},
 		})
+	}
+}
+
+// AdminListSessions godoc
+// @Summary List user sessions (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} v1.AdminSessionsResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/{id}/sessions [get]
+func AdminListSessions(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		tokens, err := adminSvc.ListUserSessions(c.Request.Context(), userID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		items := make([]AdminSessionItem, len(tokens))
+		for i, t := range tokens {
+			items[i] = AdminSessionItem{
+				ID:        t.ID,
+				TokenHash: t.TokenHash[:8] + "...",
+				Revoked:   t.Revoked,
+				ExpiresAt: t.ExpiresAt,
+				CreatedAt: t.CreatedAt,
+			}
+		}
+
+		c.JSON(http.StatusOK, gin.H{"sessions": items})
+	}
+}
+
+// AdminRevokeUserSessions godoc
+// @Summary Revoke all user sessions (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} map[string]int64
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/{id}/sessions [delete]
+func AdminRevokeUserSessions(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		if err := adminSvc.RevokeUserSessions(c.Request.Context(), userID); err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "user.revoke_sessions",
+			TargetType: "user",
+			TargetID:   fmt.Sprintf("%d", userID),
+		})
+
+		c.JSON(http.StatusOK, gin.H{"revoked": true})
 	}
 }

@@ -50,6 +50,8 @@ type TokenRepository interface {
 	// RevokeAllByUserID soft-revokes every active refresh token for the user.
 	// Called on logout and on detected token theft.
 	RevokeAllByUserID(ctx context.Context, userID int) error
+	// ListByUserID returns all refresh tokens for a user (for session management).
+	ListByUserID(ctx context.Context, userID int) ([]RefreshToken, error)
 
 	StoreBlacklistedToken(ctx context.Context, tokenHash string, expiresAt time.Time) error
 	IsTokenBlacklisted(ctx context.Context, tokenHash string) (bool, error)

@@ -28,6 +28,7 @@ func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
 	attemptRepo := infra.NewAttemptRepository(db)
+	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
 	svc := NewService(
@@ -35,6 +36,7 @@ func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
+		sessionLister,
 		auditRecorder,
 	)
 	return svc, userRepo, postRepo, channelRepo
@@ -74,6 +76,16 @@ func (a *channelListerAdapter) ListAll(ctx context.Context, offset, limit int) (
 
 type mockAuditRecorder struct {
 	logs []audit.Log
+}
+
+type mockSessionLister struct{}
+
+func (m *mockSessionLister) ListByUserID(ctx context.Context, userID int) ([]user.RefreshToken, error) {
+	return nil, nil
+}
+
+func (m *mockSessionLister) RevokeAllByUserID(ctx context.Context, userID int) error {
+	return nil
 }
 
 func (m *mockAuditRecorder) Record(ctx context.Context, e audit.Entry) error {

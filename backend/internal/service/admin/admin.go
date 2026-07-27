@@ -35,6 +35,12 @@ type ChannelMutator interface {
 	DeleteByIDAndUserID(ctx context.Context, id int, userID int) (int64, error)
 }
 
+// SessionLister defines the interface for listing user sessions.
+type SessionLister interface {
+	ListByUserID(ctx context.Context, userID int) ([]user.RefreshToken, error)
+	RevokeAllByUserID(ctx context.Context, userID int) error
+}
+
 // PostLister defines the interface for retrieving posts.
 type PostLister interface {
 	GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
@@ -65,6 +71,7 @@ type Service struct {
 	channelLister  ChannelLister
 	channelMutator ChannelMutator
 	historyLister  HistoryLister
+	sessionLister  SessionLister
 	auditRecorder  AuditRecorder
 }
 
@@ -74,6 +81,7 @@ func NewService(
 	postLister PostLister,
 	channelLister ChannelLister,
 	historyLister HistoryLister,
+	sessionLister SessionLister,
 	auditRecorder AuditRecorder,
 ) *Service {
 	return &Service{
@@ -81,6 +89,7 @@ func NewService(
 		postLister:    postLister,
 		channelLister: channelLister,
 		historyLister: historyLister,
+		sessionLister: sessionLister,
 		auditRecorder: auditRecorder,
 	}
 }
@@ -183,4 +192,14 @@ func (s *Service) UpdateChannel(ctx context.Context, channel *delivery.Channel) 
 // DeleteChannel deletes a delivery channel (admin operation).
 func (s *Service) DeleteChannel(ctx context.Context, id int, userID int) (int64, error) {
 	return s.channelMutator.DeleteByIDAndUserID(ctx, id, userID)
+}
+
+// ListUserSessions lists all refresh tokens for a user (admin operation).
+func (s *Service) ListUserSessions(ctx context.Context, userID int) ([]user.RefreshToken, error) {
+	return s.sessionLister.ListByUserID(ctx, userID)
+}
+
+// RevokeUserSessions revokes all refresh tokens for a user (admin operation).
+func (s *Service) RevokeUserSessions(ctx context.Context, userID int) error {
+	return s.sessionLister.RevokeAllByUserID(ctx, userID)
 }

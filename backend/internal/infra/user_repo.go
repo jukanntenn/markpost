@@ -149,6 +149,11 @@ func (r *UserRepository) SetRole(ctx context.Context, userID int, role user.Role
 	return updateByID[user.User](ctx, r.db, userID, map[string]any{"role": role}, "SetRole")
 }
 
+// SetActive updates a user's active status.
+func (r *UserRepository) SetActive(ctx context.Context, userID int, active bool) error {
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"is_active": active}, "SetActive")
+}
+
 // DeleteByID deletes a user by their ID.
 func (r *UserRepository) DeleteByID(ctx context.Context, userID int) (int64, error) {
 	return deleteWhere[user.User](ctx, r.db.Where("id = ?", userID))

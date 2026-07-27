@@ -340,6 +340,7 @@ func serve(configPath string) {
 
 	auditRepo := infra.NewAuditRepository(dbInstance.DB())
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, auditRepo)
+	adminSvc.SetUserMutator(userRepo)
 
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
@@ -474,6 +475,11 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 		adminGroup.Use(middleware.RequireAdmin())
 		{
 			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
+			adminGroup.POST("/users", middleware.RateLimitByUserID(l3Write), v1.AdminCreateUser(adminSvc))
+			adminGroup.PATCH("/users/:id/role", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserRole(adminSvc))
+			adminGroup.POST("/users/:id/password", middleware.RateLimitByUserID(l3Write), v1.AdminResetUserPassword(adminSvc))
+			adminGroup.PATCH("/users/:id/active", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserActive(adminSvc))
+			adminGroup.DELETE("/users/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteUser(adminSvc))
 			adminGroup.GET("/posts", v1.AdminListPosts(adminSvc))
 			adminGroup.GET("/delivery/channels", v1.AdminListChannels(adminSvc))
 			adminGroup.GET("/delivery/history", v1.AdminListDeliveryHistory(adminSvc))

@@ -19,6 +19,7 @@ type Repository interface {
 	ValidatePassword(ctx context.Context, username, password string) (*User, error)
 	SetPassword(ctx context.Context, userID int, password string) error
 	SetRole(ctx context.Context, userID int, role Role) error
+	SetActive(ctx context.Context, userID int, active bool) error
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	GetAll(ctx context.Context, offset, limit int) ([]User, error)
 	Count(ctx context.Context) (int64, error)

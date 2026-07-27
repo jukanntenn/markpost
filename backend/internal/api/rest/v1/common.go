@@ -379,3 +379,28 @@ func writePaginatedList[T any, R any](
 	mapped := utils.MapSlice(items, mapper)
 	c.JSON(http.StatusOK, wrapResponse(mapped, query.ToPagination(total)))
 }
+
+func parseIDParam(c *gin.Context, name string) (int, error) {
+	id, err := strconv.Atoi(c.Param(name))
+	if err != nil {
+		apierr.RespondError(c, service.New(service.ErrInvalidRequest, "invalid "+name))
+		return 0, err
+	}
+	return id, nil
+}
+
+func respondValidationError(c *gin.Context, err error) {
+	writeBindingError(c, nil, err)
+}
+
+func respondError(c *gin.Context, err error) {
+	apierr.RespondError(c, err)
+}
+
+func currentUserID(c *gin.Context) int {
+	u, ok := middleware.ExtractUser(c)
+	if !ok {
+		return 0
+	}
+	return u.ID
+}

@@ -17,6 +17,16 @@ type UserLister interface {
 	Count(ctx context.Context) (int64, error)
 }
 
+// UserMutator defines the interface for modifying users.
+type UserMutator interface {
+	Create(ctx context.Context, email, username, password string) (*user.User, error)
+	GetByID(ctx context.Context, id int) (*user.User, error)
+	SetRole(ctx context.Context, userID int, role user.Role) error
+	SetPassword(ctx context.Context, userID int, password string) error
+	SetActive(ctx context.Context, userID int, active bool) error
+	DeleteByID(ctx context.Context, userID int) (int64, error)
+}
+
 // PostLister defines the interface for retrieving posts.
 type PostLister interface {
 	GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
@@ -42,6 +52,7 @@ type AuditRecorder interface {
 // Service provides admin-level business logic.
 type Service struct {
 	userLister    UserLister
+	userMutator   UserMutator
 	postLister    PostLister
 	channelLister ChannelLister
 	historyLister HistoryLister
@@ -63,6 +74,11 @@ func NewService(
 		historyLister: historyLister,
 		auditRecorder: auditRecorder,
 	}
+}
+
+// SetUserMutator sets the user mutator for write operations.
+func (s *Service) SetUserMutator(mutator UserMutator) {
+	s.userMutator = mutator
 }
 
 // RecordAudit records an admin write operation for audit purposes.
@@ -103,4 +119,34 @@ func (s *Service) ListAllDeliveryHistory(ctx context.Context, offset, limit int)
 // ListAuditLogs retrieves audit logs with pagination.
 func (s *Service) ListAuditLogs(ctx context.Context, offset, limit int) ([]audit.Log, int64, error) {
 	return s.auditRecorder.List(ctx, offset, limit)
+}
+
+// CreateUser creates a new user (admin operation).
+func (s *Service) CreateUser(ctx context.Context, email, username, password string) (*user.User, error) {
+	return s.userMutator.Create(ctx, email, username, password)
+}
+
+// SetUserRole updates a user's role (admin operation).
+func (s *Service) SetUserRole(ctx context.Context, userID int, role user.Role) error {
+	return s.userMutator.SetRole(ctx, userID, role)
+}
+
+// ResetUserPassword resets a user's password (admin operation).
+func (s *Service) ResetUserPassword(ctx context.Context, userID int, password string) error {
+	return s.userMutator.SetPassword(ctx, userID, password)
+}
+
+// SetUserActive updates a user's active status (admin operation).
+func (s *Service) SetUserActive(ctx context.Context, userID int, active bool) error {
+	return s.userMutator.SetActive(ctx, userID, active)
+}
+
+// DeleteUser deletes a user (admin operation).
+func (s *Service) DeleteUser(ctx context.Context, userID int) (int64, error) {
+	return s.userMutator.DeleteByID(ctx, userID)
+}
+
+// GetUserByID retrieves a user by ID (admin operation).
+func (s *Service) GetUserByID(ctx context.Context, userID int) (*user.User, error) {
+	return s.userMutator.GetByID(ctx, userID)
 }

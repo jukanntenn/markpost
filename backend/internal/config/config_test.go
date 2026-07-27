@@ -201,19 +201,3 @@ func TestLoad_AutoDiscoveryConfigToml(t *testing.T) {
 		t.Fatalf("expected host '127.0.0.1', got %s", cfg.Server.Host)
 	}
 }
-
-func TestLoad_AutoDiscoveryMarkpostTomlFallback(t *testing.T) {
-	ResetForTest()
-
-	t.Chdir(t.TempDir())
-	writeNamedConfig(t, ".", "markpost.toml")
-
-	if err := Load(""); err != nil {
-		t.Fatalf("Load error: %v", err)
-	}
-
-	cfg := Get()
-	if cfg.Server.Host != "127.0.0.1" {
-		t.Fatalf("expected host '127.0.0.1', got %s", cfg.Server.Host)
-	}
-}

@@ -192,17 +192,10 @@ func loadConfig() {
 	} else {
 		v.SetConfigType("toml")
 		v.AddConfigPath(".")
-		var readErr error
-		for _, name := range []string{"config", "markpost"} {
-			v.SetConfigName(name)
-			readErr = v.ReadInConfig()
-			if readErr == nil {
-				break
-			}
-			if _, ok := readErr.(viper.ConfigFileNotFoundError); !ok {
-				loadErr = fmt.Errorf("failed to read config file: %w", readErr)
-				return
-			}
+		v.SetConfigName("config")
+		if err := v.ReadInConfig(); err != nil {
+			loadErr = fmt.Errorf("failed to read config file: %w", err)
+			return
 		}
 	}
 

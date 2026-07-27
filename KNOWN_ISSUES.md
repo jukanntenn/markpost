@@ -63,7 +63,7 @@ rendered on read.
 
 ## Config file name: `markpost.toml` backward-compat fallback pending removal
 
-**Status:** Tracked, not yet actionable (2026-07-02).
+**Status:** Resolved (2026-07-27). The `markpost` fallback name and its test were removed; staging mount retargeted to `/app/config.toml`.
 
 ### Background
 

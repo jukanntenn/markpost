@@ -103,3 +103,46 @@ rg -rn '/app/markpost.toml' .
 - Config loader: `backend/internal/config/config.go`
 - Fallback test: `backend/internal/config/config_test.go`
 - Deployment mounts: `docs/deployment.md`
+
+
+## Markdown: CJK fullwidth punctuation breaks emphasis closing
+
+**Status:** Resolved (2026-07-27).
+
+### Symptom
+
+Emphasis delimiters (`**`) adjacent to CJK fullwidth punctuation (e.g. the
+fullwidth right parenthesis `）` U+FF09, fullwidth comma `，`, fullwidth period
+`。`) fail to close, causing mis-paired `**` sequences in mixed CJK text.
+
+Reproduced on production post `p-2lsoUuYpibCUAMN96PrvC`: the source
+`本项目对**有限...的**无条件...定理）**进行...` rendered with the first `**`
+literal and the wrong span bolded, because the `**` after `）` could not close.
+
+### Root cause
+
+CommonMark's emphasis flanking rules (spec 6.2) classify Unicode punctuation
+specially: a `**` immediately preceded by punctuation cannot close emphasis.
+goldmark's `util.IsPunctRune` (`unicode.IsSymbol || unicode.IsPunct`) classifies
+CJK fullwidth punctuation as punctuation, so `定理）**` fails the close check
+and the `**` sequences pair incorrectly.
+
+This is a known CommonMark deficiency for CJK languages. The goldmark author
+acknowledged it in issue #61: "CommonMark spec are created by westerners, so
+they did not take account into our languages."
+
+### Fix
+
+Register a custom emphasis `InlineParser` (`internal/service/post/cjk_emphasis.go`)
+that scans delimiters with a CJK-aware punctuation predicate, treating CJK
+fullwidth punctuation as neutral (neither punctuation nor whitespace) so `**`
+closes normally. Uses only exported goldmark APIs (InlineParser interface +
+ScanDelimiter); no fork. The default emphasis parser is shadowed by registering
+the custom one at priority 600 (> default 500).
+
+### References
+
+- goldmark emphasis flanking: `parser/delimiter.go:113 ScanDelimiter`
+- goldmark IsPunctRune: `util/util.go:831`
+- goldmark issue #61 (CJK emphasis): https://github.com/yuin/goldmark/issues/61
+- CommonMark spec 6.2: https://spec.commonmark.org/0.30/#emphasis-and-strong-emphasis

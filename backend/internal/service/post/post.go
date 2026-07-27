@@ -20,7 +20,9 @@ import (
 	minhtml "github.com/tdewolff/minify/v2/html"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/util"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -54,6 +56,14 @@ func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer) *Servi
 func newGoldmark() goldmark.Markdown {
 	return goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(
+			// Replace the default emphasis parser with a CJK-aware one so that
+			// ** adjacent to CJK fullwidth punctuation (e.g. ）） closes
+			// normally instead of mis-pairing. Priority 600 > default 500.
+			parser.WithInlineParsers(
+				util.Prioritized(&cjkEmphasisParser{}, 600),
+			),
+		),
 		goldmark.WithRendererOptions(
 			html.WithUnsafe(),
 			html.WithHardWraps(),

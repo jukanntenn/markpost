@@ -71,7 +71,7 @@ The dev environment uses PostgreSQL via Docker Compose. The connection is config
 - User: `markpost`
 - Password: `markpost`
 
-The backend also supports SQLite for lightweight deployments. SQLite is the default driver when no configuration is provided. For local development without Docker, SQLite works with zero configuration.
+The backend also supports SQLite for lightweight deployments. SQLite is the default driver when no configuration is provided. For local development without Docker, SQLite works with zero configuration. <!-- MySQL/SQLite 已移除 -->
 
 ## Configuration
 

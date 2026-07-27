@@ -13,7 +13,7 @@ internal/api/rest/v1/auth_test.go
 
 ## Test Database
 
-The `infra` package provides `NewTestDatabase()` which creates an in-memory SQLite database with all migrations applied:
+The `infra` package provides `NewTestDatabase()` which creates an in-memory SQLite database with all migrations applied: <!-- MySQL/SQLite 已移除 -->
 
 ```go
 func TestSomething(t *testing.T) {

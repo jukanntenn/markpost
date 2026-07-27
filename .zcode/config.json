@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "enabled": true,
+    "events": {
+      "PostToolUse": [
+        {
+          "matcher": "Edit|Write|MultiEdit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 ${ZCODE_PROJECT_DIR}/.claude/hooks/format.py"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "python3 ${ZCODE_PROJECT_DIR}/.claude/hooks/lint_stop.py"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

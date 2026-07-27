@@ -1,6 +1,6 @@
 # Database Schema
 
-This document describes the current database schema for Markpost. The schema is defined through GORM model structs in `internal/domain/` and managed via GORM `AutoMigrate`. The project supports both PostgreSQL (production) and SQLite (development/testing) — type descriptions below use GORM semantics and are not tied to a specific database engine.
+This document describes the current database schema for Markpost. The schema is defined through GORM model structs in `internal/domain/` and managed via versioned SQL migrations with `golang-migrate` (embedded in the binary at `internal/infra/migrations/`). PostgreSQL 17 is the only supported database. Type descriptions below use PostgreSQL semantics.
 
 ## Entity Relationship Diagram
 
@@ -146,13 +146,13 @@ No tables use soft delete. Records are permanently removed via `DELETE` statemen
 
 GORM association fields (e.g., `Post.User`, `Channel.User`) define `ON DELETE CASCADE` to enforce referential integrity at the database level. Bare ID references without a GORM association (e.g., `RefreshToken.UserID`) have no foreign key constraint — cleanup is handled at the application level.
 
-### 5. Dual Database Support
+### 5. PostgreSQL Only
 
-Production uses PostgreSQL; development and testing use SQLite (in-memory for tests). Schema is defined exclusively through GORM struct tags to remain compatible across both engines. Avoid database-specific column types or features in model definitions.
+PostgreSQL 17 is the only supported database (sqlite/mysql drivers were permanently removed). Schema is managed exclusively through versioned SQL migrations (`internal/infra/migrations/`). GORM struct tags document the model's column metadata but do not drive schema changes.
 
 ### 6. Schema Migration
 
-Schema changes are applied via GORM `AutoMigrate` on application startup (see `internal/infra/db.go`). There is no versioned migration system. Ad-hoc data migrations (e.g., `migrateQIDPrefix`) run as startup functions alongside AutoMigrate.
+Schema changes are applied via `golang-migrate` with versioned SQL files in `internal/infra/migrations/` (embedded in the binary). Run `markpost migrate up` before `serve` on deploys. `infra.New(dsn)` only opens the connection; it does not migrate.
 
 ### 7. Table Naming
 
@@ -162,4 +162,4 @@ Tables without an explicit `TableName()` method use GORM's default pluralized na
 
 ## 数据库连接（DSN）
 
-Schema 设计只管表结构。数据库连接（DSN 格式、driver 推断、SQLite 目录自动创建）见 [dsn.md](./dsn.md)。
+Schema 设计只管表结构。数据库连接（DSN 格式）见 [dsn.md](./dsn.md)。

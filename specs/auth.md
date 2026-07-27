@@ -109,7 +109,7 @@ POST /auth/refresh { refresh_token }
 
 ### 2.2 软标记吊销（revoked 字段）
 
-`refresh_tokens` 表新增 `revoked` bool 字段（GORM AutoMigrate 自动添加，默认 false）：
+`refresh_tokens` 表新增 `revoked` bool 字段（通过 versioned migration 添加，默认 false）：
 
 | 字段 | 类型 | 默认 | 说明 |
 |------|------|------|------|

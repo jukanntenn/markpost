@@ -30,7 +30,9 @@ backend/
 │   │   ├── delivery/        投递渠道管理 + 重试调度 + filter/
 │   │   └── admin/           管理员只读视图（跨聚合）
 │   ├── infra/               GORM 仓储实现（实现 domain 接口）+ DB 初始化
-│   │   ├── db.go            Database 结构、New(dsn)、AutoMigrate、迁移函数
+│   │   ├── db.go            Database 结构、New(dsn)（仅开连接，不迁移）
+│   │   ├── migrate.go       golang-migrate 封装（MigrateUp/Down/Force/Version）
+│   │   ├── migrations/      嵌入式 SQL 迁移文件（NNNNNN_description.up/down.sql）
 │   │   ├── helpers.go       泛型 GORM 辅助（findFirst / findMany / existsBy / ...）
 │   │   ├── search.go        LIKE 搜索辅助
 │   │   └── *_repo.go        每聚合一个仓储实现文件（user_repo / token_repo / post_repo / ...）

@@ -61,7 +61,7 @@ Dependencies are installed before source code is copied. This ensures that code 
 
 ### Static Linking (Backend)
 
-The backend binary is statically linked with `CGO_LDFLAGS="-static"`. This embeds sqlite3 and musl libc into the binary, eliminating runtime shared library dependencies. The runtime image only needs `ca-certificates` and `tzdata`.
+The backend binary is statically linked with `CGO_LDFLAGS="-static"`. This embeds sqlite3 and musl libc into the binary, eliminating runtime shared library dependencies. The runtime image only needs `ca-certificates` and `tzdata`. <!-- MySQL/SQLite 已移除 -->
 
 ### Standalone Output (Frontend)
 

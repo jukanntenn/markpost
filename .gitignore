@@ -9,7 +9,6 @@ Thumbs.db
 *~
 
 # === AI Tools ===
-.codex/
 .fa/
 .trae/
 
@@ -43,6 +42,7 @@ go.work
 go.work.sum
 # Config
 config.toml
+!.codex/config.toml
 # Database
 *.sqlite3*
 *.db*
@@ -65,7 +65,6 @@ blob-report/
 frontend.log
 devops/frontend.pid
 devops/data/
-.codex
 
 # === Python ===
 __pycache__/

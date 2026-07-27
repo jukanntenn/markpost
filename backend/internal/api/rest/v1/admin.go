@@ -445,3 +445,49 @@ func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
 		c.JSON(http.StatusCreated, newAdminChannelItem(*ch))
 	}
 }
+
+// AdminGetStats godoc
+// @Summary Get admin dashboard statistics
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} v1.AdminStatsResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/stats [get]
+func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		// Get counts
+		users, _, err := adminSvc.ListAllUsers(ctx, 0, 1)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		posts, _, err := adminSvc.ListAllPosts(ctx, "", 0, 1)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		channels, _, err := adminSvc.ListAllDeliveryChannels(ctx, 0, 1)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		history, _, err := adminSvc.ListAllDeliveryHistory(ctx, 0, 1)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"counts": gin.H{
+				"users":    len(users),
+				"posts":    len(posts),
+				"channels": len(channels),
+				"history":  len(history),
+			},
+		})
+	}
+}

@@ -486,6 +486,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.POST("/delivery/channels", middleware.RateLimitByUserID(l3Write), v1.AdminCreateChannel(adminSvc))
 			adminGroup.GET("/delivery/history", v1.AdminListDeliveryHistory(adminSvc))
 			adminGroup.GET("/audit-logs", v1.AdminListAuditLogs(adminSvc))
+			adminGroup.GET("/stats", v1.AdminGetStats(adminSvc))
 			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))
 		}
 	}

@@ -26,4 +26,17 @@ export const adminApi = {
     request<DeliveryHistoryResponse>('/api/v1/admin/delivery/history', {
       params: paginationParams(page, limit),
     }),
+
+  getStats: () =>
+    request<{
+      counts: {
+        users: number
+        posts: number
+        channels: number
+        history: number
+      }
+    }>('/api/v1/admin/stats'),
+
+  deletePost: (qid: string) =>
+    request<void>(`/api/v1/admin/posts/${qid}`, { method: 'DELETE' }),
 }

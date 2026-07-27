@@ -28,6 +28,7 @@ export const adminKeys = {
   history: {
     all: () => [...adminKeys.all(), 'history'] as const,
   },
+  stats: () => [...adminKeys.all(), 'stats'] as const,
 }
 
 export const deliveryKeys = {

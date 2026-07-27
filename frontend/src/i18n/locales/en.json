@@ -249,7 +249,8 @@
       "users": "Users",
       "posts": "Posts",
       "channels": "Channels",
-      "history": "Delivery History"
+      "history": "Delivery History",
+      "dashboard": "Dashboard"
     },
     "errors": {
       "forbidden": "Access denied",
@@ -351,6 +352,13 @@
       "status_failed": "Failed",
       "status_expired": "Expired",
       "empty": "No delivery history found"
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "users": "Users",
+      "posts": "Posts",
+      "channels": "Channels",
+      "history": "Delivery History"
     }
   },
   "notFound": {

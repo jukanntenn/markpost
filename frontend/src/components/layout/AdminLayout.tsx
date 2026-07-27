@@ -4,7 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
-import { UsersIcon, FileTextIcon, RadioIcon, SendIcon } from 'lucide-react'
+import {
+  LayoutDashboardIcon,
+  UsersIcon,
+  FileTextIcon,
+  RadioIcon,
+  SendIcon,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface AdminNavItem {
@@ -14,6 +20,11 @@ interface AdminNavItem {
 }
 
 const adminNavItems: AdminNavItem[] = [
+  {
+    href: '/admin/dashboard',
+    labelKey: 'nav.dashboard',
+    icon: LayoutDashboardIcon,
+  },
   { href: '/admin/users', labelKey: 'nav.users', icon: UsersIcon },
   { href: '/admin/posts', labelKey: 'nav.posts', icon: FileTextIcon },
   {

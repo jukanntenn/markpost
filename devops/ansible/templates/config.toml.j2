@@ -82,3 +82,6 @@ workers = 32
 queue_size = 1024
 scan_interval = "1s"
 history_retention = "{{ delivery_history_retention | default('168h') }}"
+
+[observability]
+log_dir = "/app/data/logs"

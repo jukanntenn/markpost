@@ -32,7 +32,7 @@
 ### 三文件模型
 
 ```
-/var/log/markpost/
+/app/data/logs/
 ├── app-2026-07-14.jsonl          业务事件 + HTTP 访问 + 错误（slog）
 ├── app-2026-07-14T00-00-00.000-time.jsonl.zst   零点滚动归档
 ├── traces-2026-07-14.jsonl       OTel span
@@ -193,9 +193,9 @@ r.Use(otelgin.Middleware("markpost"))
 
 ```bash
 # 按 trace_id 串联三文件
-jq 'select(.trace_id=="a1b2c3d4...")' /var/log/markpost/app-*.jsonl
-jq 'select(.trace_id=="a1b2c3d4...")' /var/log/markpost/traces-*.jsonl
-jq 'select(.trace_id=="a1b2c3d4...")' /var/log/markpost/metrics-*.jsonl
+jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/app-*.jsonl
+jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/traces-*.jsonl
+jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/metrics-*.jsonl
 ```
 
 stdout exporter 默认输出 JSON，metrics 的 stdoutmetric 输出较冗长（每数据点一行），文件会比 traces 大。这是可接受的默认格式。

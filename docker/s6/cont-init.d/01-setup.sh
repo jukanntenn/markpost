@@ -10,3 +10,5 @@ echo "[cont-init.d] Timezone set to: $tz"
 
 mkdir -p /app/data
 echo "[cont-init.d] Data directory ready: /app/data"
+mkdir -p /app/data/logs
+echo "[cont-init.d] Logs directory ready: /app/data/logs"

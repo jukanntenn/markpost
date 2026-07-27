@@ -15,6 +15,7 @@ services:
       - "2053:2053"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - markpost-logs:/app/data/logs
       - postgres-socket:/var/run/postgresql
     environment:
       # Admin credentials (only effective on first boot)
@@ -37,6 +38,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
   postgres:
@@ -54,8 +60,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
 
 volumes:
   pgdata:
+  markpost-logs:
   postgres-socket:

@@ -22,12 +22,12 @@ services:
       - MARKPOST_RATELIMIT__AUTHED_WRITE__BURST=60
       - MARKPOST_RENDER__ENABLED=true
       - MARKPOST_RENDER__CACHE_SIZE_BYTES=134217728
-      - MARKPOST_OBSERVABILITY__LOG_DIR=/app/logs
+      - MARKPOST_OBSERVABILITY__LOG_DIR=/app/data/logs
     ports:
       - "7330:7330"
     volumes:
       - ../backend:/app:cached
-      - ./data/logs:/app/logs
+      - ./data/logs:/app/data/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,6 +39,11 @@ services:
       start_period: 30s
     labels:
       - "com.docker.compose.project=markpost"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
     build:
@@ -60,6 +65,11 @@ services:
       - backend
     labels:
       - "com.docker.compose.project=markpost"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres:
     image: postgres:17-alpine
@@ -89,6 +99,11 @@ services:
       retries: 5
     labels:
       - "com.docker.compose.project=markpost"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   markpost_pgdata:

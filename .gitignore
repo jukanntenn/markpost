@@ -11,6 +11,7 @@ Thumbs.db
 # === AI Tools ===
 .fa/
 .trae/
+.serena/
 
 # === Environment ===
 .env

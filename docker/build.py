@@ -39,8 +39,13 @@ PLATFORM_ALIASES = {
 DOCKERFILE = "docker/Dockerfile"
 BUILD_CONTEXT = "."
 
+# Map a target platform to (install_arg, binfmt_misc_name).
+# - install_arg: the arch name passed to `tonistiigi/binfmt --install <arg>`
+# - binfmt_misc_name: the registered emulator file under /proc/sys/fs/binfmt_misc/
+# These differ for arm64: `--install arm64` registers as `qemu-aarch64`
+# (confirmed by tonistiigi/binfmt README emulator list).
 QEMU_ARCH_MAP = {
-    "linux/arm64": "arm64",
+    "linux/arm64": ("arm64", "aarch64"),
 }
 
 logger = logging.getLogger("build")
@@ -193,18 +198,29 @@ def check_builder_platforms(target_platforms):
 
     if foreign_platforms:
         for p in foreign_platforms:
-            arch = QEMU_ARCH_MAP.get(p)
-            if arch and not os.path.exists(f"/proc/sys/fs/binfmt_misc/qemu-{arch}"):
+            entry = QEMU_ARCH_MAP.get(p)
+            if not entry:
+                continue
+            install_arg, binfmt_name = entry
+            if not os.path.exists(f"/proc/sys/fs/binfmt_misc/qemu-{binfmt_name}"):
+                retry_cmd = " ".join([sys.argv[0]] + sys.argv[1:])
                 env_error(
-                    f"QEMU binfmt for {arch} is not registered — required for cross-platform build ({p}).",
-                    f"Run: docker run --rm --privileged tonistiigi/binfmt --install {arch}",
+                    f"QEMU binfmt for {install_arg} is not registered - required for cross-platform build ({p}).",
+                    (
+                        f"Run:\n"
+                        f"    docker run --rm --privileged tonistiigi/binfmt --install {install_arg}\n"
+                        f"Then wait ~10 seconds for the emulator to register, and retry:\n"
+                        f"    {retry_cmd}"
+                    ),
                 )
 
+        logger.info("Bootstrapping buildx builder (may take ~30s)...")
         result = subprocess.run(
             ["docker", "buildx", "inspect", "--bootstrap"],
             capture_output=True,
             text=True,
         )
+
         if result.returncode != 0:
             env_error(
                 f"Failed to bootstrap builder: {result.stderr.strip()}",
@@ -257,6 +273,14 @@ def main():
             platforms_to_build = [host_platform]
         else:
             platforms_to_build = [target_platforms[0]]
+        if len(target_platforms) > 1:
+            dropped = [p for p in target_platforms if p not in platforms_to_build]
+            logger.warning(
+                "Non-push mode builds only the host platform (%s); "
+                "multi-platform targets dropped: %s. Use --push for a true multi-arch build.",
+                platforms_to_build[0],
+                ", ".join(dropped),
+            )
 
     builder_name = check_environment(platforms_to_build)
 

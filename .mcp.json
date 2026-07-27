@@ -8,9 +8,34 @@
         "--transport",
         "stdio",
         "--dsn",
-        "sqlite:///home/alice/Workspace/markpost/data/markpost.db"
+        "postgres://markpost:markpost@localhost:5432/markpost?sslmode=disable"
       ],
       "env": {}
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "$(pwd)"
+      ]
     }
   }
 }

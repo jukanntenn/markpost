@@ -1,6 +1,6 @@
 FROM golang:1.26-alpine AS go-build
 
-RUN apk add --no-cache git gcc musl-dev sqlite-dev
+RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app
 
@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY backend/ .
 
-RUN CGO_ENABLED=1 CGO_LDFLAGS="-static" go build -ldflags="-w -s" -o markpost ./cmd/server
+RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o markpost ./cmd/server
 
 
 FROM node:24-alpine3.21 AS node-build

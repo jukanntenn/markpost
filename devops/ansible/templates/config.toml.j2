@@ -42,12 +42,12 @@ allow_origins = [{% if public_url is defined %}"{{ public_url }}"{% else %}"*"{%
 allow_headers = ["Content-Type", "Authorization", "X-OAuth-State"]
 
 [oauth.github]
-{% if github_client_id is defined and github_client_id | length > 0 %}
+{% if github_client_id is defined and github_client_id | length > 0 and public_url is defined %}
 client_id = "{{ github_client_id }}"
 client_secret = "{{ github_client_secret }}"
 redirect_url = "{{ public_url }}/auth/callback"
 {% else %}
-# GitHub OAuth disabled (no client_id in vault).
+# GitHub OAuth disabled (no client_id in vault or public_url not set).
 client_id = ""
 client_secret = ""
 {% endif %}

@@ -12,6 +12,11 @@ image: "{{ registry }}/markpost:{{ image_tag }}"
 # / bookmarks point at it). The container-side port is the shared caddy_port.
 host_port: 8089
 
+# External base URL for delivery notification links and OAuth redirects. dev is
+# LAN-only HTTP (no tunnel/domain), so this points at the host's LAN IP and the
+# published host_port. Feishu clients on the LAN resolve this to reach Caddy.
+public_url: "http://192.168.5.200:8089"
+
 # TLS profile for the rendered Caddyfile: http = plain HTTP, auto_https off.
 tls_profile: http
 

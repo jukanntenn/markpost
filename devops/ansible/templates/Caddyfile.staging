@@ -4,7 +4,6 @@
 # Plain HTTP (no TLS). Caddy serves the Next.js static export directly and
 # reverse-proxies API/static/swagger/post routes to the Go backend on
 # 127.0.0.1:7330. Internal layout: Caddy :2053, Go backend 127.0.0.1:7330.
-
 {
 	auto_https off
 }

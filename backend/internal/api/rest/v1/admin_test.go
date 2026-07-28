@@ -591,7 +591,45 @@ func TestAdminCreateChannel_InvalidBody(t *testing.T) {
 }
 
 func TestAdminGetStats_Success(t *testing.T) {
-	svc, _, _ := setupAdminHandlerWithMutators(t)
+	// AdminGetStats must report the real totals (the COUNT(*) from each
+	// repository), not len() of a limit=1 slice. Build the service in-test so we
+	// keep the db handle and can seed known counts for every entity.
+	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	postRepo := infra.NewPostRepository(db)
+	channelRepo := infra.NewDeliveryChannelRepository(db)
+	attemptRepo := infra.NewAttemptRepository(db)
+	svc := admin.NewService(
+		userRepo.(*infra.UserRepository),
+		&postListerAdapter{repo: postRepo},
+		&channelListerAdapter{repo: channelRepo},
+		attemptRepo,
+		&mockSessionLister{},
+		&mockAuditRecorder{},
+	)
+
+	ctx := t.Context()
+	u1, _ := userRepo.Create(ctx, "a@example.com", "alice", "pass")
+	u2, _ := userRepo.Create(ctx, "b@example.com", "bob", "pass")
+	for i := 0; i < 3; i++ {
+		_, _ = postRepo.Create(ctx, fmt.Sprintf("post-%d", i), "body", u1.ID)
+	}
+	_ = channelRepo.Create(ctx, &delivery.Channel{
+		UserID:        u2.ID,
+		Kind:          delivery.ChannelKindFeishu,
+		Name:          "Ch1",
+		Configuration: delivery.ChannelConfiguration{"webhook_url": "https://a.com", "card_link_url": ""},
+	})
+	// delivery_history has no repository Create; seed via raw SQL (existing
+	// convention in delivery_attempt_repo_test.go).
+	for i := 0; i < 4; i++ {
+		if err := db.Exec(
+			"INSERT INTO delivery_history (status, last_error, user_id) VALUES (?, '', ?)",
+			delivery.StatusDelivered, u1.ID,
+		).Error; err != nil {
+			t.Fatalf("seed delivery_history: %v", err)
+		}
+	}
 
 	router := newTestEngine()
 	router.GET("/admin/stats", func(c *gin.Context) {
@@ -604,26 +642,32 @@ func TestAdminGetStats_Success(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
 
 	var resp map[string]interface{}
-	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
 	counts, ok := resp["counts"].(map[string]interface{})
 	if !ok {
 		t.Fatal("expected counts in response")
 	}
-	if _, ok := counts["users"]; !ok {
-		t.Error("expected users count")
+	want := map[string]float64{
+		"users":    2,
+		"posts":    3,
+		"channels": 1,
+		"history":  4,
 	}
-	if _, ok := counts["posts"]; !ok {
-		t.Error("expected posts count")
-	}
-	if _, ok := counts["channels"]; !ok {
-		t.Error("expected channels count")
-	}
-	if _, ok := counts["history"]; !ok {
-		t.Error("expected history count")
+	for key, expected := range want {
+		got, ok := counts[key].(float64)
+		if !ok {
+			t.Errorf("expected %s count to be numeric, got %T (%v)", key, counts[key], counts[key])
+			continue
+		}
+		if got != expected {
+			t.Errorf("expected %s count %v, got %v", key, expected, got)
+		}
 	}
 }
 

@@ -546,23 +546,22 @@ func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		// Get counts
-		users, _, err := adminSvc.ListAllUsers(ctx, 0, 1)
+		_, userCount, err := adminSvc.ListAllUsers(ctx, 0, 1)
 		if err != nil {
 			respondError(c, err)
 			return
 		}
-		posts, _, err := adminSvc.ListAllPosts(ctx, "", 0, 1)
+		_, postCount, err := adminSvc.ListAllPosts(ctx, "", 0, 1)
 		if err != nil {
 			respondError(c, err)
 			return
 		}
-		channels, _, err := adminSvc.ListAllDeliveryChannels(ctx, 0, 1)
+		_, channelCount, err := adminSvc.ListAllDeliveryChannels(ctx, 0, 1)
 		if err != nil {
 			respondError(c, err)
 			return
 		}
-		history, _, err := adminSvc.ListAllDeliveryHistory(ctx, 0, 1)
+		_, historyCount, err := adminSvc.ListAllDeliveryHistory(ctx, 0, 1)
 		if err != nil {
 			respondError(c, err)
 			return
@@ -570,10 +569,10 @@ func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
 
 		c.JSON(http.StatusOK, gin.H{
 			"counts": gin.H{
-				"users":    len(users),
-				"posts":    len(posts),
-				"channels": len(channels),
-				"history":  len(history),
+				"users":    userCount,
+				"posts":    postCount,
+				"channels": channelCount,
+				"history":  historyCount,
 			},
 		})
 	}

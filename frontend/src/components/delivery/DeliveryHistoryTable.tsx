@@ -64,6 +64,8 @@ export function DeliveryHistoryTable({ items }: DeliveryHistoryTableProps) {
                   {item.post_qid ? (
                     <a
                       href={buildPostUrl(item.post_qid)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="truncate font-medium hover:underline"
                     >
                       {item.post_title ?? item.post_qid}

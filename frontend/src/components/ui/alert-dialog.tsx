@@ -3,6 +3,7 @@
 import * as React from 'react'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
@@ -86,7 +87,12 @@ function AlertDialogCancel({
   className,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  return <Button variant="outline" className={cn('', className)} {...props} />
+  return (
+    <DialogClose
+      render={<Button variant="outline" className={cn('', className)} />}
+      {...props}
+    />
+  )
 }
 
 export {

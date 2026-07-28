@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 
 import { adminApi, adminKeys } from '@/lib/api'
@@ -66,12 +65,14 @@ export function AdminDeliveryHistoryPage() {
               </TableCell>
               <TableCell>
                 {item.post_qid ? (
-                  <Link
+                  <a
                     href={buildPostUrl(item.post_qid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="truncate font-medium hover:underline"
                   >
                     {item.post_title ?? item.post_qid}
-                  </Link>
+                  </a>
                 ) : (
                   <span className="text-muted-foreground italic">
                     {t('history.postDeleted')}

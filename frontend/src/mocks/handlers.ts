@@ -170,6 +170,24 @@ export const handlers = [
     })
   }),
 
+  http.post('/api/v1/admin/users', async ({ request }) => {
+    const body = (await request.json()) as {
+      email?: string
+      username: string
+      password: string
+    }
+    const created = {
+      id: mockAdminUsers.length + 1,
+      email: body.email ?? '',
+      username: body.username,
+      role: 'user',
+      is_active: true,
+      created_at: new Date().toISOString(),
+    }
+    mockAdminUsers.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
   http.get('/api/v1/admin/posts', ({ request }) => {
     const url = new URL(request.url)
     const search = url.searchParams.get('search')
@@ -183,6 +201,16 @@ export const handlers = [
       limit: 20,
       total_pages: 1,
     })
+  }),
+
+  http.delete('/api/v1/admin/posts/:qid', ({ params }) => {
+    const qid = params.qid as string
+    const index = mockAdminPosts.findIndex((p) => p.qid === qid)
+    if (index === -1) {
+      return HttpResponse.json({ message: 'not found' }, { status: 404 })
+    }
+    mockAdminPosts.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.get('/api/v1/admin/delivery/channels', () => {

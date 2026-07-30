@@ -45,8 +45,7 @@ export function AdminUserDialog({ open, onOpenChange }: AdminUserDialogProps) {
 
   function validate(): boolean {
     const newErrors: Partial<UserFormState> = {}
-    if (!form.email) newErrors.email = t('users.emailRequired')
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       newErrors.email = t('users.emailInvalid')
     if (!form.username) newErrors.username = t('users.usernameRequired')
     if (!form.password) newErrors.password = t('users.passwordRequired')
@@ -91,7 +90,7 @@ export function AdminUserDialog({ open, onOpenChange }: AdminUserDialogProps) {
           <DialogTitle>{t('users.addUser')}</DialogTitle>
           <DialogDescription>{t('users.addUserDescription')}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div className="space-y-2">
             <Label htmlFor="email">{t('users.email')}</Label>
             <Input

@@ -98,4 +98,50 @@ describe('AdminPostsPage', () => {
       expect(screen.getByText('Username')).toBeInTheDocument()
     })
   })
+
+  it('shows delete confirmation dialog with post title when delete clicked', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<AdminPostsPage />, { wrapper: ThemeProvider })
+
+    await waitFor(() => {
+      expect(screen.getByText('First Post')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    await user.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Delete post "First Post"\?/i)
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByText('admin.posts.deleteConfirm')
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('posts.deleteConfirm')).not.toBeInTheDocument()
+  })
+
+  it('closes delete dialog on cancel', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<AdminPostsPage />, { wrapper: ThemeProvider })
+
+    await waitFor(() => {
+      expect(screen.getByText('First Post')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    await user.click(deleteButtons[0])
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /delete post/i })
+      ).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -106,6 +106,7 @@ export function AdminPostsPage() {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="delete"
                 onClick={() =>
                   setDeleteTarget({ qid: post.qid, title: post.title })
                 }

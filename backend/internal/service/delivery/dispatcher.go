@@ -52,6 +52,20 @@ type Sender interface {
 	Send(ctx context.Context, p *domainpost.Post, channel *delivery.Channel) error
 }
 
+// Metrics is the subset of observability instruments the dispatcher records.
+// A nil/no-op implementation makes metrics opt-in so tests are unchanged.
+type Metrics interface {
+	AddDeliveryPending(ctx context.Context, delta int64)
+	IncDeliveryDispatched(ctx context.Context)
+	IncDeliveryFailed(ctx context.Context)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) AddDeliveryPending(context.Context, int64) {}
+func (noopMetrics) IncDeliveryDispatched(context.Context)     {}
+func (noopMetrics) IncDeliveryFailed(context.Context)         {}
+
 // Dispatcher implements domainpost.DeliveryEnqueuer on top of the persistent
 // best-effort delivery queue: a PostgreSQL-backed attempt table,
 // drained by a ScanInterval-tick scheduler that claims due rows and dispatches
@@ -63,6 +77,7 @@ type Dispatcher struct {
 	postRepo    PostRepo
 	sender      Sender
 	cfg         config.DeliveryConfig
+	metrics     Metrics
 
 	pool   pond.Pool
 	ticker *time.Ticker
@@ -72,11 +87,24 @@ type Dispatcher struct {
 	now func() time.Time
 }
 
+// Option configures a Dispatcher.
+type Option func(*Dispatcher)
+
+// WithMetrics injects the delivery-metrics recorder. Without it the dispatcher
+// runs with a no-op recorder.
+func WithMetrics(m Metrics) Option {
+	return func(d *Dispatcher) {
+		if m != nil {
+			d.metrics = m
+		}
+	}
+}
+
 // NewDispatcher constructs a dispatcher over the given repos and sender. The
 // worker pool size and queue depth come from [delivery] config. It implements
 // domainpost.DeliveryEnqueuer: Enqueue is synchronous, best-effort, and never
 // returns an error. Start must be called to launch the scheduler.
-func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo PostRepo, sender Sender) *Dispatcher {
+func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo PostRepo, sender Sender, opts ...Option) *Dispatcher {
 	cfg := config.Get().Delivery
 	workers := cfg.Workers
 	if workers < 1 {
@@ -93,17 +121,22 @@ func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo Po
 		pond.WithNonBlocking(true),
 	)
 
-	return &Dispatcher{
+	d := &Dispatcher{
 		attemptRepo: attemptRepo,
 		channelRepo: channelRepo,
 		postRepo:    postRepo,
 		sender:      sender,
 		cfg:         cfg,
+		metrics:     noopMetrics{},
 		pool:        pool,
 		stop:        make(chan struct{}),
 		done:        make(chan struct{}),
 		now:         time.Now,
 	}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 // Enqueue matches a freshly-created post against the author's enabled delivery
@@ -150,7 +183,9 @@ func (d *Dispatcher) Enqueue(job domainpost.DeliveryJob) {
 
 	if err := d.attemptRepo.Create(ctx, attempts); err != nil {
 		log.Printf("delivery enqueue: create attempts user_id=%d post_qid=%s err=%v", job.UserID, job.PostQID, err)
+		return
 	}
+	d.metrics.AddDeliveryPending(ctx, int64(len(attempts)))
 }
 
 // Start launches the scheduler goroutine. It is safe to call once. The
@@ -205,6 +240,7 @@ func (d *Dispatcher) sweepExpiry(ctx context.Context) {
 				log.Printf("delivery sweep: archive expired attempt_id=%d err=%v", a.ID, err)
 			}
 		}
+		d.metrics.AddDeliveryPending(ctx, -int64(len(expired)))
 		if len(expired) < expireBatchSize {
 			return
 		}
@@ -252,6 +288,8 @@ func (d *Dispatcher) execute(ctx context.Context, a *delivery.Attempt) {
 	if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusDelivered, ""); err != nil {
 		log.Printf("delivery execute: archive delivered attempt_id=%d err=%v", a.ID, err)
 	}
+	d.metrics.AddDeliveryPending(ctx, -1)
+	d.metrics.IncDeliveryDispatched(ctx)
 }
 
 // handleSendError applies the backoff policy to a failed attempt: if the
@@ -266,6 +304,8 @@ func (d *Dispatcher) handleSendError(ctx context.Context, a *delivery.Attempt, s
 		if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusFailed, lastError); err != nil {
 			log.Printf("delivery execute: archive failed attempt_id=%d err=%v", a.ID, err)
 		}
+		d.metrics.AddDeliveryPending(ctx, -1)
+		d.metrics.IncDeliveryFailed(ctx)
 		return
 	}
 

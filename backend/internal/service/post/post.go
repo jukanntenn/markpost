@@ -26,6 +26,17 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+// Metrics is the subset of the observability instruments the post service
+// records. Implementations are typically *observability.Metrics; a nil value
+// (noopMetrics) makes metrics opt-in so existing callers and tests are unchanged.
+type Metrics interface {
+	IncPostsCreated(ctx context.Context)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) IncPostsCreated(context.Context) {}
+
 // Service provides post-related business logic.
 type Service struct {
 	postRepo  post.Repository
@@ -36,13 +47,27 @@ type Service struct {
 	cache     renderCache
 	group     singleflight.Group
 	purger    Purger
+	metrics   Metrics
+}
+
+// Option configures a Service.
+type Option func(*Service)
+
+// WithMetrics injects the business-metrics recorder. Without it the service
+// runs with a no-op recorder.
+func WithMetrics(m Metrics) Option {
+	return func(s *Service) {
+		if m != nil {
+			s.metrics = m
+		}
+	}
 }
 
 // NewService creates a new Service instance. The in-process render cache
 // (singleflight + ristretto) is built from the [render] config section; when
 // disabled the service behaves exactly as it did before caching.
-func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer) *Service {
-	return &Service{
+func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer, opts ...Option) *Service {
+	s := &Service{
 		postRepo:  postRepo,
 		md:        newGoldmark(),
 		sanitizer: newPostHTMLSanitizer(),
@@ -50,7 +75,12 @@ func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer) *Servi
 		delivery:  delivery,
 		cache:     newRenderCache(),
 		purger:    newPurger(),
+		metrics:   noopMetrics{},
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func newGoldmark() goldmark.Markdown {
@@ -139,6 +169,7 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 	if err != nil {
 		return "", service.Wrap(service.ErrInternal, "create post failed", err)
 	}
+	s.metrics.IncPostsCreated(ctx)
 
 	if s.delivery != nil {
 		s.delivery.Enqueue(post.DeliveryJob{

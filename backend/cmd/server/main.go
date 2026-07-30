@@ -277,6 +277,10 @@ func serve(configPath string) {
 	// §trace↔log 关联). Replaces the default text handler.
 	slog.SetDefault(slog.New(observability.NewTraceHandler(appLogger)))
 
+	// Business + runtime metrics (observability.md §指标清单). Resolved once;
+	// instruments are no-ops before Init, so this is safe in any boot order.
+	metrics := observability.NewMetrics()
+
 	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
 
@@ -330,13 +334,16 @@ func serve(configPath string) {
 	deliverySvc := deliverysvc.NewService(deliveryRepo, attemptRepo)
 
 	postDeliverySvc := deliverysvc.NewPostDeliveryService()
-	deliveryDispatcher := deliverysvc.NewDispatcher(attemptRepo, deliveryRepo, postRepo, postDeliverySvc)
+	deliveryDispatcher := deliverysvc.NewDispatcher(
+		attemptRepo, deliveryRepo, postRepo, postDeliverySvc,
+		deliverysvc.WithMetrics(&dispatcherMetrics{metrics}),
+	)
 	dispatcherCtx, dispatcherCancel := context.WithCancel(context.Background())
 	defer dispatcherCancel()
 	deliveryDispatcher.Start(dispatcherCtx)
 	defer deliveryDispatcher.Stop()
 
-	postSvc = postsvc.NewService(postRepo, deliveryDispatcher)
+	postSvc = postsvc.NewService(postRepo, deliveryDispatcher, postsvc.WithMetrics(&postMetrics{metrics}))
 
 	auditRepo := infra.NewAuditRepository(dbInstance.DB())
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, tokenRepo, auditRepo)
@@ -355,6 +362,7 @@ func serve(configPath string) {
 
 	// otelgin creates a trace span per HTTP request (method/path/status/latency).
 	r.Use(otelgin.Middleware("markpost"))
+	r.Use(middleware.ActiveRequests())
 
 	r.Use(ginI18n.Localize(ginI18n.WithBundle(&ginI18n.BundleCfg{
 		RootPath: "./locales",

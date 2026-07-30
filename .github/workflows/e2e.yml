@@ -46,4 +46,4 @@ jobs:
           curl -fsSL https://dl.dagger.io/dagger/install.sh | sh
           dagger version
       - name: Run E2E
-        run: dagger --module e2e call all --source .
+        run: dagger call -m e2e all --source .

@@ -1,117 +1,117 @@
 #!/usr/bin/env bash
 #
-# Runs the three vegeta load-test scenarios against a running markpost server.
+# k6 load-test runner for markpost.
 #
-# Scenarios (per performance-optimization.md P5 item 18):
-#   hot      - a small set of QIDs hit round-robin; after the first request each
-#              is a render-cache + CDN hit. Measures the warm serving path.
-#   cold     - unique QIDs streamed one per request; each is a cache miss that
-#              forces a full DB read + render. Requires seed COUNT >= total
-#              requests (RATE x DURATION) for genuine all-miss behavior; below
-#              that, QIDs repeat and later hits warm the cache.
-#   all-cold - like cold but draws QIDs in a shuffled order from the full pool,
-#              maximizing cache-miss spread when COUNT is large.
+# Scenarios (see scripts/loadtest/k6/*.js and README.md for full design):
+#   read-cold-miss      origin renders each QID once (singleflight collapse)
+#   read-revalidate-304 CDN revalidation: GET + If-None-Match → 304
+#   read-warm-hit       hot QIDs, render-cache hits
+#   write               POST /:post_key + async delivery fan-out
+#   soak                mixed read+write held 60m (memory/conn/goroutine steady-state)
 #
-# Prerequisites:
-#   - vegeta on PATH (go install github.com/tsenart/vegeta/v12@v12.13.0)
-#   - jq on PATH
-#   - server running and reachable at $HOST:$PORT
-#   - scripts/loadtest/seed.sh already run (out/hot.txt + out/qids.json exist)
+# The k6 binary is fetched on first run into scripts/loadtest/k6-bin/ (pinned
+# version below); it is NOT committed. Requires jq + curl.
 #
 # Usage:
-#   bash scripts/loadtest/run.sh                 # all scenarios, defaults
-#   SCENARIOS="hot cold" bash scripts/loadtest/run.sh
-#   HOST=localhost PORT=7330 RATE=200 DURATION=30s bash scripts/loadtest/run.sh
+#   bash scripts/loadtest/run.sh                       # all short scenarios
+#   SCENARIO=read-revalidate-304 RATE=50 bash scripts/loadtest/run.sh
+#   SCENARIO=soak bash scripts/loadtest/run.sh
+#   SCENARIO=write RATE=10 bash scripts/loadtest/run.sh
+#
+# Env vars:
+#   SCENARIO  run a single scenario (default: all except soak)
+#   SCHEME/HOST/PORT  target (default https://localhost:2053, the e2e compose)
+#   RATE      req/s for read/write scenarios (per-scenario defaults in the JS)
+#   DURATION  scenario duration (default per JS)
+#   HOLD/RAMP soak hold/ramp duration (default 60m/2m)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-OUT_DIR="$SCRIPT_DIR/out"
+K6_DIR="$SCRIPT_DIR/k6"
+BIN_DIR="$SCRIPT_DIR/k6-bin"
+OUT_DIR="$SCRIPT_DIR/out/results"
 
-HOST="${HOST:-localhost}"
-PORT="${PORT:-7330}"
-DURATION="${DURATION:-30s}"
-# Per-scenario rates; all-cold uses the cold rate unless overridden.
-# HOT_RATE defaults to 100 to match the L1 read limiter (100/s, burst 200);
-# raising it above the limiter yields 429s. To test higher origin load, raise
-# MARKPOST_RATELIMIT__READ__PER_SECOND on the server in lockstep.
-HOT_RATE="${HOT_RATE:-100}"
-COLD_RATE="${COLD_RATE:-100}"
-SCENARIOS="${SCENARIOS:-hot cold all-cold}"
+K6_VERSION="v2.1.0"
 
-BUCKETS='[0,5ms,10ms,25ms,50ms,100ms,250ms,500ms,1s,2s]'
+# Detect platform (linux/amd64 or linux/arm64); k6 ships tarballs for both.
+detect_platform() {
+    local arch
+    arch="$(uname -m)"
+    case "$arch" in
+        x86_64|amd64) echo "linux-amd64" ;;
+        aarch64|arm64) echo "linux-arm64" ;;
+        *) echo "linux-amd64" ;;
+    esac
+}
+K6_PLATFORM="$(detect_platform)"
 
 require() {
     command -v "$1" >/dev/null 2>&1 || { echo "error: $1 not found on PATH" >&2; exit 1; }
 }
-require vegeta
+require curl
 require jq
 
-if [[ ! -f "$OUT_DIR/hot.txt" || ! -f "$OUT_DIR/qids.json" ]]; then
-    echo "error: target lists not found. Run bash scripts/loadtest/seed.sh first." >&2
-    exit 1
+# ── Ensure k6 binary (curl release tarball, pinned version) ────────────────
+ensure_k6() {
+    if [[ -x "$BIN_DIR/k6" ]]; then
+        return
+    fi
+    echo "==> Fetching k6 ${K6_VERSION} (${K6_PLATFORM})"
+    mkdir -p "$BIN_DIR"
+    local tmpdir
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    curl -sSL "https://github.com/grafana/k6/releases/download/${K6_VERSION}/k6-${K6_VERSION}-${K6_PLATFORM}.tar.gz" \
+        | tar xz -C "$tmpdir"
+    mv "$tmpdir/k6-${K6_VERSION}-${K6_PLATFORM}/k6" "$BIN_DIR/k6"
+    chmod +x "$BIN_DIR/k6"
+}
+
+# ── Scenario runner ────────────────────────────────────────────────────────
+# Maps the SCENARIO alias to a JS file + env exports.
+run_scenario() {
+    local name="$1"
+    local script
+    local k6_env=()
+    case "$name" in
+        read-cold-miss)
+            script="$K6_DIR/read.js"
+            k6_env+=(SCENARIO=cold-miss);;
+        read-revalidate-304)
+            script="$K6_DIR/read.js"
+            k6_env+=(SCENARIO=revalidate-304);;
+        read-warm-hit)
+            script="$K6_DIR/read.js"
+            k6_env+=(SCENARIO=warm-hit);;
+        write)
+            script="$K6_DIR/write.js";;
+        soak)
+            script="$K6_DIR/soak.js";;
+        *)
+            echo "error: unknown scenario '$name'" >&2
+            echo "valid: read-cold-miss read-revalidate-304 read-warm-hit write soak" >&2
+            exit 1;;
+    esac
+
+    echo "==> [${name}] $(basename "$script")"
+    mkdir -p "$OUT_DIR"
+    env "${k6_env[@]}" "$BIN_DIR/k6" run "$script" \
+        --out "json=$OUT_DIR/${name}.json" \
+        --summary-export="$OUT_DIR/${name}-summary.json"
+    echo "    results: $OUT_DIR/${name}.json"
+}
+
+ensure_k6
+
+if [[ -n "${SCENARIO:-}" ]]; then
+    run_scenario "$SCENARIO"
+else
+    for s in read-cold-miss read-revalidate-304 read-warm-hit write; do
+        run_scenario "$s"
+    done
+    echo "==> soak omitted by default (long-running). Run explicitly:"
+    echo "    SCENARIO=soak bash scripts/loadtest/run.sh"
 fi
 
-base_url="http://$HOST:$PORT"
-mkdir -p "$OUT_DIR/results"
-
-run_hot() {
-    echo "==> [hot] $HOT_RATE/s for $DURATION (cache hits)"
-    local targets="$OUT_DIR/results/hot_targets.txt"
-    : > "$targets"
-    while read -r qid; do
-        echo "GET $base_url/$qid" >> "$targets"
-    done < "$OUT_DIR/hot.txt"
-
-    vegeta attack -rate="$HOT_RATE/s" -duration="$DURATION" \
-        -targets="$targets" -name=hot \
-        | tee "$OUT_DIR/results/hot.bin" \
-        | vegeta report
-    vegeta report -type=json -buckets="$BUCKETS" \
-        "$OUT_DIR/results/hot.bin" > "$OUT_DIR/results/hot.json"
-    echo "    report: $OUT_DIR/results/hot.json"
-}
-
-# emit_targets streams vegeta JSON-format targets from a QID array. The first
-# argument selects jq's iteration order so cold walks the pool sequentially and
-# all-cold reverses it for a different access pattern. The stream repeats the
-# pool indefinitely so vegeta's -lazy reader never hits EOF before -duration
-# elapses. When the pool is exhausted and restarts, repeated QIDs hit the render
-# cache; a large COUNT (>= rate x duration) keeps the first pass fully cold.
-emit_targets() {
-    local order="$1"
-    local arr
-    arr=$(jq "$order" "$OUT_DIR/qids.json")
-    jq -ncr --arg url "$base_url" --argjson arr "$arr" \
-        'def emit: ($arr[] | {method:"GET", url:($url + "/" + .)}), emit; emit'
-}
-
-run_cold() {
-    local name="$1" order="$2" rate="$3"
-    echo "==> [$name] $rate/s for $DURATION (cache misses)"
-    # emit_targets produces an unbounded stream; when vegeta's -duration
-    # elapses it closes stdin, so the jq writer receives SIGPIPE. That is
-    # expected — disable pipefail for this segment so it does not abort the
-    # script.
-    set +o pipefail
-    emit_targets "$order" \
-        | vegeta attack -rate="$rate/s" -duration="$DURATION" \
-            -format=json -lazy -name="$name" \
-        | tee "$OUT_DIR/results/$name.bin" \
-        | vegeta report
-    set -o pipefail
-    vegeta report -type=json -buckets="$BUCKETS" \
-        "$OUT_DIR/results/$name.bin" > "$OUT_DIR/results/$name.json"
-    echo "    report: $OUT_DIR/results/$name.json"
-}
-
-for scenario in $SCENARIOS; do
-    case "$scenario" in
-        hot)      run_hot ;;
-        cold)     run_cold cold    "."      "$COLD_RATE" ;;
-        all-cold) run_cold all-cold "reverse" "$COLD_RATE" ;;
-        *) echo "unknown scenario: $scenario (skipping)" >&2 ;;
-    esac
-done
-
-echo "==> Done. Plots: vegeta plot $OUT_DIR/results/*.bin > out/results/plot.html"
+echo "==> Done."

@@ -127,7 +127,10 @@ func generateQID(rng *rand.Rand) string {
 	for i := range b {
 		b[i] = qidAlphabet[rng.Intn(len(qidAlphabet))]
 	}
-	return string(b)
+	// Match the production QID format ("p-" + nanoid) so seeded posts route
+	// through the same Caddy handle /p-* → reverse_proxy as real posts; the
+	// read-path Caddyfile only proxies QID-shaped paths to the Go backend.
+	return "p-" + string(b)
 }
 
 func generateTitle(rng *rand.Rand, minLen, maxLen int) string {

@@ -1,172 +1,167 @@
-# Load Testing (vegeta)
+# Load Testing (k6)
 
-End-to-end HTTP load tests for markpost's read path, per
-`specs/backend/performance-optimization.md` P5 item 18. Three scenarios drive
-the same `GET /:qid` endpoint under different cache states.
+End-to-end HTTP load tests for markpost. The design targets the real
+production architecture from
+[`specs/backend/performance-optimization.md`](../../specs/backend/performance-optimization.md):
+the origin sits behind a **Cloudflare CDN**, so it almost never sees a plain
+repeat GET (the edge absorbs those). What reaches the origin is (a) **cold
+misses** — the first render of a QID for an edge node — and (b) **CDN
+revalidations** — a conditional GET carrying the last ETag once `s-maxage`
+(1h) elapses, to which the origin answers `304` (bodyless) from the render
+cache.
+
+These scenarios reproduce that request shape **without a real CDN** by toggling
+the `If-None-Match` header, so the measured latency reflects what the 2-core /
+3 Mbps origin must actually sustain.
 
 ## Prerequisites
 
-1. **vegeta v12.13.0**
+1. **A running server.** Use the **e2e compose** — it is the closest to
+   production: the single-container image (Caddy + Go via s6), self-signed
+   HTTPS on `https://localhost:2053`, and the mock services the write/delivery
+   paths need (an OAuth mock and a Feishu webhook mock). It also raises the
+   rate limits so write load tests aren't L2-throttled.
 
    ```bash
-   go install github.com/tsenart/vegeta/v12@v12.13.0
+   docker compose -f e2e/docker-compose.yml up -d --build
+   curl -k https://localhost:2053/api/v1/health
    ```
 
-   Verify: `vegeta -version`.
+   The k6 scripts target `https://localhost:2053` with
+   `insecureSkipTLSVerify` by default. Override with `SCHEME`/`HOST`/`PORT`
+   (e.g. to point at a plain-HTTP dev server: `SCHEME=http PORT=7330`).
 
-2. **jq** — for streaming unique QID targets in the cold scenarios.
+2. **jq + curl** — `run.sh` fetches the pinned k6 binary on first run.
 
-3. **A running server.** For the dev environment:
-
-   ```bash
-   python3 devops/dev.py start
-   ```
-
-   The server must be reachable at `localhost:7330` (override with `HOST`/`PORT`).
+3. **Seed data** — read scenarios need `out/qids.json`, write/soak need
+   `out/write_keys.txt` (see Seeding below). The seed CLIs run against the e2e
+   app container: `SERVICE=app COMPOSE_FILE=e2e/docker-compose.yml`.
 
 ## Quick start
 
 ```bash
-# 1. Seed 1000 posts (32 KB bodies) and extract vegeta target lists.
-bash scripts/loadtest/seed.sh
+# 0. Start the e2e stack (production-shaped, self-signed HTTPS, mocks)
+docker compose -f e2e/docker-compose.yml up -d --build
 
-# 2. Run all three scenarios at the default rates.
+# 1. Seed posts + write targets (runs the seed CLIs inside the e2e app container)
+SERVICE=app COMPOSE_FILE=e2e/docker-compose.yml bash scripts/loadtest/seed.sh
+SERVICE=app COMPOSE_FILE=e2e/docker-compose.yml bash scripts/loadtest/seed_write.sh
+
+# 2. Run all short scenarios (cold-miss, revalidate-304, warm-hit, write)
 bash scripts/loadtest/run.sh
+
+# 3. Soak (1h) — run explicitly
+SCENARIO=soak bash scripts/loadtest/run.sh
 ```
 
-Results land in `scripts/loadtest/out/results/` (`*.bin` raw, `*.json` report).
-
-## Seeding
-
-`seed.sh` generates fake posts and imports them:
-
-| Step | Where | What |
-|------|-------|------|
-| Generate | host | `go run ./tools/` → `backend/fake.json` |
-| Import | server container | `docker compose exec backend go run ./cmd/server import-fake-posts --file /app/fake.json` |
-| Extract | host | `jq` → `out/hot.txt` (few QIDs) + `out/qids.json` (all QIDs) |
-
-The import runs inside the container so it can reach Postgres on the container
-network without exposing the DB port. `backend/` is bind-mounted at `/app`, so
-`fake.json` is visible on both sides.
-
-Tunable env vars:
-
-| Var | Default | Notes |
-|-----|---------|-------|
-| `COUNT` | `1000` | Number of posts. For a fully all-cold run, set this ≥ `RATE × DURATION` so no QID repeats. |
-| `BODY_BYTES` | `32768` | Target body size; matches the spec's 32 KB average. |
-| `SEED` | `1` | Fixed RNG seed → reproducible QIDs and bodies. |
-| `HOT_COUNT` | `10` | How many QIDs go into `hot.txt`. |
+The k6 binary is fetched into `scripts/loadtest/k6-bin/` (gitignored) on first
+run. Results land in `scripts/loadtest/out/results/` (`*.json` raw,
+`*-summary.json` exported).
 
 ## Scenarios
 
-All three hit `GET http://$HOST:$PORT/:qid`. They differ only in which QIDs they
-send and whether the render cache can absorb them.
+| Scenario | Simulates | Rate | Default duration |
+|----------|-----------|------|------------------|
+| `read-cold-miss` | A QID seen by an edge for the first time — full DB read + render, singleflight collapses concurrent same-QID misses. | 20 req/s | 60s |
+| `read-revalidate-304` | CDN revalidation after `s-maxage`: GET warms the cache, then `If-None-Match` triggers a bodyless `304`. | 50 req/s | 60s |
+| `read-warm-hit` | A viral post: a small fixed QID set hit round-robin; all but the first per QID are render-cache hits. | 100 req/s | 60s |
+| `write` | `POST /:post_key` (async delivery `Enqueue`) + L2 rate-limit distribution across seeded users. | 10 req/s | 60s |
+| `soak` | Mixed read (15/s) + write (2/s) held 60m to surface memory/connection/goroutine leaks. | 15 + 2 req/s | ramp 2m + hold 60m + ramp 2m |
 
-| Scenario | Rate | Targets | Cache behavior |
-|----------|------|---------|----------------|
-| **hot** | 100/s | 10 QIDs round-robin | First request per QID misses; the rest are render-cache + (if present) CDN hits. Measures the warm path. |
-| **cold** | 100/s | QIDs streamed in order, one per request | Each QID is a miss on first touch. If `COUNT < RATE × DURATION`, later wraps become hits. |
-| **all-cold** | 100/s | Same pool, reversed order | Same as cold but with a different access pattern to spread misses. Set `COUNT` large for genuine zero-repeat. |
-
-The hot rate defaults to 100/s to match the L1 read limiter (`100/s`, burst 200);
-exceeding it triggers 429s. To push origin throughput harder, raise
-`MARKPOST_RATELIMIT__READ__PER_SECOND` on the server in lockstep with `HOT_RATE`.
-
-Defaults: `DURATION=30s`. Override per-scenario rate with `HOT_RATE` / `COLD_RATE`.
-Run a subset with `SCENARIOS="hot cold" bash scripts/loadtest/run.sh`.
-
-### Reading the report
-
-vegeta prints a text table to stdout and writes a JSON report to
-`out/results/<scenario>.json`. Key columns:
-
-- **Latencies (p50/p90/p95/p99)** — tail latency under load. Compare hot vs cold
-  to see the render-cache's effect (hot p99 should be far lower).
-- **Success** — fraction of responses with status in `[200,400)`. A 304 (revalidation
-  hit) counts as success; a 404/500 counts as failure. If cold shows failures, the
-  QID pool may be exhausted (raise `COUNT`).
-- **Bytes In/Out** — per-request and total. Confirms the gzip/zstd + externalized-CSS
-  savings from P0 items 1–3.
-
-### Plotting
+Rates are calibrated to the origin's ~25 resp/s physical envelope
+(`performance-optimization.md`: 375 KB/s ÷ ~15 KB/page ≈ 25 origin responses/s).
+They model the **回源** (origin-facing) load after the CDN absorbs the bulk of
+user traffic, not the total user concurrency (which the edge handles).
 
 ```bash
-vegeta plot scripts/loadtest/out/results/hot.bin scripts/loadtest/out/results/cold.bin \
-    > scripts/loadtest/out/results/plot.html
+SCENARIO=read-revalidate-304 RATE=50 bash scripts/loadtest/run.sh
+SCENARIO=write RATE=10 DURATION=60s bash scripts/loadtest/run.sh
+SCENARIO=soak HOLD=60m READ_RATE=15 WRITE_RATE=2 bash scripts/loadtest/run.sh
 ```
 
-## Micro-benchmarks (P5 item 17)
+## What each scenario measures
 
-The Go-level render benchmarks live in
-`backend/internal/service/post/render_bench_test.go` and run independently of a
-server:
+- **Latency** p50/p95/p99 (`http_req_duration`).
+- **Origin work split** — custom counters `origin_revalidate_304` vs
+  `origin_cold_miss_200` separate the cheap revalidation path from expensive
+  cold renders (the decisive distinction behind a CDN).
+- **Bandwidth** — `data_received` vs the 3 Mbps origin envelope; the summary
+  reports average Mbps and utilization % so a scenario that would saturate the
+  link is obvious.
+- **Failure rate** (`http_req_failed`); thresholds fail the run if breached.
+
+### Write: verifying the delivery fan-out
+
+The write scenario's `POST /:post_key` triggers an **asynchronous** delivery
+fan-out: `CreatePost` enqueues a `DeliveryJob`, and the dispatcher claims the
+pending attempt on its ticker and sends it to the author's Feishu webhook. The
+HTTP response returns before the send lands, so verifying delivery takes a few
+extra steps (the e2e stack's `webhook-mock` is the sink):
+
+1. Seed users **with channels pointed at the mock** and a keyword that matches
+   the generated title (`Load`):
+   ```bash
+   WEBHOOK_URL="http://webhook-mock:3002/webhook" USERS=100 CHANNELS=1 \
+     CHANNEL_KEYWORDS="Load" SERVICE=app COMPOSE_FILE=e2e/docker-compose.yml \
+     bash scripts/loadtest/seed_write.sh
+   ```
+2. Run the write scenario.
+3. Check the mock received one webhook per created post:
+   ```bash
+   docker exec e2e-app-1 wget -qO- http://webhook-mock:3002/webhooks | jq length
+   ```
+4. In `metrics-*.jsonl`, `markpost.delivery.dispatched_total` should track the
+   created count and `markpost.delivery.pending` should stay near zero (the
+   dispatcher drains faster than writes arrive).
+
+Note: successful attempts are archived to `delivery_history` and removed from
+`delivery_attempts`, so `delivery_attempts` being empty after a run is **normal**
+(it only holds in-flight / retrying rows).
+
+### Soak: what to check after the run
+
+The soak summary prints the k6-side numbers, but the slow-failure signals live
+in the backend's `metrics-*.jsonl` (ensure dev/prod mounts it — see
+`devops/dev.py` / the compose files):
+
+- `process.runtime.go.mem.heap_alloc` — should plateau near the render-cache
+  `MaxCost` (128 MiB), not climb monotonically (ristretto TinyLFU steady state).
+- `process.runtime.go.goroutines` — should be stable (delivery worker pool +
+  http handlers), not grow without bound.
+- `markpost.delivery.pending` — should track the write rate, not accumulate.
+
+A 60-minute hold deliberately exceeds both the Postgres `ConnMaxLifetime`
+(30m) and the CDN `s-maxage` (1h) so a full connection-recycle and a cache
+revalidation cycle occur during the test.
+
+## Seeding
+
+`seed.sh` generates fake posts and imports them via the `import-fake-posts` CLI
+(production user-repo path, no DB port exposure):
+
+| Var | Default | Notes |
+|-----|---------|-------|
+| `COUNT` | `1000` | Posts. For genuine all-cold, set ≥ `RATE × DURATION`. |
+| `BODY_BYTES` | `32768` | Body size; matches the spec's 32 KB average. |
+| `SEED` | `1` | Fixed RNG seed → reproducible QIDs/bodies. |
+| `HOT_COUNT` | `10` | QIDs reserved for the warm-hit pool. |
+
+`seed_write.sh` seeds users (with `mpk-` post keys) and optional delivery
+channels, capturing keys to `out/write_keys.txt`. The L2 limit is 10/min/user;
+at `RATE=10 × 60s = 600` requests you need ≥100 users (`USERS=100`).
+
+```bash
+bash scripts/loadtest/seed.sh
+USERS=100 CHANNELS=3 bash scripts/loadtest/seed_write.sh
+```
+
+## Micro-benchmarks
+
+Go-level render/dispatch benchmarks run independently of a server and pinpoint
+which stage dominates (goldmark vs bluemonday vs minify vs delivery filter):
 
 ```bash
 cd backend
 go test -bench=. -benchmem -run=^$ ./internal/service/post/
+go test -bench=. -benchmem -run=^$ ./internal/service/delivery/filter/
 ```
-
-These isolate the render pipeline (goldmark + bluemonday + minify), the cache-hit
-path, singleflight collapse, and the ETag/minify costs — the components whose
-end-to-end effect the vegeta scenarios above measure over HTTP.
-
-## Write-path load testing (POST /:post_key)
-
-The write path creates a post via `POST /:post_key` (public, no JWT). It is
-governed by the **L2 rate limiter** (10/min, burst 20, plus 1000/day per user),
-keyed on `user_id`. A single post_key can sustain only ~10 requests/minute, so
-write load tests seed many users and round-robin their keys.
-
-### L2 rate-limit constraint
-
-The default L2 limit is **10/min per user**. At 50/s × 10s = 500 requests, you
-need ≥ 84 users (500 ÷ 6) for every user to stay under 10/min. Two options:
-
-- **Scale users** (default): seed enough users so each gets < 10 requests/min.
-  `seed_write.sh` warns if the pool is too small.
-- **Raise the limit**: set `MARKPOST_RATELIMIT__PUBLIC_WRITE__PER_SECOND` to the
-  target rate in `devops/docker-compose.yml` and restart (`python3 devops/dev.py
-  stop && python3 devops/dev.py start`). This tests raw server throughput
-  without the production throttle.
-
-### Seeding write targets
-
-```bash
-# 100 users, no delivery channels (plain scenario)
-bash scripts/loadtest/seed_write.sh
-
-# 200 users, 3 Feishu delivery channels each (delivery scenario)
-USERS=200 CHANNELS=3 bash scripts/loadtest/seed_write.sh
-```
-
-`seed_write.sh` runs the `seed-users` CLI inside the container (creates users
-via the production user-repo path with unique `mpk-` keys), captures the keys to
-`out/write_keys.txt`, then generates `out/write_targets.jsonl` — vegeta JSON
-targets whose post bodies follow a **normal distribution** (mean 32 KiB, σ 8 KiB,
-clamped to [1 KiB, 32 KiB]) matching the spec's post-size assumption.
-
-### Scenarios
-
-| Scenario | What it measures | How to run |
-|----------|-----------------|------------|
-| **plain** | Baseline write throughput: PostKey DB lookup + post insert. Users have no delivery channels. | `SCENARIO=plain bash scripts/loadtest/run_write.sh` |
-| **delivery** | Write with synchronous delivery fan-out: channel query + keyword filter compile/match + attempt insert (inline in the create request). The latency delta vs `plain` is the delivery cost. | `SCENARIO=delivery bash scripts/loadtest/run_write.sh` (requires `CHANNELS>0` seed) |
-
-Both use the same `write_targets.jsonl` file; the difference is whether the
-seeded users have delivery channels. The webhook HTTP send itself is asynchronous
-(scheduler + pond pool) and does **not** block the write response.
-
-Defaults: `RATE=50`, `DURATION=10s`. Override with env vars:
-`RATE=100 DURATION=30s SCENARIO=plain bash scripts/loadtest/run_write.sh`.
-
-### Reading the write-path report
-
-Compare `plain` vs `delivery`:
-- **p50/p99 latency** — `delivery` should be higher; the delta is the inline
-  fan-out cost (channel query + filter + attempt insert).
-- **Success ratio** — 100% means no 429s (user pool large enough). 429s indicate
-  the L2 limit was hit; seed more users or raise the limit.
-- **Status codes** — `201` = created, `400` = body validation (should not appear
-  if targets are ≤ 32 KiB), `429` = rate-limited, `403` = invalid post_key.

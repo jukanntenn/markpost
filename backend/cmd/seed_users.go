@@ -36,6 +36,15 @@ func RunSeedUsers(configPath string, count int, prefix, password string, channel
 	channelRepo := infra.NewDeliveryChannelRepository(dbInstance.DB())
 	ctx := context.Background()
 
+	// The seeded channels' webhook target is overridable so the e2e/load stack
+	// can point them at its webhook-mock (http://webhook-mock:3002) instead of
+	// the dev default no-op sink. Without this the dispatcher's sends fail and
+	// the delivery metrics never advance.
+	webhookURL := os.Getenv("MP_SEED_WEBHOOK_URL")
+	if webhookURL == "" {
+		webhookURL = "http://localhost:9999/no-op"
+	}
+
 	keys := make([]string, 0, count)
 	for i := 1; i <= count; i++ {
 		username := fmt.Sprintf("%s_%d", prefix, i)
@@ -54,7 +63,7 @@ func RunSeedUsers(configPath string, count int, prefix, password string, channel
 				Name:    fmt.Sprintf("%s-channel-%d", username, c),
 				Enabled: true,
 				Configuration: delivery.ChannelConfiguration{
-					"webhook_url":   "http://localhost:9999/no-op",
+					"webhook_url":   webhookURL,
 					"card_link_url": "",
 				},
 				Keywords: keywords,

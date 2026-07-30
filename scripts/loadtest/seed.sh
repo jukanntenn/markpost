@@ -47,11 +47,21 @@ go run ./tools/ \
     -output="$FAKE_JSON"
 
 echo "==> Importing fake.json into the database (inside $SERVICE container)"
-# fake.json lives under backend/ which maps to /app in the container.
-docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" \
-    go run ./cmd/server import-fake-posts --file /app/fake.json
+# The import runs inside the target container so it can reach Postgres on the
+# container network. Two modes: the dev image (air, Go toolchain present, with
+# backend/ bind-mounted at /app) runs `go run`; the production-shaped image
+# (no Go, no bind mount — e.g. the e2e/load stack) uses the compiled binary and
+# a copied-in file. Detect by whether `go` exists in the container.
+if docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" which go >/dev/null 2>&1; then
+    docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" \
+        go run ./cmd/server import-fake-posts --file /app/fake.json
+else
+    docker compose -f "$COMPOSE_FILE" cp "$FAKE_JSON" "$SERVICE:/tmp/fake.json" >/dev/null
+    docker compose -f "$COMPOSE_FILE" exec -T "$SERVICE" \
+        markpost --config /app/config.toml import-fake-posts --file /tmp/fake.json
+fi
 
-echo "==> Extracting vegeta target lists"
+echo "==> Extracting target lists"
 mkdir -p "$OUT_DIR"
 # hot.txt: a small set of QIDs (round-robined by vegeta) for the hot-cache
 # scenario. Each line is one QID; the run.sh wraps it as an http-format target.

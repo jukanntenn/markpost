@@ -316,7 +316,7 @@ func TestAdminCreateUser_Success(t *testing.T) {
 	}
 }
 
-func TestAdminCreateUser_InvalidBody(t *testing.T) {
+func TestAdminCreateUser_SuccessWithoutEmail(t *testing.T) {
 	svc, _, _ := setupAdminHandlerWithMutators(t)
 
 	router := newTestEngine()
@@ -325,16 +325,35 @@ func TestAdminCreateUser_InvalidBody(t *testing.T) {
 		c.Next()
 	}, AdminCreateUser(svc))
 
-	t.Run("missing email", func(t *testing.T) {
-		body := `{"username":"user","password":"password123"}`
-		req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-		if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
-			t.Errorf("expected 422 or 400, got %d", w.Code)
-		}
-	})
+	// 不带 email 字段
+	body := `{"username":"noemail","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/admin/users", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected status %d, got %d, body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var resp AdminUserItem
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Email != "" {
+		t.Errorf("email = %q, want empty", resp.Email)
+	}
+	if resp.Username != "noemail" {
+		t.Errorf("username = %q, want %q", resp.Username, "noemail")
+	}
+}
+
+func TestAdminCreateUser_InvalidBody(t *testing.T) {
+	svc, _, _ := setupAdminHandlerWithMutators(t)
+
+	router := newTestEngine()
+	router.POST("/admin/users", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Next()
+	}, AdminCreateUser(svc))
 
 	t.Run("short password", func(t *testing.T) {
 		body := `{"email":"test@example.com","username":"user","password":"ab"}`

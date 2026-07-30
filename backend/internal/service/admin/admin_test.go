@@ -218,6 +218,27 @@ func TestCreateUser(t *testing.T) {
 			t.Fatal("expected error for duplicate email")
 		}
 	})
+
+	t.Run("creates user without email", func(t *testing.T) {
+		u, err := svc.CreateUser(ctx, "", "svcnoemail", "password123")
+		if err != nil {
+			t.Fatalf("CreateUser without email: %v", err)
+		}
+		if u.Email != "" {
+			t.Errorf("email = %q, want empty", u.Email)
+		}
+	})
+
+	t.Run("creates two users without email", func(t *testing.T) {
+		_, err := svc.CreateUser(ctx, "", "svcempty1", "password123")
+		if err != nil {
+			t.Fatalf("first empty-email CreateUser: %v", err)
+		}
+		_, err = svc.CreateUser(ctx, "", "svcempty2", "password123")
+		if err != nil {
+			t.Fatalf("second empty-email CreateUser should succeed, got: %v", err)
+		}
+	})
 }
 
 func TestSetUserRole(t *testing.T) {

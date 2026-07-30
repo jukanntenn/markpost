@@ -25,6 +25,9 @@ func NewUserRepository(db *gorm.DB, postKeyLength int) user.Repository {
 }
 
 func (r *UserRepository) ensureEmailUnique(ctx context.Context, email string) error {
+	if email == "" {
+		return nil
+	}
 	exists, err := r.existsByEmail(ctx, email)
 	if err != nil {
 		return err

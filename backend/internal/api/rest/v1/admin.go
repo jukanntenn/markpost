@@ -152,7 +152,7 @@ func AdminListAuditLogs(adminSvc AdminService) gin.HandlerFunc {
 
 // AdminCreateUserRequest represents the request body for creating a user (admin).
 type AdminCreateUserRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email" binding:"omitempty,email"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 }

@@ -58,6 +58,30 @@ func TestUserRepository_Create(t *testing.T) {
 			t.Errorf("expected ErrUsernameTaken, got: %v", err)
 		}
 	})
+
+	t.Run("creates user with empty email", func(t *testing.T) {
+		u, err := repo.Create(ctx, "", "noemail", "password123")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if u.Email != "" {
+			t.Errorf("email = %q, want empty", u.Email)
+		}
+		if u.Username != "noemail" {
+			t.Errorf("username = %q, want %q", u.Username, "noemail")
+		}
+	})
+
+	t.Run("allows multiple users with empty email", func(t *testing.T) {
+		_, err := repo.Create(ctx, "", "emptymail1", "password123")
+		if err != nil {
+			t.Fatalf("first empty-email create: %v", err)
+		}
+		_, err = repo.Create(ctx, "", "emptymail2", "password123")
+		if err != nil {
+			t.Fatalf("second empty-email create should succeed, got: %v", err)
+		}
+	})
 }
 
 func TestUserRepository_GetByID(t *testing.T) {

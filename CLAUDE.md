@@ -25,7 +25,7 @@ All commands assume the working directory noted in each section. Prefer running 
 
 **E2E** (`e2e/`, separate workspace):
 - `pnpm test` — Playwright (chromium only)
-- `dagger -c e2e call all --source ..` — full e2e via dagger (from repo root)
+- `dagger --module e2e call all --source ..` — full e2e via dagger (from repo root)
 
 **DevOps** (repo root):
 - `python3 devops/dev.py start` — start backend + frontend + postgres in Docker Compose
@@ -94,7 +94,7 @@ Schema changes go through `golang-migrate` with versioned SQL files in `backend/
 
 - **Backend**: `go test ./...` in `backend/`. Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable.
 - **Frontend**: `pnpm test:run` — Vitest with jsdom + v8 coverage.
-- **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger -c e2e call all --source ..`.
+- **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger --module e2e call all --source ..`.
 
 ## Boundaries
 

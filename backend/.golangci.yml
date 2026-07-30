@@ -60,7 +60,7 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: markpost
+      local-prefixes: ["markpost"]
 
 issues:
   max-issues-per-linter: 0

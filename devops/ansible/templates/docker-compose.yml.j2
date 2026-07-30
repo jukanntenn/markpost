@@ -5,7 +5,8 @@
 # container (Caddy + Go backend via s6-overlay) plus a sibling postgres reached
 # over a shared Unix-socket volume. Per-environment differences are confined to
 # the published host port and whether the certs directory is bind-mounted
-# (production only, for the Cloudflare Origin CA cert).
+# (production only, for the Cloudflare Origin CA cert). The app data directory
+# (observability JSONL) is bind-mounted in every environment.
 #
 # Postgres is never published on the host — it is reachable only from the app
 # container over the shared postgres-socket volume.
@@ -18,8 +19,12 @@ services:
       - "{{ host_port }}:{{ caddy_port }}"
     volumes:
       - {{ config_file }}:/app/config.toml:ro
-{% if env == 'production' %}
+      # /app/data holds observability JSONL (app/traces/metrics-*.jsonl via
+      # timberjack, log_dir set unconditionally in config.toml.j2). Mounted in
+      # every environment so logs/traces/metrics reach the host, not just
+      # production; otherwise they are trapped in the container writable layer.
       - {{ app_path }}/data:/app/data
+{% if env == 'production' %}
       - {{ app_path }}/certs:/app/certs:ro
 {% endif %}
       - {{ caddyfile }}:/etc/caddy/Caddyfile:ro

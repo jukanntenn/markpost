@@ -15,7 +15,9 @@ services:
       - "2053:2053"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - markpost-logs:/app/data/logs
+      # Bind-mount the observability JSONL dir (app/traces/metrics-*.jsonl) so
+      # logs/traces/metrics are visible on the host under ./data/logs.
+      - ./data/logs:/app/data/logs
       - postgres-socket:/var/run/postgresql
     environment:
       # Admin credentials (only effective on first boot)
@@ -26,6 +28,8 @@ services:
       - MARKPOST_JWT__REFRESH_SIGNING_KEY=${MARKPOST_JWT__REFRESH_SIGNING_KEY:-change-me}
       # Public URL (optional, e.g. https://markpost.example.com)
       - MARKPOST_SERVER__PUBLIC_URL=${MARKPOST_SERVER__PUBLIC_URL:-}
+      # Observability: write app/traces/metrics JSONL to the bind-mounted dir.
+      - MARKPOST_OBSERVABILITY__LOG_DIR=/app/data/logs
       # PostgreSQL DSN (password must match POSTGRES_PASSWORD below)
       - MARKPOST_DB__DRIVER=postgresql
       - MARKPOST_DB__DSN=host=/var/run/postgresql user=${POSTGRES_USER:-markpost} password=${POSTGRES_PASSWORD:-markpost} dbname=${POSTGRES_DB:-markpost} sslmode=disable
@@ -69,5 +73,4 @@ services:
 
 volumes:
   pgdata:
-  markpost-logs:
   postgres-socket:

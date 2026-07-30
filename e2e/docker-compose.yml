@@ -55,6 +55,9 @@ services:
         condition: service_healthy
     volumes:
       - postgres-socket:/var/run/postgresql
+      - ./config.toml:/app/config.toml:ro
+      # Observability JSONL (app/traces/metrics) → host, for load-test analysis.
+      - ./data/logs:/app/data/logs
       - ../docker/Caddyfile.local:/etc/caddy/Caddyfile:ro
     environment:
       - MARKPOST_RATELIMIT__READ__PER_SECOND=100
@@ -67,7 +70,7 @@ services:
       - MARKPOST_RATELIMIT__AUTHED_WRITE__BURST=100
       - GIN_MODE=release
       - MARKPOST_DB__DRIVER=postgresql
-      - MARKPOST_DB__DSN=host=/var/run/postgresql user=markpost password=markpost dbname=markpost_e2e sslmode=disable
+      - MARKPOST_DB__DSN=postgres://markpost:markpost@postgres:5432/markpost_e2e?sslmode=disable
       - MARKPOST_OAUTH__GITHUB__CLIENT_ID=mock-client-id
       - MARKPOST_OAUTH__GITHUB__CLIENT_SECRET=mock-client-secret
       - MARKPOST_OAUTH__GITHUB__REDIRECT_URL=https://localhost:2053/auth/callback

@@ -77,7 +77,7 @@ func (r *PostRepository) CountByUserID(ctx context.Context, userID int) (int64, 
 
 // GetByUserID retrieves posts for a specific user with pagination.
 func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]post.Post, error) {
-	return findMany[post.Post](ctx, r.db.Where("user_id = ?", userID).Order("created_at DESC"), offset, limit, "GetByUserID")
+	return findMany[post.Post](ctx, r.db.Where("user_id = ?", userID).Order("created_at DESC, id DESC"), offset, limit, "GetByUserID")
 }
 
 func (r *PostRepository) searchQuery(search string) *gorm.DB {
@@ -86,7 +86,7 @@ func (r *PostRepository) searchQuery(search string) *gorm.DB {
 
 // ListAll retrieves all posts with optional search and pagination.
 func (r *PostRepository) ListAll(ctx context.Context, search string, offset int, limit int) ([]post.Post, error) {
-	query := r.searchQuery(search).Preload("User").Order("created_at DESC")
+	query := r.searchQuery(search).Preload("User").Order("created_at DESC, id DESC")
 	return findMany[post.Post](ctx, query, offset, limit, "ListAll")
 }
 

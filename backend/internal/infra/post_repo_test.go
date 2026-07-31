@@ -338,3 +338,83 @@ func TestPostRepository_CountExpired(t *testing.T) {
 		t.Errorf("count = %d, want 1", count)
 	}
 }
+
+// TestPostRepository_OrderStabilityTiebreak verifies the deterministic
+// secondary sort key (id DESC). When several posts share the exact same
+// created_at (a realistic batch-creation case), ORDER BY created_at DESC alone
+// is non-deterministic in Postgres; the added id DESC tiebreak guarantees a
+// stable total order across repeated queries (which matters because the
+// dashboard polls every 3s).
+func TestPostRepository_OrderStabilityTiebreak(t *testing.T) {
+	t.Run("GetByUserID ties broken by id DESC and stable across queries", func(t *testing.T) {
+		db := SetupTestDB(t)
+		uid := createTestUser(t, db)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		// Create three posts, then force the SAME created_at so they tie.
+		p1, _ := repo.Create(ctx, "T1", "B1", uid)
+		p2, _ := repo.Create(ctx, "T2", "B2", uid)
+		p3, _ := repo.Create(ctx, "T3", "B3", uid)
+		tied := time.Now().UTC().Truncate(time.Microsecond)
+		for _, p := range []*post.Post{p1, p2, p3} {
+			if err := db.Model(&post.Post{}).Where("id = ?", p.ID).
+				Update("created_at", tied).Error; err != nil {
+				t.Fatalf("set created_at: %v", err)
+			}
+		}
+
+		want := []int{p3.ID, p2.ID, p1.ID} // newest id first
+		for range 3 {
+			got, err := repo.GetByUserID(ctx, uid, 0, 10)
+			if err != nil {
+				t.Fatalf("GetByUserID: %v", err)
+			}
+			gotIDs := []int{got[0].ID, got[1].ID, got[2].ID}
+			if !equalIntSlices(gotIDs, want) {
+				t.Errorf("order = %v, want %v (id DESC tiebreak)", gotIDs, want)
+			}
+		}
+	})
+
+	t.Run("ListAll ties broken by id DESC and stable across queries", func(t *testing.T) {
+		db := SetupTestDB(t)
+		uid := createTestUser(t, db)
+		repo := NewPostRepository(db)
+		ctx := context.Background()
+
+		p1, _ := repo.Create(ctx, "T1", "B1", uid)
+		p2, _ := repo.Create(ctx, "T2", "B2", uid)
+		tied := time.Now().UTC().Truncate(time.Microsecond)
+		for _, p := range []*post.Post{p1, p2} {
+			if err := db.Model(&post.Post{}).Where("id = ?", p.ID).
+				Update("created_at", tied).Error; err != nil {
+				t.Fatalf("set created_at: %v", err)
+			}
+		}
+
+		want := []int{p2.ID, p1.ID}
+		for range 3 {
+			got, err := repo.ListAll(ctx, "", 0, 10)
+			if err != nil {
+				t.Fatalf("ListAll: %v", err)
+			}
+			gotIDs := []int{got[0].ID, got[1].ID}
+			if !equalIntSlices(gotIDs, want) {
+				t.Errorf("order = %v, want %v (id DESC tiebreak)", gotIDs, want)
+			}
+		}
+	})
+}
+
+func equalIntSlices(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}

@@ -76,6 +76,12 @@
 # Default: "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable"
 # dsn = "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable"
 
+# IANA timezone name (e.g. "UTC", "Asia/Shanghai") used to pin both the GORM
+# NowFunc and the Postgres session timezone (SET TIME ZONE). Keeps stored and
+# read-back timestamps in a single, explicit zone regardless of the process TZ.
+# [OPTIONAL] Env: MARKPOST_DB__TIMEZONE  Default: "UTC"
+# timezone = "UTC"
+
 
 # --- Admin ---------------------------------------------------------------------
 

@@ -95,6 +95,42 @@ func TestDefaults(t *testing.T) {
 	if cfg.Post.BodyMaxBytes != 32768 {
 		t.Fatalf("expected default BodyMaxBytes 32768, got %d", cfg.Post.BodyMaxBytes)
 	}
+	if cfg.DB.Timezone != "UTC" {
+		t.Fatalf("expected default DB.Timezone 'UTC', got %q", cfg.DB.Timezone)
+	}
+}
+
+func TestLoad_RejectsInvalidTimezone(t *testing.T) {
+	ResetForTest()
+
+	tmpFile, err := os.CreateTemp("", "test-config-*.toml")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	content := `
+server.host = "127.0.0.1"
+server.port = 7330
+[db]
+driver = "postgresql"
+dsn = ":memory:"
+timezone = "Not/A/Real/Zone"
+[admin]
+initial_username = "markpost"
+initial_password = "markpost"
+[jwt]
+access_signing_key = "test-access-key-at-least-32-characters"
+refresh_signing_key = "test-refresh-key-at-least-32-characters"
+[delivery]
+request_timeout = "5s"
+`
+	_, _ = tmpFile.WriteString(content)
+	_ = tmpFile.Close()
+
+	if err := Load(tmpFile.Name()); err == nil {
+		t.Fatal("expected validation error for invalid timezone, got nil")
+	}
 }
 
 func TestFileExists(t *testing.T) {

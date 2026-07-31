@@ -17,7 +17,7 @@ func RunPruneExpiredPosts(configPath string, dryRun bool, batchSize int) error {
 
 	cfg := config.Get()
 
-	dbInstance, err := infra.New(cfg.DB.DSN)
+	dbInstance, err := infra.New(cfg.DB.DSN, cfg.DB.Timezone)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
 	}

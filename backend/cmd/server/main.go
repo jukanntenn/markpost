@@ -46,6 +46,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"golang.org/x/text/language"
+	"gorm.io/gorm"
 )
 
 var authSvc *auth.Service
@@ -256,7 +257,7 @@ func serve(configPath string) {
 
 	cfg := config.Get()
 
-	dbInstance, err := infra.New(cfg.DB.DSN)
+	dbInstance, err := infra.New(cfg.DB.DSN, cfg.DB.Timezone)
 	if err != nil {
 		log.Fatalf("Failed to init database: %v", err)
 	}
@@ -276,6 +277,11 @@ func serve(configPath string) {
 	// Structured logging with trace_id/span_id correlation (observability.md
 	// §trace↔log 关联). Replaces the default text handler.
 	slog.SetDefault(slog.New(observability.NewTraceHandler(appLogger)))
+
+	// Timezone self-check: emit the resolved process TZ, the configured DB
+	// timezone, and the live Postgres session timezone so any future drift
+	// (container TZ vs. server default vs. NowFunc) is visible in app-*.jsonl.
+	logTimezoneSelfCheck(cfg.DB.Timezone, dbInstance.DB())
 
 	// Business + runtime metrics (observability.md §指标清单). Resolved once;
 	// instruments are no-ops before Init, so this is safe in any boot order.
@@ -419,6 +425,24 @@ func serve(configPath string) {
 		slog.Error("failed to close database", "error", err)
 	}
 	slog.Info("server stopped")
+}
+
+// logTimezoneSelfCheck emits the process TZ, the configured DB timezone, and
+// the live Postgres session timezone. Any drift between them (e.g. a container
+// whose TZ env differs from the server default) shows up here in app-*.jsonl,
+// making timestamp issues diagnosable instead of silent.
+func logTimezoneSelfCheck(cfgTimezone string, db *gorm.DB) {
+	processTZ, _ := time.Now().Zone()
+	sessionTZ := "unknown"
+	var pgTZ string
+	if err := db.Raw("SHOW TIME ZONE").Scan(&pgTZ).Error; err == nil {
+		sessionTZ = pgTZ
+	}
+	slog.Info("timezone resolved",
+		"process_zone", processTZ,
+		"config_db_timezone", cfgTimezone,
+		"postgres_session_timezone", sessionTZ,
+	)
 }
 
 // SetupRoutes configures all API routes for the application.

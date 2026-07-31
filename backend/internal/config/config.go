@@ -40,8 +40,9 @@ type ServerConfig struct {
 
 // DBConfig holds database-related configuration.
 type DBConfig struct {
-	Driver string `mapstructure:"driver" validate:"oneof=postgresql"`
-	DSN    string `mapstructure:"dsn" validate:"required"`
+	Driver   string `mapstructure:"driver" validate:"oneof=postgresql"`
+	DSN      string `mapstructure:"dsn" validate:"required"`
+	Timezone string `mapstructure:"timezone" validate:"omitempty,timezone"`
 }
 
 // AdminConfig holds admin-related configuration.
@@ -237,6 +238,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.public_url", "")
 	v.SetDefault("db.driver", "postgresql")
 	v.SetDefault("db.dsn", "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable")
+	v.SetDefault("db.timezone", "UTC")
 	v.SetDefault("admin.initial_username", "markpost")
 	v.SetDefault("admin.initial_password", "markpost")
 	v.SetDefault("post.title_max_length", 150)

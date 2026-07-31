@@ -12,6 +12,7 @@ import type { AbstractIntlMessages } from 'next-intl'
 import { availableLocales, defaultLocale, type Locale } from '@/i18n/constants'
 import { setCurrentLocale } from '@/i18n/current'
 import { getDefaultLocale, loadMessages, persistLocale } from '@/utils/i18n'
+import { setDefaultLocale } from '@/utils/time'
 import { AppShellSkeleton } from './AppShellSkeleton'
 
 interface LocaleContextValue {
@@ -50,6 +51,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       setMessages(m)
       document.documentElement.lang = newLocale
       setCurrentLocale(newLocale)
+      setDefaultLocale(newLocale)
       setReady(true)
     },
     []

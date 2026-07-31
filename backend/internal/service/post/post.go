@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -48,6 +49,7 @@ type Service struct {
 	group     singleflight.Group
 	purger    Purger
 	metrics   Metrics
+	loggerVal *slog.Logger
 }
 
 // Option configures a Service.
@@ -59,6 +61,17 @@ func WithMetrics(m Metrics) Option {
 	return func(s *Service) {
 		if m != nil {
 			s.metrics = m
+		}
+	}
+}
+
+// WithLogger injects a structured logger for key business events (post
+// create/read). Without it the service uses slog.Default(), so logs always
+// carry trace_id via the installed trace handler.
+func WithLogger(l *slog.Logger) Option {
+	return func(s *Service) {
+		if l != nil {
+			s.loggerVal = l
 		}
 	}
 }
@@ -76,6 +89,7 @@ func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer, opts .
 		cache:     newRenderCache(),
 		purger:    newPurger(),
 		metrics:   noopMetrics{},
+		loggerVal: slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -155,6 +169,15 @@ func neutralizeRawHTMLElements(htmlContent string) string {
 	return rawHTMLElementRe.ReplaceAllString(htmlContent, "&lt;$1$2$3")
 }
 
+// logger returns the service logger, defaulting to slog.Default() when the
+// field is nil (e.g. tests that build a Service struct literal directly).
+func (s *Service) logger() *slog.Logger {
+	if s.loggerVal == nil {
+		return slog.Default()
+	}
+	return s.loggerVal
+}
+
 func (s *Service) getPostByQID(ctx context.Context, qid string) (*post.Post, error) {
 	p, err := s.postRepo.GetByQID(ctx, qid)
 	if err != nil {
@@ -170,6 +193,13 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 		return "", service.Wrap(service.ErrInternal, "create post failed", err)
 	}
 	s.metrics.IncPostsCreated(ctx)
+	s.logger().Info("post created",
+		"qid", p.QID,
+		"post_id", p.ID,
+		"user_id", userID,
+		"created_at_unix", p.CreatedAt.Unix(),
+		"created_at_iso", p.CreatedAt.UTC().Format(time.RFC3339Nano),
+	)
 
 	if s.delivery != nil {
 		s.delivery.Enqueue(post.DeliveryJob{
@@ -205,6 +235,11 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 		if err != nil {
 			return nil, err
 		}
+		s.logger().Debug("render post html",
+			"qid", qid,
+			"post_id", p.ID,
+			"created_at_iso", p.CreatedAt.UTC().Format(time.RFC3339Nano),
+		)
 		var buf bytes.Buffer
 		if err := s.md.Convert([]byte(p.Body), &buf); err != nil {
 			return nil, service.Wrap(service.ErrInternal, "render post failed", err)

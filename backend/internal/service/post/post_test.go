@@ -1,8 +1,10 @@
 package post
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -70,6 +72,36 @@ func TestService_CreatePost(t *testing.T) {
 		}
 		if enqueuer.jobs[0].Title != "Title" {
 			t.Errorf("job title = %q, want %q", enqueuer.jobs[0].Title, "Title")
+		}
+	})
+
+	t.Run("logs structured post-created event with timestamp fields", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		uid := createTestUser(t, db)
+		repo := infra.NewPostRepository(db)
+
+		var buf bytes.Buffer
+		logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}))
+		svc := NewService(repo, nil, WithLogger(logger))
+		ctx := context.Background()
+
+		qid, err := svc.CreatePost(ctx, "Logged", "Body", uid)
+		if err != nil {
+			t.Fatalf("create: %v", err)
+		}
+
+		logOut := buf.String()
+		if !strings.Contains(logOut, `msg="post created"`) {
+			t.Errorf("log missing 'post created' message: %s", logOut)
+		}
+		if !strings.Contains(logOut, "qid="+qid) {
+			t.Errorf("log missing qid field: %s", logOut)
+		}
+		if !strings.Contains(logOut, "created_at_iso=") {
+			t.Errorf("log missing created_at_iso field: %s", logOut)
+		}
+		if !strings.Contains(logOut, "created_at_unix=") {
+			t.Errorf("log missing created_at_unix field: %s", logOut)
 		}
 	})
 }

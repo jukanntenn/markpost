@@ -44,6 +44,8 @@
   --text-small: 14px;
   --text-caption: 12px;
   --text-overline: 11px;
+
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
 }
 
 :root {
@@ -99,4 +101,38 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* skeleton-shimmer layers a translucent highlight band over bg-muted so the
+   same block both fills with the muted token and animates a left-to-right
+   sweep. bg-muted sets the base color; this gradient (set to 300% width so the
+   highlight can travel fully off-screen) is painted on top and scrolled by the
+   shimmer keyframes via background-position. */
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--muted), white 14%) 50%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+}
+
+.dark .skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--muted), white 6%) 50%,
+    transparent 100%
+  );
 }

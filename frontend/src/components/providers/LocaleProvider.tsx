@@ -5,14 +5,14 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from 'react'
-import { NextIntlClientProvider, type IntlError } from 'next-intl'
+import { NextIntlClientProvider } from 'next-intl'
 import type { AbstractIntlMessages } from 'next-intl'
 import { availableLocales, defaultLocale, type Locale } from '@/i18n/constants'
 import { setCurrentLocale } from '@/i18n/current'
 import { getDefaultLocale, loadMessages, persistLocale } from '@/utils/i18n'
+import { AppShellSkeleton } from './AppShellSkeleton'
 
 interface LocaleContextValue {
   locale: Locale
@@ -29,31 +29,28 @@ export function useLocaleContext() {
   return ctx
 }
 
-// LocaleProvider is a pure client-side provider (no server props). It boots
-// with an empty messages object — the first render shows a neutral loading
-// state, then the hydration effect loads the user's preferred locale chunk and
-// re-renders with real messages. Under static export the root layout cannot
-// call getLocale()/getMessages() (server-only), so this self-bootstraps.
+// LocaleProvider is a pure client-side provider (no server props). Under static
+// export the root layout cannot call getLocale()/getMessages() (server-only),
+// so this self-bootstraps: the messages chunk is loaded asynchronously after
+// hydration.
 //
-// Booting with `messages={}` means next-intl raises MISSING_MESSAGE for every
-// accessed namespace during that one bootstrap frame. Those errors are pure
-// noise (the messages genuinely haven't loaded yet, by design), so onError
-// suppresses MISSING_MESSAGE only while messages are still empty. Once a locale
-// chunk has loaded, real missing-key errors surface normally. See
-// specs/frontend/i18n.md.
+// To avoid a "flash of untranslated keys", the tree is gated behind `ready`:
+// until the first locale chunk resolves we render AppShellSkeleton instead of
+// children, so no `useTranslations` call runs with empty messages (which would
+// otherwise emit the dotted key path via next-intl's message fallback). Once a
+// chunk loads, children mount once with real messages. See specs/frontend/i18n.md.
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale)
   const [messages, setMessages] = useState<AbstractIntlMessages>({})
-
-  const messagesLoaded = useRef(false)
+  const [ready, setReady] = useState(false)
 
   const applyMessages = useCallback(
     (newLocale: Locale, m: AbstractIntlMessages) => {
       setLocaleState(newLocale)
       setMessages(m)
-      messagesLoaded.current = true
       document.documentElement.lang = newLocale
       setCurrentLocale(newLocale)
+      setReady(true)
     },
     []
   )
@@ -72,22 +69,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     [applyMessages]
   )
 
-  const onError = useCallback((error: IntlError) => {
-    if (error.code === 'MISSING_MESSAGE' && !messagesLoaded.current) {
-      return
-    }
-    console.error(error)
-  }, [])
-
   return (
     <LocaleContext.Provider value={{ locale, setLocale, availableLocales }}>
-      <NextIntlClientProvider
-        locale={locale}
-        messages={messages}
-        onError={onError}
-      >
-        {children}
-      </NextIntlClientProvider>
+      {ready ? (
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      ) : (
+        <AppShellSkeleton />
+      )}
     </LocaleContext.Provider>
   )
 }

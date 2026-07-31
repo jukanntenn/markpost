@@ -73,6 +73,7 @@
       "copyKey": "Post Key をコピー",
       "createdAt": "作成日時",
       "copied": "クリップボードにコピーしました！",
+      "copyFailed": "コピーに失敗しました",
       "createTestPost": "テスト投稿を作成",
       "createTestPostTip": "Markdown サンプルをすばやく作成",
       "copyPostKey": "Post キーをコピー",

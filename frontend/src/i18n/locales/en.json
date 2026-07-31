@@ -73,6 +73,7 @@
       "copyKey": "Copy key",
       "createdAt": "Created at",
       "copied": "copied to clipboard!",
+      "copyFailed": "Failed to copy",
       "createTestPost": "Create Test Post",
       "createTestPostTip": "Quickly create a sample Markdown post",
       "copyPostKey": "Copy Post Key",

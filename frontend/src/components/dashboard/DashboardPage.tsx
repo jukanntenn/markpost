@@ -27,6 +27,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Menu } from '@/components/ui/menu'
 import { QueryState } from '@/components/ui/query-state'
+import { toast } from '@/stores/toast'
 
 export function DashboardPage() {
   const [showKey, setShowKey] = useState(false)
@@ -37,6 +38,11 @@ export function DashboardPage() {
   const tPostKey = useTranslations('dashboard.postKey')
   const tRecentPosts = useTranslations('dashboard.recentPosts')
   const tDocs = useTranslations('dashboard.documentation')
+
+  const handleCopy = async (text: string) => {
+    const ok = await copy(text)
+    if (!ok) toast.error(tPostKey('copyFailed'))
+  }
 
   const {
     data: postKeyData,
@@ -114,13 +120,15 @@ export function DashboardPage() {
                         <CopyIcon className="size-4" />
                       </Menu.Trigger>
                       <Menu.Popup>
-                        <Menu.Item onClick={() => postKey && copy(postKey)}>
+                        <Menu.Item
+                          onClick={() => postKey && handleCopy(postKey)}
+                        >
                           <KeyIcon className="size-4" />
                           {tPostKey('copyPostKey')}
                         </Menu.Item>
                         <Menu.Item
                           onClick={() =>
-                            postKey && copy(buildFullPostUrl(postKey))
+                            postKey && handleCopy(buildFullPostUrl(postKey))
                           }
                         >
                           <Link2Icon className="size-4" />

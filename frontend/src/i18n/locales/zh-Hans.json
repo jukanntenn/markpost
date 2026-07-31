@@ -73,6 +73,7 @@
       "copyKey": "复制 Post Key",
       "createdAt": "创建于",
       "copied": "已复制到粘贴板！",
+      "copyFailed": "复制失败",
       "createTestPost": "创建测试内容",
       "createTestPostTip": "快速创建一条 Markdown 示例",
       "copyPostKey": "复制 Post 密钥",

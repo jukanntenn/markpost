@@ -18,6 +18,12 @@ hooks = [
   { id = "mixed-line-ending", args = ["--fix=lf"] },
 ]
 
+# ---- GitHub Actions: actionlint (auto-installed via go install) ----
+[[repos]]
+repo = "https://github.com/rhysd/actionlint"
+rev = "v1.7.12"
+hooks = [{ id = "actionlint" }]
+
 # ---- Go: golangci-lint (format via `fmt`, lint via `run`) ----
 [[repos]]
 repo = "local"

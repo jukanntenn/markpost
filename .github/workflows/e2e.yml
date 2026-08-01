@@ -33,6 +33,7 @@ jobs:
               - 'frontend/**'
               - 'docker/**'
               - 'e2e/**'
+              - '.github/workflows/e2e.yml'
 
   e2e:
     needs: changes

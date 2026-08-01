@@ -34,8 +34,10 @@ jobs:
               - 'backend/go.mod'
               - 'backend/go.sum'
               - 'backend/.golangci.yml'
+              - '.github/workflows/lint.yml'
             frontend:
               - 'frontend/**'
+              - '.github/workflows/lint.yml'
 
   lint-backend:
     needs: changes

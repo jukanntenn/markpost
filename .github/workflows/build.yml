@@ -33,8 +33,10 @@ jobs:
               - 'backend/**'
               - 'backend/go.mod'
               - 'backend/go.sum'
+              - '.github/workflows/build.yml'
             frontend:
               - 'frontend/**'
+              - '.github/workflows/build.yml'
 
   build-backend:
     needs: changes

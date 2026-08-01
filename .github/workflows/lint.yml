@@ -53,6 +53,9 @@ jobs:
           version: v2.12.2
           working-directory: backend
           args: --timeout 5m
+      - name: Verify golangci-lint config
+        working-directory: backend
+        run: golangci-lint config verify
 
   lint-frontend:
     needs: changes

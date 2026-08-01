@@ -3,6 +3,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -103,8 +104,8 @@ func resolveFieldName(t reflect.Type, fieldName string) string {
 // ParseBindingErrors converts a validation error into a slice of field-level details.
 func ParseBindingErrors(err error, req interface{}) []service.FieldDetail {
 	var causes []service.FieldDetail
-	ve, ok := err.(validator.ValidationErrors)
-	if !ok {
+	var ve validator.ValidationErrors
+	if !errors.As(err, &ve) {
 		return []service.FieldDetail{{
 			Field: "",
 			Code:  service.ErrFieldViolation,
@@ -133,8 +134,8 @@ func writeBindingError(c *gin.Context, req interface{}, err error) {
 // validator failures become ErrValidation (422 — the body parses but a field
 // value violates a business rule). See error-handling.md "binding error".
 func handleBindingError(req interface{}, err error) *service.Error {
-	ve, ok := err.(validator.ValidationErrors)
-	if !ok {
+	var ve validator.ValidationErrors
+	if !errors.As(err, &ve) {
 		// JSON syntax / type mismatch / empty body — not a field validation.
 		return service.New(service.ErrInvalidRequest, err.Error())
 	}

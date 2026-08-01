@@ -364,7 +364,10 @@ func (s *Service) DeletePostByQID(ctx context.Context, qid string, ownerID int) 
 
 	s.invalidateCache(qid)
 
-	purgeCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	// The purge is best-effort and must outlive the request: WithoutCancel
+	// inherits ctx values but detaches from the request's cancellation, then
+	// WithTimeout bounds the purge itself.
+	purgeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	go func() {
 		defer cancel()
 		s.purger.PurgePost(purgeCtx, qid)

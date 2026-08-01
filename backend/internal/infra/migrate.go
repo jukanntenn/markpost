@@ -2,6 +2,7 @@ package infra
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
 
@@ -20,7 +21,7 @@ func MigrateUp(dsn string) error {
 		return err
 	}
 	defer func() { _, _ = m.Close() }()
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("migrate up: %w", err)
 	}
 	return nil
@@ -33,7 +34,7 @@ func MigrateDown(dsn string, n int) error {
 		return err
 	}
 	defer func() { _, _ = m.Close() }()
-	if err := m.Steps(-n); err != nil && err != migrate.ErrNoChange {
+	if err := m.Steps(-n); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("migrate down %d: %w", n, err)
 	}
 	return nil

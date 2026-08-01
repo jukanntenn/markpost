@@ -118,7 +118,7 @@ func TestWrap(t *testing.T) {
 	if e.Description != "msg" {
 		t.Errorf("Description = %q, want %q", e.Description, "msg")
 	}
-	if e.Err != cause {
+	if !errors.Is(e.Err, cause) {
 		t.Errorf("Err = %v, want %v", e.Err, cause)
 	}
 	if e.Details != nil {

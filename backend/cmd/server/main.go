@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -396,9 +397,13 @@ func serve(configPath string) {
 	// Graceful shutdown: on SIGINT/SIGTERM stop accepting connections, flush
 	// OTel exporters (so no buffered spans/metrics are lost), close the
 	// timberjack loggers, stop the delivery dispatcher, and close the DB.
-	srv := &http.Server{Addr: listenAddr, Handler: r}
+	srv := &http.Server{
+		Addr:              listenAddr,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			dispatcherCancel()
 			deliveryDispatcher.Stop()
 			slog.Error("failed to start server", "error", err)

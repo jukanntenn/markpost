@@ -2,6 +2,7 @@
 package httputil
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -22,8 +23,12 @@ func CheckHTTPResponse(resp *http.Response, path string) error {
 // FetchAndDecodeJSON performs an HTTP GET to the given URL, checks the response
 // status, and decodes the JSON body into target. The caller is responsible for
 // closing the response body.
-func FetchAndDecodeJSON(client *http.Client, url string, target any) error {
-	resp, err := client.Get(url)
+func FetchAndDecodeJSON(ctx context.Context, client *http.Client, url string, target any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("GET %s: %w", url, err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("GET %s: %w", url, err)
 	}

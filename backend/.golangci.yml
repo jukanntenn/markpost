@@ -9,50 +9,31 @@ run:
   tests: true
 
 linters:
-  default: "none"
+  default: standard
   enable:
-    - errcheck
-    - unused
-    - staticcheck
-    - ineffassign
-    - govet
     - revive
+    - bodyclose
+    - rowserrcheck
+    - nilnil
+    - noctx
+    - contextcheck
+    - errorlint
 
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: false
-      exclude-functions:
-        - "(*os.File).Close"
-        - "(*os.File).Sync"
-        - "os.Remove"
-        - "os.RemoveAll"
-        - "os.Rename"
-        - "(*bufio.Writer).Flush"
-        - "(*os.File).Truncate"
 
     staticcheck:
-      checks: ["all", "-SA9004"]
+      checks: ["all"]
 
     revive:
       confidence: 0.8
 
   exclusions:
     rules:
-      - linters: [revive]
-        text: "package-comments:"
-      - linters: [revive]
-        text: "exported:"
-      - linters: [revive]
-        text: "var-naming:"
-      - linters: [revive]
-        text: "unused-parameter:"
-      - linters: [revive]
-        text: "stutters"
       - path: _test\.go
-        linters: [errcheck, revive, staticcheck]
-      - text: "SA1019:"
-        linters: [staticcheck]
+        linters: [noctx, contextcheck]
 
 formatters:
   enable:

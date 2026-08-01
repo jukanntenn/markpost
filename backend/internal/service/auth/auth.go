@@ -154,7 +154,7 @@ func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user
 	}
 
 	var githubUser user.GitHubUser
-	if err := httputil.FetchAndDecodeJSON(client, userURL, &githubUser); err != nil {
+	if err := httputil.FetchAndDecodeJSON(ctx, client, userURL, &githubUser); err != nil {
 		return nil, service.Wrap(ErrGitHubUserFetch, "failed to get GitHub user", err)
 	}
 
@@ -162,7 +162,7 @@ func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user
 		return nil, service.Wrap(ErrGitHubUserFetch, "invalid GitHub user data", fmt.Errorf("ID=%d, Login='%s'", githubUser.ID, githubUser.Login))
 	}
 
-	email, err := s.getGitHubUserEmails(client)
+	email, err := s.getGitHubUserEmails(ctx, client)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user
 	return &githubUser, nil
 }
 
-func (s *Service) getGitHubUserEmails(client *http.Client) (string, error) {
+func (s *Service) getGitHubUserEmails(ctx context.Context, client *http.Client) (string, error) {
 	var emails []struct {
 		Email    string `json:"email"`
 		Primary  bool   `json:"primary"`
@@ -185,7 +185,7 @@ func (s *Service) getGitHubUserEmails(client *http.Client) (string, error) {
 		emailsURL = s.userURL + "/user/emails"
 	}
 
-	if err := httputil.FetchAndDecodeJSON(client, emailsURL, &emails); err != nil {
+	if err := httputil.FetchAndDecodeJSON(ctx, client, emailsURL, &emails); err != nil {
 		return "", service.Wrap(ErrGitHubUserFetch, "failed to get GitHub user emails", err)
 	}
 

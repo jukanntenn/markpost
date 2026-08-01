@@ -23,10 +23,28 @@ hooks = [
 repo = "local"
 
 [[repos.hooks]]
+id = "golangci-config-verify"
+name = "golangci-lint config verify (backend)"
+language = "system"
+entry = "bash -c 'cd backend && golangci-lint config verify'"
+files = "^backend/\\.golangci\\.yml$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
 id = "golangci-fmt"
 name = "golangci-lint fmt (backend)"
 language = "system"
 entry = "bash -c 'cd backend && golangci-lint fmt'"
+files = "^backend/.*\\.go$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "golangci-run"
+name = "golangci-lint run (backend)"
+language = "system"
+entry = "bash -c 'cd backend && golangci-lint run'"
 files = "^backend/.*\\.go$"
 pass_filenames = false
 stages = ["pre-commit"]

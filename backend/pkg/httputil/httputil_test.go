@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -65,7 +66,7 @@ func TestFetchAndDecodeJSON(t *testing.T) {
 		defer srv.Close()
 
 		var m map[string]string
-		if err := FetchAndDecodeJSON(srv.Client(), srv.URL, &m); err != nil {
+		if err := FetchAndDecodeJSON(context.Background(), srv.Client(), srv.URL, &m); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if m["key"] != "value" {
@@ -80,7 +81,7 @@ func TestFetchAndDecodeJSON(t *testing.T) {
 		defer srv.Close()
 
 		var m map[string]string
-		err := FetchAndDecodeJSON(srv.Client(), srv.URL, &m)
+		err := FetchAndDecodeJSON(context.Background(), srv.Client(), srv.URL, &m)
 		if err == nil {
 			t.Fatal("expected error for 500")
 		}
@@ -97,7 +98,7 @@ func TestFetchAndDecodeJSON(t *testing.T) {
 		defer srv.Close()
 
 		var m map[string]string
-		if err := FetchAndDecodeJSON(srv.Client(), srv.URL, &m); err == nil {
+		if err := FetchAndDecodeJSON(context.Background(), srv.Client(), srv.URL, &m); err == nil {
 			t.Fatal("expected error for invalid JSON")
 		}
 	})

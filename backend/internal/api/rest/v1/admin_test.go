@@ -29,8 +29,12 @@ func setupAdminHandlerDeps(t *testing.T) (*admin.Service, user.Repository, post.
 	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
+	concreteUserRepo, ok := userRepo.(*infra.UserRepository)
+	if !ok {
+		t.Fatalf("NewUserRepository did not return *infra.UserRepository")
+	}
 	svc := admin.NewService(
-		userRepo.(*infra.UserRepository),
+		concreteUserRepo,
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
@@ -277,15 +281,19 @@ func setupAdminHandlerWithMutators(t *testing.T) (*admin.Service, user.Repositor
 	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
+	concreteUserRepo, ok := userRepo.(*infra.UserRepository)
+	if !ok {
+		t.Fatalf("NewUserRepository did not return *infra.UserRepository")
+	}
 	svc := admin.NewService(
-		userRepo.(*infra.UserRepository),
+		concreteUserRepo,
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
 		sessionLister,
 		auditRecorder,
 	)
-	svc.SetUserMutator(userRepo.(*infra.UserRepository))
+	svc.SetUserMutator(concreteUserRepo)
 	svc.SetChannelMutator(channelRepo)
 	return svc, userRepo, channelRepo
 }
@@ -533,7 +541,8 @@ func TestAdminDeleteUser_Success(t *testing.T) {
 
 	var resp map[string]interface{}
 	_ = json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["deleted"].(float64) != 1 {
+	deleted, ok := resp["deleted"].(float64)
+	if !ok || deleted != 1 {
 		t.Errorf("expected deleted=1, got %v", resp["deleted"])
 	}
 }
@@ -618,8 +627,12 @@ func TestAdminGetStats_Success(t *testing.T) {
 	postRepo := infra.NewPostRepository(db)
 	channelRepo := infra.NewDeliveryChannelRepository(db)
 	attemptRepo := infra.NewAttemptRepository(db)
+	concreteUserRepo, ok := userRepo.(*infra.UserRepository)
+	if !ok {
+		t.Fatalf("NewUserRepository did not return *infra.UserRepository")
+	}
 	svc := admin.NewService(
-		userRepo.(*infra.UserRepository),
+		concreteUserRepo,
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,

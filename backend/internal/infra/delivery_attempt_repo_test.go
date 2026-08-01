@@ -13,7 +13,10 @@ import (
 func setupAttemptRepoTestDB(t *testing.T) (*AttemptRepository, []delivery.Attempt) {
 	t.Helper()
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 
 	u := &user.User{Email: "a@b.c", Username: "a", Password: "x", PostKey: "pk"}
 	if err := db.Create(u).Error; err != nil {
@@ -91,7 +94,10 @@ func TestAttemptRepository_CountByStatus(t *testing.T) {
 
 func TestAttemptRepository_PruneHistorySubqueryLimit(t *testing.T) {
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 
 	old := time.Now().Add(-2 * 24 * time.Hour)
 	recent := time.Now()
@@ -132,7 +138,10 @@ func TestAttemptRepository_PruneHistorySubqueryLimit(t *testing.T) {
 
 func TestAttemptRepository_ListHistoryJoinsAndNulls(t *testing.T) {
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 	ctx := context.Background()
 
 	u := &user.User{Email: "hist@b.c", Username: "histuser", Password: "x", PostKey: "hpk"}
@@ -226,7 +235,10 @@ func TestAttemptRepository_ListHistoryJoinsAndNulls(t *testing.T) {
 
 func TestAttemptRepository_ListHistoryAdminViewIncludesAnonymized(t *testing.T) {
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 	ctx := context.Background()
 
 	u := &user.User{Email: "anon@b.c", Username: "anonuser", Password: "x", PostKey: "apk"}
@@ -277,7 +289,10 @@ func TestAttemptRepository_ListHistoryAdminViewIncludesAnonymized(t *testing.T) 
 
 func TestAttemptRepository_ListHistoryByChannel(t *testing.T) {
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 	ctx := context.Background()
 
 	u := &user.User{Email: "ch@b.c", Username: "chuser", Password: "x", PostKey: "cpk"}
@@ -347,7 +362,10 @@ func TestAttemptRepository_ListHistoryByChannel(t *testing.T) {
 
 func TestAttemptRepository_LatestPerChannel(t *testing.T) {
 	db := SetupTestDB(t)
-	repo := NewAttemptRepository(db).(*AttemptRepository)
+	repo, ok := NewAttemptRepository(db).(*AttemptRepository)
+	if !ok {
+		t.Fatalf("NewAttemptRepository did not return *AttemptRepository")
+	}
 	ctx := context.Background()
 
 	u := &user.User{Email: "lp@b.c", Username: "lpuser", Password: "x", PostKey: "lpk"}

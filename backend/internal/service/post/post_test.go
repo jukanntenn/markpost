@@ -34,7 +34,11 @@ func setupPostService(t *testing.T) (*Service, *infra.PostRepository, *gorm.DB) 
 	db := infra.SetupTestDB(t)
 	repo := infra.NewPostRepository(db)
 	svc := NewService(repo, nil)
-	return svc, repo.(*infra.PostRepository), db
+	postRepo, ok := repo.(*infra.PostRepository)
+	if !ok {
+		t.Fatalf("NewPostRepository did not return *infra.PostRepository")
+	}
+	return svc, postRepo, db
 }
 
 func TestService_CreatePost(t *testing.T) {

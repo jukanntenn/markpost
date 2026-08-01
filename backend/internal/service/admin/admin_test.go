@@ -31,8 +31,12 @@ func setupAdminService(t *testing.T) (*Service, user.Repository, post.Repository
 	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
+	concreteUserRepo, ok := userRepo.(*infra.UserRepository)
+	if !ok {
+		t.Fatalf("NewUserRepository did not return *infra.UserRepository")
+	}
 	svc := NewService(
-		userRepo.(*infra.UserRepository),
+		concreteUserRepo,
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
@@ -181,15 +185,19 @@ func setupAdminServiceWithMutators(t *testing.T) (*Service, user.Repository, del
 	sessionLister := &mockSessionLister{}
 	auditRecorder := &mockAuditRecorder{}
 
+	concreteUserRepo, ok := userRepo.(*infra.UserRepository)
+	if !ok {
+		t.Fatalf("NewUserRepository did not return *infra.UserRepository")
+	}
 	svc := NewService(
-		userRepo.(*infra.UserRepository),
+		concreteUserRepo,
 		&postListerAdapter{repo: postRepo},
 		&channelListerAdapter{repo: channelRepo},
 		attemptRepo,
 		sessionLister,
 		auditRecorder,
 	)
-	svc.SetUserMutator(userRepo.(*infra.UserRepository))
+	svc.SetUserMutator(concreteUserRepo)
 	svc.SetChannelMutator(channelRepo)
 	return svc, userRepo, channelRepo
 }

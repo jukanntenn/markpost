@@ -49,7 +49,11 @@ func newServiceWithCache(t *testing.T) (*Service, *infra.PostRepository, *ristre
 		cache:     cache,
 		purger:    noopPurger{},
 	}
-	return svc, repo.(*infra.PostRepository), cache, db
+	postRepo, ok := repo.(*infra.PostRepository)
+	if !ok {
+		t.Fatalf("NewPostRepository did not return *infra.PostRepository")
+	}
+	return svc, postRepo, cache, db
 }
 
 func TestRenderCache_HitReturnsStoredValue(t *testing.T) {

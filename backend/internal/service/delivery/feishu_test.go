@@ -10,6 +10,16 @@ import (
 	"time"
 )
 
+// mustAs asserts v holds type T, failing t immediately otherwise.
+func mustAs[T any](t *testing.T, v any, what string) T {
+	t.Helper()
+	out, ok := v.(T)
+	if !ok {
+		t.Fatalf("%s is %T, not %T", what, v, out)
+	}
+	return out
+}
+
 func TestFeishuClient_SendText(t *testing.T) {
 	t.Run("sends message successfully", func(t *testing.T) {
 		var receivedBody map[string]any
@@ -154,8 +164,8 @@ func TestFeishuClient_SendCard(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		card := receivedBody["card"].(map[string]any)
-		cardLink := card["card_link"].(map[string]any)
+		card := mustAs[map[string]any](t, receivedBody["card"], "card")
+		cardLink := mustAs[map[string]any](t, card["card_link"], "card.card_link")
 		if cardLink["url"] != "https://custom.example.com/post/p-abc" {
 			t.Errorf("card_link url = %v, want %q", cardLink["url"], "https://custom.example.com/post/p-abc")
 		}
@@ -184,13 +194,13 @@ func TestFeishuClient_SendCard(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		card := receivedBody["card"].(map[string]any)
-		body := card["body"].(map[string]any)
-		elements := body["elements"].([]any)
+		card := mustAs[map[string]any](t, receivedBody["card"], "card")
+		body := mustAs[map[string]any](t, card["body"], "card.body")
+		elements := mustAs[[]any](t, body["elements"], "card.body.elements")
 
 		hasButton := false
 		for _, elem := range elements {
-			el := elem.(map[string]any)
+			el := mustAs[map[string]any](t, elem, "card.body.elements element")
 			if el["tag"] == "button" {
 				hasButton = true
 				if el["url"] != "https://example.com/p-abc" {
@@ -226,12 +236,12 @@ func TestFeishuClient_SendCard(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		card := receivedBody["card"].(map[string]any)
-		body := card["body"].(map[string]any)
-		elements := body["elements"].([]any)
+		card := mustAs[map[string]any](t, receivedBody["card"], "card")
+		body := mustAs[map[string]any](t, card["body"], "card.body")
+		elements := mustAs[[]any](t, body["elements"], "card.body.elements")
 
 		for _, elem := range elements {
-			el := elem.(map[string]any)
+			el := mustAs[map[string]any](t, elem, "card.body.elements element")
 			if el["tag"] == "button" {
 				t.Error("expected no button element when card_link_url equals post URL")
 			}
@@ -259,9 +269,9 @@ func TestFeishuClient_SendCard(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		card := receivedBody["card"].(map[string]any)
-		body := card["body"].(map[string]any)
-		elements := body["elements"].([]any)
+		card := mustAs[map[string]any](t, receivedBody["card"], "card")
+		body := mustAs[map[string]any](t, card["body"], "card.body")
+		elements := mustAs[[]any](t, body["elements"], "card.body.elements")
 		if len(elements) != 0 {
 			t.Errorf("expected 0 elements, got %d", len(elements))
 		}

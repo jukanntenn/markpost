@@ -10,6 +10,10 @@ All commands assume the working directory noted in each section. Prefer running 
 
 **Backend** (`backend/`):
 - `go test ./...` — run tests (uses testcontainers-go; requires a running Docker daemon)
+- `go test -race ./...` — run tests with the race detector (mirrors CI)
+- `go test -cover ./...` — run tests with per-package coverage summary
+- `go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out` — collect coverage and view it in a browser
+- `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./internal/pkg/...` — fuzz a single target for a bounded duration (writes crash seeds to `testdata/fuzz/`)
 - `go build ./...` — compile
 - `golangci-lint run ./...` — lint
 - `golangci-lint fmt` — format all Go files (gofmt + goimports)
@@ -93,7 +97,7 @@ Schema changes go through `golang-migrate` with versioned SQL files in `backend/
 
 ## Testing
 
-- **Backend**: `go test ./...` in `backend/`. Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable.
+- **Backend**: `go test -race ./...` in `backend/` (CI runs the same with `-coverprofile`). Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable. Fuzz targets are scheduled daily by `.github/workflows/fuzz.yml`; run one locally with `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./pkg/...` and commit any `testdata/fuzz/` crash seeds as regression cases.
 - **Frontend**: `pnpm test:run` — Vitest with jsdom + v8 coverage.
 - **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger call -m e2e all --source ..`.
 

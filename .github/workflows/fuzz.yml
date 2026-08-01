@@ -1,0 +1,52 @@
+name: Fuzz
+
+# Exploratory fuzzing, not a PR gate. Runs each fuzz target for a bounded
+# duration on a schedule; a crash surfaces as a failed run with the failing
+# seed in the logs (and committed to testdata/fuzz locally for regression).
+on:
+  schedule:
+    - cron: '17 18 * * *' # daily at ~01:00 UTC+7
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: ./internal/service/delivery/filter
+            target: FuzzCompile_NeverPanics
+          - package: ./internal/middleware
+            target: FuzzUserIDFromContext
+          - package: ./internal/api/rest/v1
+            target: FuzzEtagMatch
+          - package: ./internal/service/post
+            target: FuzzCacheKey
+          - package: ./internal/service/post
+            target: FuzzSanitizeCacheTag
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          cache: true
+          cache-dependency-path: backend/go.sum
+      # Fuzz targets here do not use testcontainers, so no Docker is needed.
+      - name: Fuzz ${{ matrix.target }}
+        working-directory: backend
+        run: go test -fuzz=^${{ matrix.target }}$ -fuzztime=120s -run='^$' ${{ matrix.package }}
+      # On a crash, Go writes the failing seed to testdata/fuzz/<target>/.
+      # Upload it so the regression corpus can be recovered and committed.
+      - name: Upload failing seed corpus
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-corpus-${{ matrix.target }}
+          path: backend/${{ matrix.package }}/testdata/fuzz/
+          if-no-files-found: ignore
+          retention-days: 30

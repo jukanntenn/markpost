@@ -110,7 +110,7 @@ language = "system"
 entry = "prettier --write \"$@\""
 shell = "bash"
 files = ".*\\.(md|ya?ml|html|json|css)$"
-exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/"
+exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
 pass_filenames = true
 stages = ["pre-commit"]
 

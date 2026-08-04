@@ -15,7 +15,9 @@ hooks = [
   { id = "check-merge-conflict" },
   { id = "check-added-large-files" },
   { id = "detect-private-key" },
-  { id = "mixed-line-ending", args = ["--fix=lf"] },
+  { id = "mixed-line-ending", args = [
+    "--fix=lf",
+  ] },
 ]
 
 # ---- GitHub Actions: actionlint (auto-installed via go install) ----
@@ -32,7 +34,8 @@ repo = "local"
 id = "golangci-config-verify"
 name = "golangci-lint config verify (backend)"
 language = "system"
-entry = "bash -c 'cd backend && golangci-lint config verify'"
+entry = "cd backend && golangci-lint config verify"
+shell = "bash"
 files = "^backend/\\.golangci\\.yml$"
 pass_filenames = false
 stages = ["pre-commit"]
@@ -41,7 +44,8 @@ stages = ["pre-commit"]
 id = "golangci-fmt"
 name = "golangci-lint fmt (backend)"
 language = "system"
-entry = "bash -c 'cd backend && golangci-lint fmt'"
+entry = "cd backend && golangci-lint fmt"
+shell = "bash"
 files = "^backend/.*\\.go$"
 pass_filenames = false
 stages = ["pre-commit"]
@@ -50,17 +54,18 @@ stages = ["pre-commit"]
 id = "golangci-run"
 name = "golangci-lint run (backend)"
 language = "system"
-entry = "bash -c 'cd backend && golangci-lint run'"
+entry = "cd backend && golangci-lint run"
+shell = "bash"
 files = "^backend/.*\\.go$"
 pass_filenames = false
 stages = ["pre-commit"]
 
 [[repos.hooks]]
 id = "agents-sync"
-name = "AGENTS.md == CLAUDE.md"
+name = "AI tool configs in sync"
 language = "system"
-entry = "bash -c 'diff -q AGENTS.md CLAUDE.md || { echo \"AGENTS.md != CLAUDE.md — run scripts/sync-agents.sh\"; exit 1; }'"
-files = "^(AGENTS|CLAUDE)\\.md$"
+entry = "scripts/check-agents-sync.sh"
+files = "^(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
 pass_filenames = false
 stages = ["pre-commit"]
 
@@ -69,17 +74,96 @@ stages = ["pre-commit"]
 id = "prettier"
 name = "prettier (frontend)"
 language = "system"
-entry = "bash -c 'cd frontend && npx prettier --write .'"
+entry = "cd frontend && pnpm format"
+shell = "bash"
 files = "^frontend/.*\\.(ts|tsx|js|jsx|json|css|md)$"
 pass_filenames = false
 stages = ["pre-commit"]
 
+[[repos.hooks]]
+id = "frontend-eslint"
+name = "eslint (frontend)"
+language = "system"
+entry = "cd frontend && pnpm lint"
+shell = "bash"
+files = "^frontend/.*\\.(ts|tsx|js|jsx)$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "frontend-typecheck"
+name = "tsc --noEmit (frontend)"
+language = "system"
+entry = "cd frontend && pnpm typecheck"
+shell = "bash"
+files = "^frontend/.*\\.(ts|tsx)$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- 全仓库格式化 (每次扫全文件;工具缺失则优雅降级) ----
+
+# prettier 管 non-frontend 的 md/yaml/html/json/css (全局 prettier)
+[[repos.hooks]]
+id = "prettier-root"
+name = "prettier (root, non-frontend)"
+language = "system"
+entry = "prettier --write \"$@\""
+shell = "bash"
+files = ".*\\.(md|ya?ml|html|json|css)$"
+exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/"
+pass_filenames = true
+stages = ["pre-commit"]
+
+# oxfmt 管 toml (缺则跳过)
+[[repos.hooks]]
+id = "oxfmt"
+name = "oxfmt (toml)"
+language = "system"
+entry = "command -v oxfmt >/dev/null || { echo 'oxfmt not installed, skipping'; exit 0; } && oxfmt --write \"$@\""
+shell = "bash"
+files = ".*\\.toml$"
+pass_filenames = true
+stages = ["pre-commit"]
+
+# djlint 管 j2 (缺则跳过;profile=jinja 处理 Jinja2 模板)
+[[repos.hooks]]
+id = "djlint"
+name = "djlint (j2)"
+language = "system"
+entry = "command -v djlint >/dev/null || { echo 'djlint not installed, skipping'; exit 0; } && djlint --reformat --profile=jinja \"$@\""
+shell = "bash"
+files = ".*\\.j2$"
+pass_filenames = true
+stages = ["pre-commit"]
+
+# caddy fmt 管 Caddyfile (缺则跳过;.j2 模板由 djlint 处理)
+[[repos.hooks]]
+id = "caddy-fmt"
+name = "caddy fmt (Caddyfile)"
+language = "system"
+entry = "command -v caddy >/dev/null || { echo 'caddy not installed, skipping'; exit 0; } && for f in \"$@\"; do caddy fmt --overwrite \"$f\"; done"
+shell = "bash"
+files = "(^|/)Caddyfile(\\.(dev|staging|local|production))?$"
+pass_filenames = true
+stages = ["pre-commit"]
+
 # ---- pre-push: run tests ----
+[[repos.hooks]]
+id = "backend-generate-check"
+name = "generated files up to date (backend)"
+language = "system"
+entry = "cd backend && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && go generate ./internal/web && git diff --exit-code -- docs internal/web"
+shell = "bash"
+files = "^backend/"
+pass_filenames = false
+stages = ["pre-push"]
+
 [[repos.hooks]]
 id = "backend-test"
 name = "go test (backend, pre-push)"
 language = "system"
-entry = "bash -c 'cd backend && go test ./...'"
+entry = "cd backend && go test ./..."
+shell = "bash"
 files = "^backend/.*\\.go$"
 pass_filenames = false
 stages = ["pre-push"]
@@ -88,7 +172,8 @@ stages = ["pre-push"]
 id = "frontend-test"
 name = "vitest (frontend, pre-push)"
 language = "system"
-entry = "bash -c 'cd frontend && pnpm test:run'"
+entry = "cd frontend && pnpm test:run"
+shell = "bash"
 files = "^frontend/"
 pass_filenames = false
 stages = ["pre-push"]

@@ -5,7 +5,7 @@ export interface PasswordChangeValues {
 
 export function validatePasswordChange(
   values: PasswordChangeValues,
-  messages: { notMatch: string; minLength: string }
+  messages: { notMatch: string; minLength: string },
 ): string | null {
   if (values.newPassword !== values.confirmPassword) {
     return messages.notMatch

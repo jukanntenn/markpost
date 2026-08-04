@@ -26,7 +26,9 @@ test("sends a test message to the channel webhook", async ({
   });
 
   await deliveryPage.goto();
-  await expect(deliveryPage.channelRow("Test Target")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Test Target")).toBeVisible({
+    timeout: 15000,
+  });
 
   await deliveryPage.editChannel("Test Target");
   await deliveryPage.clickTestInDialog();
@@ -41,10 +43,10 @@ test("sends a test message to the channel webhook", async ({
   expect(testWebhook, "expected a test card to reach the webhook mock").toBeDefined();
 });
 
-test("test button is hidden for a brand-new channel (create mode)", async ({
-  deliveryPage,
-}) => {
+test("test button is hidden for a brand-new channel (create mode)", async ({ deliveryPage }) => {
   await deliveryPage.clickAddChannel();
   await expect(deliveryPage.dialog).toBeVisible();
-  await expect(deliveryPage.dialog.getByRole("button", { name: "Test", exact: true })).toHaveCount(0);
+  await expect(deliveryPage.dialog.getByRole("button", { name: "Test", exact: true })).toHaveCount(
+    0,
+  );
 });

@@ -14,6 +14,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ### 1. 认证相关 (Auth)
 
 #### 1.1 密码登录
+
 - **路径**: `POST /api/auth/login`
 - **描述**: 使用用户名和密码进行身份验证
 - **请求体**:
@@ -26,6 +27,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `AuthResponse`
 
 #### 1.2 刷新令牌
+
 - **路径**: `POST /api/auth/refresh`
 - **描述**: 使用 refresh token 获取新的 access token
 - **请求体**:
@@ -37,6 +39,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `AuthResponse`
 
 #### 1.3 修改密码
+
 - **路径**: `POST /api/auth/change-password`
 - **描述**: 修改已认证用户的密码
 - **认证**: 需要 Bearer Token
@@ -50,6 +53,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `MessageResponse`
 
 #### 1.4 查询 Post Key
+
 - **路径**: `GET /api/post_key`
 - **描述**: 查询用户的 post key，用于创建文章
 - **认证**: 需要 Bearer Token
@@ -58,6 +62,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ### 2. OAuth 相关
 
 #### 2.1 获取 GitHub OAuth URL
+
 - **路径**: `GET /api/oauth/url`
 - **描述**: 生成 GitHub OAuth 授权 URL
 - **响应**:
@@ -68,6 +73,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
   ```
 
 #### 2.2 GitHub 登录
+
 - **路径**: `POST /api/oauth/login`
 - **描述**: 处理 GitHub OAuth 回调并认证用户
 - **查询参数**:
@@ -83,6 +89,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ### 3. 文章相关 (Posts)
 
 #### 3.1 创建文章
+
 - **路径**: `POST /{post_key}`
 - **描述**: 使用 post key 创建新的 Markdown 文章
 - **路径参数**:
@@ -97,6 +104,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `CreatePostResponse` (201 Created)
 
 #### 3.2 渲染文章
+
 - **路径**: `GET /{id}`
 - **描述**: 渲染文章为 HTML 页面
 - **路径参数**:
@@ -108,6 +116,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
   - format=raw: Markdown 内容 (text/markdown)
 
 #### 3.3 获取用户文章列表
+
 - **路径**: `GET /api/posts`
 - **描述**: 获取用户的文章分页列表
 - **认证**: 需要 Bearer Token
@@ -119,12 +128,14 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ### 4. 投递渠道相关 (Delivery Channels)
 
 #### 4.1 列出投递渠道
+
 - **路径**: `GET /api/delivery/channels`
 - **描述**: 获取用户的所有投递渠道
 - **认证**: 需要 Bearer Token
 - **响应**: `DeliveryChannelListResponse`
 
 #### 4.2 创建投递渠道
+
 - **路径**: `POST /api/delivery/channels`
 - **描述**: 创建新的投递渠道
 - **认证**: 需要 Bearer Token
@@ -141,6 +152,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `DeliveryChannelResponse`
 
 #### 4.3 更新投递渠道
+
 - **路径**: `PUT /api/delivery/channels/:id`
 - **描述**: 更新投递渠道信息
 - **认证**: 需要 Bearer Token
@@ -158,6 +170,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `DeliveryChannelResponse`
 
 #### 4.4 删除投递渠道
+
 - **路径**: `DELETE /api/delivery/channels/:id`
 - **描述**: 删除投递渠道
 - **认证**: 需要 Bearer Token
@@ -172,6 +185,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 #### 5.1 用户管理
 
 ##### 5.1.1 列出所有用户
+
 - **路径**: `GET /api/admin/users`
 - **描述**: 获取所有用户的分页列表
 - **查询参数**:
@@ -180,6 +194,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `ListUsersResponse`
 
 ##### 5.1.2 创建用户
+
 - **路径**: `POST /api/admin/users`
 - **描述**: 创建新用户
 - **请求体**:
@@ -192,6 +207,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `{ "user": AdminUserResponse }`
 
 ##### 5.1.3 更新用户角色
+
 - **路径**: `PUT /api/admin/users/:id/role`
 - **描述**: 更新用户角色
 - **路径参数**:
@@ -205,6 +221,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `{ "user": AdminUserResponse }`
 
 ##### 5.1.4 删除用户
+
 - **路径**: `DELETE /api/admin/users/:id`
 - **描述**: 删除用户
 - **路径参数**:
@@ -212,6 +229,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `{ "ok": true }`
 
 ##### 5.1.5 重置用户密码
+
 - **路径**: `POST /api/admin/users/:id/reset-password`
 - **描述**: 重置用户密码
 - **路径参数**:
@@ -228,6 +246,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 #### 5.2 文章管理
 
 ##### 5.2.1 列出所有文章
+
 - **路径**: `GET /api/admin/posts`
 - **描述**: 获取所有文章的分页列表
 - **查询参数**:
@@ -237,6 +256,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `AdminPostsListResponse`
 
 ##### 5.2.2 更新文章
+
 - **路径**: `PUT /api/admin/posts/:id`
 - **描述**: 更新文章内容
 - **路径参数**:
@@ -251,6 +271,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `{ "post": AdminPostResponse }`
 
 ##### 5.2.3 删除文章
+
 - **路径**: `DELETE /api/admin/posts/:id`
 - **描述**: 删除文章
 - **路径参数**:
@@ -260,11 +281,13 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 #### 5.3 投递渠道管理
 
 ##### 5.3.1 列出所有投递渠道
+
 - **路径**: `GET /api/admin/channels`
 - **描述**: 获取所有用户的投递渠道
 - **响应**: `{ "channels": [AdminDeliveryChannelResponse] }`
 
 ##### 5.3.2 更新投递渠道
+
 - **路径**: `PUT /api/admin/channels/:id`
 - **描述**: 更新任意用户的投递渠道
 - **路径参数**:
@@ -281,6 +304,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 - **响应**: `{ "channel": AdminDeliveryChannelResponse }`
 
 ##### 5.3.3 删除投递渠道
+
 - **路径**: `DELETE /api/admin/channels/:id`
 - **描述**: 删除任意用户的投递渠道
 - **路径参数**:
@@ -290,6 +314,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ### 6. 健康检查
 
 #### 6.1 健康检查
+
 - **路径**: `GET /health`
 - **描述**: 检查 API 健康状态
 - **响应**:
@@ -302,6 +327,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ## 数据模型
 
 ### AuthResponse
+
 ```json
 {
   "access_token": "string",
@@ -314,6 +340,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### MessageResponse
+
 ```json
 {
   "message": "string"
@@ -321,6 +348,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### PostKeyResponse
+
 ```json
 {
   "post_key": "string",
@@ -329,6 +357,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### CreatePostResponse
+
 ```json
 {
   "id": "integer"
@@ -336,6 +365,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### PostsListResponse
+
 ```json
 {
   "posts": [
@@ -356,6 +386,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### DeliveryChannelResponse
+
 ```json
 {
   "id": "integer",
@@ -370,6 +401,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### AdminUserResponse
+
 ```json
 {
   "id": "integer",
@@ -382,6 +414,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### AdminPostResponse
+
 ```json
 {
   "id": "integer",
@@ -399,6 +432,7 @@ Markpost 是一个类似 pastebin 的 Markdown 博客服务，支持 OAuth 和 J
 ```
 
 ### AdminDeliveryChannelResponse
+
 ```json
 {
   "id": "integer",

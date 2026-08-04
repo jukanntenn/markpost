@@ -1,0 +1,16 @@
+# Next.js build artifacts
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.pnpm-approved-builds.json
+
+# Lock file (managed by pnpm, not formatted)
+pnpm-lock.yaml
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/

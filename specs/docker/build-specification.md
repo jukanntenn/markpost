@@ -2,11 +2,11 @@
 
 ## Base Images
 
-| Image | Stage | Version | Size (compressed) |
-|-------|-------|---------|-------------------|
-| `golang:1.26-alpine` | Backend builder | Pinned to Alpine | ~150MB |
-| `alpine:3.21` | Backend runtime | Pinned | ~3MB |
-| `node:24-alpine3.21` | Frontend builder & runtime | Pinned to Alpine 3.21 | ~60MB |
+| Image                | Stage                      | Version               | Size (compressed) |
+| -------------------- | -------------------------- | --------------------- | ----------------- |
+| `golang:1.26-alpine` | Backend builder            | Pinned to Alpine      | ~150MB            |
+| `alpine:3.21`        | Backend runtime            | Pinned                | ~3MB              |
+| `node:24-alpine3.21` | Frontend builder & runtime | Pinned to Alpine 3.21 | ~60MB             |
 
 All base images are pinned to specific Alpine versions (`alpine:3.21`, `alpine3.21`) for build reproducibility. Unpinned `latest` tags are not used.
 
@@ -15,6 +15,7 @@ All base images are pinned to specific Alpine versions (`alpine:3.21`, `alpine3.
 **docker buildx** — Docker CLI plugin for multi-platform and cache-enabled builds.
 
 Key features used:
+
 - Multi-platform builds via QEMU emulation (`docker-container` driver)
 - Registry-based build cache (`--cache-to`/`--cache-from`)
 - Multi-stage Dockerfile builds
@@ -50,11 +51,13 @@ markpost/
 Dependencies are installed before source code is copied. This ensures that code changes don't invalidate the expensive dependency installation layer.
 
 **Backend** (`backend.Dockerfile`):
+
 1. `COPY go.mod go.sum` → `RUN go mod download` — cached unless dependencies change
 2. `COPY . .` — invalidated by source changes
 3. `RUN CGO_ENABLED=1 CGO_LDFLAGS="-static" go build` — only re-runs after source changes
 
 **Frontend** (`frontend.Dockerfile`):
+
 1. `COPY package.json pnpm-lock.yaml pnpm-workspace.yaml` → `RUN pnpm install --frozen-lockfile` — cached unless dependencies change
 2. `COPY . .` — invalidated by source changes
 3. `RUN pnpm build` — only re-runs after source changes
@@ -66,6 +69,7 @@ The backend binary is statically linked with `CGO_LDFLAGS="-static"`. This embed
 ### Standalone Output (Frontend)
 
 Next.js is configured with `output: "standalone"` which produces a minimal server bundle. The runtime image copies only:
+
 - `.next/standalone/` — the server and its dependencies
 - `.next/static/` — static assets
 - `public/` — public assets
@@ -79,6 +83,7 @@ pnpm is activated via `corepack enable` instead of `npm install -g pnpm`. The ex
 ### Build Context Filtering
 
 Each build context has a `.dockerignore` that excludes non-essential files:
+
 - **Backend**: test files, generated docs, dev tools, config files, IDE files
 - **Frontend**: `.env.local`
 
@@ -103,34 +108,34 @@ The script does **not** modify the environment. If requirements are not met, it 
 
 The following checks run before any build starts:
 
-| Check | Command | Failure |
-|-------|---------|---------|
-| Docker daemon running | `docker info` | Exit 2 |
-| buildx plugin available | `docker buildx version` | Exit 2 |
-| Builder supports target platforms | `docker buildx inspect` | Exit 2 |
-| QEMU registered for foreign architectures | `/proc/sys/fs/binfmt_misc/qemu-<arch>` | Exit 2 |
+| Check                                     | Command                                | Failure |
+| ----------------------------------------- | -------------------------------------- | ------- |
+| Docker daemon running                     | `docker info`                          | Exit 2  |
+| buildx plugin available                   | `docker buildx version`                | Exit 2  |
+| Builder supports target platforms         | `docker buildx inspect`                | Exit 2  |
+| QEMU registered for foreign architectures | `/proc/sys/fs/binfmt_misc/qemu-<arch>` | Exit 2  |
 
 ### CLI Flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--push` | Push to registry (multi-platform) | Load locally (single platform) |
-| `--registry` | Container registry address | `192.168.5.50:5000` |
-| `--tags` | Additional image tags | `dev` only |
-| `--backend-only` | Build only the backend image | Build both |
-| `--frontend-only` | Build only the frontend image | Build both |
-| `--platform` | Target platform(s): `amd64`, `arm64`. Repeatable. | Both platforms |
-| `--no-cache` | Disable all build cache | Cache enabled |
-| `--verbose` | Full build output (no progress bar) | Compact progress |
+| Flag              | Description                                       | Default                        |
+| ----------------- | ------------------------------------------------- | ------------------------------ |
+| `--push`          | Push to registry (multi-platform)                 | Load locally (single platform) |
+| `--registry`      | Container registry address                        | `192.168.5.50:5000`            |
+| `--tags`          | Additional image tags                             | `dev` only                     |
+| `--backend-only`  | Build only the backend image                      | Build both                     |
+| `--frontend-only` | Build only the frontend image                     | Build both                     |
+| `--platform`      | Target platform(s): `amd64`, `arm64`. Repeatable. | Both platforms                 |
+| `--no-cache`      | Disable all build cache                           | Cache enabled                  |
+| `--verbose`       | Full build output (no progress bar)               | Compact progress               |
 
 ### Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Build failure (buildx command failed) |
-| 2 | Environment check failure (missing tool, unregistered QEMU, unsupported platform) |
-| 3 | Invalid arguments (conflicting flags, unknown platform) |
+| Code | Meaning                                                                           |
+| ---- | --------------------------------------------------------------------------------- |
+| 0    | Success                                                                           |
+| 1    | Build failure (buildx command failed)                                             |
+| 2    | Environment check failure (missing tool, unregistered QEMU, unsupported platform) |
+| 3    | Invalid arguments (conflicting flags, unknown platform)                           |
 
 ### Error Output Format
 

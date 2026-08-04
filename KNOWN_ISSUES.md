@@ -60,7 +60,6 @@ rendered on read.
 - cmark-gfm require-double-tilde: https://github.com/github/cmark-gfm/pull/362
 - cmark-gfm #99 (single tilde is problematic): https://github.com/github/cmark-gfm/issues/99
 
-
 ## Config file name: `markpost.toml` backward-compat fallback pending removal
 
 **Status:** Resolved (2026-07-27). The `markpost` fallback name and its test were removed; staging mount retargeted to `/app/config.toml`.
@@ -103,7 +102,6 @@ rg -rn '/app/markpost.toml' .
 - Config loader: `backend/internal/config/config.go`
 - Fallback test: `backend/internal/config/config_test.go`
 - Deployment mounts: `docs/deployment.md`
-
 
 ## Markdown: CJK fullwidth punctuation breaks emphasis closing
 

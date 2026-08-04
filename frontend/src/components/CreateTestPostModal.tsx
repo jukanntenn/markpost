@@ -35,7 +35,7 @@ interface CreateTestPostModalProps {
 
 async function createTestPost(
   postKey: string,
-  data: CreateTestPostRequest
+  data: CreateTestPostRequest,
 ): Promise<CreateTestPostResponse> {
   return request<CreateTestPostResponse>(`/${postKey}`, {
     method: 'POST',

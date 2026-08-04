@@ -101,6 +101,7 @@ Fail → report which check failed (lint/test) + the specific violations, STOP.
 ### Step 4: README Consistency Check
 
 Compare `README.md` and `README_zh.md` for conflicting or contradictory information:
+
 - Feature descriptions must agree (content may differ in detail, but must not contradict)
 - API examples must match
 - Quick Start instructions must agree
@@ -140,11 +141,13 @@ cat .github/workflows/docker-publish.yml
 ```
 
 **release.yml** MUST have:
+
 - Trigger on `v*` tags
 - CHANGELOG extraction step (awk to extract version-specific notes)
 - `softprops/action-gh-release` with `body_path` pointing to extracted notes
 
 **docker-publish.yml** MUST have:
+
 - Trigger on `v*` tags
 - Multi-arch Docker build (amd64 + arm64)
 - Push to Docker Hub (`jukanntenn/markpost`)
@@ -178,6 +181,7 @@ git push && git push --tags
 ```
 
 Then provide monitoring URLs:
+
 - GitHub Release: `https://github.com/jukanntenn/markpost/actions/workflows/release.yml`
 - Docker publish: `https://github.com/jukanntenn/markpost/actions/workflows/docker-publish.yml`
 

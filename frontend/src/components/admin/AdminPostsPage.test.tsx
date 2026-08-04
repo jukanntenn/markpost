@@ -24,7 +24,7 @@ describe('AdminPostsPage', () => {
     renderWithProviders(<AdminPostsPage />, { wrapper: ThemeProvider })
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /post management/i })
+        screen.getByRole('heading', { name: /post management/i }),
       ).toBeInTheDocument()
     })
   })
@@ -112,11 +112,11 @@ describe('AdminPostsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/Delete post "First Post"\?/i)
+        screen.getByText(/Delete post "First Post"\?/i),
       ).toBeInTheDocument()
     })
     expect(
-      screen.queryByText('admin.posts.deleteConfirm')
+      screen.queryByText('admin.posts.deleteConfirm'),
     ).not.toBeInTheDocument()
     expect(screen.queryByText('posts.deleteConfirm')).not.toBeInTheDocument()
   })
@@ -134,7 +134,7 @@ describe('AdminPostsPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /delete post/i })
+        screen.getByRole('heading', { name: /delete post/i }),
       ).toBeInTheDocument()
     })
 

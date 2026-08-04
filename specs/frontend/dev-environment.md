@@ -30,8 +30,8 @@ Creates an optimized production build.
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable      | Description                           | Default                 |
+| ------------- | ------------------------------------- | ----------------------- |
 | `BACKEND_URL` | Backend address for server-side proxy | `http://127.0.0.1:7330` |
 
 The frontend ships a committed `.env` with `BACKEND_URL=http://127.0.0.1:7330`. The proxy (`src/proxy.ts`) uses this to forward `/api/*` requests to the backend. To override, create `.env.local` (gitignored).

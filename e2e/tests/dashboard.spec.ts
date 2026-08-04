@@ -58,9 +58,7 @@ test("copies post key and shows temporary success badge", async ({
   await expect(copiedBadge).toBeVisible();
 
   await authenticatedPage.waitForTimeout(2200);
-  await expect(
-    authenticatedPage.getByText("copied to clipboard!", { exact: true })
-  ).toHaveCount(0);
+  await expect(authenticatedPage.getByText("copied to clipboard!", { exact: true })).toHaveCount(0);
 });
 
 test("navigates to settings and logs out from user menu", async ({

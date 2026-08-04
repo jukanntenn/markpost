@@ -9,13 +9,13 @@ describe('buildUrl', () => {
 
   it('returns base + path with non-empty base', () => {
     expect(buildUrl('https://api.example.com', '/api/v1/posts')).toBe(
-      'https://api.example.com/api/v1/posts'
+      'https://api.example.com/api/v1/posts',
     )
   })
 
   it('appends params as query string', () => {
     expect(buildUrl('', '/api/v1/posts', { page: 1, limit: 20 })).toBe(
-      '/api/v1/posts?page=1&limit=20'
+      '/api/v1/posts?page=1&limit=20',
     )
   })
 
@@ -34,13 +34,13 @@ describe('buildUrl', () => {
 
   it('strips trailing slash from base', () => {
     expect(buildUrl('https://api.example.com/', '/api/v1/posts')).toBe(
-      'https://api.example.com/api/v1/posts'
+      'https://api.example.com/api/v1/posts',
     )
   })
 
   it('strips trailing slash from base with params', () => {
     expect(buildUrl('https://api.example.com/', '/api', { page: 1 })).toBe(
-      'https://api.example.com/api?page=1'
+      'https://api.example.com/api?page=1',
     )
   })
 

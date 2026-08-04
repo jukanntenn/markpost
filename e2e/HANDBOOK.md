@@ -24,13 +24,13 @@
 
 ### 核心组件
 
-| 组件 | 作用 | 端口 |
-|------|------|------|
-| **App Container** | Caddy 反向代理 + Go 后端 + 前端静态文件 | 2053 (HTTPS) |
-| **PostgreSQL** | 测试数据库，每个测试文件独立数据库 | 5432 (内部) |
-| **Webhook Mock** | 模拟飞书 Webhook 接收端 | 3002 (内部) |
-| **OAuth Mock** | 模拟 GitHub OAuth 全流程（授权、令牌交换、用户信息） | 3001 (内部) |
-| **Playwright** | 浏览器自动化测试运行器（宿主机） | - |
+| 组件              | 作用                                                 | 端口         |
+| ----------------- | ---------------------------------------------------- | ------------ |
+| **App Container** | Caddy 反向代理 + Go 后端 + 前端静态文件              | 2053 (HTTPS) |
+| **PostgreSQL**    | 测试数据库，每个测试文件独立数据库                   | 5432 (内部)  |
+| **Webhook Mock**  | 模拟飞书 Webhook 接收端                              | 3002 (内部)  |
+| **OAuth Mock**    | 模拟 GitHub OAuth 全流程（授权、令牌交换、用户信息） | 3001 (内部)  |
+| **Playwright**    | 浏览器自动化测试运行器（宿主机）                     | -            |
 
 ### 关键设计决策
 
@@ -85,23 +85,23 @@ dagger call test --source=.. --test-file=login.spec.ts
 
 ### 测试文件清单
 
-| 测试文件 | 覆盖功能 |
-|---------|---------|
-| `login.spec.ts` | 登录表单、验证、错误提示、键盘提交、重定向 |
-| `dashboard.spec.ts` | Post Key 显示/隐藏/复制、用户菜单、登出 |
-| `dashboard-create-post.spec.ts` | 快速创建帖子、表单验证 |
-| `posts.spec.ts` | 帖子列表页、未认证重定向 |
-| `admin.spec.ts` | 管理页权限、导航链接 |
-| `admin-users.spec.ts` | 用户列表、管理员显示 |
-| `admin-posts.spec.ts` | 帖子管理、搜索功能 |
-| `admin-channels.spec.ts` | 渠道列表、创建渠道 |
-| `admin-delivery-history.spec.ts` | 投递历史空状态 |
-| `settings.spec.ts` | 设置页渲染、语言切换、密码验证 |
-| `settings-change-password.spec.ts` | 修改密码并验证登录 |
-| `settings-delivery-channel.spec.ts` | 渠道 CRUD、启用/禁用切换 |
-| `delivery-history.spec.ts` | 投递历史区域显示 |
-| `oauth-callback.spec.ts` | OAuth 全流程：成功登录、缺少参数、错误参数、无效 state、令牌交换失败、用户信息获取失败、state 一次性消费 |
-| `feishu-webhook.spec.ts` | Webhook 触发与负载验证 |
+| 测试文件                            | 覆盖功能                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `login.spec.ts`                     | 登录表单、验证、错误提示、键盘提交、重定向                                                               |
+| `dashboard.spec.ts`                 | Post Key 显示/隐藏/复制、用户菜单、登出                                                                  |
+| `dashboard-create-post.spec.ts`     | 快速创建帖子、表单验证                                                                                   |
+| `posts.spec.ts`                     | 帖子列表页、未认证重定向                                                                                 |
+| `admin.spec.ts`                     | 管理页权限、导航链接                                                                                     |
+| `admin-users.spec.ts`               | 用户列表、管理员显示                                                                                     |
+| `admin-posts.spec.ts`               | 帖子管理、搜索功能                                                                                       |
+| `admin-channels.spec.ts`            | 渠道列表、创建渠道                                                                                       |
+| `admin-delivery-history.spec.ts`    | 投递历史空状态                                                                                           |
+| `settings.spec.ts`                  | 设置页渲染、语言切换、密码验证                                                                           |
+| `settings-change-password.spec.ts`  | 修改密码并验证登录                                                                                       |
+| `settings-delivery-channel.spec.ts` | 渠道 CRUD、启用/禁用切换                                                                                 |
+| `delivery-history.spec.ts`          | 投递历史区域显示                                                                                         |
+| `oauth-callback.spec.ts`            | OAuth 全流程：成功登录、缺少参数、错误参数、无效 state、令牌交换失败、用户信息获取失败、state 一次性消费 |
+| `feishu-webhook.spec.ts`            | Webhook 触发与负载验证                                                                                   |
 
 ---
 
@@ -158,6 +158,7 @@ test.afterEach(async ({ request, authToken }) => {
 ```
 
 `cleanupTestData` 函数会：
+
 1. 删除所有帖子
 2. 删除所有投递渠道
 3. 清空 Webhook Mock 接收记录
@@ -167,15 +168,15 @@ test.afterEach(async ({ request, authToken }) => {
 
 ## 7. 环境变量
 
-| 变量 | 默认值 | 说明 |
-|------|-------|------|
-| `BASE_URL` | `https://localhost:2053` | 前端访问地址 |
-| `BACKEND_URL` | `https://localhost:2053` | 后端 API 地址 |
-| `ADMIN_USERNAME` | `markpost` | 管理员用户名 |
-| `ADMIN_PASSWORD` | `markpost` | 管理员密码 |
-| `WEBHOOK_MOCK_URL` | `http://localhost:3002` | Webhook Mock 地址 |
-| `OAUTH_MOCK_URL` | `http://localhost:3001` | OAuth Mock 地址 |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | - | 设为 `0` 跳过 TLS 验证 |
+| 变量                           | 默认值                   | 说明                   |
+| ------------------------------ | ------------------------ | ---------------------- |
+| `BASE_URL`                     | `https://localhost:2053` | 前端访问地址           |
+| `BACKEND_URL`                  | `https://localhost:2053` | 后端 API 地址          |
+| `ADMIN_USERNAME`               | `markpost`               | 管理员用户名           |
+| `ADMIN_PASSWORD`               | `markpost`               | 管理员密码             |
+| `WEBHOOK_MOCK_URL`             | `http://localhost:3002`  | Webhook Mock 地址      |
+| `OAUTH_MOCK_URL`               | `http://localhost:3001`  | OAuth Mock 地址        |
+| `NODE_TLS_REJECT_UNAUTHORIZED` | -                        | 设为 `0` 跳过 TLS 验证 |
 
 ---
 
@@ -186,6 +187,7 @@ test.afterEach(async ({ request, authToken }) => {
 **原因**：Caddy 自签证书的 SNI 与请求主机名不匹配。
 
 **解决**：
+
 - Docker Compose：设置 `NODE_TLS_REJECT_UNAUTHORIZED=0`
 - Dagger：已在模块中设置该环境变量
 
@@ -200,6 +202,7 @@ test.afterEach(async ({ request, authToken }) => {
 **原因**：前一个测试创建的数据影响后续测试。
 
 **解决**：
+
 - 每个测试文件的 `beforeEach` 中调用 `cleanupTestData()`
 - 密码修改测试需要在修改前和重置后都清理数据
 - API 响应格式为 `data.items`（不是 `data.channels`）
@@ -215,6 +218,7 @@ test.afterEach(async ({ request, authToken }) => {
 **原因**：OAuth Mock 服务未启动或后端未配置指向 Mock 服务。
 
 **解决**：
+
 - 确保 `e2e/docker-compose.yml` 中 `oauth-mock` 服务正常运行
 - 确保后端环境变量包含 `MARKPOST_OAUTH__GITHUB__AUTH_URL`、`TOKEN_URL`、`USER_URL`
 
@@ -280,4 +284,4 @@ jobs:
 
 ---
 
-*手册版本: 2026-07-16*
+_手册版本: 2026-07-16_

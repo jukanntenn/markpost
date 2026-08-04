@@ -25,7 +25,7 @@ const formatterCache = new Map<string, Intl.DateTimeFormat>()
 
 function getCachedFormatter(
   locale: string,
-  options: Intl.DateTimeFormatOptions
+  options: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
   const key = `${locale}:${JSON.stringify(options)}`
   let formatter = formatterCache.get(key)
@@ -43,7 +43,7 @@ export interface FormatTimeOptions {
 
 export function formatToLocalTime(
   utcString: string,
-  options?: FormatTimeOptions
+  options?: FormatTimeOptions,
 ): string {
   if (!utcString) return ''
 

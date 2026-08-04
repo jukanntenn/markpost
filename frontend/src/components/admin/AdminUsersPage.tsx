@@ -63,7 +63,7 @@ export function AdminUsersPage() {
         toast.success(t('users.roleChanged'))
         setAction(null)
       },
-    })
+    }),
   )
 
   const activeMutation = useMutation(
@@ -75,7 +75,7 @@ export function AdminUsersPage() {
         toast.success(t('users.activeChanged'))
         setAction(null)
       },
-    })
+    }),
   )
 
   const deleteMutation = useMutation(
@@ -87,7 +87,7 @@ export function AdminUsersPage() {
         toast.success(t('users.deleted'))
         setAction(null)
       },
-    })
+    }),
   )
 
   function handleAction() {

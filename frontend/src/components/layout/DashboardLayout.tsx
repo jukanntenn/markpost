@@ -93,7 +93,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     'h-9 px-3 text-sm font-medium',
                     isActive
                       ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
+                      : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
                   {t(item.labelKey)}

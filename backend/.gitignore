@@ -1,0 +1,19 @@
+# Go build artifacts
+*.exe~
+*.test
+*.out
+server
+tmp/
+fake.json
+
+# Coverage
+coverage.*
+*.coverprofile
+profile.cov
+
+# Go workspace
+go.work
+go.work.sum
+
+# Logs
+logs/

@@ -1,7 +1,7 @@
 {
   "name": "markpost-e2e",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "test": "docker compose up -d --wait && playwright test; EXIT=$?; docker compose down; exit $EXIT",

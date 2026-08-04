@@ -40,7 +40,7 @@ describe('PostsPage', () => {
         const url = new URL(request.url)
         capturedLimit = url.searchParams.get('limit')
         return HttpResponse.json(mockPosts)
-      })
+      }),
     )
 
     renderWithProviders(<PostsPage />, { wrapper: ThemeProvider })
@@ -60,7 +60,7 @@ describe('PostsPage', () => {
     const { mockEmptyPosts } = await import('@/mocks/handlers')
 
     server.use(
-      http.get('/api/v1/posts', () => HttpResponse.json(mockEmptyPosts))
+      http.get('/api/v1/posts', () => HttpResponse.json(mockEmptyPosts)),
     )
 
     renderWithProviders(<PostsPage />, { wrapper: ThemeProvider })

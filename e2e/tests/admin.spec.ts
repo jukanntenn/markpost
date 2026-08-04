@@ -1,8 +1,6 @@
 import { test, expect } from "../lib/fixtures";
 
-test("unauthenticated user cannot access /admin and is redirected to login", async ({
-  page,
-}) => {
+test("unauthenticated user cannot access /admin and is redirected to login", async ({ page }) => {
   await page.goto("/admin");
   await page.waitForURL("**/login");
 });
@@ -14,9 +12,7 @@ test("admin user can access /admin and is redirected to /admin/users", async ({
   await authenticatedPage.waitForURL("**/admin/users");
 });
 
-test("admin navigation links work correctly", async ({
-  authenticatedPage: page,
-}) => {
+test("admin navigation links work correctly", async ({ authenticatedPage: page }) => {
   await page.goto("/admin/users");
   await page.waitForURL("**/admin/users");
 

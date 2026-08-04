@@ -170,6 +170,7 @@ The backend ships a Swagger 2.0 spec at `backend/docs/swagger.json`, which [yaak
 ### Workflow
 
 When the backend API changes:
+
 1. Update Swagger annotations in Go code
 2. Run `swag init` to regenerate `backend/docs/swagger.json`
 3. Re-import into yaak (your environment configs are preserved)

@@ -11,8 +11,8 @@ describe('validatePasswordChange', () => {
     expect(
       validatePasswordChange(
         { newPassword: 'secret123', confirmPassword: 'secret123' },
-        messages
-      )
+        messages,
+      ),
     ).toBeNull()
   })
 
@@ -20,8 +20,8 @@ describe('validatePasswordChange', () => {
     expect(
       validatePasswordChange(
         { newPassword: 'secret123', confirmPassword: 'different' },
-        messages
-      )
+        messages,
+      ),
     ).toBe('Passwords do not match')
   })
 
@@ -29,8 +29,8 @@ describe('validatePasswordChange', () => {
     expect(
       validatePasswordChange(
         { newPassword: 'abc', confirmPassword: 'abc' },
-        messages
-      )
+        messages,
+      ),
     ).toBe('Password too short')
   })
 
@@ -38,8 +38,8 @@ describe('validatePasswordChange', () => {
     expect(
       validatePasswordChange(
         { newPassword: 'abc', confirmPassword: 'xyz' },
-        messages
-      )
+        messages,
+      ),
     ).toBe('Passwords do not match')
   })
 })

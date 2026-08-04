@@ -31,14 +31,14 @@ factor := KEYWORD | "(" expr ")"         # terminal or grouped sub-expression
 
 Exactly seven ASCII characters are operators:
 
-| Char | Meaning | Notes |
-|------|---------|-------|
-| `,` | OR | Equivalent to `\|` |
-| `\|` | OR | Equivalent to `,` |
-| `&` | AND | |
-| `!` | NOT (prefix) | Right-associative; `!!a == a`, `!!!a == !a` |
-| `(` `)` | Grouping | Overrides precedence; may nest arbitrarily |
-| `"` | Quoting | Makes operator characters literal; see below |
+| Char    | Meaning      | Notes                                        |
+| ------- | ------------ | -------------------------------------------- |
+| `,`     | OR           | Equivalent to `\|`                           |
+| `\|`    | OR           | Equivalent to `,`                            |
+| `&`     | AND          |                                              |
+| `!`     | NOT (prefix) | Right-associative; `!!a == a`, `!!!a == !a`  |
+| `(` `)` | Grouping     | Overrides precedence; may nest arbitrarily   |
+| `"`     | Quoting      | Makes operator characters literal; see below |
 
 **Every other character is literal keyword content.** This includes letters, digits, CJK, emoji, and all punctuation except the seven above: `+ / \ : ; @ # $ % ^ = ~ [ ] { } < > ? * '` and so on. Such keywords need no quotes.
 
@@ -58,7 +58,7 @@ A quoted segment treats everything between the quotes as literal content — all
 
 - `"a,b"` → keyword `a,b`.
 - `"a & b"` → keyword `a & b`.
-- `" error "` → keyword ` error ` (leading and trailing space kept).
+- `" error "` → keyword `error` (leading and trailing space kept).
 
 A literal double-quote inside a quoted segment is written by **doubling**: `""`.
 
@@ -73,7 +73,7 @@ Quotes are required only when a keyword contains any of `, | & ! ( ) "` or when 
 
 ### Whitespace
 
-Whitespace around operators is ignored: `a & b` ≡ `a&b`. Two adjacent factors with **no operator between them** are a syntax error (see *Rejections* below) — the only way to combine factors is with an explicit operator. This is the key property that makes the grammar unambiguous.
+Whitespace around operators is ignored: `a & b` ≡ `a&b`. Two adjacent factors with **no operator between them** are a syntax error (see _Rejections_ below) — the only way to combine factors is with an explicit operator. This is the key property that makes the grammar unambiguous.
 
 ## Matching Semantics
 
@@ -85,18 +85,18 @@ title'    = strings.ToLower(norm.NFC(title))
 match     = strings.Contains(title', keyword')
 ```
 
-| Dimension | Rule |
-|-----------|------|
-| Match type | Substring (quoted and unquoted are both substring) |
-| Case | Insensitive — Unicode default case folding via `strings.ToLower` |
-| Normalization | Both keyword and title normalized to **Unicode NFC** before comparison |
-| Matched field | **Title only** (`post.DeliveryJob.Title`) |
-| Empty / whitespace-only expression | Matches everything (always deliver) |
-| Regex / wildcards | Not supported (`*`, `?`, etc. are literal characters) |
+| Dimension                          | Rule                                                                   |
+| ---------------------------------- | ---------------------------------------------------------------------- |
+| Match type                         | Substring (quoted and unquoted are both substring)                     |
+| Case                               | Insensitive — Unicode default case folding via `strings.ToLower`       |
+| Normalization                      | Both keyword and title normalized to **Unicode NFC** before comparison |
+| Matched field                      | **Title only** (`post.DeliveryJob.Title`)                              |
+| Empty / whitespace-only expression | Matches everything (always deliver)                                    |
+| Regex / wildcards                  | Not supported (`*`, `?`, etc. are literal characters)                  |
 
 **NFC normalization** ensures that Korean, Vietnamese, and diacritic-bearing Latin scripts match correctly regardless of whether the keyword or title arrived in precomposed (NFC) or decomposed (NFD) form. For example, Korean `오류` (2 NFC runes) and its 4-rune NFD expansion are byte-different but treated as equal.
 
-**Substring note**: `"key word"` matches a title containing `the key word here` (the phrase appears verbatim) but not `the keyword here` (the space is missing). A quoted phrase is still a *substring* match, not a whole-title equality.
+**Substring note**: `"key word"` matches a title containing `the key word here` (the phrase appears verbatim) but not `the keyword here` (the space is missing). A quoted phrase is still a _substring_ match, not a whole-title equality.
 
 ## Validation and Error Handling
 
@@ -111,15 +111,15 @@ Expressions are validated at **write time** in the service layer:
 
 All of the following are rejected with a `ParseError`. A stored expression can never produce an ambiguous match because invalid input never reaches storage.
 
-| Category | Examples |
-|----------|----------|
-| Empty operand | `a,,b`, `a && b`, `a &`, `& a`, `,`, `a,` |
-| Operator without operand | `!`, `&`, `\|`, `a \| \| b` |
-| Unbalanced / empty group | `(a`, `a)`, `()`, `(a,)`, `)(a` |
-| Unterminated quote | `"abc`, `"""` |
-| Adjacent factors without operator | `a (b)`, `(a)(b)`, `a"b"` |
-| Empty keyword | `""`, `a & ""`, `(), a` |
-| Operators only | `& \| ,`, `! &`, `(!)` |
+| Category                          | Examples                                  |
+| --------------------------------- | ----------------------------------------- |
+| Empty operand                     | `a,,b`, `a && b`, `a &`, `& a`, `,`, `a,` |
+| Operator without operand          | `!`, `&`, `\|`, `a \| \| b`               |
+| Unbalanced / empty group          | `(a`, `a)`, `()`, `(a,)`, `)(a`           |
+| Unterminated quote                | `"abc`, `"""`                             |
+| Adjacent factors without operator | `a (b)`, `(a)(b)`, `a"b"`                 |
+| Empty keyword                     | `""`, `a & ""`, `(), a`                   |
+| Operators only                    | `& \| ,`, `! &`, `(!)`                    |
 
 Empty keyword (`""`) is rejected because the empty string is a substring of every title and would match everything — an "unexpected surprise" source.
 
@@ -137,22 +137,22 @@ The seven operators are **ASCII-only**. Their full-width variants (`， ＆ ｜ 
 
 ## Worked Examples
 
-| # | Input | Meaning |
-|---|-------|---------|
-| 1 | `alert` | title contains `alert` |
-| 2 | `a, b, c` | `a` OR `b` OR `c` |
-| 3 | `a \| b \| c` | same as #2 (`\|` ≡ `,`) |
-| 4 | `a & b & c` | `a` AND `b` AND `c` |
-| 5 | `!test` | title does NOT contain `test` |
-| 6 | `prod & (error, warning) & !debug` | `prod` AND (`error` OR `warning`) AND NOT `debug` |
-| 7 | `key word 1` | keyword `key word 1` (multi-word, no quotes) |
-| 8 | `! key word` | NOT keyword `key word` |
-| 9 | `C++`, `a/b`, `🚀go` | each a single keyword, no quotes needed |
-| 10 | `"a,b"` | keyword `a,b` |
-| 11 | `"a & b"` | keyword `a & b` |
-| 12 | `"say ""hi"""` | keyword `say "hi"` |
-| 13 | `""""` | keyword `"` |
-| 14 | `!!a` | `a` (double negation) |
+| #   | Input                              | Meaning                                           |
+| --- | ---------------------------------- | ------------------------------------------------- |
+| 1   | `alert`                            | title contains `alert`                            |
+| 2   | `a, b, c`                          | `a` OR `b` OR `c`                                 |
+| 3   | `a \| b \| c`                      | same as #2 (`\|` ≡ `,`)                           |
+| 4   | `a & b & c`                        | `a` AND `b` AND `c`                               |
+| 5   | `!test`                            | title does NOT contain `test`                     |
+| 6   | `prod & (error, warning) & !debug` | `prod` AND (`error` OR `warning`) AND NOT `debug` |
+| 7   | `key word 1`                       | keyword `key word 1` (multi-word, no quotes)      |
+| 8   | `! key word`                       | NOT keyword `key word`                            |
+| 9   | `C++`, `a/b`, `🚀go`               | each a single keyword, no quotes needed           |
+| 10  | `"a,b"`                            | keyword `a,b`                                     |
+| 11  | `"a & b"`                          | keyword `a & b`                                   |
+| 12  | `"say ""hi"""`                     | keyword `say "hi"`                                |
+| 13  | `""""`                             | keyword `"`                                       |
+| 14  | `!!a`                              | `a` (double negation)                             |
 
 ## Implementation
 
@@ -160,13 +160,13 @@ The seven operators are **ASCII-only**. Their full-width variants (`， ＆ ｜ 
 
 All logic lives in `internal/service/delivery/filter/` (~250 lines, zero new dependencies — `golang.org/x/text/unicode/norm` was already a direct dependency):
 
-| File | Responsibility |
-|------|----------------|
-| `lexer.go` | Tokenizer: seven operators, bare/quoted keyword reading, `""` doubling, whitespace skipping |
-| `ast.go` | AST node types: `orNode`, `andNode`, `notNode`, `keywordNode`, `alwaysTrueNode` |
-| `parser.go` | Recursive-descent parser following the precedence grammar; panics into `*ParseError{Pos, Msg}` |
-| `evaluator.go` | `normalizeMatch` (NFC + ToLower) and `containsSubstr` |
-| `filter.go` | Public API: `Compile(expr) (*Matcher, error)`, `MustCompile(expr) *Matcher`, `(*Matcher).Match(title) bool`, `*ParseError` |
+| File           | Responsibility                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `lexer.go`     | Tokenizer: seven operators, bare/quoted keyword reading, `""` doubling, whitespace skipping                                |
+| `ast.go`       | AST node types: `orNode`, `andNode`, `notNode`, `keywordNode`, `alwaysTrueNode`                                            |
+| `parser.go`    | Recursive-descent parser following the precedence grammar; panics into `*ParseError{Pos, Msg}`                             |
+| `evaluator.go` | `normalizeMatch` (NFC + ToLower) and `containsSubstr`                                                                      |
+| `filter.go`    | Public API: `Compile(expr) (*Matcher, error)`, `MustCompile(expr) *Matcher`, `(*Matcher).Match(title) bool`, `*ParseError` |
 
 The matcher is invoked from `internal/service/delivery/post_delivery.go`. The check is hoisted **above** the `switch channel.Kind`, so all channel kinds share the same filter (previously it was wired only into the Feishu branch).
 
@@ -178,14 +178,14 @@ The matcher is invoked from `internal/service/delivery/post_delivery.go`. The ch
 
 Benchmarked in `internal/service/delivery/filter/filter_bench_test.go` (AMD Ryzen 5 5600H):
 
-| Scenario | ns/op | allocs/op |
-|----------|------:|----------:|
-| Compile, single keyword | ~153 | 4 |
-| Compile, compound (`prod & (error,warning,fatal) & !debug & !(staging,local)`) | ~1152 | 24 |
-| Match (medium title, hit) | ~682 | **0** |
-| Match (long 4KB title, hit) | ~9658 | **0** |
-| Normalize (NFC+ToLower), long title | ~5549 | 0 |
-| Compile + Match (medium title) — real per-channel delivery cost | ~1618 | 17 |
+| Scenario                                                                       | ns/op | allocs/op |
+| ------------------------------------------------------------------------------ | ----: | --------: |
+| Compile, single keyword                                                        |  ~153 |         4 |
+| Compile, compound (`prod & (error,warning,fatal) & !debug & !(staging,local)`) | ~1152 |        24 |
+| Match (medium title, hit)                                                      |  ~682 |     **0** |
+| Match (long 4KB title, hit)                                                    | ~9658 |     **0** |
+| Normalize (NFC+ToLower), long title                                            | ~5549 |         0 |
+| Compile + Match (medium title) — real per-channel delivery cost                | ~1618 |        17 |
 
 Evaluation is **zero-allocation**; only compilation allocates (proportional to AST size). For a typical channel the per-delivery cost is ~1.6 µs. The dominant factor for long titles is title normalization (NFC + ToLower), not parsing.
 
@@ -193,11 +193,11 @@ Evaluation is **zero-allocation**; only compilation allocates (proportional to A
 
 Tests live in `internal/service/delivery/filter/`:
 
-| File | Scope |
-|------|-------|
-| `filter_test.go` | Semantics, precedence, special characters/quoting, empty-matches-all, valid edge cases, invalid rejections |
+| File                          | Scope                                                                                                                                                                                                                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filter_test.go`              | Semantics, precedence, special characters/quoting, empty-matches-all, valid edge cases, invalid rejections                                                                                                                                                            |
 | `filter_multilingual_test.go` | Chinese (no word boundaries), Japanese (mixed scripts, long vowel mark, small kana), Korean (NFC/NFD), Thai, Arabic/Hebrew (RTL), Cyrillic (case), German (umlauts, ß limit), Latin diacritics, emoji (ZWJ/skin tone/flags), mixed scripts, full-width literalization |
-| `fuzz_test.go` | `FuzzCompile_NeverPanics` (1.3M+ execs, no panic) plus five boolean-identity property tests: De Morgan, double negation, commutativity, distributivity, tautology/contradiction |
+| `fuzz_test.go`                | `FuzzCompile_NeverPanics` (1.3M+ execs, no panic) plus five boolean-identity property tests: De Morgan, double negation, commutativity, distributivity, tautology/contradiction                                                                                       |
 
 ## Design Decisions
 

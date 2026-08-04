@@ -77,7 +77,7 @@ export function useCopyToClipboard(resetDelay = 2000) {
       }
       return ok
     },
-    [resetDelay]
+    [resetDelay],
   )
 
   return { copied, copy } as const

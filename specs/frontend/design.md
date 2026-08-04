@@ -1,9 +1,11 @@
 # Ember Studio
 
 ## Overview
+
 A warm, craft-focused design system for creative project management tools. The aesthetic blends terracotta warmth with modern minimalism — soft earth tones anchor the interface while amber accents draw attention to actions and progress. Designed for teams that value aesthetics alongside productivity. Both light and dark modes feel intentional, not just inverted. The overall mood is calm, focused, and subtly luxurious.
 
 ## Colors
+
 - **Primary** (#C2410C): Terracotta — CTAs, active states, links, focus rings, progress indicators
 - **Primary Hover** (#9A3412): Burnt sienna — hover states on primary elements
 - **Accent** (#F59E0B): Amber — notifications, badges, highlights, new-item indicators
@@ -19,6 +21,7 @@ A warm, craft-focused design system for creative project management tools. The a
 - **Error** (#DC2626): Overdue, failed, destructive actions
 
 ## Typography
+
 - **Display Font**: Playfair Display — loaded from Google Fonts
 - **Body Font**: Source Sans 3 — loaded from Google Fonts
 - **Code Font**: Fira Code — loaded from Google Fonts
@@ -28,9 +31,11 @@ Display and heading text uses Playfair Display at bold weight with tight letter 
 Type scale: Display 64px, Headline 48px, Section heading 28px, Subhead 20px, Body 16px, Small 14px, Caption 12px, Overline 11px uppercase tracking-wide.
 
 ## Elevation
+
 Cards rest flat with a 1px warm border (#D6D3D1) and gain a soft shadow on hover (0 4px 16px rgba(28,25,23,0.06)). Active/selected cards get a 2px left border in terracotta. Primary buttons gain a warm glow on hover (0 4px 12px rgba(194,65,12,0.25)). Modals use a larger shadow (0 24px 48px rgba(28,25,23,0.12)) with a backdrop blur. The nav is transparent with backdrop-blur, gaining a 1px bottom border on scroll.
 
 ## Components
+
 - **Buttons**: Primary uses terracotta (#C2410C) fill with white text, 8px radius, semibold weight. Secondary uses transparent bg with 1px stone border (#D6D3D1), warm text. Ghost has no border, just text color. Destructive uses red bg with white text. All buttons have 150ms transition. Sizes: small (32px height, 12px padding), medium (40px, 16px), large (48px, 24px).
 - **Cards**: Warm white surface (#F5F5F4), 1px border (#D6D3D1), 12px radius, 16px padding. Project cards show a colored left stripe (4px) matching the project's assigned color. Hover lifts 2px with shadow increase. Selected cards have a terracotta left border.
 - **Inputs**: 1px border (#D6D3D1), surface background (#F5F5F4), 8px radius, 12px padding, 16px font. Focus: border turns terracotta with a warm ring (0 0 0 3px rgba(194,65,12,0.12)). Error: border turns red. Labels are 14px semibold above the input.
@@ -41,6 +46,7 @@ Cards rest flat with a 1px warm border (#D6D3D1) and gain a soft shadow on hover
 - **Navigation**: Sidebar layout, 256px width. Warm white bg with 1px right border. Logo and workspace name at top. Collapsible sections with chevron toggles. Active item: terracotta left accent bar (3px) with warm tinted background.
 
 ## Spacing
+
 - Base unit: 4px
 - Scale: 4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80px
 - Component padding: small 8x12, medium 12x16, large 16x24
@@ -49,12 +55,14 @@ Cards rest flat with a 1px warm border (#D6D3D1) and gain a soft shadow on hover
 - Card grid gap: 16px mobile, 24px desktop
 
 ## Border Radius
+
 - 4px: Inline code, small badges
 - 8px: Buttons, inputs, selects, dropdowns
 - 12px: Cards, panels, modals, popovers
 - 9999px: Avatars, chips, pills, progress bars
 
 ## Do's and Don'ts
+
 - Do use terracotta (#C2410C) only for interactive elements and active states — never as decoration
 - Do maintain the 4px spacing grid consistently
 - Do use Playfair Display for headings and Source Sans 3 for body — the serif/sans contrast is the design's signature

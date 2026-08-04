@@ -97,15 +97,15 @@ GET /:qid?format=raw
 
 所有配置通过环境变量设置，可在 `.env` 文件中指定或直接传递给容器。
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `MARKPOST_ADMIN__INITIAL_USERNAME` | 管理员用户名（仅首次启动生效） | `markpost` |
-| `MARKPOST_ADMIN__INITIAL_PASSWORD` | 管理员密码（仅首次启动生效） | `markpost` |
-| `MARKPOST_JWT__ACCESS_SIGNING_KEY` | JWT 访问令牌签名密钥 | `change-me` |
-| `MARKPOST_JWT__REFRESH_SIGNING_KEY` | JWT 刷新令牌签名密钥 | `change-me` |
-| `MARKPOST_SERVER__PUBLIC_URL` | 服务公网地址 | *（空）* |
-| `MARKPOST_TIMEZONE` | 容器时区 | `UTC` |
-| `MARKPOST_POST__RETENTION_DAYS` | 文章保留天数 | `7` |
+| 变量                                | 说明                           | 默认值      |
+| ----------------------------------- | ------------------------------ | ----------- |
+| `MARKPOST_ADMIN__INITIAL_USERNAME`  | 管理员用户名（仅首次启动生效） | `markpost`  |
+| `MARKPOST_ADMIN__INITIAL_PASSWORD`  | 管理员密码（仅首次启动生效）   | `markpost`  |
+| `MARKPOST_JWT__ACCESS_SIGNING_KEY`  | JWT 访问令牌签名密钥           | `change-me` |
+| `MARKPOST_JWT__REFRESH_SIGNING_KEY` | JWT 刷新令牌签名密钥           | `change-me` |
+| `MARKPOST_SERVER__PUBLIC_URL`       | 服务公网地址                   | _（空）_    |
+| `MARKPOST_TIMEZONE`                 | 容器时区                       | `UTC`       |
+| `MARKPOST_POST__RETENTION_DAYS`     | 文章保留天数                   | `7`         |
 
 完整变量列表请参阅 [`.env.example`](docker/.env.example)。
 

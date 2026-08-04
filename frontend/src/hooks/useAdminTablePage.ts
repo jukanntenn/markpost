@@ -12,7 +12,7 @@ import type { Paginated } from '@/types/pagination'
 
 function toQueryStateProps(
   query: { isLoading: boolean; error: Error | null },
-  t: (key: string) => string
+  t: (key: string) => string,
 ): QueryStateProps {
   return {
     isLoading: query.isLoading,
@@ -32,7 +32,7 @@ export function useAdminTablePage<TItem>(
     t: (key: string) => string
     queryFn: (page?: number, limit?: number) => Promise<Paginated<TItem>>
     queryKeyBuilder?: (page: number) => readonly unknown[]
-  }
+  },
 ) {
   const { t, queryFn, queryKeyBuilder, ...restOptions } = options
   const [page, setPage] = useState(1)
@@ -64,7 +64,7 @@ export function useAdminSearchTablePage<TItem>(
     UseQueryOptions<Paginated<TItem>>,
     'select' | 'queryKey' | 'queryFn'
   > &
-    SearchOptions<TItem> & { t: (key: string) => string }
+    SearchOptions<TItem> & { t: (key: string) => string },
 ) {
   const { t, ...queryOptions } = options
   const { items, search, setSearch, pagination, page, onPageChange, ...query } =

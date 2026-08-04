@@ -10,7 +10,7 @@ function renderWithTheme() {
   return renderWithProviders(
     <ThemeProvider>
       <ThemeToggle />
-    </ThemeProvider>
+    </ThemeProvider>,
   )
 }
 
@@ -51,7 +51,7 @@ describe('ThemeToggle', () => {
       <ThemeProvider>
         <ThemeToggle />
         <ThemeValueReader />
-      </ThemeProvider>
+      </ThemeProvider>,
     )
     const toggle = screen.getByRole('button', { name: /toggle theme/i })
     expect(toggle).toBeInTheDocument()

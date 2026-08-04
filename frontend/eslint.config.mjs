@@ -1,15 +1,10 @@
-import next from 'eslint-config-next'
-import coreWebVitals from 'eslint-config-next/core-web-vitals'
-import typescript from 'eslint-config-next/typescript'
-import prettier from 'eslint-config-prettier'
+import nextVitals from 'eslint-config-next/core-web-vitals'
+import nextTs from 'eslint-config-next/typescript'
+import prettier from 'eslint-config-prettier/flat'
 
 const config = [
-  ...next,
-  ...coreWebVitals,
-  ...typescript,
-  {
-    ignores: ['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'dist/**'],
-  },
+  ...nextVitals,
+  ...nextTs,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
@@ -19,6 +14,9 @@ const config = [
     },
   },
   prettier,
+  {
+    ignores: ['dist/**'],
+  },
 ]
 
 export default config

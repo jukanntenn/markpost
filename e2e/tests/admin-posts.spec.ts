@@ -22,7 +22,13 @@ test("create a post via API and verify it appears in admin list", async ({
   page,
 }) => {
   const postKey = await getPostKey(request, authToken.token);
-  const post = await createPost(request, authToken.token, postKey, "Admin Test Post", "Test body content");
+  const post = await createPost(
+    request,
+    authToken.token,
+    postKey,
+    "Admin Test Post",
+    "Test body content",
+  );
 
   await page.reload();
   await expect(adminPostsPage.heading).toBeVisible({ timeout: 15000 });
@@ -31,12 +37,7 @@ test("create a post via API and verify it appears in admin list", async ({
   await expect(postRow).toBeVisible({ timeout: 15000 });
 });
 
-test("search for posts", async ({
-  request,
-  authToken,
-  adminPostsPage,
-  page,
-}) => {
+test("search for posts", async ({ request, authToken, adminPostsPage, page }) => {
   const postKey = await getPostKey(request, authToken.token);
   await createPost(request, authToken.token, postKey, "Searchable Post", "Body");
   await createPost(request, authToken.token, postKey, "Another Post", "Body");

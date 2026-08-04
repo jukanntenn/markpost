@@ -31,7 +31,7 @@ function ToastList() {
         'group pointer-events-auto relative flex w-full items-start gap-3 overflow-hidden rounded-lg border bg-popover p-4 shadow-lg',
         'transition-[opacity,transform] duration-200',
         'data-[starting-style]:opacity-0 data-[starting-style]:translate-y-2',
-        'data-[ending-style]:opacity-0 data-[ending-style]:translate-y-2'
+        'data-[ending-style]:opacity-0 data-[ending-style]:translate-y-2',
       )}
     >
       <Toast.Content className="flex w-full items-start gap-3">

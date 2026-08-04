@@ -37,7 +37,15 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:2053/api/v1/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:2053/api/v1/health",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -60,7 +68,11 @@ services:
       - pgdata:/var/lib/postgresql/data
       - postgres-socket:/var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U ${POSTGRES_USER:-markpost}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h /var/run/postgresql -U ${POSTGRES_USER:-markpost}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

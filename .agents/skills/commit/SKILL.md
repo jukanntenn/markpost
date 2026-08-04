@@ -33,13 +33,13 @@ One big commit is a black box — you can't bisect, can't cherry-pick, and can't
 
 A "logical change unit" is a set of file edits that together accomplish one coherent purpose. Examples:
 
-| Logical change                           | Files                                              | Rationale                                               |
-| ---------------------------------------- | -------------------------------------------------- | ------------------------------------------------------- |
-| Add a new REST endpoint                  | handler + service + repository (backend)            | Full vertical slice — one commit                        |
-| Implement a frontend page with API call  | page component + API fetcher + type definition      | Feature spans component, data, and types — one commit   |
-| Fix a CSS padding bug                    | frontend component only                             | Isolated fix — one commit                               |
-| Update Docker build and compose config   | Dockerfile + docker-compose.yml                    | DevOps change — one commit                              |
-| Bump Go dependency and update code       | go.mod + go.sum + affected backend files            | Dependency update — always together                     |
+| Logical change                          | Files                                          | Rationale                                             |
+| --------------------------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| Add a new REST endpoint                 | handler + service + repository (backend)       | Full vertical slice — one commit                      |
+| Implement a frontend page with API call | page component + API fetcher + type definition | Feature spans component, data, and types — one commit |
+| Fix a CSS padding bug                   | frontend component only                        | Isolated fix — one commit                             |
+| Update Docker build and compose config  | Dockerfile + docker-compose.yml                | DevOps change — one commit                            |
+| Bump Go dependency and update code      | go.mod + go.sum + affected backend files       | Dependency update — always together                   |
 
 ### 2. Ordering: infrastructure → feature → fix → docs → chore
 
@@ -91,11 +91,13 @@ build: add pnpm workspace config and update Dockerfile
 Before every commit, run the relevant checks based on what changed:
 
 **Backend changes:**
+
 ```bash
 cd backend && go test ./... && golangci-lint run
 ```
 
 **Frontend changes:**
+
 ```bash
 cd frontend && pnpm lint && pnpm test:run
 ```
@@ -138,13 +140,13 @@ Reply 'ok' / '行' to execute. Reply with edits, or '我自己来' / 'manual' to
 
 ### 6. Special cases
 
-| Case                                                      | Rule                                                                                                 |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Only one file changed**                                 | Skip the plan protocol — commit directly with a descriptive message                                  |
-| **Generated files** (swagger.json, next-env.d.ts)         | Bundle with the commit that caused them, or a single `chore` commit if standalone                    |
-| **Mixed language edits** (e.g., README.md + README_zh.md) | Keep in one commit if they describe the same change                                                  |
-| **Cross-stack feature** (backend + frontend)               | If tightly coupled (API + its consumer), one commit; if independent parts, split by stack            |
-| **Swagger/docs regeneration**                             | Regenerate via `swag init` command, bundle with the API change that required it                       |
+| Case                                                      | Rule                                                                                      |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Only one file changed**                                 | Skip the plan protocol — commit directly with a descriptive message                       |
+| **Generated files** (swagger.json, next-env.d.ts)         | Bundle with the commit that caused them, or a single `chore` commit if standalone         |
+| **Mixed language edits** (e.g., README.md + README_zh.md) | Keep in one commit if they describe the same change                                       |
+| **Cross-stack feature** (backend + frontend)              | If tightly coupled (API + its consumer), one commit; if independent parts, split by stack |
+| **Swagger/docs regeneration**                             | Regenerate via `swag init` command, bundle with the API change that required it           |
 
 ### 7. What NOT to do
 

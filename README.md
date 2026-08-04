@@ -97,15 +97,15 @@ GET /:qid?format=raw
 
 All configuration is done via environment variables. Set them in your `.env` file or pass them directly to the container.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MARKPOST_ADMIN__INITIAL_USERNAME` | Admin username (first boot only) | `markpost` |
-| `MARKPOST_ADMIN__INITIAL_PASSWORD` | Admin password (first boot only) | `markpost` |
-| `MARKPOST_JWT__ACCESS_SIGNING_KEY` | JWT access token signing key | `change-me` |
-| `MARKPOST_JWT__REFRESH_SIGNING_KEY` | JWT refresh token signing key | `change-me` |
-| `MARKPOST_SERVER__PUBLIC_URL` | Public URL of the service | *(empty)* |
-| `MARKPOST_TIMEZONE` | Container timezone | `UTC` |
-| `MARKPOST_POST__RETENTION_DAYS` | Days before posts expire | `7` |
+| Variable                            | Description                      | Default     |
+| ----------------------------------- | -------------------------------- | ----------- |
+| `MARKPOST_ADMIN__INITIAL_USERNAME`  | Admin username (first boot only) | `markpost`  |
+| `MARKPOST_ADMIN__INITIAL_PASSWORD`  | Admin password (first boot only) | `markpost`  |
+| `MARKPOST_JWT__ACCESS_SIGNING_KEY`  | JWT access token signing key     | `change-me` |
+| `MARKPOST_JWT__REFRESH_SIGNING_KEY` | JWT refresh token signing key    | `change-me` |
+| `MARKPOST_SERVER__PUBLIC_URL`       | Public URL of the service        | _(empty)_   |
+| `MARKPOST_TIMEZONE`                 | Container timezone               | `UTC`       |
+| `MARKPOST_POST__RETENTION_DAYS`     | Days before posts expire         | `7`         |
 
 For the full list, see [`.env.example`](docker/.env.example).
 

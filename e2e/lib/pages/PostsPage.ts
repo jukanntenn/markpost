@@ -9,7 +9,10 @@ export class PostsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.allPostsHeading = page.getByRole("heading", { name: "All Posts", exact: true });
+    this.allPostsHeading = page.getByRole("heading", {
+      name: "All Posts",
+      exact: true,
+    });
     this.titleColumnHeader = page.getByRole("columnheader", { name: "Title" });
     this.previousButton = page.getByRole("button", { name: "Previous" });
     this.nextButton = page.getByRole("button", { name: "Next" });

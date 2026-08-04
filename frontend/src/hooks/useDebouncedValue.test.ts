@@ -14,7 +14,9 @@ describe('useDebouncedValue', () => {
   it('returns the initial value immediately', () => {
     const { result } = renderHook(
       ({ value, delay }) => useDebouncedValue(value, delay),
-      { initialProps: { value: 'hello', delay: 500 } }
+      {
+        initialProps: { value: 'hello', delay: 500 },
+      },
     )
     expect(result.current).toBe('hello')
   })
@@ -22,7 +24,9 @@ describe('useDebouncedValue', () => {
   it('updates after the delay elapses', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebouncedValue(value, delay),
-      { initialProps: { value: 'hello', delay: 500 } }
+      {
+        initialProps: { value: 'hello', delay: 500 },
+      },
     )
 
     rerender({ value: 'world', delay: 500 })
@@ -36,7 +40,9 @@ describe('useDebouncedValue', () => {
   it('does not update before the delay elapses', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebouncedValue(value, delay),
-      { initialProps: { value: 'hello', delay: 500 } }
+      {
+        initialProps: { value: 'hello', delay: 500 },
+      },
     )
 
     rerender({ value: 'world', delay: 500 })
@@ -50,7 +56,9 @@ describe('useDebouncedValue', () => {
   it('resets the timer on rapid changes', () => {
     const { result, rerender } = renderHook(
       ({ value, delay }) => useDebouncedValue(value, delay),
-      { initialProps: { value: 'hello', delay: 500 } }
+      {
+        initialProps: { value: 'hello', delay: 500 },
+      },
     )
 
     rerender({ value: 'a', delay: 500 })

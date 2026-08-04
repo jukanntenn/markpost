@@ -45,7 +45,7 @@ export function PasswordChangeCard() {
         setTimeout(() => setSuccess(''), 3000)
       },
       onError: setErrorOnError(setError),
-    })
+    }),
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,7 +55,7 @@ export function PasswordChangeCard() {
 
     const validationError = validatePasswordChange(
       { newPassword, confirmPassword },
-      { notMatch: t('passwordsNotMatch'), minLength: t('passwordMinLength') }
+      { notMatch: t('passwordsNotMatch'), minLength: t('passwordMinLength') },
     )
     if (validationError) {
       setError(validationError)

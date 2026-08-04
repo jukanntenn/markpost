@@ -54,7 +54,7 @@ export function AdminChannelsPage() {
         toast.success(t('channels.enabledChanged'))
         setAction(null)
       },
-    })
+    }),
   )
 
   const deleteMutation = useMutation(
@@ -66,7 +66,7 @@ export function AdminChannelsPage() {
         toast.success(t('channels.deleted'))
         setAction(null)
       },
-    })
+    }),
   )
 
   function handleAction() {

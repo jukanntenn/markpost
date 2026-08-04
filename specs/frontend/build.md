@@ -26,12 +26,12 @@ export default nextConfig;
 
 markpost 的所有业务逻辑在后端 Go，前端不需要 API Routes / SSR 代理 / Server Actions。纯静态导出的优势：
 
-| 优势 | 说明 |
-|------|------|
+| 优势         | 说明                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------ |
 | 零 Node 内存 | 不需要常驻 Node 进程（省 50-150MB+），内存留给 Go 后端 + PostgreSQL（符合 2C/2G 硬件约束） |
-| 部署极简 | 静态文件丢到任意静态服务器 / CDN，`nginx root /var/www/out;` 即可 |
-| 冷启动零延迟 | CDN 边缘直接返回，无 Node 冷启动 |
-| 镜像复用 | 同一份 `out/` 部署到任何同源拓扑（与 docker/build-spec 的镜像复用一致） |
+| 部署极简     | 静态文件丢到任意静态服务器 / CDN，`nginx root /var/www/out;` 即可                          |
+| 冷启动零延迟 | CDN 边缘直接返回，无 Node 冷启动                                                           |
+| 镜像复用     | 同一份 `out/` 部署到任何同源拓扑（与 docker/build-spec 的镜像复用一致）                    |
 
 ---
 
@@ -60,11 +60,11 @@ Turbopack 与 `output: "export"` 完全兼容。Turbopack 文档未将静态导�
 
 纯静态导出不能用任何服务端运行时能力。以下文件移除：
 
-| 文件 | 移除原因 | 源码依据 |
-|------|---------|---------|
-| `src/proxy.ts` | middleware（`NextResponse.rewrite` 转发 `/api/*` 到后端），纯静态导出不支持 middleware | `export/index.ts` 构建报错 |
-| `src/app/health/route.ts` | API Route（Route Handler），纯静态导出不支持 | `export/index.ts:304-317` |
-| `src/i18n/request.ts` | `getRequestConfig` + `cookies()` 是服务端 API，纯静态导出不用 | next-intl 服务端装配 |
+| 文件                      | 移除原因                                                                               | 源码依据                   |
+| ------------------------- | -------------------------------------------------------------------------------------- | -------------------------- |
+| `src/proxy.ts`            | middleware（`NextResponse.rewrite` 转发 `/api/*` 到后端），纯静态导出不支持 middleware | `export/index.ts` 构建报错 |
+| `src/app/health/route.ts` | API Route（Route Handler），纯静态导出不支持                                           | `export/index.ts:304-317`  |
+| `src/i18n/request.ts`     | `getRequestConfig` + `cookies()` 是服务端 API，纯静态导出不用                          | next-intl 服务端装配       |
 
 i18n 改为纯客户端装配（`NextIntlClientProvider` 直接传 locale + messages），详见 [i18n.md](./i18n.md)。
 
@@ -123,14 +123,14 @@ Next.js 官方文档明确（`environment-variables.mdx:152`）：`NEXT_PUBLIC_`
 }
 ```
 
-| 脚本 | 说明 | 变化 |
-|------|------|------|
-| `dev` | 开发服务器（Turbopack 默认） | 去掉冗余 `--turbopack`（已是默认） |
-| `build` | 生产构建（产出 `out/`） | 不变（Turbopack 默认） |
-| `serve` | 本地预览静态产物 | **新增** |
-| `lint` | ESLint | 不变 |
-| `test` / `test:run` | Vitest | 不变 |
-| ~~`start`~~ | ~~`next start`~~ | **移除**（纯静态不需要 Node 运行时） |
+| 脚本                | 说明                         | 变化                                 |
+| ------------------- | ---------------------------- | ------------------------------------ |
+| `dev`               | 开发服务器（Turbopack 默认） | 去掉冗余 `--turbopack`（已是默认）   |
+| `build`             | 生产构建（产出 `out/`）      | 不变（Turbopack 默认）               |
+| `serve`             | 本地预览静态产物             | **新增**                             |
+| `lint`              | ESLint                       | 不变                                 |
+| `test` / `test:run` | Vitest                       | 不变                                 |
+| ~~`start`~~         | ~~`next start`~~             | **移除**（纯静态不需要 Node 运行时） |
 
 ---
 
@@ -138,19 +138,19 @@ Next.js 官方文档明确（`environment-variables.mdx:152`）：`NEXT_PUBLIC_`
 
 纯静态导出下的特性可用性：
 
-| 能力 | 可用 | 说明 |
-|------|------|------|
-| 静态 HTML/CSS/JS | ✅ | `out/` 全静态 |
-| `next/font` 自托管字体 | ✅ | 构建时嵌入 |
-| 客户端路由（`next/link`、`router`） | ✅ | SPA 式导航 |
-| 客户端数据获取（fetch） | ✅ | 直连后端 API（相对路径 + 反代） |
-| Turbopack 打包 | ✅ | 默认 bundler |
-| middleware / Proxy | ❌ | 已移除（纯静态不支持） |
-| API Routes（Route Handler） | ❌ | 已移除 |
-| Server Actions | ❌ | 不使用 |
-| Server Components（数据获取） | ❌ | 仅静态渲染，无运行时 |
-| ISR（增量静态再生成） | ❌ | 全静态 |
-| `NEXT_PUBLIC_` 运行时变量 | ⚠️ | 构建时冻死，不用 |
+| 能力                                | 可用 | 说明                            |
+| ----------------------------------- | ---- | ------------------------------- |
+| 静态 HTML/CSS/JS                    | ✅   | `out/` 全静态                   |
+| `next/font` 自托管字体              | ✅   | 构建时嵌入                      |
+| 客户端路由（`next/link`、`router`） | ✅   | SPA 式导航                      |
+| 客户端数据获取（fetch）             | ✅   | 直连后端 API（相对路径 + 反代） |
+| Turbopack 打包                      | ✅   | 默认 bundler                    |
+| middleware / Proxy                  | ❌   | 已移除（纯静态不支持）          |
+| API Routes（Route Handler）         | ❌   | 已移除                          |
+| Server Actions                      | ❌   | 不使用                          |
+| Server Components（数据获取）       | ❌   | 仅静态渲染，无运行时            |
+| ISR（增量静态再生成）               | ❌   | 全静态                          |
+| `NEXT_PUBLIC_` 运行时变量           | ⚠️   | 构建时冻死，不用                |
 
 ---
 

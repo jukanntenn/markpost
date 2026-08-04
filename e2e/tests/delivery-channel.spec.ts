@@ -32,7 +32,9 @@ test("creates a channel with keywords", async ({ deliveryPage, page }) => {
   await expect(deliveryPage.dialog).not.toBeVisible({ timeout: 15000 });
 
   await page.reload();
-  await expect(deliveryPage.channelRow("Keyword Channel")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Keyword Channel")).toBeVisible({
+    timeout: 15000,
+  });
 });
 
 test("edits a channel name", async ({ deliveryPage, page }) => {
@@ -40,7 +42,9 @@ test("edits a channel name", async ({ deliveryPage, page }) => {
   await expect(deliveryPage.dialog).not.toBeVisible({ timeout: 15000 });
 
   await page.reload();
-  await expect(deliveryPage.channelRow("Edit Me")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Edit Me")).toBeVisible({
+    timeout: 15000,
+  });
 
   await deliveryPage.editChannel("Edit Me");
   await expect(deliveryPage.channelNameInput).toBeVisible();
@@ -50,7 +54,9 @@ test("edits a channel name", async ({ deliveryPage, page }) => {
 
   await expect(deliveryPage.dialog).not.toBeVisible({ timeout: 15000 });
   await page.reload();
-  await expect(deliveryPage.channelRow("Edited Name")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Edited Name")).toBeVisible({
+    timeout: 15000,
+  });
 });
 
 test("toggles channel enabled/disabled", async ({ deliveryPage, page }) => {
@@ -78,7 +84,9 @@ test("deletes a channel with confirmation", async ({ deliveryPage, page }) => {
   await expect(deliveryPage.dialog).not.toBeVisible({ timeout: 15000 });
 
   await page.reload();
-  await expect(deliveryPage.channelRow("Delete Me")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Delete Me")).toBeVisible({
+    timeout: 15000,
+  });
 
   await deliveryPage.editChannel("Delete Me");
   await deliveryPage.clickDeleteInDialog();

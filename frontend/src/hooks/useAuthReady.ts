@@ -8,6 +8,6 @@ export function useAuthReady() {
       hasHydrated: state._hasHydrated,
       isAuthenticated: !!state.token && !!state.user,
       isAdmin: state.user?.role === 'admin',
-    }))
+    })),
   )
 }

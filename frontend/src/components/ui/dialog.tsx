@@ -39,7 +39,7 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           'fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg bg-card p-6 shadow-[0_24px_48px_rgba(28,25,23,0.12)] dark:shadow-[0_24px_48px_rgba(28,25,23,0.3)] outline-none transition-[opacity,transform] duration-200 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95 sm:max-w-lg',
-          className
+          className,
         )}
         {...props}
       >
@@ -81,7 +81,7 @@ function DialogFooter({
       data-slot="dialog-footer"
       className={cn(
         'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
-        className
+        className,
       )}
       {...props}
     >

@@ -9,7 +9,14 @@ import { AdminPostsPage } from "./pages/AdminPostsPage";
 import { AdminChannelsPage } from "./pages/AdminChannelsPage";
 import { AdminDeliveryHistoryPage } from "./pages/AdminDeliveryHistoryPage";
 import { OAuthCallbackPage } from "./pages/OAuthCallbackPage";
-import { apiLogin, waitForBackend, deleteAllPosts, deleteAllDeliveryChannels, clearWebhooks, clearOAuthRequests } from "./helpers";
+import {
+  apiLogin,
+  waitForBackend,
+  deleteAllPosts,
+  deleteAllDeliveryChannels,
+  clearWebhooks,
+  clearOAuthRequests,
+} from "./helpers";
 
 type TestFixtures = {
   loginPage: LoginPage;
@@ -23,7 +30,11 @@ type TestFixtures = {
   adminDeliveryHistoryPage: AdminDeliveryHistoryPage;
   oauthCallbackPage: OAuthCallbackPage;
   authenticatedPage: Page;
-  authToken: { token: string; refreshToken: string; user: { id: number; username: string; role: string } };
+  authToken: {
+    token: string;
+    refreshToken: string;
+    user: { id: number; username: string; role: string };
+  };
 };
 
 export const test = base.extend<TestFixtures>({
@@ -81,7 +92,11 @@ export const test = base.extend<TestFixtures>({
     await use({
       token: auth.token,
       refreshToken: auth.refresh_token,
-      user: { id: auth.user.id, username: auth.user.username, role: auth.user.role },
+      user: {
+        id: auth.user.id,
+        username: auth.user.username,
+        role: auth.user.role,
+      },
     });
   },
 

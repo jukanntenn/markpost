@@ -23,7 +23,7 @@ function extractErrorCodes(source: string): Set<string> {
 describe('ApiErrorCodes sync with backend', () => {
   const backendDir = path.resolve(
     __dirname,
-    '../../../../backend/internal/service'
+    '../../../../backend/internal/service',
   )
   const backendCodes = new Set<string>()
   for (const file of BACKEND_ERROR_FILES) {
@@ -39,7 +39,7 @@ describe('ApiErrorCodes sync with backend', () => {
     const missing = frontendCodes.filter((c) => !backendCodes.has(c))
     expect(
       missing,
-      `Frontend codes not in backend: ${missing.join(', ')}`
+      `Frontend codes not in backend: ${missing.join(', ')}`,
     ).toEqual([])
   })
 
@@ -49,12 +49,12 @@ describe('ApiErrorCodes sync with backend', () => {
     // and are intentionally absent from the frontend enum. We check the inverse
     // direction (frontend ⊆ backend) strictly above.
     const missing = Array.from(backendCodes).filter(
-      (c) => !frontendCodes.includes(c)
+      (c) => !frontendCodes.includes(c),
     )
     // Log for visibility but do not fail: the frontend only needs a subset.
     expect(
       missing,
-      `Backend codes not in frontend (informational): ${missing.join(', ')}`
+      `Backend codes not in frontend (informational): ${missing.join(', ')}`,
     ).toBeDefined()
   })
 })

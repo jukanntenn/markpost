@@ -8,10 +8,10 @@
 
 认证基于无状态 JWT，access token 与 refresh token 分离：
 
-| token 类型 | 用途 | 签名密钥 | 默认有效期 | 传输方式 |
-|-----------|------|---------|-----------|---------|
-| Access | API 请求鉴权 | `jwt.access_signing_key`（独立） | 24h | `Authorization: Bearer <token>` |
-| Refresh | 换取新 access token | `jwt.refresh_signing_key`（独立） | 720h（30 天） | 请求体字段 |
+| token 类型 | 用途                | 签名密钥                          | 默认有效期    | 传输方式                        |
+| ---------- | ------------------- | --------------------------------- | ------------- | ------------------------------- |
+| Access     | API 请求鉴权        | `jwt.access_signing_key`（独立）  | 24h           | `Authorization: Bearer <token>` |
+| Refresh    | 换取新 access token | `jwt.refresh_signing_key`（独立） | 720h（30 天） | 请求体字段                      |
 
 两个 token 用**各自独立的 HMAC 密钥**签名，互不通用——access 密钥签的 token 无法通过 refresh 校验，反之亦然。
 
@@ -111,8 +111,8 @@ POST /auth/refresh { refresh_token }
 
 `refresh_tokens` 表新增 `revoked` bool 字段（通过 versioned migration 添加，默认 false）：
 
-| 字段 | 类型 | 默认 | 说明 |
-|------|------|------|------|
+| 字段      | 类型 | 默认  | 说明                            |
+| --------- | ---- | ----- | ------------------------------- |
 | `revoked` | bool | false | true 表示已吊销（用于重用检测） |
 
 吊销操作从物理 `DELETE` 改为 `UPDATE SET revoked=true`。这样保留了吊销记录，使重用检测成为可能。
@@ -160,12 +160,14 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
 markpost 采用**同页重定向**（模式 B），而非弹窗模式。这是基于消除本质缺陷的决策：
 
 **弹窗模式的本质缺陷**（无论用轮询 localStorage 还是 postMessage）：
+
 - 弹窗可能被浏览器拦截
 - 用户手动关闭弹窗时，主窗口无法区分"成功关闭"还是"失败关闭"
 - 跨窗口通信（postMessage）需要处理 origin 校验、弹窗引用丢失等边缘情况
 - 移动端弹窗体验差
 
 **同页重定向消除了这些问题**：
+
 - 没有第二个窗口，无需跨窗口通信
 - 所有状态在同一页面会话内流转
 - 失败时 callback 页面在同一上下文，直接处理 error 分支
@@ -223,9 +225,9 @@ markpost 采用**同页重定向**（模式 B），而非弹窗模式。这是�
 
 **双层校验**：
 
-| 层 | 存储 | 职责 |
-|----|------|------|
-| 后端（主防线） | ristretto 缓存 | 生成 state 时存，`/oauth/login` 时校验匹配 + 一次性消费 |
+| 层               | 存储           | 职责                                                         |
+| ---------------- | -------------- | ------------------------------------------------------------ |
+| 后端（主防线）   | ristretto 缓存 | 生成 state 时存，`/oauth/login` 时校验匹配 + 一次性消费      |
 | 前端（二次校验） | sessionStorage | `/oauth/url` 返回的 state 存 sessionStorage，callback 时比对 |
 
 后端是主防线（state 不匹配 → 401）。前端二次校验提前拦截，减少无效请求。
@@ -236,11 +238,11 @@ markpost 采用**同页重定向**（模式 B），而非弹窗模式。这是�
 
 在 state 基础上加 PKCE 双保险：
 
-| 组件 | 位置 | 说明 |
-|------|------|------|
-| `verifier` | 随 state 同存 ristretto（不进 URL） | `oauth2.GenerateVerifier()`，32 字节随机 |
-| `challenge` | 授权 URL（`code_challenge` 参数） | `S256ChallengeOption(verifier)` 计算 SHA256(verifier) |
-| Exchange | `VerifierOption(verifier)` | 后端 Exchange 时传 verifier，GitHub 校验 SHA256(verifier) === challenge |
+| 组件        | 位置                                | 说明                                                                    |
+| ----------- | ----------------------------------- | ----------------------------------------------------------------------- |
+| `verifier`  | 随 state 同存 ristretto（不进 URL） | `oauth2.GenerateVerifier()`，32 字节随机                                |
+| `challenge` | 授权 URL（`code_challenge` 参数）   | `S256ChallengeOption(verifier)` 计算 SHA256(verifier)                   |
+| Exchange    | `VerifierOption(verifier)`          | 后端 Exchange 时传 verifier，GitHub 校验 SHA256(verifier) === challenge |
 
 > 依据：`golang.org/x/oauth2/pkce.go` — `GenerateVerifier()`（`pkce.go:27-38`）、`S256ChallengeOption`（`pkce.go:57-62`）、`VerifierOption`（`pkce.go:42-44`）。`oauth2.go:153-158` 建议用 PKCE 做 CSRF 防护。
 
@@ -264,30 +266,30 @@ GitHub OAuth App 的 `redirect_uri` 注册为：`https://<your-domain>/auth/call
 
 每个失败路径都有明确的用户可见行为：
 
-| 失败场景 | 检测点 | HTTP/状态 | 用户可见行为 |
-|---------|--------|----------|-------------|
-| 用户拒绝授权 | GitHub 重定向带 `?error=access_denied` | callback 前端 | 提示"授权已取消" → `/login` |
-| state 前端不匹配 | callback state ≠ sessionStorage | callback 前端 | 提示"登录状态异常，请重试" → `/login` |
-| state 后端不匹配/过期 | ristretto 查不到 state | `/oauth/login` 401 `invalid_state` | 提示"登录超时，请重试" → `/login` |
-| state 重复使用（重放） | ristretto 已删除（一次性消费） | `/oauth/login` 401 `invalid_state` | 同上 |
-| PKCE 校验失败 | Exchange 时 verifier 不匹配 | `/oauth/login` 401 `oauth_exchange_failed` | 提示"授权验证失败" → `/login` |
-| GitHub Exchange 失败 | token endpoint 拒绝 | `/oauth/login` 401 `oauth_exchange_failed` | 同上 |
-| 获取 GitHub 用户信息失败 | API 调用失败 | `/oauth/login` 502 `github_user_fetch_failed` | 提示"无法获取 GitHub 账户信息" → `/login` |
-| code 缺失/格式错 | callback query 无 code | callback 前端 | 提示"授权回调无效" → `/login` |
-| 用户关 GitHub 页面/返回 | 无回调发生 | 前端无感知 | 用户回到登录页需重新点击（无"卡在等待"状态） |
-| 网络断开 | POST /oauth/login fetch 失败 | callback 前端 catch | 显示"网络错误，请重试"，保留在 callback 页 |
+| 失败场景                 | 检测点                                 | HTTP/状态                                     | 用户可见行为                                 |
+| ------------------------ | -------------------------------------- | --------------------------------------------- | -------------------------------------------- |
+| 用户拒绝授权             | GitHub 重定向带 `?error=access_denied` | callback 前端                                 | 提示"授权已取消" → `/login`                  |
+| state 前端不匹配         | callback state ≠ sessionStorage        | callback 前端                                 | 提示"登录状态异常，请重试" → `/login`        |
+| state 后端不匹配/过期    | ristretto 查不到 state                 | `/oauth/login` 401 `invalid_state`            | 提示"登录超时，请重试" → `/login`            |
+| state 重复使用（重放）   | ristretto 已删除（一次性消费）         | `/oauth/login` 401 `invalid_state`            | 同上                                         |
+| PKCE 校验失败            | Exchange 时 verifier 不匹配            | `/oauth/login` 401 `oauth_exchange_failed`    | 提示"授权验证失败" → `/login`                |
+| GitHub Exchange 失败     | token endpoint 拒绝                    | `/oauth/login` 401 `oauth_exchange_failed`    | 同上                                         |
+| 获取 GitHub 用户信息失败 | API 调用失败                           | `/oauth/login` 502 `github_user_fetch_failed` | 提示"无法获取 GitHub 账户信息" → `/login`    |
+| code 缺失/格式错         | callback query 无 code                 | callback 前端                                 | 提示"授权回调无效" → `/login`                |
+| 用户关 GitHub 页面/返回  | 无回调发生                             | 前端无感知                                    | 用户回到登录页需重新点击（无"卡在等待"状态） |
+| 网络断开                 | POST /oauth/login fetch 失败           | callback 前端 catch                           | 显示"网络错误，请重试"，保留在 callback 页   |
 
 ### 3.8 OAuth 错误码
 
 定义在 `internal/service/auth/errors.go`（遵循 error-handling.md 的"域专属码分文件"原则）：
 
-| ErrCode | Value | HTTP | 场景 |
-|---------|-------|------|------|
-| `ErrMissingState` | `missing_state` | 400 | `/oauth/login` 请求缺 state 参数 |
-| `ErrMissingCode` | `missing_code` | 400 | `/oauth/login` 请求缺 code 参数 |
-| `ErrInvalidState` | `invalid_state` | 401 | state 不匹配 / 过期 / 重放 |
-| `ErrOAuthExchangeFailed` | `oauth_exchange_failed` | 401 | PKCE 校验失败 或 GitHub Exchange 失败 |
-| `ErrGitHubUserFetch` | `github_user_fetch_failed` | 502 | 获取 GitHub 用户信息失败（上游故障，用 502 Bad Gateway 而非笼统 500） |
+| ErrCode                  | Value                      | HTTP | 场景                                                                  |
+| ------------------------ | -------------------------- | ---- | --------------------------------------------------------------------- |
+| `ErrMissingState`        | `missing_state`            | 400  | `/oauth/login` 请求缺 state 参数                                      |
+| `ErrMissingCode`         | `missing_code`             | 400  | `/oauth/login` 请求缺 code 参数                                       |
+| `ErrInvalidState`        | `invalid_state`            | 401  | state 不匹配 / 过期 / 重放                                            |
+| `ErrOAuthExchangeFailed` | `oauth_exchange_failed`    | 401  | PKCE 校验失败 或 GitHub Exchange 失败                                 |
+| `ErrGitHubUserFetch`     | `github_user_fetch_failed` | 502  | 获取 GitHub 用户信息失败（上游故障，用 502 Bad Gateway 而非笼统 500） |
 
 ---
 
@@ -305,11 +307,11 @@ GitHub OAuth App 的 `redirect_uri` 注册为：`https://<your-domain>/auth/call
 
 ### 4.2 密码长度策略
 
-| 约束 | 值 | 理由 |
-|------|-----|------|
-| 最小长度 | 8 字符 | NIST 800-63B 建议：长度比复杂度更重要 |
-| 最大长度 | 72 字符 | bcrypt 算法限制（见下） |
-| 复杂度 | **不强制** | NIST 800-63B 不推荐强制大小写+数字+符号（促使用户用可预测替换如 `P@ssw0rd!`） |
+| 约束     | 值         | 理由                                                                          |
+| -------- | ---------- | ----------------------------------------------------------------------------- |
+| 最小长度 | 8 字符     | NIST 800-63B 建议：长度比复杂度更重要                                         |
+| 最大长度 | 72 字符    | bcrypt 算法限制（见下）                                                       |
+| 复杂度   | **不强制** | NIST 800-63B 不推荐强制大小写+数字+符号（促使用户用可预测替换如 `P@ssw0rd!`） |
 
 ### 4.3 72 字节上限预检
 
@@ -333,9 +335,9 @@ if utf8.RuneCountInString(password) > 72 {
 
 登出同时处理两种 token：
 
-| token | 登出操作 |
-|-------|---------|
-| Access token | SHA-256 哈希存入 `token_blacklist`（TTL = 剩余有效期），中间件 `AuthWithBlacklist` 后续拒绝 |
+| token         | 登出操作                                                                                     |
+| ------------- | -------------------------------------------------------------------------------------------- |
+| Access token  | SHA-256 哈希存入 `token_blacklist`（TTL = 剩余有效期），中间件 `AuthWithBlacklist` 后续拒绝  |
 | Refresh token | `UPDATE refresh_tokens SET revoked=true WHERE user_id = ?`（吊销该用户的所有 refresh token） |
 
 登出吊销 refresh token 防止攻击者在 access token 过期后用残留的 refresh token 重新获取访问权限。
@@ -346,10 +348,10 @@ if utf8.RuneCountInString(password) > 72 {
 
 ### 6.1 存储
 
-| 项 | 设计 |
-|----|------|
-| 存储位置 | `localStorage`（key = `markpost_auth`） |
-| 存储内容 | `{ token, refreshToken, user, _hasHydrated }` |
+| 项       | 设计                                                                      |
+| -------- | ------------------------------------------------------------------------- |
+| 存储位置 | `localStorage`（key = `markpost_auth`）                                   |
+| 存储内容 | `{ token, refreshToken, user, _hasHydrated }`                             |
 | 状态管理 | Zustand + `persist` 中间件，`partialize` 只持久化 token/refreshToken/user |
 
 ### 6.2 XSS 风险与缓解
@@ -359,6 +361,7 @@ localStorage 对所有同源 JS 可见，任何 XSS（含第三方库漏洞）�
 **为什么接受 localStorage**：前端重构为纯静态客户端（无服务端运行时），无法使用 HttpOnly cookie（没有服务端 Set-Cookie）。access + refresh 都存 localStorage 是纯静态前端唯一可行的方案。
 
 **缓解措施**：
+
 - CSP（Content-Security-Policy）限制脚本来源
 - 所有用户输入经过 bluemonday 消毒（文章渲染）+ 输出转义（模板）
 - 依赖项定期审计
@@ -370,8 +373,10 @@ API client 拦截 401 响应，自动尝试 refresh：
 ```typescript
 // 伪代码（详见 src/lib/api/base.ts）
 async function handleTokenRefresh(): Promise<boolean> {
-  if (refreshPromise) return refreshPromise;  // 单飞：并发 401 共享一个 refresh
-  refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null; });
+  if (refreshPromise) return refreshPromise; // 单飞：并发 401 共享一个 refresh
+  refreshPromise = refreshAccessToken().finally(() => {
+    refreshPromise = null;
+  });
   return refreshPromise;
 }
 
@@ -379,7 +384,7 @@ async function handleTokenRefresh(): Promise<boolean> {
 if (response.status === 401 && !skipAuthRefresh) {
   const refreshed = await handleTokenRefresh();
   if (!refreshed) throw new Error("Session expired");
-  return retry();  // 用新 token 重试原请求
+  return retry(); // 用新 token 重试原请求
 }
 ```
 
@@ -394,7 +399,7 @@ Zustand persist 从 localStorage 恢复是异步的。用 `_hasHydrated` 标志�
 ```typescript
 onRehydrateStorage: () => (state) => {
   state?.setHasHydrated(true);
-}
+};
 ```
 
 路由守卫在水合完成前渲染 PageSpinner，水合后根据真实认证状态决定渲染/重定向。
@@ -441,7 +446,8 @@ function AuthCallbackPage() {
     sessionStorage.removeItem("oauth_state");
 
     // 4. POST 后端
-    authApi.loginWithGitHub(code, state)
+    authApi
+      .loginWithGitHub(code, state)
       .then((data) => {
         setAuth(data.token, data.user, data.refresh_token);
         router.replace("/dashboard");

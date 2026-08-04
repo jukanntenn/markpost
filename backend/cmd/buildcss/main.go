@@ -47,6 +47,9 @@ func main() {
 	if err != nil {
 		die("minify css: %v", err)
 	}
+	// Trailing newline for POSIX file convention; included in the hash so
+	// CSSHash matches the embedded bytes exactly.
+	minified = append(minified, '\n')
 
 	hash := fmt.Sprintf("%016x", xxhash.Sum64String(string(minified)))
 

@@ -288,6 +288,19 @@ def main():
     dockerfile_path = os.path.join(project_root, DOCKERFILE)
     context_path = os.path.join(project_root, BUILD_CONTEXT)
 
+    # Resolve the version string baked into the Go binary (git describe).
+    # Falls back to the short commit hash when there are no tags, then "dev".
+    version = "dev"
+    try:
+        desc = subprocess.check_output(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            cwd=project_root, text=True, stderr=subprocess.DEVNULL,
+        ).strip()
+        if desc:
+            version = desc
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+
     all_tags = ["dev"] + args.tags
     full_image_names = []
     cmd = ["docker", "buildx", "build"]
@@ -299,6 +312,7 @@ def main():
         full_image_names.append(full_tag)
         cmd.extend(["--tag", full_tag])
 
+    cmd.extend(["--build-arg", f"VERSION={version}"])
     cmd.extend(["--platform", ",".join(platforms_to_build)])
 
     if args.push:
@@ -324,6 +338,7 @@ def main():
     logger.info("  Platforms:  %s", ", ".join(platforms_to_build))
     logger.info("  Builder:    %s", builder_name)
     logger.info("  Images:     %s", ", ".join(full_image_names))
+    logger.info("  Version:    %s", version)
     logger.info("  Context:    %s", context_path)
     logger.info("  Dockerfile: %s", dockerfile_path)
 

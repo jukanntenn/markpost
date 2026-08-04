@@ -18,55 +18,33 @@ Thumbs.db
 .env.*
 !.env.example
 
-# === Backend (Go) ===
-# Binaries
+# === Global binary artifacts ===
 *.exe
-*.exe~
 *.dll
 *.so
 *.dylib
-*.test
-*.out
-backend/server
-backend/tmp/
-backend/fake.json
-# Observability JSONL logs (timberjack-rolled app/traces/metrics)
-backend/logs/
-# Load-test runtime artifacts (seed data, k6 results, fetched k6 binary)
-scripts/loadtest/out/
-scripts/loadtest/k6-bin/
-# Coverage
-coverage.*
-*.coverprofile
-profile.cov
-# Go workspace
-go.work
-go.work.sum
-# Config
-config.toml
-!.codex/config.toml
-# Database
+
+# === Database (defensive wildcards) ===
 *.sqlite3*
 *.db*
 
-# === Frontend (Node.js / Next.js) ===
+# === Node.js (spans all workspaces) ===
 node_modules/
-.next/
-dist/
-*.tsbuildinfo
-next-env.d.ts
-.pnpm-approved-builds.json
-# Test artifacts
-playwright-report/
-test-results/
-blob-report/
+
+# === Playwright CLI (spans all workspaces) ===
 .playwright/
-.playwright-cli
+.playwright-cli/
+
+# === Local config files (per-workspace; protect .codex) ===
+config.toml
+!.codex/config.toml
 
 # === DevOps / Runtime ===
 frontend.log
 devops/frontend.pid
 devops/data/
+scripts/loadtest/out/
+scripts/loadtest/k6-bin/
 
 # === Python ===
 __pycache__/
@@ -83,6 +61,6 @@ venv/
 htmlcov/
 .hypothesis/
 
+# === Local / AI workspace ===
 .local/
 .zcode/plans/
-frontend/out/

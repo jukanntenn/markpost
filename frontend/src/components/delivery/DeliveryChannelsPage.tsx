@@ -41,7 +41,7 @@ export function DeliveryChannelsPage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingChannel, setEditingChannel] = useState<DeliveryChannel | null>(
-    null
+    null,
   )
 
   const latestQuery = useQuery({
@@ -60,10 +60,10 @@ export function DeliveryChannelsPage() {
         toast.success(
           vars.data.enabled
             ? t('channels.enabledToast')
-            : t('channels.disabledToast')
+            : t('channels.disabledToast'),
         )
       },
-    })
+    }),
   )
 
   function openNew() {
@@ -145,7 +145,7 @@ export function DeliveryChannelsPage() {
                         <p className="truncate text-xs text-muted-foreground">
                           {truncate(
                             channel.configuration?.webhook_url ?? '',
-                            40
+                            40,
                           )}
                         </p>
                       </TableCell>

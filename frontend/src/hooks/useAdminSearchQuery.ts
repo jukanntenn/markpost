@@ -11,7 +11,7 @@ export type SearchOptions<TItem> = {
   queryFn: (
     search: string,
     page?: number,
-    limit?: number
+    limit?: number,
   ) => Promise<Paginated<TItem>>
   debounceMs?: number
 }
@@ -21,7 +21,7 @@ export function useAdminSearchQuery<TItem>(
     UseQueryOptions<Paginated<TItem>>,
     'select' | 'queryKey' | 'queryFn'
   > &
-    SearchOptions<TItem>
+    SearchOptions<TItem>,
 ) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)

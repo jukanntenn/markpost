@@ -5,10 +5,7 @@ test("redirects to login when unauthenticated", async ({ page }) => {
   await page.waitForURL("**/login");
 });
 
-test("renders settings page in English", async ({
-  authenticatedPage,
-  settingsPage,
-}) => {
+test("renders settings page in English", async ({ authenticatedPage, settingsPage }) => {
   await settingsPage.goto();
 
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
@@ -20,27 +17,19 @@ test("renders settings page in English", async ({
   await expect(settingsPage.changePasswordButton).toBeVisible();
 });
 
-test("switches language to Chinese via select", async ({
-  authenticatedPage,
-  settingsPage,
-}) => {
+test("switches language to Chinese via select", async ({ authenticatedPage, settingsPage }) => {
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 
   await settingsPage.selectLocale("zh-Hans");
 
   await expect(authenticatedPage.getByText("应用设置", { exact: true })).toBeVisible();
-  await expect(
-    authenticatedPage.getByText("修改密码", { exact: true })
-  ).toBeVisible();
+  await expect(authenticatedPage.getByText("修改密码", { exact: true })).toBeVisible();
   const lng = await authenticatedPage.evaluate(() => localStorage.getItem("locale"));
   expect(lng).toBe("zh-Hans");
 });
 
-test("shows error on wrong current password", async ({
-  authenticatedPage,
-  settingsPage,
-}) => {
+test("shows error on wrong current password", async ({ authenticatedPage, settingsPage }) => {
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 
@@ -51,10 +40,7 @@ test("shows error on wrong current password", async ({
   await expect(alert).toBeVisible();
 });
 
-test("client validation: new password min length", async ({
-  authenticatedPage,
-  settingsPage,
-}) => {
+test("client validation: new password min length", async ({ authenticatedPage, settingsPage }) => {
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 
@@ -64,10 +50,7 @@ test("client validation: new password min length", async ({
   await expect(settingsPage.getAlert()).toContainText("Password must be at least 6 characters");
 });
 
-test("client validation: passwords must match", async ({
-  authenticatedPage,
-  settingsPage,
-}) => {
+test("client validation: passwords must match", async ({ authenticatedPage, settingsPage }) => {
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 

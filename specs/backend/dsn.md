@@ -10,14 +10,14 @@
 
 ### 1.1 推断规则（按优先级，逐条匹配，命中即止）
 
-| # | 匹配特征 | 判定 | 可靠性 | 依据 |
-|---|---------|------|--------|------|
-| 1 | 以 `postgres://` 或 `postgresql://` 开头 | postgres | 结构化（scheme） | pgx `ParseConfig` 认 scheme |
-| 2 | 以 `file:` 开头 | sqlite | 结构化（scheme） | SQLite URI 规范 | <!-- MySQL/SQLite 已移除 -->
-| 3 | 等于 `:memory:` | sqlite | 结构化（字面值） | SQLite 保留名 | <!-- MySQL/SQLite 已移除 -->
-| 4 | 含 `@tcp(` 或 `@unix(` | mysql | 结构化（go-sql-driver 专有格式） | `go-sql-driver/mysql` DSN 格式独此一家 | <!-- MySQL/SQLite 已移除 -->
-| 5 | 含空格 + `=`（key=value 模式） | postgres | 启发式 | PG keyword 格式；sqlite 裸路径不会同时含空格和 `=` | <!-- MySQL/SQLite 已移除 -->
-| 6 | 其它（裸路径，无空格无 scheme） | sqlite | 兜底假设 | sqlite 是默认 driver，裸路径最可能是 sqlite 文件 | <!-- MySQL/SQLite 已移除 -->
+| #   | 匹配特征                                 | 判定     | 可靠性                           | 依据                                               |
+| --- | ---------------------------------------- | -------- | -------------------------------- | -------------------------------------------------- |
+| 1   | 以 `postgres://` 或 `postgresql://` 开头 | postgres | 结构化（scheme）                 | pgx `ParseConfig` 认 scheme                        |
+| 2   | 以 `file:` 开头                          | sqlite   | 结构化（scheme）                 | SQLite URI 规范                                    | <!-- MySQL/SQLite 已移除 --> |
+| 3   | 等于 `:memory:`                          | sqlite   | 结构化（字面值）                 | SQLite 保留名                                      | <!-- MySQL/SQLite 已移除 --> |
+| 4   | 含 `@tcp(` 或 `@unix(`                   | mysql    | 结构化（go-sql-driver 专有格式） | `go-sql-driver/mysql` DSN 格式独此一家             | <!-- MySQL/SQLite 已移除 --> |
+| 5   | 含空格 + `=`（key=value 模式）           | postgres | 启发式                           | PG keyword 格式；sqlite 裸路径不会同时含空格和 `=` | <!-- MySQL/SQLite 已移除 --> |
+| 6   | 其它（裸路径，无空格无 scheme）          | sqlite   | 兜底假设                         | sqlite 是默认 driver，裸路径最可能是 sqlite 文件   | <!-- MySQL/SQLite 已移除 --> |
 
 这 6 条覆盖了所有支持的 DSN 形态，每条都有依据。规则 5 和 6 不冲突——PG keyword 一定含空格+`=`，sqlite 裸路径不会。 <!-- MySQL/SQLite 已移除 -->
 
@@ -43,10 +43,10 @@ driver 缺省 → 走推断规则 1-6
 
 ### 1.3 配置改动
 
-| 项 | 现状 | 改为 |
-|----|------|------|
-| `db.driver` validator tag | `oneof=sqlite mysql postgresql`（隐式 required） | `omitempty,oneof=sqlite mysql postgresql` | <!-- MySQL/SQLite 已移除 -->
-| `config.example.toml` | `driver = "sqlite"`（必填示例） | 注释掉 + 标注 `[OPTIONAL]`，说明缺省时从 DSN 推断 | <!-- MySQL/SQLite 已移除 -->
+| 项                        | 现状                                             | 改为                                              |
+| ------------------------- | ------------------------------------------------ | ------------------------------------------------- |
+| `db.driver` validator tag | `oneof=sqlite mysql postgresql`（隐式 required） | `omitempty,oneof=sqlite mysql postgresql`         | <!-- MySQL/SQLite 已移除 --> |
+| `config.example.toml`     | `driver = "sqlite"`（必填示例）                  | 注释掉 + 标注 `[OPTIONAL]`，说明缺省时从 DSN 推断 | <!-- MySQL/SQLite 已移除 --> |
 
 ---
 
@@ -61,26 +61,29 @@ markpost 支持 PostgreSQL（生产主选）、MySQL（可选）、SQLite（开�
 pgx 同时接受两种 DSN 风格：
 
 **keyword 格式**（可读性好，密码含特殊字符不需转义）：
+
 ```
 host=localhost port=5432 user=markpost password=CHANGE_ME dbname=markpost sslmode=verify-full TimeZone=Asia/Shanghai
 ```
 
 **URL 格式**（更像整体 URL，但密码里的 `@:/` 等字符需 percent-encode）：
+
 ```
 postgres://markpost:CHANGE_ME@localhost:5432/markpost?sslmode=verify-full
 ```
 
 **Unix domain socket**（同机部署，无 TCP 开销）：
+
 ```
 host=/var/run/postgresql user=markpost password=CHANGE_ME dbname=markpost sslmode=disable
 ```
 
 **sslmode 取值**（不在 spec 强制，由部署者按拓扑选择）：
 
-| 取值 | 适用场景 |
-|------|---------|
-| `disable` | 内网 / Unix socket（无 TLS） |
-| `require` | 强制 TLS，但不校验证书 |
+| 取值          | 适用场景                              |
+| ------------- | ------------------------------------- |
+| `disable`     | 内网 / Unix socket（无 TLS）          |
+| `require`     | 强制 TLS，但不校验证书                |
 | `verify-full` | 强制 TLS + 证书校验（推荐跨网络生产） |
 
 > 配合 [cloudflare.md](./cloudflare.md) 的 CDN↔源站 Full strict，端到端加密闭环。
@@ -95,28 +98,30 @@ host=/var/run/postgresql user=markpost password=CHANGE_ME dbname=markpost sslmod
 markpost:CHANGE_ME@tcp(localhost:3306)/markpost?charset=utf8mb4&parseTime=True&loc=Local
 ```
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| `charset` | **`utf8mb4`**（强制） | 完整 4 字节 UTF-8，支持 emoji 和 CJK 扩展。不用 `utf8`（实际是 utf8mb3，3 字节） |
-| `parseTime` | **`True`**（必带） | 否则 `time.Time` 扫描失败 |
-| `loc` | `Local` | 驱动在 `Explain()` 里读 `DSNConfig.Loc` 做时间转换 |
+| 参数        | 值                    | 说明                                                                             |
+| ----------- | --------------------- | -------------------------------------------------------------------------------- |
+| `charset`   | **`utf8mb4`**（强制） | 完整 4 字节 UTF-8，支持 emoji 和 CJK 扩展。不用 `utf8`（实际是 utf8mb3，3 字节） |
+| `parseTime` | **`True`**（必带）    | 否则 `time.Time` 扫描失败                                                        |
+| `loc`       | `Local`               | 驱动在 `Explain()` 里读 `DSNConfig.Loc` 做时间转换                               |
 
 ### 2.3 SQLite <!-- MySQL/SQLite 已移除 -->
 
 底层库：`mattn/go-sqlite3`（gorm-sqlite 透传 DSN，`sqlite.go:53`）。参数用 `_` 前缀。 <!-- MySQL/SQLite 已移除 -->
 
 **生产 / 开发（文件型，固定格式）**：
+
 ```
 file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL&_busy_timeout=5000
 ```
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| `_foreign_keys` | `on` | 启用外键约束 |
-| `_journal_mode` | `WAL` | Write-Ahead Logging，并发读写性能更好 |
+| 参数            | 值           | 说明                                        |
+| --------------- | ------------ | ------------------------------------------- |
+| `_foreign_keys` | `on`         | 启用外键约束                                |
+| `_journal_mode` | `WAL`        | Write-Ahead Logging，并发读写性能更好       |
 | `_busy_timeout` | `5000`（ms） | 锁等待超时，避免立即报 `database is locked` |
 
 **测试（内存型）**：
+
 ```
 file:testdb?mode=memory&cache=shared
 ```
@@ -212,22 +217,22 @@ func dirForSQLite(dsn string) (dir string, ok bool) { <!-- MySQL/SQLite 已移�
 
 ### 3.5 Edge Case 表
 
-| 输入 DSN | 分支 | 需创建目录 | ok |
-|---------|------|----------|-----|
-| `/abs/path/db.sqlite` | 非 file | `/abs/path` | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `rel/path/db.sqlite` | 非 file | `rel/path` | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `./data/markpost.db` | 非 file | `./data` | ✅ |
-| `db.sqlite`（无目录） | 非 file | `""`（cwd，无需建） | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL` | file | `./data` | ✅ |
-| `file:/abs/path/db.sqlite?mode=ro` | file | `/abs/path` | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `file:///abs/path/db.sqlite` | file，authority 空 | `/abs/path` | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `file://localhost/abs/path/db.sqlite` | file，authority=localhost | `/abs/path` | ✅ | <!-- MySQL/SQLite 已移除 -->
-| `file://darkstar/abs/path/db.sqlite` | file，非法 authority | — | ❌ | <!-- MySQL/SQLite 已移除 -->
-| `:memory:` | 非 file 特例 | `""`（内存库） | ✅ |
-| `file::memory:` | file，body=`:memory:` | `""`（内存库） | ✅ |
-| `file::memory:?cache=shared` | file | `""`（共享内存库） | ✅ |
-| `file:data.db?mode=memory` | file，query 含 mode=memory | `""`（内存库） | ✅ |
-| `sqlite://host/db` | 非 file，含 `://` | — | ❌ | <!-- MySQL/SQLite 已移除 -->
+| 输入 DSN                                                     | 分支                       | 需创建目录          | ok  |
+| ------------------------------------------------------------ | -------------------------- | ------------------- | --- |
+| `/abs/path/db.sqlite`                                        | 非 file                    | `/abs/path`         | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `rel/path/db.sqlite`                                         | 非 file                    | `rel/path`          | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `./data/markpost.db`                                         | 非 file                    | `./data`            | ✅  |
+| `db.sqlite`（无目录）                                        | 非 file                    | `""`（cwd，无需建） | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `file:./data/markpost.db?_foreign_keys=on&_journal_mode=WAL` | file                       | `./data`            | ✅  |
+| `file:/abs/path/db.sqlite?mode=ro`                           | file                       | `/abs/path`         | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `file:///abs/path/db.sqlite`                                 | file，authority 空         | `/abs/path`         | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `file://localhost/abs/path/db.sqlite`                        | file，authority=localhost  | `/abs/path`         | ✅  | <!-- MySQL/SQLite 已移除 --> |
+| `file://darkstar/abs/path/db.sqlite`                         | file，非法 authority       | —                   | ❌  | <!-- MySQL/SQLite 已移除 --> |
+| `:memory:`                                                   | 非 file 特例               | `""`（内存库）      | ✅  |
+| `file::memory:`                                              | file，body=`:memory:`      | `""`（内存库）      | ✅  |
+| `file::memory:?cache=shared`                                 | file                       | `""`（共享内存库）  | ✅  |
+| `file:data.db?mode=memory`                                   | file，query 含 mode=memory | `""`（内存库）      | ✅  |
+| `sqlite://host/db`                                           | 非 file，含 `://`          | —                   | ❌  | <!-- MySQL/SQLite 已移除 --> |
 
 ### 3.6 失败行为
 

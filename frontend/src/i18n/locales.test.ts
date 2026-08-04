@@ -40,7 +40,7 @@ describe('locale messages are valid ICU MessageFormat', () => {
       }
       expect(
         failures,
-        `${locale} has malformed ICU messages:\n${failures.join('\n')}`
+        `${locale} has malformed ICU messages:\n${failures.join('\n')}`,
       ).toEqual([])
     })
   }
@@ -56,11 +56,11 @@ describe('locale messages are valid ICU MessageFormat', () => {
       const extra = [...keySets[i]].filter((k) => !baseline.has(k))
       expect(
         missing,
-        `${LOCALES[i]} missing keys present in ${LOCALES[0]}: ${missing.join(', ')}`
+        `${LOCALES[i]} missing keys present in ${LOCALES[0]}: ${missing.join(', ')}`,
       ).toEqual([])
       expect(
         extra,
-        `${LOCALES[i]} has keys absent in ${LOCALES[0]}: ${extra.join(', ')}`
+        `${LOCALES[i]} has keys absent in ${LOCALES[0]}: ${extra.join(', ')}`,
       ).toEqual([])
     }
   })
@@ -69,7 +69,7 @@ describe('locale messages are valid ICU MessageFormat', () => {
 // Same as flattenMessages but returns the {path: value} map for parsing.
 function flatten(
   obj: Record<string, unknown>,
-  prefix = ''
+  prefix = '',
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(obj)) {

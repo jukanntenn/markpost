@@ -5,7 +5,7 @@ import { toast } from '@/stores/toast'
 export function mutationOptions<TData, TVariables>(
   opts: Omit<UseMutationOptions<TData, Error, TVariables>, 'onError'> & {
     onError?: (err: Error) => void
-  }
+  },
 ): UseMutationOptions<TData, Error, TVariables> {
   const { onError, ...rest } = opts
   return {

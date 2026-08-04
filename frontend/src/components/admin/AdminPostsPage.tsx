@@ -55,7 +55,7 @@ export function AdminPostsPage() {
         toast.success(t('posts.deleted'))
         setDeleteTarget(null)
       },
-    })
+    }),
   )
 
   const backendUrl =

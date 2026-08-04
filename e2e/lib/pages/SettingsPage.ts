@@ -13,9 +13,13 @@ export class SettingsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.appSettingsHeading = page.getByText("Application Settings", { exact: true });
+    this.appSettingsHeading = page.getByText("Application Settings", {
+      exact: true,
+    });
     this.languageLabel = page.getByText("Language", { exact: true });
-    this.changePasswordHeading = page.getByText("Change Password", { exact: true });
+    this.changePasswordHeading = page.getByText("Change Password", {
+      exact: true,
+    });
     this.currentPasswordInput = page.locator("#current-password");
     this.newPasswordInput = page.locator("#new-password");
     this.confirmPasswordInput = page.locator("#confirm-password");
@@ -38,7 +42,9 @@ export class SettingsPage {
   }
 
   async getSuccessMessage() {
-    return this.page.getByText("Password changed successfully!", { exact: true });
+    return this.page.getByText("Password changed successfully!", {
+      exact: true,
+    });
   }
 
   getAlert() {

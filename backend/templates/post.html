@@ -1,23 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta name="color-scheme" content="light dark">
-        <title>{{.Title}}</title>
-        <link rel="stylesheet" href="/static/post.{{.CSSHash}}.css">
-    </head>
-    <body>
-        <main class="page">
-            <article class="container">
-                <header class="post-header">
-                    <h1 class="post-title">{{.Title}}</h1>
-                </header>
-                <div class="content">{{.Body}}</div>
-                <footer class="post-footer">
-                    <a href="/dashboard">Powered by Markpost</a>
-                </footer>
-            </article>
-        </main>
-    </body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/post.{{.CSSHash}}.css" />
+  </head>
+  <body>
+    <main class="page">
+      <article class="container">
+        <header class="post-header">
+          <h1 class="post-title">{{.Title}}</h1>
+        </header>
+        <div class="content">{{.Body}}</div>
+        <footer class="post-footer">
+          <a href="/dashboard">Powered by Markpost</a>
+        </footer>
+      </article>
+    </main>
+  </body>
 </html>

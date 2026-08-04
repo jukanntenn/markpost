@@ -12,7 +12,7 @@ interface UsePostsOptions {
 export function usePosts(
   page: number,
   limit: number = DEFAULT_PAGE_SIZE,
-  options?: UsePostsOptions
+  options?: UsePostsOptions,
 ) {
   const { items, ...rest } = useAdminQuery<PostListItem>({
     queryKey: postKeys.list(page, limit),

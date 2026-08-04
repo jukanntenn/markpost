@@ -73,11 +73,11 @@ SCN-001: Admin publishes a post
 
 ## Artifact Locations
 
-| Artifact | Location |
-|---|---|
-| Domain aggregates | `specs/aggregates/` |
-| Structured Scenarios (SCNs) | `tests/e2e/scenarios/` |
-| Agent tooling | `.claude/skills/`, `.claude/commands/` |
+| Artifact                    | Location                               |
+| --------------------------- | -------------------------------------- |
+| Domain aggregates           | `specs/aggregates/`                    |
+| Structured Scenarios (SCNs) | `tests/e2e/scenarios/`                 |
+| Agent tooling               | `.claude/skills/`, `.claude/commands/` |
 
 ## Phasing
 

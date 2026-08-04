@@ -66,7 +66,7 @@ export function AdminUserDialog({ open, onOpenChange }: AdminUserDialogProps) {
         setForm(EMPTY_FORM)
         setErrors({})
       },
-    })
+    }),
   )
 
   function handleSubmit(e: React.FormEvent) {

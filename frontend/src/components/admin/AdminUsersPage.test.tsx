@@ -23,7 +23,7 @@ describe('AdminUsersPage', () => {
     renderWithProviders(<AdminUsersPage />, { wrapper: ThemeProvider })
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /user management/i })
+        screen.getByRole('heading', { name: /user management/i }),
       ).toBeInTheDocument()
     })
   })
@@ -46,7 +46,7 @@ describe('AdminUsersPage', () => {
     renderWithProviders(<AdminUsersPage />, { wrapper: ThemeProvider })
     await waitFor(() => {
       expect(
-        screen.getByRole('button', { name: /add user/i })
+        screen.getByRole('button', { name: /add user/i }),
       ).toBeInTheDocument()
     })
   })

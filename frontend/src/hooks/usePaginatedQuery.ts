@@ -7,7 +7,7 @@ export function usePaginatedQuery<TItem, TResponse>(
       items: TItem[]
       pagination: Pagination | undefined
     }
-  }
+  },
 ) {
   const { extractData, ...queryOptions } = options
   const result = useQuery<TResponse>(queryOptions)

@@ -7,7 +7,11 @@
       "command": "python3",
       "args": ["devops/dev.py", "start"],
       "options": { "cwd": "${workspaceFolder}" },
-      "presentation": { "reveal": "always", "panel": "dedicated", "focus": false },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
       "problemMatcher": [],
       "isBackground": true,
       "icon": { "id": "rocket", "color": "terminal.ansiBlue" }

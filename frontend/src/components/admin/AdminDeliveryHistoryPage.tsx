@@ -102,7 +102,7 @@ export function AdminDeliveryHistoryPage() {
                 {showError ? (
                   <span
                     className={cn(
-                      'block max-w-[200px] truncate text-destructive'
+                      'block max-w-[200px] truncate text-destructive',
                     )}
                     title={item.last_error}
                   >

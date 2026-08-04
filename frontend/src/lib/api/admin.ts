@@ -15,7 +15,10 @@ export const adminApi = {
   createUser: (data: { email: string; username: string; password: string }) =>
     request<{ id: number; username: string; email: string; role: string }>(
       '/api/v1/admin/users',
-      { method: 'POST', json: data }
+      {
+        method: 'POST',
+        json: data,
+      },
     ),
 
   setUserRole: (id: number, role: string) =>

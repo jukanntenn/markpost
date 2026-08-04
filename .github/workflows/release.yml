@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -14,26 +14,26 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
-    - name: Extract release notes from CHANGELOG
-      id: changelog
-      run: |
-        version=${GITHUB_REF#refs/tags/v}
-        awk "/\\[${version}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md > release_notes.md
-        if [ ! -s release_notes.md ]; then
-          echo "::error::CHANGELOG.md 中未找到版本 ${version} 的条目。请确保 CHANGELOG.md 包含 [${version}] 的 section。"
-          exit 1
-        fi
-        echo "path=release_notes.md" >> "$GITHUB_OUTPUT"
+      - name: Extract release notes from CHANGELOG
+        id: changelog
+        run: |
+          version=${GITHUB_REF#refs/tags/v}
+          awk "/\\[${version}\\]/{flag=1; next} /^## \\[/{flag=0} flag" CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "::error::CHANGELOG.md 中未找到版本 ${version} 的条目。请确保 CHANGELOG.md 包含 [${version}] 的 section。"
+            exit 1
+          fi
+          echo "path=release_notes.md" >> "$GITHUB_OUTPUT"
 
-    - name: Create Release
-      uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-      with:
-        body_path: ${{ steps.changelog.outputs.path }}
-        draft: false
-        prerelease: ${{ contains(github.ref, '-rc') }}
-        make_latest: ${{ !contains(github.ref, '-rc') }}
+      - name: Create Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          body_path: ${{ steps.changelog.outputs.path }}
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') }}
+          make_latest: ${{ !contains(github.ref, '-rc') }}

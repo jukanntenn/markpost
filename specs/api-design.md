@@ -6,13 +6,13 @@
 
 ### 1.1 资源命名（对齐 GitHub）
 
-| 模式 | 规则 | 示例 |
-|------|------|------|
-| 集合 | 复数名词 | `/posts`、`/delivery/channels`、`/admin/users` |
-| 单例 / 服务 | 单数名词 | `/post-key`、`/health`、`/oauth`、`/auth` |
-| 嵌套 | 表达从属关系 | `/delivery/channels/:id`、`/admin/delivery/channels` |
-| admin 命名空间 | `/admin` 前缀 | delivery 域的 admin 端点用 `/admin/delivery/*` 嵌套，体现资源归属 |
-| 功能端点 | 动词命名空间 | `/auth/*`（login/refresh/logout/change-password）、`/oauth/*`（url/login）——认证本质是动作，不强行资源化 |
+| 模式           | 规则          | 示例                                                                                                     |
+| -------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
+| 集合           | 复数名词      | `/posts`、`/delivery/channels`、`/admin/users`                                                           |
+| 单例 / 服务    | 单数名词      | `/post-key`、`/health`、`/oauth`、`/auth`                                                                |
+| 嵌套           | 表达从属关系  | `/delivery/channels/:id`、`/admin/delivery/channels`                                                     |
+| admin 命名空间 | `/admin` 前缀 | delivery 域的 admin 端点用 `/admin/delivery/*` 嵌套，体现资源归属                                        |
+| 功能端点       | 动词命名空间  | `/auth/*`（login/refresh/logout/change-password）、`/oauth/*`（url/login）——认证本质是动作，不强行资源化 |
 
 ### 1.2 kebab-case（统一）
 
@@ -29,10 +29,10 @@ URL path 版本化：`/api/v1`。所有 REST API 在此前缀下。版本升级�
 
 post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等外部工具用：
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/:post_key` | 外部投递创建文章，post_key 在 URL path 中认证 |
-| GET | `/:id` | 渲染文章（返回 HTML 非 JSON，或 `?format=raw` 返回 Markdown） |
+| 方法 | 路径         | 说明                                                          |
+| ---- | ------------ | ------------------------------------------------------------- |
+| POST | `/:post_key` | 外部投递创建文章，post_key 在 URL path 中认证                 |
+| GET  | `/:id`       | 渲染文章（返回 HTML 非 JSON，或 `?format=raw` 返回 Markdown） |
 
 这些端点不返回 JSON（GET 返回 HTML 页面），本就不属于 REST API 集合。
 
@@ -40,12 +40,12 @@ post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等
 
 ## 二、HTTP 方法语义（对齐 GitHub）
 
-| 方法 | 语义 | 成功状态码 | 用例 |
-|------|------|----------|------|
-| GET | 查询 / 读取 | 200 | 列表、详情 |
-| POST | 创建 / 动作 | **201 Created** | 创建渠道、创建文章、登录、OAuth |
-| PATCH | **部分更新**（省略字段 = 不变） | 200 | 更新渠道 |
-| DELETE | 删除 | **204 No Content**（无 body） | 删除渠道、删除文章 |
+| 方法   | 语义                            | 成功状态码                    | 用例                            |
+| ------ | ------------------------------- | ----------------------------- | ------------------------------- |
+| GET    | 查询 / 读取                     | 200                           | 列表、详情                      |
+| POST   | 创建 / 动作                     | **201 Created**               | 创建渠道、创建文章、登录、OAuth |
+| PATCH  | **部分更新**（省略字段 = 不变） | 200                           | 更新渠道                        |
+| DELETE | 删除                            | **204 No Content**（无 body） | 删除渠道、删除文章              |
 
 > **PATCH 而非 PUT**：现状 delivery 渠道更新用 PUT 做部分更新。对齐 GitHub 改为 PATCH。PUT 的规范语义是"整体替换"，部分更新用 PATCH 更准确。
 
@@ -57,12 +57,13 @@ post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等
 
 ### 3.1 400 vs 422 区分（对齐 GitHub）
 
-| 场景 | 状态码 | ErrCode | 说明 |
-|------|--------|---------|------|
-| 请求格式错误（JSON 反序列化失败、空 body、类型不匹配） | **400** | `ErrInvalidRequest` | 服务器无法解析请求内容 |
-| 字段校验失败（required / min_length / ...） | **422** | `ErrValidation` | 请求能解析但字段值不满足业务规则 |
+| 场景                                                   | 状态码  | ErrCode             | 说明                             |
+| ------------------------------------------------------ | ------- | ------------------- | -------------------------------- |
+| 请求格式错误（JSON 反序列化失败、空 body、类型不匹配） | **400** | `ErrInvalidRequest` | 服务器无法解析请求内容           |
+| 字段校验失败（required / min_length / ...）            | **422** | `ErrValidation`     | 请求能解析但字段值不满足业务规则 |
 
 **GitHub 422 证据**（来自 `rest-api-docs-md`，三种触发场景都返回 422）：
+
 - 参数语义冲突：`type` 参数与 `visibility`/`affiliation` 同时用 → 422（`user/repos/get.md`）
 - 缺必需语义限定符：search 缺 `is:issue` → 422（`search/issues/get.md`）
 - 业务前置条件不满足：仓库 ≥10000 commits → 422（`stats/code_frequency/get.md`）
@@ -86,7 +87,11 @@ post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等
   "code": "validation",
   "message": "Request validation failed",
   "errors": [
-    { "field": "new_password", "code": "min_length", "message": "new_password must be at least 8 characters" }
+    {
+      "field": "new_password",
+      "code": "min_length",
+      "message": "new_password must be at least 8 characters"
+    }
   ]
 }
 ```
@@ -122,12 +127,12 @@ post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等
 
 markpost 有两种认证方式，对应不同路径类：
 
-| 路径类 | 认证方式 | 中间件 | 限流维度 |
-|--------|---------|--------|---------|
-| 公共读（`GET /:id`） | 无 | — | L1 per-IP |
-| 公共写（`POST /:post_key`） | PostKey（URL path 中的 key） | PostKey | L2 per-user_id（10/min + 1000/day） |
-| 认证 API（`/api/v1/*` 受保护） | JWT Bearer | AuthWithBlacklist | L3 per-user_id（30/min） |
-| 公共 API（`/oauth/*`、`/auth/login`、`/auth/refresh`、`/health`） | 无 | — | L1 per-IP |
+| 路径类                                                            | 认证方式                     | 中间件            | 限流维度                            |
+| ----------------------------------------------------------------- | ---------------------------- | ----------------- | ----------------------------------- |
+| 公共读（`GET /:id`）                                              | 无                           | —                 | L1 per-IP                           |
+| 公共写（`POST /:post_key`）                                       | PostKey（URL path 中的 key） | PostKey           | L2 per-user_id（10/min + 1000/day） |
+| 认证 API（`/api/v1/*` 受保护）                                    | JWT Bearer                   | AuthWithBlacklist | L3 per-user_id（30/min）            |
+| 公共 API（`/oauth/*`、`/auth/login`、`/auth/refresh`、`/health`） | 无                           | —                 | L1 per-IP                           |
 
 两种认证都设置 `user_id` 到 gin context，限流统一按 user_id 维度。
 
@@ -139,11 +144,11 @@ markpost 有两种认证方式，对应不同路径类：
 
 ### 6.1 三层 token bucket（tollbooth）
 
-| 层 | 作用域 | 维度 | 速率 | burst |
-|----|--------|------|------|-------|
-| L1 | 公共读 | per-IP | 100/s | 200 |
-| L2 | 公共写（post_key） | per-user_id | 10/min + 1000/day 双限（链式两个 limiter） | 20 / 1000 |
-| L3 | 认证写（JWT） | per-user_id | 30/min | 60 |
+| 层  | 作用域             | 维度        | 速率                                       | burst     |
+| --- | ------------------ | ----------- | ------------------------------------------ | --------- |
+| L1  | 公共读             | per-IP      | 100/s                                      | 200       |
+| L2  | 公共写（post_key） | per-user_id | 10/min + 1000/day 双限（链式两个 limiter） | 20 / 1000 |
+| L3  | 认证写（JWT）      | per-user_id | 30/min                                     | 60        |
 
 维度选择：读路径只有 IP（CDN 回源场景 IP 是唯一标识）；写路径用 user_id（轮换凭证 / 换 IP 都不能逃限）。
 

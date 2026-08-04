@@ -40,7 +40,7 @@ describe('mutationOptions', () => {
     expect(customOnError).toHaveBeenCalledWith(
       new Error('custom error'),
       undefined,
-      undefined
+      undefined,
     )
     expect(toast.error).not.toHaveBeenCalled()
   })

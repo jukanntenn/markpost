@@ -23,7 +23,7 @@ describe('AdminChannelsPage', () => {
     renderWithProviders(<AdminChannelsPage />, { wrapper: ThemeProvider })
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /channel management/i })
+        screen.getByRole('heading', { name: /channel management/i }),
       ).toBeInTheDocument()
     })
   })

@@ -23,7 +23,7 @@ server.service.addRoute("GET", "/user", (_req, res) => {
       login: MOCK_USERNAME,
       avatar_url: "https://example.com/avatar.png",
       email: MOCK_EMAIL,
-    })
+    }),
   );
 });
 
@@ -34,7 +34,7 @@ server.service.addRoute("GET", "/user/emails", (_req, res) => {
     JSON.stringify([
       { email: MOCK_EMAIL, primary: true, verified: true },
       { email: "secondary@example.com", primary: false, verified: true },
-    ])
+    ]),
   );
 });
 

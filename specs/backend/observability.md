@@ -16,11 +16,11 @@
 
 ### 三支柱落盘
 
-| 支柱 | 采集 | 落盘 |
-|---|---|---|
-| **Logs** | `log/slog`，自写 Handler 从 ctx 提取 trace_id/span_id 注入每条日志 | timberjack → `app-*.jsonl` |
-| **Traces** | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）+ 业务手动子 span | `stdouttrace.New(WithWriter(timberjack))` → `traces-*.jsonl` |
-| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ runtime 自动采集 | `stdoutmetric.New(WithWriter(timberjack))` → `metrics-*.jsonl` |
+| 支柱        | 采集                                                                  | 落盘                                                           |
+| ----------- | --------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Logs**    | `log/slog`，自写 Handler 从 ctx 提取 trace_id/span_id 注入每条日志    | timberjack → `app-*.jsonl`                                     |
+| **Traces**  | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）+ 业务手动子 span | `stdouttrace.New(WithWriter(timberjack))` → `traces-*.jsonl`   |
+| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ runtime 自动采集       | `stdoutmetric.New(WithWriter(timberjack))` → `metrics-*.jsonl` |
 
 ### 技术可行性依据
 
@@ -44,14 +44,14 @@
 
 ### timberjack 滚动配置（混合策略，三文件共用）
 
-| 配置项 | 值 | 说明 |
-|---|---|---|
-| `RotateAt` | `["00:00"]` | 每天零点滚动（为主） |
-| `MaxSize` | 100 MB | 故障日中途切兜底（单文件不过大） |
-| `MaxBackups` | 14 | 保留 14 个旧文件（约两周） |
-| `MaxAge` | 30 | 30 天前的删除（与 MaxBackups 取严） |
-| `Compression` | `"zstd"` | 旧文件 zstd 压缩 |
-| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | 毫秒格式，避免 size 二次切时重名 |
+| 配置项             | 值                          | 说明                                |
+| ------------------ | --------------------------- | ----------------------------------- |
+| `RotateAt`         | `["00:00"]`                 | 每天零点滚动（为主）                |
+| `MaxSize`          | 100 MB                      | 故障日中途切兜底（单文件不过大）    |
+| `MaxBackups`       | 14                          | 保留 14 个旧文件（约两周）          |
+| `MaxAge`           | 30                          | 30 天前的删除（与 MaxBackups 取严） |
+| `Compression`      | `"zstd"`                    | 旧文件 zstd 压缩                    |
+| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | 毫秒格式，避免 size 二次切时重名    |
 
 **混合策略说明**：以每天零点切为主，但若某天日志暴增（故障风暴），100MB 会中途切一次，那一天有 2 个文件。`BackupTimeFormat` 用毫秒格式确保 size 二次切时不重名。如果看重"严格一天一文件"，可去掉 MaxSize 改纯日期切，但失去单文件大小控制。
 
@@ -86,6 +86,7 @@
 **统一用 `slog.Error` + `os.Exit(1)`，废弃 `log.Fatalf`**。理由：保证 fatal 也进结构化日志（app.jsonl）、带 trace 等字段。
 
 仅启动期不可恢复错误使用 fatal（进程无法继续）：
+
 - Config 文件加载失败
 - 数据库连接失败
 - Admin 用户初始化失败
@@ -127,12 +128,12 @@ r.Use(otelgin.Middleware("markpost"))
 
 业务关键操作用 `tracer.Start(ctx, "operation.name")` 建子 span：
 
-| 操作 | span name |
-|---|---|
+| 操作                                  | span name                          |
+| ------------------------------------- | ---------------------------------- |
 | DB 写事务（创建 post、delivery 派发） | `post.Create`、`delivery.Dispatch` |
-| Markdown 渲染 | `post.RenderHTML` |
-| delivery 调度循环 | `delivery.Schedule` |
-| 外部调用（OAuth 回调 GitHub） | `auth.GitHubCallback` |
+| Markdown 渲染                         | `post.RenderHTML`                  |
+| delivery 调度循环                     | `delivery.Schedule`                |
+| 外部调用（OAuth 回调 GitHub）         | `auth.GitHubCallback`              |
 
 子 span 通过 `trace.SpanFromContext(ctx)` 继承父 span 的 trace_id，形成调用链。**错误时在 span 上记录 error 属性**：`span.SetStatus(codes.Error, msg); span.RecordError(err)`。
 
@@ -156,17 +157,17 @@ r.Use(otelgin.Middleware("markpost"))
 
 暂采纳以下指标，后续按需扩展：
 
-| 层 | 指标 | 类型 | 标签 | 说明 |
-|---|---|---|---|---|
-| HTTP | `http.server.request.duration` | histogram | method, path, status | 接口级性能（otelgin 自动 + 补充） |
-| HTTP | `http.server.active_requests` | gauge | — | 当前在途请求数 |
-| 业务 | `markpost.posts.created_total` | counter | — | 投稿创建数 |
-| 业务 | `markpost.auth.login_total` | counter | result=success/failure | 登录成功/失败分布 |
-| 业务 | `markpost.auth.token_refresh_total` | counter | — | token 刷新次数 |
-| 业务 | `markpost.delivery.pending` | gauge | — | 待派发数 |
-| 业务 | `markpost.delivery.dispatched_total` | counter | — | 已派发数 |
-| 业务 | `markpost.delivery.failed_total` | counter | reason | 派发失败数（按原因） |
-| 系统 | runtime metrics | — | — | OTel Go runtime 自动采集（goroutine 数、GC、mem） |
+| 层   | 指标                                 | 类型      | 标签                   | 说明                                              |
+| ---- | ------------------------------------ | --------- | ---------------------- | ------------------------------------------------- |
+| HTTP | `http.server.request.duration`       | histogram | method, path, status   | 接口级性能（otelgin 自动 + 补充）                 |
+| HTTP | `http.server.active_requests`        | gauge     | —                      | 当前在途请求数                                    |
+| 业务 | `markpost.posts.created_total`       | counter   | —                      | 投稿创建数                                        |
+| 业务 | `markpost.auth.login_total`          | counter   | result=success/failure | 登录成功/失败分布                                 |
+| 业务 | `markpost.auth.token_refresh_total`  | counter   | —                      | token 刷新次数                                    |
+| 业务 | `markpost.delivery.pending`          | gauge     | —                      | 待派发数                                          |
+| 业务 | `markpost.delivery.dispatched_total` | counter   | —                      | 已派发数                                          |
+| 业务 | `markpost.delivery.failed_total`     | counter   | reason                 | 派发失败数（按原因）                              |
+| 系统 | runtime metrics                      | —         | —                      | OTel Go runtime 自动采集（goroutine 数、GC、mem） |
 
 ### 日志关联字段
 

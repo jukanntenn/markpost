@@ -25,32 +25,43 @@
 //
 // Requires both scripts/loadtest/out/qids.json and write_keys.txt.
 
-import http from 'k6/http';
-import exec from 'k6/execution';
-import { check } from 'k6';
-import { SharedArray } from 'k6/data';
-import { originGet, bandwidthSummary, tileBody, normalBodySize, baseURL, tlsOptions, summaryTrendStats } from './lib.js';
+import http from "k6/http";
+import exec from "k6/execution";
+import { check } from "k6";
+import { SharedArray } from "k6/data";
+import {
+  originGet,
+  bandwidthSummary,
+  tileBody,
+  normalBodySize,
+  baseURL,
+  tlsOptions,
+  summaryTrendStats,
+} from "./lib.js";
 
 const BASE_URL = baseURL();
-const READ_RATE = parseInt(__ENV.READ_RATE || '15', 10);
-const WRITE_RATE = parseInt(__ENV.WRITE_RATE || '2', 10);
-const HOLD = __ENV.HOLD || '60m';
-const RAMP = __ENV.RAMP || '2m';
+const READ_RATE = parseInt(__ENV.READ_RATE || "15", 10);
+const WRITE_RATE = parseInt(__ENV.WRITE_RATE || "2", 10);
+const HOLD = __ENV.HOLD || "60m";
+const RAMP = __ENV.RAMP || "2m";
 
-const qids = new SharedArray('qids', function () {
-  return JSON.parse(open(__ENV.QIDS_FILE || '../out/qids.json'));
+const qids = new SharedArray("qids", function () {
+  return JSON.parse(open(__ENV.QIDS_FILE || "../out/qids.json"));
 });
-const keys = new SharedArray('keys', function () {
-  const raw = open(__ENV.KEYS_FILE || '../out/write_keys.txt');
-  return raw.trim().split('\n').filter((k) => k.length > 0);
+const keys = new SharedArray("keys", function () {
+  const raw = open(__ENV.KEYS_FILE || "../out/write_keys.txt");
+  return raw
+    .trim()
+    .split("\n")
+    .filter((k) => k.length > 0);
 });
 
 export const options = {
   scenarios: {
     read: {
-      executor: 'ramping-arrival-rate',
+      executor: "ramping-arrival-rate",
       startRate: 0,
-      timeUnit: '1s',
+      timeUnit: "1s",
       preAllocatedVUs: Math.max(READ_RATE * 3, 50),
       maxVUs: Math.max(READ_RATE * 6, 100),
       stages: [
@@ -60,9 +71,9 @@ export const options = {
       ],
     },
     write: {
-      executor: 'ramping-arrival-rate',
+      executor: "ramping-arrival-rate",
       startRate: 0,
-      timeUnit: '1s',
+      timeUnit: "1s",
       preAllocatedVUs: Math.max(WRITE_RATE * 5, 20),
       maxVUs: Math.max(WRITE_RATE * 10, 40),
       stages: [
@@ -73,28 +84,31 @@ export const options = {
     },
   },
   thresholds: {
-    'http_req_duration{scenario:read}': ['p(95)<200'],
-    'http_req_duration{scenario:write}': ['p(95)<500'],
-    http_req_failed: ['rate<0.02'],
+    "http_req_duration{scenario:read}": ["p(95)<200"],
+    "http_req_duration{scenario:write}": ["p(95)<500"],
+    http_req_failed: ["rate<0.02"],
   },
   ...tlsOptions,
   summaryTrendStats,
   noConnectionReuse: false,
 };
 
-const writeHeaders = { 'Content-Type': 'application/json' };
+const writeHeaders = { "Content-Type": "application/json" };
 
 export default function () {
   const sc = exec.scenario.name;
   const it = exec.scenario.iterationInTest || 0;
-  if (sc === 'read') {
+  if (sc === "read") {
     // 70% revalidation (warm QID + If-None-Match), 30% cold miss (fresh QID).
-    const warm = (it % 10) < 7;
+    const warm = it % 10 < 7;
     const idx = warm ? it % Math.min(50, qids.length) : it % qids.length;
     const qid = qids[idx];
     if (warm) {
-      const first = http.get(`${BASE_URL}/${qid}`, { responseType: 'text', tags: { name: 'read' } });
-      const etag = first.headers && first.headers.Etag ? first.headers.Etag : '';
+      const first = http.get(`${BASE_URL}/${qid}`, {
+        responseType: "text",
+        tags: { name: "read" },
+      });
+      const etag = first.headers && first.headers.Etag ? first.headers.Etag : "";
       if (etag) originGet(BASE_URL, qid, etag);
     } else {
       originGet(BASE_URL, qid);
@@ -107,8 +121,14 @@ export default function () {
     title: `Soak post ${it}`,
     body: tileBody(normalBodySize()),
   });
-  const res = http.post(`${BASE_URL}/${key}`, body, { headers: writeHeaders, tags: { name: 'create' } });
-  check(res, { 'created 201': (r) => r.status === 201, 'not rate-limited': (r) => r.status !== 429 });
+  const res = http.post(`${BASE_URL}/${key}`, body, {
+    headers: writeHeaders,
+    tags: { name: "create" },
+  });
+  check(res, {
+    "created 201": (r) => r.status === 201,
+    "not rate-limited": (r) => r.status !== 429,
+  });
 }
 
 export function handleSummary(data) {

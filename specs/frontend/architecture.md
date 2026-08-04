@@ -78,12 +78,16 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "markpost_auth",
-      partialize: ({ token, refreshToken, user }) => ({ token, refreshToken, user }),
+      partialize: ({ token, refreshToken, user }) => ({
+        token,
+        refreshToken,
+        user,
+      }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
-    }
-  )
+    },
+  ),
 );
 ```
 

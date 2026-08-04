@@ -39,7 +39,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     expect(screen.getByRole('dialog')).toBeVisible()
@@ -53,7 +53,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -67,7 +67,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     const createButton = screen.getByRole('button', { name: /create/i })
@@ -83,7 +83,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
@@ -102,7 +102,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     const titleInput = screen.getByPlaceholderText(/title/i)
@@ -128,7 +128,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     const cancelButton = screen.getByRole('button', { name: /cancel/i })
@@ -141,7 +141,7 @@ describe('CreateTestPostModal', () => {
     server.use(
       http.post('/:postKey', () => {
         return HttpResponse.json({ message: 'Server error' }, { status: 500 })
-      })
+      }),
     )
 
     const user = userEvent.setup()
@@ -152,7 +152,7 @@ describe('CreateTestPostModal', () => {
         onHide={mockOnHide}
         onSuccess={mockOnSuccess}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     const bodyTextarea = screen.getByPlaceholderText(/markdown/i)

@@ -9,6 +9,7 @@ You are a senior pair-programming partner for the markpost codebase: a Go (Gin/G
 All commands assume the working directory noted in each section. Prefer running the dev environment in containers (see DevOps) over running services on the host.
 
 **Backend** (`backend/`):
+
 - `go test ./...` — run tests (uses testcontainers-go; requires a running Docker daemon)
 - `go test -race ./...` — run tests with the race detector (mirrors CI)
 - `go test -cover ./...` — run tests with per-package coverage summary
@@ -22,6 +23,7 @@ All commands assume the working directory noted in each section. Prefer running 
 - `swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal` — regenerate Swagger docs
 
 **Frontend** (`frontend/`):
+
 - `pnpm dev` — dev server (port 3034)
 - `pnpm build` — production build (static export to `out/`)
 - `pnpm lint` — ESLint
@@ -29,10 +31,12 @@ All commands assume the working directory noted in each section. Prefer running 
 - `pnpm test` — Vitest watch; `pnpm test:run` — run once
 
 **E2E** (`e2e/`, separate workspace):
+
 - `pnpm test` — Playwright (chromium only)
 - `dagger call -m e2e all --source ..` — full e2e via dagger (from repo root)
 
 **DevOps** (repo root):
+
 - `python3 devops/dev.py start` — start backend + frontend + postgres in Docker Compose
 - `python3 devops/dev.py stop`
 - `python3 devops/dev.py logs [backend|frontend|postgres]`
@@ -76,6 +80,7 @@ docker/              production Dockerfile (s6 multi-process), build.py
 ## Database Migrations (important)
 
 Schema changes go through `golang-migrate` with versioned SQL files in `backend/internal/infra/migrations/` (embedded in the binary). Rules:
+
 - To change schema: create `NNNNNN_description.up.sql` + `.down.sql`, run `markpost migrate up`.
 - Migrations are PostgreSQL-only (the only supported driver).
 - Never edit a migration file after it's applied to any shared DB; write a new one instead.
@@ -83,9 +88,9 @@ Schema changes go through `golang-migrate` with versioned SQL files in `backend/
 
 ## Code Style
 
-- **Go**: golangci-lint handles format (gofmt + goimports, `local-prefixes: markpost`) and lint. No standalone gofmt/goimports calls. Self-documenting code; comments only to explain *why*, never *what*.
+- **Go**: golangci-lint handles format (gofmt + goimports, `local-prefixes: markpost`) and lint. No standalone gofmt/goimports calls. Self-documenting code; comments only to explain _why_, never _what_.
 - **Frontend**: Prettier for formatting (`.prettierrc.json`), eslint-config-next for correctness. Function components + hooks only, never class components. PascalCase component files (`PostList.tsx`).
-- **No comments unless explaining a non-obvious *why*.** Prefer clear names.
+- **No comments unless explaining a non-obvious _why_.** Prefer clear names.
 - **Never edit generated files**: `backend/docs/` (Swagger), lock files (`pnpm-lock.yaml`, `go.sum`).
 
 ## Git Workflow

@@ -25,14 +25,16 @@ describe('AdminUserDialog', () => {
     const onOpenChange = vi.fn()
     renderWithProviders(
       <AdminUserDialog open={true} onOpenChange={onOpenChange} />,
-      { wrapper: ThemeProvider }
+      {
+        wrapper: ThemeProvider,
+      },
     )
 
     // 不填 email，只填 username + password
     await user.type(screen.getByPlaceholderText(/enter username/i), 'newuser')
     await user.type(
       screen.getByPlaceholderText(/min 6 characters/i),
-      'password123'
+      'password123',
     )
 
     await user.click(screen.getByRole('button', { name: /^create$/i }))
@@ -49,17 +51,19 @@ describe('AdminUserDialog', () => {
     const onOpenChange = vi.fn()
     renderWithProviders(
       <AdminUserDialog open={true} onOpenChange={onOpenChange} />,
-      { wrapper: ThemeProvider }
+      {
+        wrapper: ThemeProvider,
+      },
     )
 
     await user.type(
       screen.getByPlaceholderText(/user@example.com/i),
-      'good@example.com'
+      'good@example.com',
     )
     await user.type(screen.getByPlaceholderText(/enter username/i), 'emailuser')
     await user.type(
       screen.getByPlaceholderText(/min 6 characters/i),
-      'password123'
+      'password123',
     )
 
     await user.click(screen.getByRole('button', { name: /^create$/i }))
@@ -74,18 +78,20 @@ describe('AdminUserDialog', () => {
     const user = userEvent.setup()
     renderWithProviders(
       <AdminUserDialog open={true} onOpenChange={vi.fn()} />,
-      { wrapper: ThemeProvider }
+      {
+        wrapper: ThemeProvider,
+      },
     )
 
     // 填了格式错误的 email（form noValidate 确保 React 校验逻辑执行）
     await user.type(
       screen.getByPlaceholderText(/user@example\.com/i),
-      'not-an-email'
+      'not-an-email',
     )
     await user.type(screen.getByPlaceholderText(/enter username/i), 'xuser')
     await user.type(
       screen.getByPlaceholderText(/min 6 characters/i),
-      'password123'
+      'password123',
     )
 
     await user.click(screen.getByRole('button', { name: /^create$/i }))

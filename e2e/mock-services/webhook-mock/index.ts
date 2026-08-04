@@ -25,10 +25,16 @@ const server = http.createServer((req, res) => {
 
   if (req.method === "POST" && url.pathname.startsWith("/webhook")) {
     let body = "";
-    req.on("data", (chunk) => { body += chunk.toString(); });
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
     req.on("end", () => {
       let parsedBody: unknown;
-      try { parsedBody = JSON.parse(body); } catch { parsedBody = body; }
+      try {
+        parsedBody = JSON.parse(body);
+      } catch {
+        parsedBody = body;
+      }
 
       receivedWebhooks.push({
         timestamp: new Date().toISOString(),

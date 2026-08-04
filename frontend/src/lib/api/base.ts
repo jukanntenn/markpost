@@ -56,7 +56,7 @@ async function handleTokenRefresh(): Promise<boolean> {
 
 export function paginationParams(
   page?: number,
-  limit?: number
+  limit?: number,
 ): Record<string, string | number> {
   const params: Record<string, string | number> = {}
   if (page != null) params.page = page
@@ -67,7 +67,7 @@ export function paginationParams(
 export function buildUrl(
   base: string,
   path: string,
-  params?: Record<string, string | number>
+  params?: Record<string, string | number>,
 ): string {
   const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
   if (!params || Object.keys(params).length === 0) {
@@ -110,7 +110,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 async function attemptRetry<T>(
   response: Response,
   skipRefresh: boolean,
-  retry: () => Promise<Response>
+  retry: () => Promise<Response>,
 ): Promise<T | undefined> {
   if (response.status !== 401 || skipRefresh) return undefined
   const refreshed = await handleTokenRefresh()
@@ -120,7 +120,7 @@ async function attemptRetry<T>(
 
 export async function request<T>(
   url: string,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
 ): Promise<T> {
   const { token } = useAuthStore.getState()
   const {

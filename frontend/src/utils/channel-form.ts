@@ -63,7 +63,7 @@ export function formToCreatePayload(form: FormState): CreateChannelPayload {
 
 export function formToUpdatePayload(
   editingId: number,
-  form: FormState
+  form: FormState,
 ): UpdateChannelMutationVars {
   return {
     id: editingId,
@@ -77,7 +77,7 @@ export function formToUpdatePayload(
 
 export function validateConfiguration(
   kind: string,
-  configuration: FeishuConfiguration
+  configuration: FeishuConfiguration,
 ): { valid: boolean; errors: Record<string, string> } {
   const schema = channelConfigurationSchemas[kind]
   if (!schema) {

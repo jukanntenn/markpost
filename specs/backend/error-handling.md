@@ -21,6 +21,7 @@ infra (GORM)  ──裸透传 sentinel──▶  domain  ──sentinel──▶
 ### infra 层：GORM error 隔离，裸透传
 
 **核心规则**：
+
 - 开启 GORM 的 `TranslateError: true`（`gorm.Config`），驱动自动把数据库特定错误码翻译成 GORM 通用 sentinel：
   - PostgreSQL `23505`（唯一键冲突）→ `gorm.ErrDuplicatedKey`
   - PostgreSQL `23503`（外键冲突）→ `gorm.ErrForeignKeyViolated`
@@ -43,6 +44,7 @@ func findFirst[T any](ctx context.Context, query *gorm.DB) (*T, error) {
 ### domain 层：通用 sentinel
 
 **核心规则**：
+
 - domain 只定义**跨域通用**的 sentinel error（`ErrNotFound`、`ErrConflict`、`ErrAlreadyExists` 等），作为跨层错误识别的稳定契约。
 - repository 接口返回这些 sentinel，**透传不包装**。
 - 域特定的业务错误（如"投稿 qid 重复"、"频道不存在"）**不**在 domain 定义 sentinel，由 service 层根据业务上下文识别后转 service.Error。
@@ -50,6 +52,7 @@ func findFirst[T any](ctx context.Context, query *gorm.DB) (*T, error) {
 ### service 层：最轻量领域隔离
 
 **核心规则**：
+
 - service 调用 infra/repository 后，用 `errors.Is` 判定 sentinel，转成 `service.Error`：
 
 ```go
@@ -70,6 +73,7 @@ case err != nil:
 ### handler 层：binding + 转发
 
 **核心规则**：
+
 - handler 的 error 基本都来自 service。
 - handler 只做三件事：(1) binding 校验失败 → 转 FieldDetail → `service.Error{Code: ErrValidation}`；(2) 调 service；(3) 把 error 交给 `apierr.RespondError`。
 - **handler 不重复包装 service error**。
@@ -92,6 +96,7 @@ func SomeHandler(svc SomeService) gin.HandlerFunc {
 ### apierr 层：客户端错误响应唯一入口
 
 **核心规则**：
+
 - `apierr.RespondError(c, err)` 是 handler 和 middleware 返回客户端错误响应的**唯一入口**。
 - 输入是一个 `error`，内部处理：
   - 非 `service.Error` → `slog.Error` 记录（带 trace 字段）+ 兜底 500
@@ -100,6 +105,7 @@ func SomeHandler(svc SomeService) gin.HandlerFunc {
 ### middleware 层
 
 **核心规则**：
+
 - 与 handler 同模式，但必须 `c.Abort()` 后再 `RespondError`（中止中间件链）。
 - 详见下方"middleware 错误处理"。
 
@@ -123,6 +129,7 @@ type FieldDetail struct {
 **方法**：实现 `Error()`、`Unwrap()`（返回 `Err`），支持 `errors.As`/`errors.Is`。
 
 **构造器**：
+
 - `New(code *ErrCode, description string) *Error`
 - `Wrap(code *ErrCode, description string, err error) *Error`
 - `WithDetails(code *ErrCode, description string, details []FieldDetail) *Error`
@@ -143,6 +150,7 @@ type ErrCode struct {
 ```
 
 **为什么这样设计**：
+
 - 消除 `httpStatuses`、`errorCodeMessages`、`validationFieldMessages` 三张全局 map。
 - **域完全自治**：auth 的错误码 + httpStatus + i18n message + 占位符全在 `auth/errors.go` 一个文件里定义。
 - **零副作用**：无 `init()` 注册、无全局 merge、无注册函数。纯声明式，静态可分析。
@@ -167,28 +175,28 @@ internal/service/
 
 所有域通用的错误码 + 字段校验通用码：
 
-| ErrCode | Value | HTTP | 含义 |
-|---|---|---|---|
-| `ErrInternal` | `internal` | 500 | 意外的服务器内部错误 |
-| `ErrValidation` | `validation` | **422** | 请求参数校验失败（表单 binding）——字段校验失败是"语义上无法处理"（RFC 4918 422），见 [api-design.md](../api-design.md) §3.1 |
-| `ErrInvalidRequest` | `invalid_request` | 400 | 请求格式错误（JSON 反序列化失败、空 body 等） |
-| `ErrNotFound` | `not_found` | 404 | 资源不存在 |
-| `ErrUnauthorized` | `unauthorized` | 401 | 未认证 |
-| `ErrForbidden` | `forbidden` | 403 | 无权限 |
-| `ErrConflict` | `conflict` | 409 | 资源冲突（重复创建等） |
-| `ErrRateLimited` | `rate_limited` | 429 | 触发限流 |
+| ErrCode             | Value             | HTTP    | 含义                                                                                                                        |
+| ------------------- | ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `ErrInternal`       | `internal`        | 500     | 意外的服务器内部错误                                                                                                        |
+| `ErrValidation`     | `validation`      | **422** | 请求参数校验失败（表单 binding）——字段校验失败是"语义上无法处理"（RFC 4918 422），见 [api-design.md](../api-design.md) §3.1 |
+| `ErrInvalidRequest` | `invalid_request` | 400     | 请求格式错误（JSON 反序列化失败、空 body 等）                                                                               |
+| `ErrNotFound`       | `not_found`       | 404     | 资源不存在                                                                                                                  |
+| `ErrUnauthorized`   | `unauthorized`    | 401     | 未认证                                                                                                                      |
+| `ErrForbidden`      | `forbidden`       | 403     | 无权限                                                                                                                      |
+| `ErrConflict`       | `conflict`        | 409     | 资源冲突（重复创建等）                                                                                                      |
+| `ErrRateLimited`    | `rate_limited`    | 429     | 触发限流                                                                                                                    |
 
 字段校验通用码（均 422，理由同 `ErrValidation`）：
 
-| ErrCode | Value | HTTP | Placeholder | 含义 |
-|---|---|---|---|---|
-| `ErrRequired` | `required` | 422 | — | 字段必填 |
-| `ErrMinLength` | `min_length` | 422 | `Min` | 未达最小长度 |
-| `ErrMaxLength` | `max_length` | 422 | `Max` | 超过最大长度 |
-| `ErrLength` | `length` | 422 | `Len` | 长度不符 |
-| `ErrEmail` | `invalid_email` | 422 | — | 邮箱格式错误 |
-| `ErrOneOf` | `not_one_of` | 422 | `OneOf` | 值不在允许范围内 |
-| `ErrFieldViolation` | `field_violation` | 422 | `Param` | 通用兜底（未知 validator tag） |
+| ErrCode             | Value             | HTTP | Placeholder | 含义                           |
+| ------------------- | ----------------- | ---- | ----------- | ------------------------------ |
+| `ErrRequired`       | `required`        | 422  | —           | 字段必填                       |
+| `ErrMinLength`      | `min_length`      | 422  | `Min`       | 未达最小长度                   |
+| `ErrMaxLength`      | `max_length`      | 422  | `Max`       | 超过最大长度                   |
+| `ErrLength`         | `length`          | 422  | `Len`       | 长度不符                       |
+| `ErrEmail`          | `invalid_email`   | 422  | —           | 邮箱格式错误                   |
+| `ErrOneOf`          | `not_one_of`      | 422  | `OneOf`     | 值不在允许范围内               |
+| `ErrFieldViolation` | `field_violation` | 422  | `Param`     | 通用兜底（未知 validator tag） |
 
 ### 域专属码示例（service/auth/errors.go）
 
@@ -231,6 +239,7 @@ type FieldError struct {
 ### 响应示例
 
 **简单错误（无 errors）**：
+
 ```json
 {
   "code": "invalid_credentials",
@@ -239,13 +248,22 @@ type FieldError struct {
 ```
 
 **表单校验错误（有 errors 数组）**：
+
 ```json
 {
   "code": "validation",
   "message": "Request validation failed",
   "errors": [
-    {"field": "new_password", "code": "min_length", "message": "new_password must be at least 6 characters"},
-    {"field": "current_password", "code": "required", "message": "current_password is required"}
+    {
+      "field": "new_password",
+      "code": "min_length",
+      "message": "new_password must be at least 6 characters"
+    },
+    {
+      "field": "current_password",
+      "code": "required",
+      "message": "current_password is required"
+    }
   ]
 }
 ```
@@ -268,15 +286,15 @@ try {
 } catch (error) {
   const err = error.response.data as ErrorResponse;
   if (err.errors) {
-    err.errors.forEach(e => {
+    err.errors.forEach((e) => {
       if (e.field) {
-        setError(e.field, { type: e.code, message: e.message });  // 字段错误标红
+        setError(e.field, { type: e.code, message: e.message }); // 字段错误标红
       } else {
-        toast.error(e.message);  // 非字段错误顶部提示
+        toast.error(e.message); // 非字段错误顶部提示
       }
     });
   } else {
-    toast.error(err.message);  // 简单错误整体提示
+    toast.error(err.message); // 简单错误整体提示
   }
 }
 ```
@@ -337,11 +355,11 @@ func renderMessage(c *gin.Context, code *service.ErrCode, data map[string]any) s
 
 gin 的 `ShouldBindJSON`/`ShouldBindQuery`/`ShouldBindHeader` 等返回的 error 分三类（基于 gin 源码 `binding/json.go`、`binding/form.go`）：
 
-| 阶段 | error 类型 | 处理 |
-|---|---|---|
-| **JSON 反序列化** | `*json.SyntaxError` / `*json.UnmarshalTypeError` / `io.EOF`（空 body） | → `ErrInvalidRequest`（400，无法定位字段，笼统"请求格式错误"） |
-| **结构体校验** | `validator.ValidationErrors`（`[]FieldError`） | → `ErrValidation`（422，带 `errors[]` 字段级详情） |
-| **切片校验** | `binding.SliceValidationError`（`[]error`） | → 递归扁平化为 `[]FieldDetail`（当前无数组 body 接口，保留防御） |
+| 阶段              | error 类型                                                             | 处理                                                             |
+| ----------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **JSON 反序列化** | `*json.SyntaxError` / `*json.UnmarshalTypeError` / `io.EOF`（空 body） | → `ErrInvalidRequest`（400，无法定位字段，笼统"请求格式错误"）   |
+| **结构体校验**    | `validator.ValidationErrors`（`[]FieldError`）                         | → `ErrValidation`（422，带 `errors[]` 字段级详情）               |
+| **切片校验**      | `binding.SliceValidationError`（`[]error`）                            | → 递归扁平化为 `[]FieldDetail`（当前无数组 body 接口，保留防御） |
 
 **语义区分的理由**：`ErrInvalidRequest` 表示"整个请求体解析不了"（前端检查 Content-Type / body 构造）；`ErrValidation` 表示"能解析但字段值不合规"（前端回填表单标红）。
 
@@ -460,6 +478,7 @@ func buildTemplateData(fd FieldDetail) map[string]any {
 ### 明确弃用 validator 自带 translation
 
 validator 自带的 `ValidationErrors.Translate(translator)` 方案不采用。理由：
+
 1. **职责越界**：把 error→message 绑死在 validator 包内，与统一 i18n 体系冲突。
 2. **绕过错误码**：直接生成字符串 message，不经过 ErrCode 映射，客户端拿不到结构化的 code/field/param。
 3. **Translator 初始化复杂**：与已有的 go-i18n locale 文件体系重叠冲突。
@@ -516,9 +535,11 @@ error 不携带操作上下文（无 label），定位靠可观测性体系：
 **场景 1：已知 sentinel**（如 not_found）—— error 码直接映射，无需排查。
 
 **场景 2：infra 意外 error**（如连接池耗尽）—— `app.jsonl` 记录 trace_id → `traces.jsonl` 查 span 调用链：
+
 ```
 POST /:post_key → post.Create → posts.Insert（span 的 err 属性记录原始错误）
 ```
+
 span name 提供层级化操作上下文，比单层 label 更精确。
 
 **场景 3：service 内部 error**（如渲染失败）—— `service.Error.Description`（领域语义"render post failed"）+ span 调用链双重定位。
@@ -542,6 +563,7 @@ span name 提供层级化操作上下文，比单层 label 更精确。
 ```
 
 **审查结论**：0 panic 风险。
+
 - `MustGetMessage` 不 panic（源码确认：`message, _ := GetMessage()` 丢弃 error 返回空串）
 - `config.Get()` 不 panic（`sync.Once`，返回零值）
 - validator 接口方法纯读取不 panic

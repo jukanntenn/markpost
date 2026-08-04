@@ -43,7 +43,10 @@ export class DashboardPage {
   }
 
   async clickUserMenu() {
-    await this.page.getByRole("button").filter({ hasText: /markpost/ }).click();
+    await this.page
+      .getByRole("button")
+      .filter({ hasText: /markpost/ })
+      .click();
   }
 
   async clickLogout() {

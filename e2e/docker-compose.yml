@@ -8,7 +8,11 @@ services:
     volumes:
       - postgres-socket:/var/run/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U markpost -d markpost_e2e"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h /var/run/postgresql -U markpost -d markpost_e2e",
+        ]
       interval: 2s
       timeout: 5s
       retries: 10

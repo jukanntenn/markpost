@@ -2,17 +2,17 @@
 
 This document specifies how markpost integrates with Cloudflare's free-tier CDN for the SaaS reference instance, and records the three deployment modes the project supports. It is the authoritative reference for the DNS, TLS, caching, and cache-purge decisions. All Cloudflare behavior claims cite the Cloudflare documentation at `~/Workspace/contexts/cloudflare/cloudflare-docs/` (repo version 2026-07-08); citations use paths relative to that root.
 
-The caching and invalidation *design* (three cache layers, ETag scheme, cache-tag purge, render cache) lives in [`performance-optimization.md`](./performance-optimization.md). This document covers the *operational* layer: how to wire a VPS origin to Cloudflare, which SSL mode to choose, how the purge API is called, and what the free-tier limits are.
+The caching and invalidation _design_ (three cache layers, ETag scheme, cache-tag purge, render cache) lives in [`performance-optimization.md`](./performance-optimization.md). This document covers the _operational_ layer: how to wire a VPS origin to Cloudflare, which SSL mode to choose, how the purge API is called, and what the free-tier limits are.
 
 ## Deployment Modes
 
-markpost ships as self-hostable software *and* runs as an official SaaS instance. Every design choice must work in both contexts: nothing SaaS-specific is baked into application code or configuration defaults (`performance-optimization.md:471-476`). The three modes differ only in deployment topology, Caddyfile, and DNS — the Go binary is identical.
+markpost ships as self-hostable software _and_ runs as an official SaaS instance. Every design choice must work in both contexts: nothing SaaS-specific is baked into application code or configuration defaults (`performance-optimization.md:471-476`). The three modes differ only in deployment topology, Caddyfile, and DNS — the Go binary is identical.
 
-| Mode | Origin | DNS | TLS termination | CDN | Caddyfile | Typical use |
-|------|--------|-----|-----------------|-----|-----------|-------------|
-| **SaaS** | VPS | domain → Cloudflare (Proxied / orange cloud) | Cloudflare edge (visitor side) + Origin CA on Caddy (origin side, Full strict) | yes | `Caddyfile.j2` (TLS via Origin CA, `trusted_proxies` = Cloudflare CIDRs) | official instance |
-| **Self-hosted (with domain)** | VPS / NAS | domain → origin IP (DNS-only / gray cloud) | Caddy automatic Let's Encrypt + HTTPS redirect | no | per-domain site block (not yet templated in repo) | personal / small-team self-hosting |
-| **Homelab** | NAS | none (LAN IP:port) | none (plaintext HTTP) | no | `docker/Caddyfile` (`:7157`, TLS-less) | home network, trusted LAN |
+| Mode                          | Origin    | DNS                                          | TLS termination                                                                | CDN | Caddyfile                                                                | Typical use                        |
+| ----------------------------- | --------- | -------------------------------------------- | ------------------------------------------------------------------------------ | --- | ------------------------------------------------------------------------ | ---------------------------------- |
+| **SaaS**                      | VPS       | domain → Cloudflare (Proxied / orange cloud) | Cloudflare edge (visitor side) + Origin CA on Caddy (origin side, Full strict) | yes | `Caddyfile.j2` (TLS via Origin CA, `trusted_proxies` = Cloudflare CIDRs) | official instance                  |
+| **Self-hosted (with domain)** | VPS / NAS | domain → origin IP (DNS-only / gray cloud)   | Caddy automatic Let's Encrypt + HTTPS redirect                                 | no  | per-domain site block (not yet templated in repo)                        | personal / small-team self-hosting |
+| **Homelab**                   | NAS       | none (LAN IP:port)                           | none (plaintext HTTP)                                                          | no  | `docker/Caddyfile` (`:7157`, TLS-less)                                   | home network, trusted LAN          |
 
 **The CDN is a precondition for the SaaS reference instance only.** A 3 Mbps origin cannot serve hundreds of reads/second directly (`performance-optimization.md:44-53`). Self-hosted instances on fatter pipes run without one and accept higher origin load. Nothing breaks without a CDN: all cache logic lives at the origin, and the CDN only adds an edge tier.
 
@@ -53,12 +53,12 @@ Cloudflare splits TLS into two independent segments:
 
 The four modes (`ssl/origin-configuration/ssl-modes/*.mdx`):
 
-| Mode | edge → origin | Origin cert required | Failure code | Security |
-|------|---------------|----------------------|--------------|----------|
-| Off | none | no | — | worst (TLS-A also off) |
-| Flexible | plaintext HTTP | no | — | medium (TLS-B plaintext) |
-| Full | HTTPS, **not validated** | yes (self-signed/CA) | 525 | medium-high (MITM can swap cert) |
-| **Full (strict)** | HTTPS, **strictly validated** | yes (unexpired, public CA or Origin CA, CN/SAN match) | 526 | highest |
+| Mode              | edge → origin                 | Origin cert required                                  | Failure code | Security                         |
+| ----------------- | ----------------------------- | ----------------------------------------------------- | ------------ | -------------------------------- |
+| Off               | none                          | no                                                    | —            | worst (TLS-A also off)           |
+| Flexible          | plaintext HTTP                | no                                                    | —            | medium (TLS-B plaintext)         |
+| Full              | HTTPS, **not validated**      | yes (self-signed/CA)                                  | 525          | medium-high (MITM can swap cert) |
+| **Full (strict)** | HTTPS, **strictly validated** | yes (unexpired, public CA or Origin CA, CN/SAN match) | 526          | highest                          |
 
 markpost selects **Full (strict)**. Cloudflare strongly recommends it:
 
@@ -116,7 +116,7 @@ Behind the orange cloud, the origin sees only Cloudflare IPs as direct peers. Cl
 - **`True-Client-IP`** — identical to `CF-Connecting-IP` in value, but Enterprise-only.
 - **`X-Forwarded-For`** — the proxy chain (comma-separated).
 
-markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally with no CIDR check). In the SaaS mode all traffic — reads and writes alike — flows through Cloudflare, and the origin firewall is locked to Cloudflare's CIDRs (see *Origin protection* above), so there is no legitimate direct-connection path. The XFF + Caddy `trusted_proxies` design is retained as **defense in depth**: it self-validates the peer at the TCP layer (where forgery is impossible), so that even if the IP allowlist is bypassed via IP spoofing, a forged `X-Forwarded-For` is overwritten by Caddy rather than appended to. Only Cloudflare (a trusted peer in a Cloudflare CIDR) may prepend to the XFF chain. This keeps gin's `ClientIP()` — and the L1/L2/L3 rate limiters keyed on it — correct even under that residual threat. The detailed mechanism is documented at `performance-optimization.md:240-254`.
+markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally with no CIDR check). In the SaaS mode all traffic — reads and writes alike — flows through Cloudflare, and the origin firewall is locked to Cloudflare's CIDRs (see _Origin protection_ above), so there is no legitimate direct-connection path. The XFF + Caddy `trusted_proxies` design is retained as **defense in depth**: it self-validates the peer at the TCP layer (where forgery is impossible), so that even if the IP allowlist is bypassed via IP spoofing, a forged `X-Forwarded-For` is overwritten by Caddy rather than appended to. Only Cloudflare (a trusted peer in a Cloudflare CIDR) may prepend to the XFF chain. This keeps gin's `ClientIP()` — and the L1/L2/L3 rate limiters keyed on it — correct even under that residual threat. The detailed mechanism is documented at `performance-optimization.md:240-254`.
 
 Operational requirement: the `cloudflare_cidrs` Ansible var (currently the placeholder `private_ranges`) must be set to the real Cloudflare CIDRs from `https://www.cloudflare.com/ips/`. Cloudflare occasionally updates these ranges; operators must resync. This maintenance responsibility is documented here and at `performance-optimization.md:252`.
 
@@ -144,17 +144,17 @@ The only path that is intentionally edge-cached is the public read `GET /:qid`. 
 
 The `CF-Cache-Status` response header diagnoses cache behavior (`cache/concepts/cache-responses.mdx`):
 
-| Value | Meaning |
-|-------|---------|
-| HIT | served from edge cache |
-| MISS | not in cache, fetched from origin |
-| EXPIRED | was cached but TTL elapsed; synchronously revalidated |
-| REVALIDATED | origin confirmed unchanged via conditional request (304); served from cache |
-| UPDATING | expired, serving stale during background revalidation (async SWR path) |
-| STALE | expired and origin unreachable; serving stale |
-| DYNAMIC | not eligible for caching; straight to origin (HTML without proper headers) |
-| BYPASS | origin instructed bypass (`no-cache`/`private`/`max-age=0`, or Set-Cookie) |
-| NONE/UNKNOWN | Cloudflare responded before reaching cache (Worker, WAF block, redirect) |
+| Value        | Meaning                                                                     |
+| ------------ | --------------------------------------------------------------------------- |
+| HIT          | served from edge cache                                                      |
+| MISS         | not in cache, fetched from origin                                           |
+| EXPIRED      | was cached but TTL elapsed; synchronously revalidated                       |
+| REVALIDATED  | origin confirmed unchanged via conditional request (304); served from cache |
+| UPDATING     | expired, serving stale during background revalidation (async SWR path)      |
+| STALE        | expired and origin unreachable; serving stale                               |
+| DYNAMIC      | not eligible for caching; straight to origin (HTML without proper headers)  |
+| BYPASS       | origin instructed bypass (`no-cache`/`private`/`max-age=0`, or Set-Cookie)  |
+| NONE/UNKNOWN | Cloudflare responded before reaching cache (Worker, WAF block, redirect)    |
 
 If post pages consistently show `DYNAMIC`, the cache headers are not taking effect; `MISS` then `HIT` on repeat confirms the cache works.
 
@@ -171,13 +171,13 @@ markpost issues a best-effort **cache-tag purge** on post deletion. The correct 
 
 **Implementation verification.** `backend/internal/service/post/purger.go` matches this contract exactly:
 
-| Contract element | `purger.go` location | Code |
-|------------------|----------------------|------|
-| Endpoint | `:48` | `fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/purge_cache", cfg.ZoneID)` |
-| Bearer auth | `:68` | `req.Header.Set("Authorization", "Bearer "+p.apiToken)` |
-| Tag body | `:56-57` | `tag := "post-" + sanitizeCacheTag(qid)`; `json.Marshal(map[string][]string{"tags": {tag}})` |
-| Best-effort | `:77-79` | `if resp.StatusCode >= 300 { log.Printf(...) }` (swallowed, no error returned) |
-| No-op when unconfigured | `:95-101` | `newPurger` returns `noopPurger` when `APIToken` or `ZoneID` is empty |
+| Contract element        | `purger.go` location | Code                                                                                         |
+| ----------------------- | -------------------- | -------------------------------------------------------------------------------------------- |
+| Endpoint                | `:48`                | `fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/purge_cache", cfg.ZoneID)`       |
+| Bearer auth             | `:68`                | `req.Header.Set("Authorization", "Bearer "+p.apiToken)`                                      |
+| Tag body                | `:56-57`             | `tag := "post-" + sanitizeCacheTag(qid)`; `json.Marshal(map[string][]string{"tags": {tag}})` |
+| Best-effort             | `:77-79`             | `if resp.StatusCode >= 300 { log.Printf(...) }` (swallowed, no error returned)               |
+| No-op when unconfigured | `:95-101`            | `newPurger` returns `noopPurger` when `APIToken` or `ZoneID` is empty                        |
 
 The implementation is correct. There is deliberately **no** `cloudflare-go` SDK dependency: purge is a single best-effort POST, and a raw `net/http` call keeps the dependency surface at zero. The five purge types (everything / by URL / by tag / by prefix / by hostname) all hit the same endpoint with different bodies; markpost only needs by-tag.
 
@@ -196,12 +196,12 @@ markpost sets `Cache-Tag: post-<qid>` in `RenderPost` (`backend/internal/api/res
 
 The Free-tier purge limits, applied **per account** via a token-bucket model (`cache/how-to/purge-cache/index.mdx`, data in `plans/index.json`):
 
-| Dimension | Free | Pro | Business | Enterprise |
-|-----------|------|-----|----------|------------|
-| Request rate (tag/prefix/hostname) | **5 / minute** | 5 / second | 10 / second | 50 / second |
-| Token bucket capacity | **25** | 25 | 50 | 500 |
-| Max operations per request | **100** | 100 | 100 | 100 |
-| by-URL rate | **800 URLs / second** | 1500 / s | 1500 / s | 3000 / s |
+| Dimension                          | Free                  | Pro        | Business    | Enterprise  |
+| ---------------------------------- | --------------------- | ---------- | ----------- | ----------- |
+| Request rate (tag/prefix/hostname) | **5 / minute**        | 5 / second | 10 / second | 50 / second |
+| Token bucket capacity              | **25**                | 25         | 50          | 500         |
+| Max operations per request         | **100**               | 100        | 100         | 100         |
+| by-URL rate                        | **800 URLs / second** | 1500 / s   | 1500 / s    | 3000 / s    |
 
 The token bucket is not a hard "5/minute ceiling": it holds up to 25 tokens, refilled at 5/minute, so short bursts (up to 25 at once) are absorbed; only when the bucket is empty does a request get rate-limited. markpost purges one tag per deletion — far below any limit. At a hypothetical 3000 deletions/day the average is ~2/minute, comfortably under the 5/minute rate.
 
@@ -211,23 +211,23 @@ Purge is triggered only by **active user/admin deletion** (`DeletePostByQID`). T
 
 Aggregated from `plans/index.json` (cache segment) and the cache docs:
 
-| Capability | Free tier | Notes |
-|------------|-----------|-------|
-| CDN storage / bandwidth / requests | free, no metered quota | only explicit statement: "users can continue to use Cloudflare's CDN (without Cache Reserve) for free" (`cache/advanced-configuration/cache-reserve.mdx`) |
-| Max cacheable file size | 512 MB | `cache/concepts/default-cache-behavior.mdx` |
-| Max upload (request body) | **100 MB** | `plans/index.json` network.max_upload_size — bounds create-post body (avg 32 KB, ~3000× headroom) |
-| Min Edge Cache TTL | 2 hours | why `stale-while-revalidate` is not used (see `performance-optimization.md:197`) |
-| Min Browser Cache TTL | 2 minutes | |
-| Cache Rules | 10 | |
-| Purge (all 5 types incl. cache-tag) | yes | Free supports URL/Hostname/Tag/Prefix/Everything (`plans/index.json:454`) |
-| Purge rate | 5/min, bucket 25, 100 ops/req | per account |
-| Proxy Read Timeout (→ 524) | **120 s** | not configurable on Free; only Enterprise can raise it (`fundamentals/reference/connection-limits.mdx`) |
-| Tiered Cache (incl. Smart Topology) | free | `plans/index.json` cache.tiered_cache |
-| ETag / Vary | yes | |
-| Cache Reserve | paid add-on | not used |
-| Cache Analytics | no | |
-| Cache by status code | Enterprise only | |
-| Origin Cache Control | on by default, **cannot disable** | so `s-maxage` etc. are strictly honored |
+| Capability                          | Free tier                         | Notes                                                                                                                                                     |
+| ----------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CDN storage / bandwidth / requests  | free, no metered quota            | only explicit statement: "users can continue to use Cloudflare's CDN (without Cache Reserve) for free" (`cache/advanced-configuration/cache-reserve.mdx`) |
+| Max cacheable file size             | 512 MB                            | `cache/concepts/default-cache-behavior.mdx`                                                                                                               |
+| Max upload (request body)           | **100 MB**                        | `plans/index.json` network.max_upload_size — bounds create-post body (avg 32 KB, ~3000× headroom)                                                         |
+| Min Edge Cache TTL                  | 2 hours                           | why `stale-while-revalidate` is not used (see `performance-optimization.md:197`)                                                                          |
+| Min Browser Cache TTL               | 2 minutes                         |                                                                                                                                                           |
+| Cache Rules                         | 10                                |                                                                                                                                                           |
+| Purge (all 5 types incl. cache-tag) | yes                               | Free supports URL/Hostname/Tag/Prefix/Everything (`plans/index.json:454`)                                                                                 |
+| Purge rate                          | 5/min, bucket 25, 100 ops/req     | per account                                                                                                                                               |
+| Proxy Read Timeout (→ 524)          | **120 s**                         | not configurable on Free; only Enterprise can raise it (`fundamentals/reference/connection-limits.mdx`)                                                   |
+| Tiered Cache (incl. Smart Topology) | free                              | `plans/index.json` cache.tiered_cache                                                                                                                     |
+| ETag / Vary                         | yes                               |                                                                                                                                                           |
+| Cache Reserve                       | paid add-on                       | not used                                                                                                                                                  |
+| Cache Analytics                     | no                                |                                                                                                                                                           |
+| Cache by status code                | Enterprise only                   |                                                                                                                                                           |
+| Origin Cache Control                | on by default, **cannot disable** | so `s-maxage` etc. are strictly honored                                                                                                                   |
 
 **The 100,000 requests/day limit does not apply to markpost.** That is a **Workers** (edge compute) quota (`workers/platform/limits.mdx`); markpost uses no Workers, only the static header-driven CDN proxy path, which has no such request cap. Even when a Worker exceeds 100k/day in fail-open mode, "requests behave as if no Worker is configured" — i.e. normal proxying to origin continues, confirming the proxy path itself is uncapped.
 

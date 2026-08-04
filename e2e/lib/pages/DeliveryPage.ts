@@ -9,9 +9,14 @@ export class DeliveryPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole("heading", { name: "Delivery Channels", exact: true });
+    this.heading = page.getByRole("heading", {
+      name: "Delivery Channels",
+      exact: true,
+    });
     this.table = page.getByRole("table").first();
-    this.emptyState = page.getByText("No delivery channels yet", { exact: true });
+    this.emptyState = page.getByText("No delivery channels yet", {
+      exact: true,
+    });
     this.dialog = page.locator("[data-slot='dialog-content']");
   }
 

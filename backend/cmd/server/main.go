@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -57,6 +58,29 @@ var jwtSvc *auth.JWTService
 var userRepo user.Repository
 var tokenRepo user.TokenRepository
 
+// version is injected at build time via -ldflags "-X main.version=..." for
+// Docker builds (which lack a .git directory). Local `go build`/`go run` leave
+// it empty, in which case effectiveVersion falls back to the VCS revision that
+// Go embeds automatically.
+var version = ""
+
+// effectiveVersion returns the build version: the ldflags-injected value when
+// set (Docker builds), otherwise the short VCS revision embedded by the Go
+// toolchain (local builds), finally "dev" as a last resort.
+func effectiveVersion() string {
+	if version != "" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) >= 8 {
+				return "dev-" + s.Value[:8]
+			}
+		}
+	}
+	return "dev"
+}
+
 // UseCors configures CORS middleware for the gin router.
 func UseCors(r *gin.Engine) {
 	cfg := config.Get()
@@ -69,8 +93,9 @@ func UseCors(r *gin.Engine) {
 
 func main() {
 	app := &cli.App{
-		Name:  "markpost",
-		Usage: "Markpost backend server and management commands",
+		Name:    "markpost",
+		Usage:   "Markpost backend server and management commands",
+		Version: effectiveVersion(),
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",

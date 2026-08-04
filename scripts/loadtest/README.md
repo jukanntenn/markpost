@@ -60,13 +60,13 @@ run. Results land in `scripts/loadtest/out/results/` (`*.json` raw,
 
 ## Scenarios
 
-| Scenario | Simulates | Rate | Default duration |
-|----------|-----------|------|------------------|
-| `read-cold-miss` | A QID seen by an edge for the first time — full DB read + render, singleflight collapses concurrent same-QID misses. | 20 req/s | 60s |
-| `read-revalidate-304` | CDN revalidation after `s-maxage`: GET warms the cache, then `If-None-Match` triggers a bodyless `304`. | 50 req/s | 60s |
-| `read-warm-hit` | A viral post: a small fixed QID set hit round-robin; all but the first per QID are render-cache hits. | 100 req/s | 60s |
-| `write` | `POST /:post_key` (async delivery `Enqueue`) + L2 rate-limit distribution across seeded users. | 10 req/s | 60s |
-| `soak` | Mixed read (15/s) + write (2/s) held 60m to surface memory/connection/goroutine leaks. | 15 + 2 req/s | ramp 2m + hold 60m + ramp 2m |
+| Scenario              | Simulates                                                                                                            | Rate         | Default duration             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- |
+| `read-cold-miss`      | A QID seen by an edge for the first time — full DB read + render, singleflight collapses concurrent same-QID misses. | 20 req/s     | 60s                          |
+| `read-revalidate-304` | CDN revalidation after `s-maxage`: GET warms the cache, then `If-None-Match` triggers a bodyless `304`.              | 50 req/s     | 60s                          |
+| `read-warm-hit`       | A viral post: a small fixed QID set hit round-robin; all but the first per QID are render-cache hits.                | 100 req/s    | 60s                          |
+| `write`               | `POST /:post_key` (async delivery `Enqueue`) + L2 rate-limit distribution across seeded users.                       | 10 req/s     | 60s                          |
+| `soak`                | Mixed read (15/s) + write (2/s) held 60m to surface memory/connection/goroutine leaks.                               | 15 + 2 req/s | ramp 2m + hold 60m + ramp 2m |
 
 Rates are calibrated to the origin's ~25 resp/s physical envelope
 (`performance-optimization.md`: 375 KB/s ÷ ~15 KB/page ≈ 25 origin responses/s).
@@ -139,12 +139,12 @@ revalidation cycle occur during the test.
 `seed.sh` generates fake posts and imports them via the `import-fake-posts` CLI
 (production user-repo path, no DB port exposure):
 
-| Var | Default | Notes |
-|-----|---------|-------|
-| `COUNT` | `1000` | Posts. For genuine all-cold, set ≥ `RATE × DURATION`. |
-| `BODY_BYTES` | `32768` | Body size; matches the spec's 32 KB average. |
-| `SEED` | `1` | Fixed RNG seed → reproducible QIDs/bodies. |
-| `HOT_COUNT` | `10` | QIDs reserved for the warm-hit pool. |
+| Var          | Default | Notes                                                 |
+| ------------ | ------- | ----------------------------------------------------- |
+| `COUNT`      | `1000`  | Posts. For genuine all-cold, set ≥ `RATE × DURATION`. |
+| `BODY_BYTES` | `32768` | Body size; matches the spec's 32 KB average.          |
+| `SEED`       | `1`     | Fixed RNG seed → reproducible QIDs/bodies.            |
+| `HOT_COUNT`  | `10`    | QIDs reserved for the warm-hit pool.                  |
 
 `seed_write.sh` seeds users (with `mpk-` post keys) and optional delivery
 channels, capturing keys to `out/write_keys.txt`. The L2 limit is 10/min/user;

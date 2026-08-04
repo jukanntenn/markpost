@@ -1,5 +1,11 @@
 import { test, expect } from "../lib/fixtures";
-import { apiLogin, BACKEND_URL, deleteAllPosts, deleteAllDeliveryChannels, clearWebhooks } from "../lib/helpers";
+import {
+  apiLogin,
+  BACKEND_URL,
+  deleteAllPosts,
+  deleteAllDeliveryChannels,
+  clearWebhooks,
+} from "../lib/helpers";
 
 test("successfully changes password and can login with new password", async ({
   authenticatedPage,

@@ -14,19 +14,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/**'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html', 'cobertura', 'junit'],
+      reporter: ['text', 'json', 'html', 'cobertura'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        'node_modules/',
-        'src/test/',
-        '*.config.ts',
-        'src/mocks/',
-        'src/main.tsx',
-        'src/vite-env.d.ts',
-      ],
+      exclude: ['src/mocks/'],
     },
   },
 })

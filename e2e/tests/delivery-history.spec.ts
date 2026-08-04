@@ -11,7 +11,11 @@ test.afterEach(async ({ request, authToken }) => {
   await cleanupTestData(request, authToken.token);
 });
 
-test("settings page no longer contains delivery sections", async ({ authenticatedPage, page, settingsPage }) => {
+test("settings page no longer contains delivery sections", async ({
+  authenticatedPage,
+  page,
+  settingsPage,
+}) => {
   await settingsPage.goto();
   await expect(settingsPage.appSettingsHeading).toBeVisible({ timeout: 15000 });
 
@@ -40,9 +44,13 @@ test("delivery history page shows delivered records after a post", async ({
   await new Promise((r) => setTimeout(r, 5000));
 
   await deliveryPage.gotoHistory();
-  await expect(page.getByRole("heading", { name: "Delivery History", exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "Delivery History", exact: true })).toBeVisible({
+    timeout: 15000,
+  });
 
   const historyTable = page.getByRole("table").first();
-  await expect(historyTable.getByText(postTitle, { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(historyTable.getByText(postTitle, { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
   await expect(historyTable.getByText("Delivered", { exact: true }).first()).toBeVisible();
 });

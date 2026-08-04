@@ -23,7 +23,7 @@ describe('AdminDashboardPage', () => {
     renderWithProviders(<AdminDashboardPage />, { wrapper: ThemeProvider })
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /dashboard/i })
+        screen.getByRole('heading', { name: /dashboard/i }),
       ).toBeInTheDocument()
     })
   })

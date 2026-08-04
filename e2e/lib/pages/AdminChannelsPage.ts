@@ -10,7 +10,9 @@ export class AdminChannelsPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.heading = page.getByRole("heading", { name: "Delivery Channel Management" });
+    this.heading = page.getByRole("heading", {
+      name: "Delivery Channel Management",
+    });
     this.table = page.locator("table");
     this.tableHeader = page.locator("thead");
     this.tableBody = page.locator("tbody");

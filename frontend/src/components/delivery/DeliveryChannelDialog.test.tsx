@@ -42,11 +42,11 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={vi.fn()}
         editingChannel={null}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     expect(
-      screen.getByRole('heading', { name: /add delivery channel/i })
+      screen.getByRole('heading', { name: /add delivery channel/i }),
     ).toBeInTheDocument()
   })
 
@@ -57,15 +57,15 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={vi.fn()}
         editingChannel={channel}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     expect(
-      screen.getByRole('heading', { name: /edit delivery channel/i })
+      screen.getByRole('heading', { name: /edit delivery channel/i }),
     ).toBeInTheDocument()
     expect(screen.getByDisplayValue('Existing Channel')).toBeInTheDocument()
     expect(
-      screen.getByDisplayValue('https://example.com/hook')
+      screen.getByDisplayValue('https://example.com/hook'),
     ).toBeInTheDocument()
     expect(screen.getByDisplayValue('alert')).toBeInTheDocument()
   })
@@ -77,10 +77,10 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={vi.fn()}
         editingChannel={null}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
     expect(
-      screen.queryByRole('button', { name: /^test$/i })
+      screen.queryByRole('button', { name: /^test$/i }),
     ).not.toBeInTheDocument()
 
     unmount()
@@ -91,7 +91,7 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={vi.fn()}
         editingChannel={channel}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
     expect(screen.getByRole('button', { name: /^test$/i })).toBeInTheDocument()
   })
@@ -106,7 +106,7 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={vi.fn()}
         editingChannel={channel}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     await user.click(screen.getByRole('button', { name: /^test$/i }))
@@ -127,13 +127,13 @@ describe('DeliveryChannelDialog', () => {
         onOpenChange={onOpenChange}
         editingChannel={channel}
       />,
-      { wrapper: ThemeProvider }
+      { wrapper: ThemeProvider },
     )
 
     await user.click(screen.getByRole('button', { name: /delete/i }))
 
     expect(
-      screen.getByRole('button', { name: /confirm delete/i })
+      screen.getByRole('button', { name: /confirm delete/i }),
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /confirm delete/i }))

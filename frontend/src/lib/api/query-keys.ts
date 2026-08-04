@@ -2,7 +2,7 @@ import type { QueryClient } from '@tanstack/react-query'
 
 export function invalidateKey(
   queryClient: QueryClient,
-  queryKey: readonly unknown[]
+  queryKey: readonly unknown[],
 ) {
   return queryClient.invalidateQueries({ queryKey })
 }

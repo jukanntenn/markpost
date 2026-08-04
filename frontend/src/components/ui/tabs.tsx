@@ -28,7 +28,7 @@ function TabsTrigger({
       data-slot="tabs-trigger"
       className={cn(
         'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-semibold transition-colors outline-none disabled:pointer-events-none disabled:opacity-50 text-muted-foreground data-[selected]:text-primary data-[selected]:border-b-2 data-[selected]:border-primary',
-        className
+        className,
       )}
       {...props}
     />

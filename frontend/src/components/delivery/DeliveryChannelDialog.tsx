@@ -49,7 +49,7 @@ export function DeliveryChannelDialog({
   const isEditing = editingChannel !== null
 
   const [form, setForm] = useState<FormState>(
-    editingChannel ? channelToForm(editingChannel) : EMPTY_FORM
+    editingChannel ? channelToForm(editingChannel) : EMPTY_FORM,
   )
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -66,7 +66,7 @@ export function DeliveryChannelDialog({
         toast.success(t('dialog.created'))
         onOpenChange(false)
       },
-    })
+    }),
   )
 
   const updateMutation = useMutation(
@@ -78,7 +78,7 @@ export function DeliveryChannelDialog({
         toast.success(t('dialog.updated'))
         onOpenChange(false)
       },
-    })
+    }),
   )
 
   const deleteMutation = useMutation(
@@ -89,7 +89,7 @@ export function DeliveryChannelDialog({
         toast.success(t('dialog.deleted'))
         onOpenChange(false)
       },
-    })
+    }),
   )
 
   const testMutation = useMutation({

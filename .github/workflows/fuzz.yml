@@ -5,7 +5,7 @@ name: Fuzz
 # seed in the logs (and committed to testdata/fuzz locally for regression).
 on:
   schedule:
-    - cron: '17 18 * * *' # daily at ~01:00 UTC+7
+    - cron: "17 18 * * *" # daily at ~01:00 UTC+7
   workflow_dispatch:
 
 permissions:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.26'
+          go-version: "1.26"
           cache: true
           cache-dependency-path: backend/go.sum
       # Fuzz targets here do not use testcontainers, so no Docker is needed.

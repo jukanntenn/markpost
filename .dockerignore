@@ -4,7 +4,12 @@
 
 # Documentation
 docs/
+specs/
+wiki/
 README.md
+README_zh.md
+CHANGELOG.md
+KNOWN_ISSUES.md
 
 # DevOps
 devops/
@@ -28,6 +33,7 @@ markpost
 .claude/
 .codex/
 .zcode/
+.opencode/
 .fa/
 .agents/
 .github/

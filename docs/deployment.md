@@ -30,22 +30,22 @@ Go backend on `127.0.0.1:7330`. Postgres is reached over a shared
 
 ### Internal ports (identical everywhere)
 
-| Component | Port | Published? |
-|-----------|------|------------|
-| Go backend | `7330` | No (Caddy proxies to it) |
-| Caddy | `2053` | Yes (host port varies per env) |
-| Postgres | `5432` | No (Unix socket, container-internal only) |
+| Component  | Port   | Published?                                |
+| ---------- | ------ | ----------------------------------------- |
+| Go backend | `7330` | No (Caddy proxies to it)                  |
+| Caddy      | `2053` | Yes (host port varies per env)            |
+| Postgres   | `5432` | No (Unix socket, container-internal only) |
 
 ### Host ports (per environment)
 
 The container always listens on 2053; the host port it is mapped to varies:
 
-| Environment | Host port → container | Notes |
-|-------------|----------------------|-------|
-| e2e / acceptance | `2053:2053` | Local verification |
-| dev (fn) | `8089:2053` | Fixed for backward compat |
-| staging (oect) | `8089:2053` | Fixed for backward compat |
-| production (ttyo) | `2053:2053` | Behind Cloudflare (edge port 443 → origin 2053 via Origin Rule) |
+| Environment       | Host port → container | Notes                                                           |
+| ----------------- | --------------------- | --------------------------------------------------------------- |
+| e2e / acceptance  | `2053:2053`           | Local verification                                              |
+| dev (fn)          | `8089:2053`           | Fixed for backward compat                                       |
+| staging (oect)    | `8089:2053`           | Fixed for backward compat                                       |
+| production (ttyo) | `2053:2053`           | Behind Cloudflare (edge port 443 → origin 2053 via Origin Rule) |
 
 In production, visitors connect to Cloudflare on the standard HTTPS port 443
 (`https://markpost.cc`). Cloudflare then reaches the origin on 2053 (the origin's
@@ -54,11 +54,11 @@ the origin side.
 
 ## TLS strategy
 
-| Environment | TLS profile | Mechanism |
-|-------------|-------------|-----------|
-| e2e / acceptance | `internal` | Caddy `tls internal` (self-signed CA, baked into image) |
-| dev / staging | `http` | `auto_https off`, plain HTTP |
-| production | `origin` | Cloudflare Origin CA cert (`/app/certs/origin.pem`) |
+| Environment      | TLS profile | Mechanism                                               |
+| ---------------- | ----------- | ------------------------------------------------------- |
+| e2e / acceptance | `internal`  | Caddy `tls internal` (self-signed CA, baked into image) |
+| dev / staging    | `http`      | `auto_https off`, plain HTTP                            |
+| production       | `origin`    | Cloudflare Origin CA cert (`/app/certs/origin.pem`)     |
 
 ---
 
@@ -116,6 +116,7 @@ staging's topology matches production.
 
 1. Build and push the new image (which includes the `migrate-sqlite-to-postgres`
    subcommand):
+
    ```bash
    python3 docker/build.py --push --tags dev
    ```
@@ -365,15 +366,15 @@ and fails otherwise, so a bare invocation never deploys to every host at once.
 
 ### Environment variable matrix
 
-| Variable | dev | staging | production |
-|----------|-----|---------|------------|
-| `image_tag` | `dev` | `dev` | `latest` |
-| `image` | `192.168.5.50:5000/markpost:dev` | `192.168.5.50:5000/markpost:dev` | `jukanntenn/markpost:latest` |
-| `host_port` | `8089` | `8089` | `2053` |
-| `tls_profile` | `http` | `http` | `origin` |
-| `public_url` | *(unset)* | `https://markpost.bytehome.fun` | `https://markpost.cc` |
-| `debug` | `true` | `false` | `false` |
-| `cloudflare_cidrs` | *(unset)* | *(unset)* | CF CIDR list |
+| Variable           | dev                              | staging                          | production                   |
+| ------------------ | -------------------------------- | -------------------------------- | ---------------------------- |
+| `image_tag`        | `dev`                            | `dev`                            | `latest`                     |
+| `image`            | `192.168.5.50:5000/markpost:dev` | `192.168.5.50:5000/markpost:dev` | `jukanntenn/markpost:latest` |
+| `host_port`        | `8089`                           | `8089`                           | `2053`                       |
+| `tls_profile`      | `http`                           | `http`                           | `origin`                     |
+| `public_url`       | _(unset)_                        | `https://markpost.bytehome.fun`  | `https://markpost.cc`        |
+| `debug`            | `true`                           | `false`                          | `false`                      |
+| `cloudflare_cidrs` | _(unset)_                        | _(unset)_                        | CF CIDR list                 |
 
 ---
 
@@ -404,6 +405,7 @@ docker compose exec markpost markpost -c /app/config.toml \
 ### Sync Cloudflare CIDRs
 
 When Cloudflare updates their IP ranges, update two places:
+
 1. The VPS firewall (re-run the ufw loop above).
 2. `devops/ansible/group_vars/production.yml` → `cloudflare_cidrs` (space-separated),
    then redeploy production.

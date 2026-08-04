@@ -53,36 +53,36 @@ erDiagram
 
 Defined in `internal/domain/user/user.go`. Stores user accounts with support for both password-based and GitHub OAuth authentication.
 
-| Go Field | DB Column | Type | Nullable | Default | Constraints | Description |
-|----------|-----------|------|----------|---------|-------------|-------------|
-| `ID` | `id` | integer auto-increment | no | — | PK | Primary key |
-| `Email` | `email` | varchar | no | — | unique | User email address |
-| `Username` | `username` | varchar | no | — | unique | Unique username for login |
-| `Name` | `name` | varchar | yes | — | — | Display name |
-| `Password` | `password_hash` | varchar | yes | — | — | Bcrypt-hashed password; empty for OAuth-only users |
-| `AvatarURL` | `avatar_url` | varchar | yes | — | — | Profile avatar URL, typically from GitHub |
-| `PostKey` | `post_key` | varchar | no | — | unique | API key for creating posts via external tools |
-| `GitHubID` | `github_id` | bigint | yes | — | unique | GitHub user ID for OAuth binding |
-| `Role` | `role` | varchar | no | `'user'` | — | User role. Values: `'admin'`, `'user'` |
-| `IsActive` | `is_active` | boolean | no | `true` | — | Whether the account is active |
-| `IsEmailVerified` | `is_email_verified` | boolean | no | `false` | — | Whether the email has been verified |
-| `LastLoginAt` | `last_login_at` | timestamp | yes | — | — | Timestamp of last successful login |
-| `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
-| `UpdatedAt` | `updated_at` | timestamp | no | `now()` | — | Record last update time (auto) |
+| Go Field          | DB Column           | Type                   | Nullable | Default  | Constraints | Description                                        |
+| ----------------- | ------------------- | ---------------------- | -------- | -------- | ----------- | -------------------------------------------------- |
+| `ID`              | `id`                | integer auto-increment | no       | —        | PK          | Primary key                                        |
+| `Email`           | `email`             | varchar                | no       | —        | unique      | User email address                                 |
+| `Username`        | `username`          | varchar                | no       | —        | unique      | Unique username for login                          |
+| `Name`            | `name`              | varchar                | yes      | —        | —           | Display name                                       |
+| `Password`        | `password_hash`     | varchar                | yes      | —        | —           | Bcrypt-hashed password; empty for OAuth-only users |
+| `AvatarURL`       | `avatar_url`        | varchar                | yes      | —        | —           | Profile avatar URL, typically from GitHub          |
+| `PostKey`         | `post_key`          | varchar                | no       | —        | unique      | API key for creating posts via external tools      |
+| `GitHubID`        | `github_id`         | bigint                 | yes      | —        | unique      | GitHub user ID for OAuth binding                   |
+| `Role`            | `role`              | varchar                | no       | `'user'` | —           | User role. Values: `'admin'`, `'user'`             |
+| `IsActive`        | `is_active`         | boolean                | no       | `true`   | —           | Whether the account is active                      |
+| `IsEmailVerified` | `is_email_verified` | boolean                | no       | `false`  | —           | Whether the email has been verified                |
+| `LastLoginAt`     | `last_login_at`     | timestamp              | yes      | —        | —           | Timestamp of last successful login                 |
+| `CreatedAt`       | `created_at`        | timestamp              | no       | `now()`  | —           | Record creation time (auto)                        |
+| `UpdatedAt`       | `updated_at`        | timestamp              | no       | `now()`  | —           | Record last update time (auto)                     |
 
 ### `posts`
 
 Defined in `internal/domain/post/post.go`. Stores user posts with Markdown body content.
 
-| Go Field | DB Column | Type | Nullable | Default | Constraints | Description |
-|----------|-----------|------|----------|---------|-------------|-------------|
-| `ID` | `id` | integer auto-increment | no | — | PK | Primary key |
-| `QID` | `qid` | varchar | no | — | unique | Unique public identifier with `p-` prefix for external references |
-| `Title` | `title` | varchar | no | — | — | Post title |
-| `Body` | `body` | text | no | — | — | Post body in Markdown |
-| `UserID` | `user_id` | integer | no | — | FK → `users`, ON DELETE CASCADE, index | Author of the post |
-| `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
-| `UpdatedAt` | `updated_at` | timestamp | no | `now()` | — | Record last update time (auto) |
+| Go Field    | DB Column    | Type                   | Nullable | Default | Constraints                            | Description                                                       |
+| ----------- | ------------ | ---------------------- | -------- | ------- | -------------------------------------- | ----------------------------------------------------------------- |
+| `ID`        | `id`         | integer auto-increment | no       | —       | PK                                     | Primary key                                                       |
+| `QID`       | `qid`        | varchar                | no       | —       | unique                                 | Unique public identifier with `p-` prefix for external references |
+| `Title`     | `title`      | varchar                | no       | —       | —                                      | Post title                                                        |
+| `Body`      | `body`       | text                   | no       | —       | —                                      | Post body in Markdown                                             |
+| `UserID`    | `user_id`    | integer                | no       | —       | FK → `users`, ON DELETE CASCADE, index | Author of the post                                                |
+| `CreatedAt` | `created_at` | timestamp              | no       | `now()` | —                                      | Record creation time (auto)                                       |
+| `UpdatedAt` | `updated_at` | timestamp              | no       | `now()` | —                                      | Record last update time (auto)                                    |
 
 ### `refresh_tokens`
 
@@ -90,14 +90,14 @@ Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT
 
 Explicit table name: `refresh_tokens`.
 
-| Go Field | DB Column | Type | Nullable | Default | Constraints | Description |
-|----------|-----------|------|----------|---------|-------------|-------------|
-| `ID` | `id` | bigint auto-increment | no | — | PK | Primary key |
-| `UserID` | `user_id` | integer | no | — | index | Owning user (no FK constraint; cleanup handled at application level) |
-| `TokenHash` | `token_hash` | varchar | no | — | unique | SHA256 hash of the refresh token |
-| `Revoked` | `revoked` | boolean | no | `false` | — | 吊销标记。`true` 表示已吊销（用于 token theft 重用检测，见 [auth.md](../auth.md) §2） |
-| `ExpiresAt` | `expires_at` | timestamp | no | — | — | Token expiration time |
-| `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
+| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints | Description                                                                           |
+| ----------- | ------------ | --------------------- | -------- | ------- | ----------- | ------------------------------------------------------------------------------------- |
+| `ID`        | `id`         | bigint auto-increment | no       | —       | PK          | Primary key                                                                           |
+| `UserID`    | `user_id`    | integer               | no       | —       | index       | Owning user (no FK constraint; cleanup handled at application level)                  |
+| `TokenHash` | `token_hash` | varchar               | no       | —       | unique      | SHA256 hash of the refresh token                                                      |
+| `Revoked`   | `revoked`    | boolean               | no       | `false` | —           | 吊销标记。`true` 表示已吊销（用于 token theft 重用检测，见 [auth.md](../auth.md) §2） |
+| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | —           | Token expiration time                                                                 |
+| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —           | Record creation time (auto)                                                           |
 
 ### `token_blacklist`
 
@@ -105,28 +105,28 @@ Defined in `internal/domain/user/token.go`. Stores blacklisted JWT token hashes 
 
 Explicit table name: `token_blacklist`.
 
-| Go Field | DB Column | Type | Nullable | Default | Constraints | Description |
-|----------|-----------|------|----------|---------|-------------|-------------|
-| `ID` | `id` | bigint auto-increment | no | — | PK | Primary key |
-| `TokenHash` | `token_hash` | varchar | no | — | unique, index | Hash of the blacklisted JWT |
-| `ExpiresAt` | `expires_at` | timestamp | no | — | index | Token expiration; used for periodic cleanup of stale entries |
-| `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
+| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints   | Description                                                  |
+| ----------- | ------------ | --------------------- | -------- | ------- | ------------- | ------------------------------------------------------------ |
+| `ID`        | `id`         | bigint auto-increment | no       | —       | PK            | Primary key                                                  |
+| `TokenHash` | `token_hash` | varchar               | no       | —       | unique, index | Hash of the blacklisted JWT                                  |
+| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | index         | Token expiration; used for periodic cleanup of stale entries |
+| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —             | Record creation time (auto)                                  |
 
 ### `channels`
 
 Defined in `internal/domain/delivery/delivery.go`. Stores delivery channel configurations for pushing post notifications to external services.
 
-| Go Field | DB Column | Type | Nullable | Default | Constraints | Description |
-|----------|-----------|------|----------|---------|-------------|-------------|
-| `ID` | `id` | integer auto-increment | no | — | PK | Primary key |
-| `UserID` | `user_id` | integer | no | — | FK → `users`, ON DELETE CASCADE, index | Owning user |
-| `Kind` | `kind` | varchar(32) | no | — | — | Channel type. Values: `'feishu'` |
-| `Name` | `name` | varchar | no | `''` | — | Human-readable channel name |
-| `Enabled` | `enabled` | boolean | no | `true` | — | Whether the channel is active |
-| `Configuration` | `configuration` | text | no | `'{}'` | — | JSON-encoded channel configuration (e.g. Feishu `webhook_url`, `card_link_url`) |
-| `Keywords` | `keywords` | text | no | `''` | — | Filter expression for deciding whether to push a post (validated at write time; see [keyword-filter.md](./keyword-filter.md)) |
-| `CreatedAt` | `created_at` | timestamp | no | `now()` | — | Record creation time (auto) |
-| `UpdatedAt` | `updated_at` | timestamp | no | `now()` | — | Record last update time (auto) |
+| Go Field        | DB Column       | Type                   | Nullable | Default | Constraints                            | Description                                                                                                                   |
+| --------------- | --------------- | ---------------------- | -------- | ------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `ID`            | `id`            | integer auto-increment | no       | —       | PK                                     | Primary key                                                                                                                   |
+| `UserID`        | `user_id`       | integer                | no       | —       | FK → `users`, ON DELETE CASCADE, index | Owning user                                                                                                                   |
+| `Kind`          | `kind`          | varchar(32)            | no       | —       | —                                      | Channel type. Values: `'feishu'`                                                                                              |
+| `Name`          | `name`          | varchar                | no       | `''`    | —                                      | Human-readable channel name                                                                                                   |
+| `Enabled`       | `enabled`       | boolean                | no       | `true`  | —                                      | Whether the channel is active                                                                                                 |
+| `Configuration` | `configuration` | text                   | no       | `'{}'`  | —                                      | JSON-encoded channel configuration (e.g. Feishu `webhook_url`, `card_link_url`)                                               |
+| `Keywords`      | `keywords`      | text                   | no       | `''`    | —                                      | Filter expression for deciding whether to push a post (validated at write time; see [keyword-filter.md](./keyword-filter.md)) |
+| `CreatedAt`     | `created_at`    | timestamp              | no       | `now()` | —                                      | Record creation time (auto)                                                                                                   |
+| `UpdatedAt`     | `updated_at`    | timestamp              | no       | `now()` | —                                      | Record last update time (auto)                                                                                                |
 
 ## Design Conventions
 

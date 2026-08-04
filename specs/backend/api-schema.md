@@ -15,9 +15,9 @@ Base path: `/api/v1`
 
 ## Health Check
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/health` | — | 服务健康检查 |
+| Method | Path      | Auth | Description  |
+| ------ | --------- | ---- | ------------ |
+| GET    | `/health` | —    | 服务健康检查 |
 
 **Response**: `{ "status": "ok" }`
 
@@ -25,10 +25,10 @@ Base path: `/api/v1`
 
 ## OAuth
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/oauth/url` | — | 获取 GitHub OAuth 授权 URL（含 PKCE challenge） |
-| POST | `/oauth/login` | — | 使用 GitHub OAuth code + state 登录 |
+| Method | Path           | Auth | Description                                     |
+| ------ | -------------- | ---- | ----------------------------------------------- |
+| GET    | `/oauth/url`   | —    | 获取 GitHub OAuth 授权 URL（含 PKCE challenge） |
+| POST   | `/oauth/login` | —    | 使用 GitHub OAuth code + state 登录             |
 
 ### GET /oauth/url
 
@@ -48,12 +48,12 @@ Base path: `/api/v1`
 
 ## Auth
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/auth/login` | — | 用户名密码登录 |
-| POST | `/auth/refresh` | — | 刷新访问令牌 |
-| POST | `/auth/logout` | JWT | 注销登录 |
-| POST | `/auth/change-password` | JWT | 修改密码 |
+| Method | Path                    | Auth | Description    |
+| ------ | ----------------------- | ---- | -------------- |
+| POST   | `/auth/login`           | —    | 用户名密码登录 |
+| POST   | `/auth/refresh`         | —    | 刷新访问令牌   |
+| POST   | `/auth/logout`          | JWT  | 注销登录       |
+| POST   | `/auth/change-password` | JWT  | 修改密码       |
 
 ### POST /auth/login
 
@@ -87,9 +87,9 @@ Base path: `/api/v1`
 
 ## Post Key
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/post-key` | JWT | 查询当前用户的 Post Key |
+| Method | Path        | Auth | Description             |
+| ------ | ----------- | ---- | ----------------------- |
+| GET    | `/post-key` | JWT  | 查询当前用户的 Post Key |
 
 **Response**: `{ post_key, created_at }`
 
@@ -97,10 +97,10 @@ Base path: `/api/v1`
 
 ## Posts
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/posts` | JWT | 获取当前用户的文章列表 |
-| DELETE | `/posts/:id` | JWT | 删除当前用户的文章 |
+| Method | Path         | Auth | Description            |
+| ------ | ------------ | ---- | ---------------------- |
+| GET    | `/posts`     | JWT  | 获取当前用户的文章列表 |
+| DELETE | `/posts/:id` | JWT  | 删除当前用户的文章     |
 
 ### GET /posts
 
@@ -116,12 +116,12 @@ Base path: `/api/v1`
 
 ## Delivery Channels
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/delivery/channels` | JWT | 获取当前用户的投递渠道列表 |
-| POST | `/delivery/channels` | JWT | 创建投递渠道 |
-| PATCH | `/delivery/channels/:id` | JWT | 部分更新投递渠道（省略字段=不变） |
-| DELETE | `/delivery/channels/:id` | JWT | 删除投递渠道 |
+| Method | Path                     | Auth | Description                       |
+| ------ | ------------------------ | ---- | --------------------------------- |
+| GET    | `/delivery/channels`     | JWT  | 获取当前用户的投递渠道列表        |
+| POST   | `/delivery/channels`     | JWT  | 创建投递渠道                      |
+| PATCH  | `/delivery/channels/:id` | JWT  | 部分更新投递渠道（省略字段=不变） |
+| DELETE | `/delivery/channels/:id` | JWT  | 删除投递渠道                      |
 
 ### POST /delivery/channels
 
@@ -149,9 +149,9 @@ Base path: `/api/v1`
 
 ## Delivery History
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/delivery/history` | JWT | 获取当前用户的投递历史 |
+| Method | Path                | Auth | Description            |
+| ------ | ------------------- | ---- | ---------------------- |
+| GET    | `/delivery/history` | JWT  | 获取当前用户的投递历史 |
 
 **Query params**: `page`, `limit`
 
@@ -163,13 +163,13 @@ Base path: `/api/v1`
 
 所有管理员端点要求 JWT 认证 + Admin 角色。
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/admin/users` | JWT+Admin | 获取全部用户列表 |
-| GET | `/admin/posts` | JWT+Admin | 获取全部文章列表 |
-| DELETE | `/admin/posts/:id` | JWT+Admin | 删除任意文章 |
-| GET | `/admin/delivery/channels` | JWT+Admin | 获取全部投递渠道 |
-| GET | `/admin/delivery/history` | JWT+Admin | 获取全部投递历史 |
+| Method | Path                       | Auth      | Description      |
+| ------ | -------------------------- | --------- | ---------------- |
+| GET    | `/admin/users`             | JWT+Admin | 获取全部用户列表 |
+| GET    | `/admin/posts`             | JWT+Admin | 获取全部文章列表 |
+| DELETE | `/admin/posts/:id`         | JWT+Admin | 删除任意文章     |
+| GET    | `/admin/delivery/channels` | JWT+Admin | 获取全部投递渠道 |
+| GET    | `/admin/delivery/history`  | JWT+Admin | 获取全部投递历史 |
 
 > delivery 域的 admin 端点嵌套在 `/admin/delivery/` 下，体现资源归属；users / posts 的 admin 端点直接在 `/admin/` 下。详见 [api-design.md](../api-design.md) §1.1。
 
@@ -207,10 +207,10 @@ Base path: `/api/v1`
 
 以下端点不在 `/api/v1` 前缀下，是 post-by-email 风格的外部接口。详见 [api-design.md](../api-design.md) §1.4。
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/:post_key` | PostKey 中间件 | 通过 Post Key 创建文章 |
-| GET | `/:id` | — | 渲染文章 |
+| Method | Path         | Auth           | Description            |
+| ------ | ------------ | -------------- | ---------------------- |
+| POST   | `/:post_key` | PostKey 中间件 | 通过 Post Key 创建文章 |
+| GET    | `/:id`       | —              | 渲染文章               |
 
 ### POST /:post_key
 

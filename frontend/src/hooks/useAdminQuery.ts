@@ -6,7 +6,7 @@ import type { Paginated } from '@/types/pagination'
 // limit/total_pages at the top level) into the { items, pagination } shape the
 // admin table pages consume. The response is already flat (api-design.md §4).
 export function useAdminQuery<TItem>(
-  options: Omit<UseQueryOptions<Paginated<TItem>>, 'select'>
+  options: Omit<UseQueryOptions<Paginated<TItem>>, 'select'>,
 ) {
   return usePaginatedQuery<TItem, Paginated<TItem>>({
     ...options,

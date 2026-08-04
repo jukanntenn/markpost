@@ -48,13 +48,12 @@ export async function waitForBackend(
     }
     await new Promise((r) => setTimeout(r, 2000));
   }
-  throw new Error(`Backend not ready after ${timeoutMs}ms. Last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  throw new Error(
+    `Backend not ready after ${timeoutMs}ms. Last error: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
+  );
 }
 
-export async function getPostKey(
-  request: APIRequestContext,
-  token: string,
-): Promise<string> {
+export async function getPostKey(request: APIRequestContext, token: string): Promise<string> {
   const resp = await request.get(`${BACKEND_URL}/api/v1/post-key`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -85,7 +84,12 @@ export async function createPost(
 export async function createDeliveryChannel(
   request: APIRequestContext,
   token: string,
-  data: { name: string; kind: string; configuration: Record<string, string>; keywords?: string },
+  data: {
+    name: string;
+    kind: string;
+    configuration: Record<string, string>;
+    keywords?: string;
+  },
 ): Promise<{ id: number }> {
   const resp = await request.post(`${BACKEND_URL}/api/v1/delivery/channels`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -129,7 +133,10 @@ export async function deleteAllPosts(request: APIRequestContext, token: string):
   }
 }
 
-export async function deleteAllDeliveryChannels(request: APIRequestContext, token: string): Promise<void> {
+export async function deleteAllDeliveryChannels(
+  request: APIRequestContext,
+  token: string,
+): Promise<void> {
   const resp = await request.get(`${BACKEND_URL}/api/v1/delivery/channels`, {
     headers: { Authorization: `Bearer ${token}` },
   });

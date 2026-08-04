@@ -1,6 +1,9 @@
 FROM golang:1.26-alpine AS go-build
 
-RUN apk add --no-cache git gcc musl-dev
+# VERSION is the version string baked into the binary via -ldflags -X.
+# Passed by build.py (git describe) or docker-publish.yml (git tag);
+# defaults to "dev" for bare `docker build`.
+ARG VERSION=dev
 
 WORKDIR /app
 
@@ -9,7 +12,7 @@ RUN go mod download
 
 COPY backend/ .
 
-RUN CGO_ENABLED=1 go build -ldflags="-w -s" -o markpost ./cmd/server
+RUN CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=${VERSION}" -o markpost ./cmd/server
 
 
 FROM node:24-alpine3.21 AS node-build

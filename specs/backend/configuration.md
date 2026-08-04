@@ -79,11 +79,11 @@ All environment variables use the prefix `MARKPOST_`.
 
 Double underscore `__` separates nested keys.
 
-| TOML path                | Environment variable              |
-|--------------------------|-----------------------------------|
-| `debug`                  | `MARKPOST_DEBUG`                  |
-| `server.host`            | `MARKPOST_SERVER__HOST`           |
-| `server.port`            | `MARKPOST_SERVER__PORT`           |
+| TOML path                | Environment variable                |
+| ------------------------ | ----------------------------------- |
+| `debug`                  | `MARKPOST_DEBUG`                    |
+| `server.host`            | `MARKPOST_SERVER__HOST`             |
+| `server.port`            | `MARKPOST_SERVER__PORT`             |
 | `oauth.github.client_id` | `MARKPOST_OAUTH__GITHUB__CLIENT_ID` |
 
 ### 4.3 Key Transformation
@@ -158,13 +158,13 @@ Every field must include:
 
 Field validation uses `go-playground/validator` tags on the config structs.
 
-| Tag          | Meaning                                |
-|--------------|----------------------------------------|
-| `required`   | Must be non-empty / non-zero           |
-| `gte=N`      | Value must be ≥ N                      |
-| `oneof=a b`  | Value must be one of the listed values |
-| `omitempty`  | Skip further validation if empty       |
-| `url`        | Must be a valid URL                    |
+| Tag         | Meaning                                |
+| ----------- | -------------------------------------- |
+| `required`  | Must be non-empty / non-zero           |
+| `gte=N`     | Value must be ≥ N                      |
+| `oneof=a b` | Value must be one of the listed values |
+| `omitempty` | Skip further validation if empty       |
+| `url`       | Must be a valid URL                    |
 
 Validation runs after all override layers are merged. A validation error causes
 the server to exit with a descriptive message.

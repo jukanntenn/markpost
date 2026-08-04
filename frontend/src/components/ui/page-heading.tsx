@@ -16,7 +16,7 @@ export function PageHeading({
       <div
         className={cn(
           'mb-6 flex items-center justify-between md:mb-8 lg:mb-12',
-          className
+          className,
         )}
       >
         <h1 className="font-display text-[28px] font-bold tracking-tight">
@@ -31,7 +31,7 @@ export function PageHeading({
     <h1
       className={cn(
         'mb-6 font-display text-[28px] font-bold tracking-tight md:mb-8 lg:mb-12',
-        className
+        className,
       )}
     >
       {children}

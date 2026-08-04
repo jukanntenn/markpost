@@ -16,27 +16,37 @@
 //
 // Requires scripts/loadtest/out/write_keys.txt (run seed_write.sh first).
 
-import http from 'k6/http';
-import exec from 'k6/execution';
-import { check } from 'k6';
-import { SharedArray } from 'k6/data';
-import { bandwidthSummary, tileBody, normalBodySize, baseURL, tlsOptions, summaryTrendStats } from './lib.js';
+import http from "k6/http";
+import exec from "k6/execution";
+import { check } from "k6";
+import { SharedArray } from "k6/data";
+import {
+  bandwidthSummary,
+  tileBody,
+  normalBodySize,
+  baseURL,
+  tlsOptions,
+  summaryTrendStats,
+} from "./lib.js";
 
 const BASE_URL = baseURL();
-const RATE = parseInt(__ENV.RATE || '10', 10);
-const DURATION = __ENV.DURATION || '60s';
+const RATE = parseInt(__ENV.RATE || "10", 10);
+const DURATION = __ENV.DURATION || "60s";
 
-const keys = new SharedArray('keys', function () {
-  const raw = open(__ENV.KEYS_FILE || '../out/write_keys.txt');
-  return raw.trim().split('\n').filter((k) => k.length > 0);
+const keys = new SharedArray("keys", function () {
+  const raw = open(__ENV.KEYS_FILE || "../out/write_keys.txt");
+  return raw
+    .trim()
+    .split("\n")
+    .filter((k) => k.length > 0);
 });
 
 export const options = {
   scenarios: {
     write: {
-      executor: 'constant-arrival-rate',
+      executor: "constant-arrival-rate",
       rate: RATE,
-      timeUnit: '1s',
+      timeUnit: "1s",
       duration: DURATION,
       preAllocatedVUs: Math.max(RATE * 2, 20),
       maxVUs: Math.max(RATE * 5, 50),
@@ -44,15 +54,15 @@ export const options = {
   },
   thresholds: {
     // Create is a DB insert + non-blocking Enqueue; should stay well under 200ms.
-    http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.02'],
+    http_req_duration: ["p(95)<500"],
+    http_req_failed: ["rate<0.02"],
   },
   ...tlsOptions,
   summaryTrendStats,
   noConnectionReuse: false,
 };
 
-const headers = { 'Content-Type': 'application/json' };
+const headers = { "Content-Type": "application/json" };
 
 export default function () {
   const i = exec.scenario.iterationInTest || 0;
@@ -62,10 +72,13 @@ export default function () {
     title: `Load test post ${i}`,
     body: tileBody(normalBodySize()),
   });
-  const res = http.post(`${BASE_URL}/${key}`, body, { headers, tags: { name: 'create' } });
+  const res = http.post(`${BASE_URL}/${key}`, body, {
+    headers,
+    tags: { name: "create" },
+  });
   check(res, {
-    'created 201': (r) => r.status === 201,
-    'not rate-limited': (r) => r.status !== 429,
+    "created 201": (r) => r.status === 201,
+    "not rate-limited": (r) => r.status !== 429,
   });
 }
 

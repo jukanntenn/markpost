@@ -35,7 +35,7 @@ export function DeliveryChannelDetailPage() {
   })
 
   const channel: DeliveryChannel | undefined = channelsQuery.data?.items.find(
-    (c) => c.id === channelID
+    (c) => c.id === channelID,
   )
 
   const historyQuery = useQuery({

@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="card"
       className={cn(
         'bg-card text-card-foreground flex flex-col gap-6 rounded-lg p-6 shadow-[0_2px_8px_rgba(28,25,23,0.04)] transition-[box-shadow,transform] duration-150 hover:-translate-y-0.5 hover:shadow-[0_4px_16px_rgba(28,25,23,0.06)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_4px_16px_rgba(28,25,23,0.2)]',
-        className
+        className,
       )}
       {...props}
     />
@@ -20,7 +20,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="card-header"
       className={cn(
         'grid auto-rows-min grid-rows-[auto_auto] items-start gap-2 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-4',
-        className
+        className,
       )}
       {...props}
     />
@@ -33,7 +33,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="card-title"
       className={cn(
         'font-display leading-none font-bold tracking-tight',
-        className
+        className,
       )}
       {...props}
     />
@@ -56,7 +56,7 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="card-action"
       className={cn(
         'col-start-2 row-span-2 row-start-1 self-start justify-self-end',
-        className
+        className,
       )}
       {...props}
     />

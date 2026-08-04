@@ -136,20 +136,20 @@ describe('describeFilter', () => {
 
   it('renders OR and AND with precedence parentheses', () => {
     expect(describeFilter(compileKeywordFilter('a, b, c').node)).toBe(
-      'a | b | c'
+      'a | b | c',
     )
     expect(describeFilter(compileKeywordFilter('a & b & c').node)).toBe(
-      'a & b & c'
+      'a & b & c',
     )
     expect(describeFilter(compileKeywordFilter('a | b & c').node)).toBe(
-      'a | (b & c)'
+      'a | (b & c)',
     )
   })
 
   it('renders NOT', () => {
     expect(describeFilter(compileKeywordFilter('!a').node)).toBe('!a')
     expect(describeFilter(compileKeywordFilter('!(a & b)').node)).toBe(
-      '!(a & b)'
+      '!(a & b)',
     )
   })
 

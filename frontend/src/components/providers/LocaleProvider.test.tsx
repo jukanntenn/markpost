@@ -16,7 +16,7 @@ vi.mock('@/utils/i18n', async () => {
   return {
     ...actual,
     loadMessages: vi.fn((locale: string) =>
-      Promise.resolve(messages[locale] ?? messages.en)
+      Promise.resolve(messages[locale] ?? messages.en),
     ),
   }
 })
@@ -49,7 +49,7 @@ describe('LocaleProvider', () => {
     render(
       <LocaleProvider>
         <Child />
-      </LocaleProvider>
+      </LocaleProvider>,
     )
 
     // First frame: skeleton present, children not mounted.
@@ -67,7 +67,7 @@ describe('LocaleProvider', () => {
     const { container } = render(
       <LocaleProvider>
         <Child />
-      </LocaleProvider>
+      </LocaleProvider>,
     )
     expect(container.textContent).not.toMatch(/[a-z]+\.[a-z]+\./)
     await waitFor(() => {
@@ -80,7 +80,7 @@ describe('LocaleProvider', () => {
     render(
       <LocaleProvider>
         <ContextProbe onCtx={(c) => (ctx = c)} />
-      </LocaleProvider>
+      </LocaleProvider>,
     )
 
     await waitFor(() => {

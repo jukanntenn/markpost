@@ -54,7 +54,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       setDefaultLocale(newLocale)
       setReady(true)
     },
-    []
+    [],
   )
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       applyMessages(newLocale, m)
       persistLocale(newLocale)
     },
-    [applyMessages]
+    [applyMessages],
   )
 
   return (

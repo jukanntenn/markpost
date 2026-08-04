@@ -32,16 +32,22 @@ test("channel detail page shows configuration and channel-scoped history", async
   await new Promise((r) => setTimeout(r, 5000));
 
   await deliveryPage.goto();
-  await expect(deliveryPage.channelRow("Detail Channel")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Detail Channel")).toBeVisible({
+    timeout: 15000,
+  });
 
   await deliveryPage.gotoChannelDetail("Detail Channel");
 
-  await expect(page.getByRole("heading", { name: "Detail Channel", exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: "Detail Channel", exact: true })).toBeVisible({
+    timeout: 15000,
+  });
   await expect(page.getByText("Configuration", { exact: true })).toBeVisible();
   await expect(page.getByText("Delivery History", { exact: true })).toBeVisible();
 
   const historyTable = page.getByRole("table").first();
-  await expect(historyTable.getByText(postTitle, { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(historyTable.getByText(postTitle, { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
 });
 
 test("latest delivery column reflects delivery outcome on the list page", async ({
@@ -63,10 +69,14 @@ test("latest delivery column reflects delivery outcome on the list page", async 
   await new Promise((r) => setTimeout(r, 5000));
 
   await deliveryPage.goto();
-  await expect(deliveryPage.channelRow("Latest Channel")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Latest Channel")).toBeVisible({
+    timeout: 15000,
+  });
 
   const latestCell = deliveryPage.getLatestCell("Latest Channel");
-  await expect(latestCell.getByText("Delivered", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(latestCell.getByText("Delivered", { exact: true })).toBeVisible({
+    timeout: 15000,
+  });
 });
 
 test("channel with no history shows Never in latest column", async ({
@@ -81,7 +91,9 @@ test("channel with no history shows Never in latest column", async ({
   });
 
   await deliveryPage.goto();
-  await expect(deliveryPage.channelRow("Silent Channel")).toBeVisible({ timeout: 15000 });
+  await expect(deliveryPage.channelRow("Silent Channel")).toBeVisible({
+    timeout: 15000,
+  });
 
   const latestCell = deliveryPage.getLatestCell("Silent Channel");
   await expect(latestCell.getByText("Never", { exact: true })).toBeVisible();

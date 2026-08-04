@@ -31,6 +31,10 @@ linters:
       confidence: 0.8
 
   exclusions:
+    # "lax" reliably skips swag's docs.go header (which doesn't match the
+    # strict "^// Code generated ... DO NOT EDIT.$" regex due to its
+    # "Package docs" prefix and missing trailing period).
+    generated: lax
     rules:
       - path: _test\.go
         linters: [noctx, contextcheck]

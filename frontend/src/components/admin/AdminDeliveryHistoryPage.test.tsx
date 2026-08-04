@@ -25,7 +25,7 @@ describe('AdminDeliveryHistoryPage', () => {
     })
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /delivery history/i })
+        screen.getByRole('heading', { name: /delivery history/i }),
       ).toBeInTheDocument()
     })
   })

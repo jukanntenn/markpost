@@ -4,26 +4,26 @@
 
 ## Route Table
 
-| Path | 路由组 | Guard | 不满足条件时 | 页面 |
-|------|--------|-------|------------|------|
-| `/` | — | — | → `/dashboard` | 着陆页（重定向） |
-| `/login` | (auth) | PublicRoute | 已认证 → `/dashboard` | 登录页（密码 + GitHub 按钮） |
-| `/auth/callback` | (auth) | PublicRoute | 已认证 → `/dashboard` | OAuth 回调页 |
-| `/dashboard` | (dashboard) | ProtectedRoute | 未认证 → `/login` | 仪表盘 |
-| `/posts` | (dashboard) | ProtectedRoute | 未认证 → `/login` | 文章列表 |
-| `/settings` | (dashboard) | ProtectedRoute | 未认证 → `/login` | 设置 |
-| `/admin` | (dashboard)/admin | AdminRoute | 未认证 → `/login`；非 admin → `/dashboard` | 管理概览 |
-| `/admin/users` | (dashboard)/admin | AdminRoute | 同上 | 用户管理 |
-| `/admin/posts` | (dashboard)/admin | AdminRoute | 同上 | 文章管理 |
-| `/admin/delivery/channels` | (dashboard)/admin | AdminRoute | 同上 | 渠道管理 |
-| `/admin/delivery/history` | (dashboard)/admin | AdminRoute | 同上 | 投递历史 |
+| Path                       | 路由组            | Guard          | 不满足条件时                               | 页面                         |
+| -------------------------- | ----------------- | -------------- | ------------------------------------------ | ---------------------------- |
+| `/`                        | —                 | —              | → `/dashboard`                             | 着陆页（重定向）             |
+| `/login`                   | (auth)            | PublicRoute    | 已认证 → `/dashboard`                      | 登录页（密码 + GitHub 按钮） |
+| `/auth/callback`           | (auth)            | PublicRoute    | 已认证 → `/dashboard`                      | OAuth 回调页                 |
+| `/dashboard`               | (dashboard)       | ProtectedRoute | 未认证 → `/login`                          | 仪表盘                       |
+| `/posts`                   | (dashboard)       | ProtectedRoute | 未认证 → `/login`                          | 文章列表                     |
+| `/settings`                | (dashboard)       | ProtectedRoute | 未认证 → `/login`                          | 设置                         |
+| `/admin`                   | (dashboard)/admin | AdminRoute     | 未认证 → `/login`；非 admin → `/dashboard` | 管理概览                     |
+| `/admin/users`             | (dashboard)/admin | AdminRoute     | 同上                                       | 用户管理                     |
+| `/admin/posts`             | (dashboard)/admin | AdminRoute     | 同上                                       | 文章管理                     |
+| `/admin/delivery/channels` | (dashboard)/admin | AdminRoute     | 同上                                       | 渠道管理                     |
+| `/admin/delivery/history`  | (dashboard)/admin | AdminRoute     | 同上                                       | 投递历史                     |
 
 ### 路由变更说明
 
-| 变更 | 现状 | 目标 | 原因 |
-|------|------|------|------|
-| OAuth callback | `/auth/github/callback` + `/auth`（两个） | `/auth/callback`（一个） | OAuth 改同页重定向，单一 callback，不带 provider（见 [auth.md](../auth.md) §3.6） |
-| health API route | `/health/route.ts` | 移除 | 纯静态导出不支持 API Route（见 [build.md](./build.md) §3） |
+| 变更             | 现状                                      | 目标                     | 原因                                                                              |
+| ---------------- | ----------------------------------------- | ------------------------ | --------------------------------------------------------------------------------- |
+| OAuth callback   | `/auth/github/callback` + `/auth`（两个） | `/auth/callback`（一个） | OAuth 改同页重定向，单一 callback，不带 provider（见 [auth.md](../auth.md) §3.6） |
+| health API route | `/health/route.ts`                        | 移除                     | 纯静态导出不支持 API Route（见 [build.md](./build.md) §3）                        |
 
 ---
 
@@ -92,16 +92,19 @@ app/(dashboard)/admin/layout.tsx → <AdminRoute><AdminLayout>{children}</AdminL
 ### Guard 行为
 
 **PublicRoute**（(auth) 组：login、callback）：
+
 - 水合中 → 渲染 PageSpinner
 - 已认证 → `router.replace("/dashboard")`
 - 未认证 → 渲染 children
 
 **ProtectedRoute**（(dashboard) 组）：
+
 - 水合中 → 渲染 PageSpinner
 - 未认证（水合后）→ `router.replace("/login")`
 - 已认证 → 渲染 children
 
 **AdminRoute**（(dashboard)/admin 嵌套）：
+
 - 未认证 → `router.replace("/login")`
 - 已认证但非 admin → `router.replace("/dashboard")`
 - admin → 渲染 children
@@ -113,7 +116,7 @@ Zustand persist 从 localStorage 恢复是异步的。用 `_hasHydrated` 标志�
 ```typescript
 onRehydrateStorage: () => (state) => {
   state?.setHasHydrated(true);
-}
+};
 ```
 
 守卫在水合完成前渲染 PageSpinner，水合后根据真实认证状态决定渲染 / 重定向。
@@ -129,6 +132,7 @@ onRehydrateStorage: () => (state) => {
 > Next.js 官方文档（`authentication.mdx:1447`）："client-side UI restrictions alone are not sufficient for security."——这句警告的语境是**有 Server Actions / API Routes 的全栈 Next.js 应用**（客户端 return null 不能阻止用户直接调用 Server Action）。
 
 **对 markpost 不适用**，因为：
+
 - 前端纯静态，**零 Server Actions / API Routes**（这些都在后端 Go）
 - 所有数据访问通过后端 REST API，后端有 **JWT 认证 + Admin 中间件**做权威校验
 - 客户端守卫被绕过（篡改 localStorage）→ 前端可能渲染页面骨架，但**所有数据请求被后端 401/403 拒绝** → 页面是空的，无数据泄露

@@ -9,7 +9,7 @@ type WrapperComponent = React.ComponentType<{ children: React.ReactNode }>
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  options?: { wrapper?: WrapperComponent }
+  options?: { wrapper?: WrapperComponent },
 ) {
   const Wrapper = options?.wrapper ?? (({ children }) => <>{children}</>)
   const client = new QueryClient({
@@ -20,7 +20,7 @@ export function renderWithProviders(
       <NextIntlClientProvider locale="en" messages={en}>
         <Wrapper>{ui}</Wrapper>
       </NextIntlClientProvider>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   )
 }
 

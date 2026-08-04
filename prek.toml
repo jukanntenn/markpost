@@ -110,7 +110,7 @@ language = "system"
 entry = "prettier --write \"$@\""
 shell = "bash"
 files = ".*\\.(md|ya?ml|html|json|css)$"
-exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
+exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/internal/web/post\\.[0-9a-f]+\\.css$|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$"
 pass_filenames = true
 stages = ["pre-commit"]
 
@@ -152,7 +152,10 @@ stages = ["pre-commit"]
 id = "backend-generate-check"
 name = "generated files up to date (backend)"
 language = "system"
-entry = "cd backend && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && go generate ./internal/web && git diff --exit-code -- docs internal/web"
+entry = "cd backend && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && { [ -n \"$(tail -c1 docs/swagger.json)\" ] && printf '\\n' >> docs/swagger.json || true; } && go generate ./internal/web && git diff --exit-code -- docs internal/web"
+# swag omits the trailing newline on docs/swagger.json; add it so the committed
+# output satisfies the end-of-file-fixer hook (docs.go and swagger.yaml already
+# end with a newline), mirroring the buildcss contract for the CSS asset.
 shell = "bash"
 files = "^backend/"
 pass_filenames = false

@@ -106,6 +106,15 @@ type PostListItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// PostsListResponse is the flat paginated list returned by GET /api/v1/posts.
+type PostsListResponse struct {
+	Items      []PostListItem `json:"items"`
+	Total      int            `json:"total"`
+	Page       int            `json:"page"`
+	Limit      int            `json:"limit"`
+	TotalPages int            `json:"total_pages"`
+}
+
 // PostRequest represents the request body for creating a new post.
 type PostRequest struct {
 	Title string `json:"title" binding:"required,titlesize"`
@@ -406,4 +415,17 @@ type AdminSessionItem struct {
 // AdminSessionsResponse represents a list of user sessions.
 type AdminSessionsResponse struct {
 	Sessions []AdminSessionItem `json:"sessions"`
+}
+
+// AdminStatsResponse represents the aggregate counts shown on the admin dashboard.
+type AdminStatsResponse struct {
+	Counts AdminStatsCounts `json:"counts"`
+}
+
+// AdminStatsCounts holds the per-resource totals for the admin dashboard.
+type AdminStatsCounts struct {
+	Users    int64 `json:"users"`
+	Posts    int64 `json:"posts"`
+	Channels int64 `json:"channels"`
+	History  int64 `json:"history"`
 }

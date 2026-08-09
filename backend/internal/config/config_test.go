@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -53,12 +54,47 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func TestLoad_WithoutConfigFails(t *testing.T) {
+// A missing ./config.toml is not fatal by itself: defaults plus MARKPOST_* env
+// vars are a complete configuration source, which is how the Docker Compose
+// quick start is wired. What must still fail is leaving required fields unset.
+func TestLoad_WithoutConfigFileFailsValidationNotDiscovery(t *testing.T) {
 	ResetForTest()
+	t.Chdir(t.TempDir())
 
 	err := Load("")
 	if err == nil {
-		t.Fatal("expected error when no config file is provided")
+		t.Fatal("expected validation to fail with neither config file nor env vars")
+	}
+	if strings.Contains(err.Error(), "failed to read config file") {
+		t.Fatalf("a missing config file must not surface as a read error: %v", err)
+	}
+}
+
+// Regression guard: the quick-start container mounts no config file and crash-
+// looped on "Config File \"config\" Not Found in \"[/app]\"" because auto
+// discovery treated the absent file as fatal.
+func TestLoad_EnvOnlyWithoutConfigFile(t *testing.T) {
+	ResetForTest()
+	t.Chdir(t.TempDir())
+
+	const dsn = "host=/var/run/postgresql user=markpost dbname=markpost sslmode=disable"
+	t.Setenv("MARKPOST_JWT__ACCESS_SIGNING_KEY", "env-access-key")
+	t.Setenv("MARKPOST_JWT__REFRESH_SIGNING_KEY", "env-refresh-key")
+	t.Setenv("MARKPOST_DB__DSN", dsn)
+
+	if err := Load(""); err != nil {
+		t.Fatalf("env-only Load: %v", err)
+	}
+
+	cfg := Get()
+	if cfg.JWT.AccessSigningKey != "env-access-key" {
+		t.Fatalf("jwt access key not taken from env: %q", cfg.JWT.AccessSigningKey)
+	}
+	if cfg.DB.DSN != dsn {
+		t.Fatalf("dsn not taken from env: %q", cfg.DB.DSN)
+	}
+	if cfg.Server.Port != 7330 {
+		t.Fatalf("expected the default port to survive, got %d", cfg.Server.Port)
 	}
 }
 

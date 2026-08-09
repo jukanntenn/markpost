@@ -6,9 +6,9 @@
 # Cloudflare Origin CA cert. Run before a release to hand-verify that the
 # production-shaped config actually boots and serves.
 #
-#   docker compose -f docker/docker-compose.yml up -d --build
+#   docker compose -f docker/docker-compose.local.yml up -d --build
 #   curl -k https://localhost:2053/api/v1/health
-#   docker compose -f docker/docker-compose.yml down -v
+#   docker compose -f docker/docker-compose.local.yml down -v
 #
 # Like e2e, local acceptance uses no persistent data volumes: the app data
 # dir and Postgres data live entirely inside the ephemeral containers, and
@@ -23,11 +23,17 @@
 # Everything else — Postgres sibling, Unix-socket connection, GUC tuning,
 # healthchecks — matches production exactly.
 
+# Both the app and the migrate one-shot run the same locally built image against
+# the same config, so the build and the config mount are declared once.
+x-build: &build
+  image: markpost:acceptance
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+
 services:
   markpost:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    <<: *build
     container_name: markpost-acceptance
     ports:
       - "2053:2053"
@@ -40,6 +46,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "-k", "https://localhost:2053/api/v1/health"]
       interval: 10s
@@ -52,6 +60,21 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+
+  # Acceptance always starts from an empty database (no persistent volumes), and
+  # migrations never run implicitly on serve, so the schema has to be applied
+  # here before the app boots.
+  migrate:
+    <<: *build
+    container_name: markpost-acceptance-migrate
+    entrypoint: ["markpost", "-c", "/app/config.toml", "migrate", "up"]
+    volumes:
+      - ../.local/config.acceptance.toml:/app/config.toml:ro
+      - postgres-socket:/var/run/postgresql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: postgres:17-alpine

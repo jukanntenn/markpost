@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -194,7 +195,12 @@ func loadConfig() {
 		v.SetConfigType("toml")
 		v.AddConfigPath(".")
 		v.SetConfigName("config")
-		if err := v.ReadInConfig(); err != nil {
+		// A missing ./config.toml is not fatal when no path was given: defaults
+		// plus MARKPOST_* env vars are a complete configuration source on their
+		// own, which is how the Docker Compose quick start is set up. Only an
+		// explicit -c path is required to exist.
+		var notFound viper.ConfigFileNotFoundError
+		if err := v.ReadInConfig(); err != nil && !errors.As(err, &notFound) {
 			loadErr = fmt.Errorf("failed to read config file: %w", err)
 			return
 		}

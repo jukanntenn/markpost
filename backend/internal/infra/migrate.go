@@ -1,13 +1,14 @@
 package infra
 
 import (
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
 	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
@@ -70,8 +71,24 @@ func newMigrate(dsn string) (*migrate.Migrate, error) {
 	if err != nil {
 		return nil, fmt.Errorf("migrate iofs: %w", err)
 	}
-	m, err := migrate.NewWithSourceInstance("iofs", src, dsn)
+	// migrate's URL-based constructor parses the DSN as a URL and fails with
+	// "no scheme" on the libpq key-value form, which GORM and injectTimezone
+	// both accept. Open the pool with lib/pq (it takes either form) and hand
+	// migrate a ready driver so the two agree on what a valid DSN is.
+	// The "postgres" sql driver is registered by lib/pq, imported by the
+	// migrate postgres driver package above.
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
+		return nil, fmt.Errorf("migrate open postgres: %w", err)
+	}
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate postgres driver: %w", err)
+	}
+	m, err := migrate.NewWithInstance("iofs", src, "postgres", driver)
+	if err != nil {
+		_ = driver.Close()
 		return nil, fmt.Errorf("migrate new: %w", err)
 	}
 	return m, nil

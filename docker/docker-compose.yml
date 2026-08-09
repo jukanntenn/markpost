@@ -6,10 +6,31 @@
 #
 # For the full list of environment variables, see .env.example
 
+# The app and the migrate one-shot must run the same image against the same
+# database, and config validation applies to every subcommand (the JWT keys are
+# required even by `migrate up`), so the whole environment is defined once here
+# and shared by both services.
+x-image: &image jukanntenn/markpost:latest
+x-app-env: &app-env
+  MARKPOST_DB__DRIVER: postgresql
+  # Unix-socket connection over the shared postgres-socket volume. The password
+  # must match POSTGRES_PASSWORD below.
+  MARKPOST_DB__DSN: "host=/var/run/postgresql user=${POSTGRES_USER:-markpost} password=${POSTGRES_PASSWORD:-markpost} dbname=${POSTGRES_DB:-markpost} sslmode=disable"
+  # Admin credentials (only effective on first boot)
+  MARKPOST_ADMIN__INITIAL_USERNAME: ${MARKPOST_ADMIN__INITIAL_USERNAME:-markpost}
+  MARKPOST_ADMIN__INITIAL_PASSWORD: ${MARKPOST_ADMIN__INITIAL_PASSWORD:-markpost}
+  # JWT signing keys (change these!)
+  MARKPOST_JWT__ACCESS_SIGNING_KEY: ${MARKPOST_JWT__ACCESS_SIGNING_KEY:-change-me}
+  MARKPOST_JWT__REFRESH_SIGNING_KEY: ${MARKPOST_JWT__REFRESH_SIGNING_KEY:-change-me}
+  # Public URL (optional, e.g. https://markpost.example.com)
+  MARKPOST_SERVER__PUBLIC_URL: ${MARKPOST_SERVER__PUBLIC_URL:-}
+  # Observability: write app/traces/metrics JSONL to the bind-mounted dir.
+  MARKPOST_OBSERVABILITY__LOG_DIR: /app/data/logs
+
 services:
   markpost:
     # Available tags: latest, v0.2.0-rc.1, v0.1.0 (https://hub.docker.com/r/jukanntenn/markpost/tags)
-    image: jukanntenn/markpost:latest
+    image: *image
     container_name: markpost
     ports:
       - "2053:2053"
@@ -20,22 +41,12 @@ services:
       - ./data/logs:/app/data/logs
       - postgres-socket:/var/run/postgresql
     environment:
-      # Admin credentials (only effective on first boot)
-      - MARKPOST_ADMIN__INITIAL_USERNAME=${MARKPOST_ADMIN__INITIAL_USERNAME:-markpost}
-      - MARKPOST_ADMIN__INITIAL_PASSWORD=${MARKPOST_ADMIN__INITIAL_PASSWORD:-markpost}
-      # JWT signing keys (change these!)
-      - MARKPOST_JWT__ACCESS_SIGNING_KEY=${MARKPOST_JWT__ACCESS_SIGNING_KEY:-change-me}
-      - MARKPOST_JWT__REFRESH_SIGNING_KEY=${MARKPOST_JWT__REFRESH_SIGNING_KEY:-change-me}
-      # Public URL (optional, e.g. https://markpost.example.com)
-      - MARKPOST_SERVER__PUBLIC_URL=${MARKPOST_SERVER__PUBLIC_URL:-}
-      # Observability: write app/traces/metrics JSONL to the bind-mounted dir.
-      - MARKPOST_OBSERVABILITY__LOG_DIR=/app/data/logs
-      # PostgreSQL DSN (password must match POSTGRES_PASSWORD below)
-      - MARKPOST_DB__DRIVER=postgresql
-      - MARKPOST_DB__DSN=host=/var/run/postgresql user=${POSTGRES_USER:-markpost} password=${POSTGRES_PASSWORD:-markpost} dbname=${POSTGRES_DB:-markpost} sslmode=disable
+      <<: *app-env
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -56,6 +67,24 @@ services:
         max-size: "10m"
         max-file: "3"
     restart: unless-stopped
+
+  # Applies the database schema, then exits. Migrations are never run implicitly
+  # on serve — the app only opens the connection — so a fresh `docker compose
+  # up` would otherwise start against an empty database. Overriding entrypoint
+  # bypasses s6 and runs the CLI directly. Idempotent: a no-op once the schema
+  # is current, so it is safe on every subsequent up.
+  migrate:
+    image: *image
+    container_name: markpost-migrate
+    entrypoint: ["markpost", "migrate", "up"]
+    environment:
+      <<: *app-env
+    volumes:
+      - postgres-socket:/var/run/postgresql
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   postgres:
     image: postgres:17-alpine

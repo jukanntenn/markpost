@@ -134,18 +134,23 @@ files = ".*\\.toml$"
 pass_filenames = true
 stages = ["pre-commit"]
 
-# djlint 管 j2 (缺则跳过;profile=jinja 处理 Jinja2 模板)
+# Ansible Jinja2 模板: 渲染后校验可解析 (缺 jinja2 则跳过)
+#
+# 这里刻意不做格式化。djlint (--profile=jinja) 是 HTML beautifier,会把行首独占
+# 一行的 {% if %} / {% endif %} 折叠进相邻行,并抹掉缩进和空行。而 Ansible 的
+# template 模块默认 trim_blocks=True —— 块标签独占一行才会被正确裁掉换行,一旦
+# 被折叠就会渲染出 `{% if %}key = "v"` 这类同行内容,产出无效 TOML/YAML。
+# 所以对这三个模板,能验证的只有"渲染结果解析得通",而不是"长得好看"。
 [[repos.hooks]]
-id = "djlint"
-name = "djlint (j2)"
+id = "ansible-templates"
+name = "ansible templates render+parse (j2)"
 language = "system"
-entry = "command -v djlint >/dev/null || { echo 'djlint not installed, skipping'; exit 0; } && djlint --reformat --profile=jinja \"$@\""
-shell = "bash"
-files = ".*\\.j2$"
-pass_filenames = true
+entry = "scripts/check-ansible-templates.py"
+files = "^devops/ansible/templates/.*\\.j2$"
+pass_filenames = false
 stages = ["pre-commit"]
 
-# caddy fmt 管 Caddyfile (缺则跳过;.j2 模板由 djlint 处理)
+# caddy fmt 管 Caddyfile (缺则跳过;.j2 模板不做格式化,见上)
 [[repos.hooks]]
 id = "caddy-fmt"
 name = "caddy fmt (Caddyfile)"

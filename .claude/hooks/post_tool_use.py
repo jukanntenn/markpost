@@ -43,8 +43,6 @@ def commands_for(path: PurePath) -> list[list[str]]:
             return [["prettier", "--write", str(path)]]
         case ".toml":
             return [["oxfmt", "--write", str(path)]]
-        case ".j2":
-            return [["djlint", "--reformat", "--profile=jinja", str(path)]]
         case _:
             return [["caddy", "fmt", str(path)]] if is_caddyfile(path) else []
 

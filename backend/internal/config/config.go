@@ -294,6 +294,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("render.cache_size_bytes", 134217728) // 128 MiB
 	v.SetDefault("render.num_counters", 100000)        // ~10x expected key count
 	v.SetDefault("render.buffer_items", 64)
+	// Registered purely so AutomaticEnv can resolve MARKPOST_CLOUDFLARE__*: viper
+	// only reads an env var for a key it already knows, and these have no other
+	// default source (an absent [cloudflare] section means "no Cloudflare").
+	v.SetDefault("cloudflare.api_token", "")
+	v.SetDefault("cloudflare.zone_id", "")
 	v.SetDefault("observability.log_dir", "./logs")
 }
 

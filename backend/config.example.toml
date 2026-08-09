@@ -70,7 +70,20 @@
 
 # Data Source Name (connection string).
 #
-#   PostgreSQL:   "host=127.0.0.1 user=markpost password=secret dbname=markpost sslmode=disable"
+# Both PostgreSQL forms are accepted, everywhere (server, migrate, CLI
+# subcommands):
+#
+#   libpq key-value:  "host=127.0.0.1 user=markpost password=secret dbname=markpost sslmode=disable"
+#   URL:              "postgres://markpost:secret@127.0.0.1:5432/markpost?sslmode=disable"
+#
+# Connect over a Unix socket by pointing host= at the socket directory:
+#   "host=/var/run/postgresql user=markpost password=secret dbname=markpost sslmode=disable"
+#
+# Prefer the URL form when the password contains spaces, quotes or backslashes:
+# key-value needs those single-quoted and escaped, whereas a URL only needs
+# percent-encoding. A "/" in the password rules out the userinfo segment
+# (it would terminate the authority) — pass credentials as query parameters
+# instead: "postgres:///markpost?host=/var/run/postgresql&user=markpost&password=a%2Fb"
 #
 # [REQUIRED]  Env: MARKPOST_DB__DSN
 # Default: "host=127.0.0.1 user=markpost password=markpost dbname=markpost sslmode=disable"
@@ -210,16 +223,46 @@ refresh_signing_key = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_REFRESH_KEY"
 
 
 # --- Rate Limit ----------------------------------------------------------------
+#
+# Three independent limiters, one per route class. Each is keyed on whatever
+# actually identifies the actor: the public read path by client IP, both write
+# paths by user_id. per_second is a token refill rate (fractional values are
+# how you express "N per minute"); burst is the bucket capacity.
 
 [ratelimit]
 
-# Max requests per second per client.  Default is unlimited.
-# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PER_SECOND  Default: unlimited
-per_second = 5
+# Public post rendering (GET /:id), keyed on the resolved client IP.
+# Generous on purpose: the CDN absorbs most reads, so this only governs the
+# fraction that revalidates against the origin.
+[ratelimit.read]
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__READ__PER_SECOND  Default: 100
+# per_second = 100
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__READ__BURST  Default: 200
+# burst = 200
 
-# Max burst size.  Must be ≥ per_second for correct behavior.
-# [OPTIONAL]  Env: MARKPOST_RATELIMIT__BURST  Default: unlimited
-burst = 50
+# Post creation via post key (POST /:post_key), keyed on user_id.
+# Two buckets apply simultaneously: a short-term rate and a daily cap.
+[ratelimit.public_write]
+# 0.1666666667 = 10 per minute.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PUBLIC_WRITE__PER_SECOND  Default: 0.1666666667
+# per_second = 0.1666666667
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PUBLIC_WRITE__BURST  Default: 20
+# burst = 20
+# Daily cap expressed as a per-second rate: 1000 / 86400 ≈ 0.0115740741.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_PER_SECOND
+# Default: 0.0115740741 (1000/day)
+# daily_per_second = 0.0115740741
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_BURST  Default: 1000
+# daily_burst = 1000
+
+# JWT-authenticated writes (dashboard, delivery channels, admin), keyed on the
+# user_id in the token.
+[ratelimit.authed_write]
+# 0.5 = 30 per minute.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__AUTHED_WRITE__PER_SECOND  Default: 0.5
+# per_second = 0.5
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__AUTHED_WRITE__BURST  Default: 60
+# burst = 60
 
 
 # --- Delivery ------------------------------------------------------------------
@@ -250,6 +293,50 @@ burst = 50
 # them. Run cmd/prune_delivery_history via cron to sweep.
 # [OPTIONAL]  Env: MARKPOST_DELIVERY__HISTORY_RETENTION  Default: "168h" (7 days)
 # history_retention = "168h"
+
+# --- Render Cache --------------------------------------------------------------
+#
+# In-process cache for rendered post HTML (singleflight + ristretto). Entries are
+# invalidated on delete/prune and rotated on release. Shrink or disable it on a
+# small self-hosted instance where memory matters more than render throughput.
+
+[render]
+
+# Disable to render every request from scratch.
+# [OPTIONAL]  Env: MARKPOST_RENDER__ENABLED  Default: true
+# enabled = true
+
+# Cache capacity in bytes.
+# [OPTIONAL]  Env: MARKPOST_RENDER__CACHE_SIZE_BYTES  Default: 134217728 (128 MiB)
+# cache_size_bytes = 134217728
+
+# Ristretto admission counters. Rule of thumb: ~10x the expected number of
+# cached keys.
+# [OPTIONAL]  Env: MARKPOST_RENDER__NUM_COUNTERS  Default: 100000
+# num_counters = 100000
+
+# Ristretto per-Get buffer size.
+# [OPTIONAL]  Env: MARKPOST_RENDER__BUFFER_ITEMS  Default: 64
+# buffer_items = 64
+
+
+# --- Cloudflare ----------------------------------------------------------------
+#
+# Optional. Only used to purge the CDN cache by cache-tag when a post is deleted.
+# Leave unset (the default) on a self-hosted instance without Cloudflare:
+# deletion still drops the DB row and the origin render cache, and the CDN
+# expires the object naturally via TTL.
+
+[cloudflare]
+
+# API token with the "Zone / Cache Purge" permission.
+# [OPTIONAL]  Env: MARKPOST_CLOUDFLARE__API_TOKEN  Default: ""
+# api_token = ""
+
+# Zone ID of the domain serving this instance.
+# [OPTIONAL]  Env: MARKPOST_CLOUDFLARE__ZONE_ID  Default: ""
+# zone_id = ""
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Observability: three pillars (logs / traces / metrics) exported to the local

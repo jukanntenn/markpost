@@ -98,6 +98,31 @@ func TestLoad_EnvOnlyWithoutConfigFile(t *testing.T) {
 	}
 }
 
+// config.example.toml documents MARKPOST_CLOUDFLARE__*, which only resolves
+// because the two keys carry an empty SetDefault: viper reads an env var solely
+// for keys it already knows, and an absent [cloudflare] section is the norm.
+func TestLoad_CloudflareFromEnv(t *testing.T) {
+	ResetForTest()
+
+	path := writeTestConfig(t)
+	defer func() { _ = os.Remove(path) }()
+
+	t.Setenv("MARKPOST_CLOUDFLARE__API_TOKEN", "env-token")
+	t.Setenv("MARKPOST_CLOUDFLARE__ZONE_ID", "env-zone")
+
+	if err := Load(path); err != nil {
+		t.Fatalf("Load error: %v", err)
+	}
+
+	cfg := Get()
+	if cfg.Cloudflare.APIToken != "env-token" {
+		t.Fatalf("api_token not taken from env: %q", cfg.Cloudflare.APIToken)
+	}
+	if cfg.Cloudflare.ZoneID != "env-zone" {
+		t.Fatalf("zone_id not taken from env: %q", cfg.Cloudflare.ZoneID)
+	}
+}
+
 func TestGet(t *testing.T) {
 	ResetForTest()
 

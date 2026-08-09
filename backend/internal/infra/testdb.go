@@ -3,6 +3,7 @@ package infra
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -66,6 +67,18 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 }
 
 func startContainer(ctx context.Context, t *testing.T) {
+	// Every package in a `go test ./...` run shares one Ryuk (the testcontainers
+	// reaper): the session ID is a hash of the *parent* pid, so a single reaper
+	// owns every package's container and prunes them as one set. That removed
+	// this package's container while its tests were still running, surfacing
+	// dozens of lines later as "No such container" / `port "5432/tcp" not
+	// found`. Own the lifecycle instead — no reaper, explicit termination in
+	// RunTestMain. Set here rather than in an init() because testcontainers
+	// reads its config lazily, on first use.
+	if err := os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true"); err != nil {
+		t.Fatalf("disable testcontainers reaper: %v", err)
+	}
+
 	c, err := tcpostgres.Run(ctx, "postgres:17-alpine",
 		tcpostgres.WithDatabase("markpost_test"),
 		tcpostgres.WithUsername("markpost"),
@@ -78,6 +91,25 @@ func startContainer(ctx context.Context, t *testing.T) {
 		t.Fatalf("start postgres container: %v", err)
 	}
 	testPGContainer = c
+}
+
+// RunTestMain runs a package's tests and then tears down the shared postgres
+// container. Every package that calls SetupTestDB must route its TestMain
+// through this: the container deliberately outlives individual tests, and with
+// the reaper disabled nothing else would ever remove it.
+func RunTestMain(m *testing.M) int {
+	code := m.Run()
+
+	if testPGContainer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := testPGContainer.Terminate(ctx); err != nil {
+			log.Printf("terminate test postgres container: %v", err)
+		}
+		testPGContainer = nil
+	}
+
+	return code
 }
 
 // SetupTestDBWithRepos mirrors the old helper's signature so callers are unchanged.

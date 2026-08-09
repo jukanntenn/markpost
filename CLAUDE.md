@@ -102,7 +102,7 @@ Schema changes go through `golang-migrate` with versioned SQL files in `backend/
 
 ## Testing
 
-- **Backend**: `go test -race ./...` in `backend/` (CI runs the same with `-coverprofile`). Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable. Fuzz targets are scheduled daily by `.github/workflows/fuzz.yml`; run one locally with `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./pkg/...` and commit any `testdata/fuzz/` crash seeds as regression cases.
+- **Backend**: `go test -race ./...` in `backend/` (CI runs the same with `-coverprofile`). Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable. Any package calling `infra.SetupTestDB` must route its `TestMain` through `infra.RunTestMain` (see `internal/infra/main_test.go`): the shared container outlives individual tests, the testcontainers reaper is deliberately disabled (it is shared across packages by parent pid and used to kill containers mid-run), so the package has to terminate it itself. Fuzz targets are scheduled daily by `.github/workflows/fuzz.yml`; run one locally with `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./pkg/...` and commit any `testdata/fuzz/` crash seeds as regression cases.
 - **Frontend**: `pnpm test:run` — Vitest with jsdom + v8 coverage.
 - **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger call -m e2e all --source ..`.
 

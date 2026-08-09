@@ -1,13 +1,16 @@
 ---
 # staging (oect @ 192.168.5.50) — treated as production-grade self-hosted.
 # Mirrors production topology (Postgres via Unix socket) but without Cloudflare
-# and without HTTPS. Always pulls the `dev` tag; promoted to production only
-# after validation here.
+# and without HTTPS. It is the promotion gate for production, so it runs a
+# pinned Docker Hub release rather than a floating tag: the artifact validated
+# here must be byte-identical to the one production will run.
 
 env: staging
-image_tag: dev
-registry: "192.168.5.50:5000"
-image: "{{ registry }}/markpost:{{ image_tag }}"
+
+# Bump this to deploy a new release; override for a one-off with
+#   ansible-playbook ... -l staging -e markpost_version=vX.Y.Z
+markpost_version: "v0.2.0-rc.3"
+image: "jukanntenn/markpost:{{ markpost_version }}"
 
 public_url: "https://markpost.bytehome.fun"
 trusted_proxies: '["127.0.0.1", "::1"]'
@@ -17,8 +20,9 @@ tls_profile: http
 caddyfile_template: Caddyfile.staging
 debug: false
 
-# staging's postgres data lives in the named pgdata volume (no host bind mount
-# for app data, matching dev and the ephemeral acceptance topology).
+# Postgres data stays in the named pgdata volume; app data (observability JSONL)
+# is bind-mounted from the host in every environment, so the dir must exist —
+# otherwise Docker creates it as root and the container cannot write logs.
 app_dirs:
-  - "{{ apps_path }}"
   - "{{ app_path }}"
+  - "{{ app_path }}/data"

@@ -5,8 +5,12 @@
 # rewrites the destination port to 2053.
 
 env: production
-image_tag: latest
-image: "jukanntenn/markpost:{{ image_tag }}"
+
+# Pinned rather than `latest`: the docker-publish workflow deliberately does not
+# move `latest` for -rc tags, so `latest` would silently resolve to an older
+# release. Bump on promotion, after staging has validated the same version.
+markpost_version: "v0.2.0-rc.3"
+image: "jukanntenn/markpost:{{ markpost_version }}"
 
 public_url: "https://markpost.cc"
 trusted_proxies: '["127.0.0.1", "::1"]'
@@ -24,7 +28,6 @@ cloudflare_cidrs:
 cloudflare_zone_id: 63edf965a56621e7982cce517cf2e219
 
 app_dirs:
-  - "{{ apps_path }}"
   - "{{ app_path }}"
   - "{{ app_path }}/data"
   - "{{ app_path }}/certs"

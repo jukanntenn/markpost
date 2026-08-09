@@ -52,9 +52,50 @@
         dest: "{{ caddyfile }}"
         mode: "0644"
 
-    - name: Pull image and recreate containers on change
+    # Schema changes are applied by `markpost migrate up`, never implicitly on
+    # serve — infra.New only opens the connection. So the deploy has to order
+    # postgres → migrate → app itself, rather than bringing everything up at
+    # once: a new image whose code expects a new column would otherwise start
+    # serving against an un-migrated database.
+    - name: Pull images
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ app_path }}"
+
+    - name: Start postgres and wait until it is healthy
       community.docker.docker_compose_v2:
         project_src: "{{ app_path }}"
-        pull: always
+        services:
+          - postgres
+        state: present
+        wait: true
+        wait_timeout: 120
+
+    # Idempotent: MigrateUp swallows migrate.ErrNoChange, so re-running is a
+    # no-op. It reports "changed" every time regardless because the command
+    # gives no machine-readable way to tell a no-op from an applied migration.
+    - name: Apply database migrations
+      community.docker.docker_compose_v2_run:
+        project_src: "{{ app_path }}"
+        service: markpost
+        entrypoint: markpost
+        argv:
+          - "-c"
+          - "/app/config.toml"
+          - "migrate"
+          - "up"
+        no_deps: true
+        cleanup: true
+        detach: false
+        # tty=false emits -T/--no-TTY. interactive is deliberately left at its
+        # default: interactive=false would emit --no-interactive, a flag docker
+        # compose does not have (checked against v5.1.3), and the run fails with
+        # "unknown flag: --no-interactive".
+        tty: false
+
+    - name: Start all services and wait until healthy
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_path }}"
         state: present
         remove_orphans: true
+        wait: true
+        wait_timeout: 120

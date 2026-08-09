@@ -19,3 +19,7 @@ caddy_port: 2053
 # postgres-socket named volume (Unix socket) — never published on the host.
 postgres_db: markpost
 postgres_user: markpost
+
+# Pinned into config.toml [db].timezone so the Postgres session timezone and the
+# app clock agree. Override per environment if a deployment wants local time.
+db_timezone: "UTC"

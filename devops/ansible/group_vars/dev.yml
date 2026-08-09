@@ -27,7 +27,9 @@ caddyfile_template: Caddyfile.dev
 debug: true
 
 # Directories to create on the host. dev keeps its postgres data in the named
-# pgdata volume; no bind-mounted app data dir is needed.
+# pgdata volume; app data (observability JSONL) is bind-mounted in every
+# environment, so the dir must exist — otherwise Docker creates it as root and
+# the container cannot write logs.
 app_dirs:
-  - "{{ apps_path }}"
   - "{{ app_path }}"
+  - "{{ app_path }}/data"

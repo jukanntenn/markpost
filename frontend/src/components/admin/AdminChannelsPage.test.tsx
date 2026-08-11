@@ -1,51 +1,50 @@
 import '@testing-library/jest-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
-import { renderWithProviders, mockMatchMedia } from '@/test/utils'
-import { ThemeProvider } from '@/components/theme-provider'
-import { AdminChannelsPage } from './AdminChannelsPage'
-
-vi.mock('@/stores/toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}))
+import { describe, expect, it, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import {
+  renderWithProviders,
+  mockMatchMedia,
+  mockNavigation,
+} from '@/test/utils'
+import AdminChannelsPage from './AdminChannelsPage'
+import { server } from '@/mocks/server'
+import { http, HttpResponse } from 'msw'
 
 beforeEach(() => {
-  vi.clearAllMocks()
   mockMatchMedia()
+  mockNavigation()
 })
 
+// F.7 Admin 渠道管理：桌面表格 + 移动卡片；开关/删除确认文案如实告知影响。
 describe('AdminChannelsPage', () => {
   it('renders the page heading', async () => {
-    renderWithProviders(<AdminChannelsPage />, { wrapper: ThemeProvider })
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: /channel management/i }),
-      ).toBeInTheDocument()
-    })
-  })
-
-  it('displays channel rows with name and kind', async () => {
-    renderWithProviders(<AdminChannelsPage />, { wrapper: ThemeProvider })
-    await waitFor(() => {
-      expect(screen.getByText('Alert Channel')).toBeInTheDocument()
-      expect(screen.getByText('feishu')).toBeInTheDocument()
-    })
+    renderWithProviders(<AdminChannelsPage />)
+    expect(
+      await screen.findByRole('heading', { name: /channels/i }),
+    ).toBeInTheDocument()
   })
 
   it('shows empty state when no channels', async () => {
-    const { mockAdminChannels } = await import('@/mocks/handlers')
-    const original = [...mockAdminChannels]
-    mockAdminChannels.length = 0
+    server.use(
+      http.get('/api/v1/admin/delivery/channels', () =>
+        HttpResponse.json({
+          items: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          total_pages: 0,
+        }),
+      ),
+    )
+    renderWithProviders(<AdminChannelsPage />)
+    expect(await screen.findByText(/no channels found/i)).toBeInTheDocument()
+  })
 
-    renderWithProviders(<AdminChannelsPage />, { wrapper: ThemeProvider })
-    await waitFor(() => {
-      expect(screen.getByText(/no channels found/i)).toBeInTheDocument()
-    })
-
-    mockAdminChannels.push(...original)
+  it('renders the channel name and status badge', async () => {
+    renderWithProviders(<AdminChannelsPage />)
+    expect(
+      (await screen.findAllByText('Alert Channel')).length,
+    ).toBeGreaterThan(0)
+    expect((await screen.findAllByText('Active')).length).toBeGreaterThan(0)
   })
 })

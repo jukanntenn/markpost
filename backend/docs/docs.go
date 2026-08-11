@@ -32,6 +32,42 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "description": "Actor user ID filter",
+                        "name": "actor_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Action filter",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target type filter",
+                        "name": "target_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target ID filter",
+                        "name": "target_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start time",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end time",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
                         "default": 1,
                         "description": "Page number (min 1)",
                         "name": "page",
@@ -49,7 +85,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedAuditLogs"
+                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
@@ -67,7 +103,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/admin/channels": {
+        "/api/v1/admin/delivery/channels": {
             "get": {
                 "security": [
                     {
@@ -101,7 +137,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedChannels"
+                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
@@ -117,61 +153,7 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/admin/delivery-history": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin"
-                ],
-                "summary": "List all delivery history (admin)",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Page number (min 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Items per page (min 1)",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/channels": {
+            },
             "post": {
                 "security": [
                     {
@@ -345,6 +327,156 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/delivery/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all delivery history (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID filter",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel ID filter",
+                        "name": "channel_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status filter (delivered/failed/expired)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number (min 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Items per page (min 1)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/delivery/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get site-wide delivery trend (admin, D2.5)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Days to aggregate (default 7)",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryStatsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/locked-channels": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List channels with persistent delivery failures (admin, D2.1)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.AdminLockedChannelsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/posts": {
             "get": {
                 "security": [
@@ -367,6 +499,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Username filter (F.9)",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number (min 1)",
@@ -385,7 +523,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedPosts"
+                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
@@ -448,6 +586,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/admin/sessions/{token_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Revoke a single user session (admin, D3.2)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Session (refresh token) ID",
+                        "name": "token_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/admin/stats": {
             "get": {
                 "security": [
@@ -461,7 +653,7 @@ const docTemplate = `{
                 "tags": [
                     "admin"
                 ],
-                "summary": "Get admin dashboard statistics",
+                "summary": "Get admin dashboard statistics (D2.4, includes week deltas)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -500,6 +692,12 @@ const docTemplate = `{
                 "summary": "List all users (admin)",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Username search (LIKE)",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number (min 1)",
@@ -518,7 +716,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedUsers"
+                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
@@ -591,6 +789,55 @@ const docTemplate = `{
             }
         },
         "/api/v1/admin/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get a single user (admin) — detail profile data (D3.2)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "security": [
                     {
@@ -721,16 +968,13 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "admin"
                 ],
-                "summary": "Reset a user's password (admin)",
+                "summary": "Reset a user's password (admin) — system generates a temporary",
                 "parameters": [
                     {
                         "type": "integer",
@@ -738,22 +982,13 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "New password",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminResetUserPasswordRequest"
-                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                            "$ref": "#/definitions/internal_api_rest_v1.AdminResetPasswordResponse"
                         }
                     },
                     "400": {
@@ -879,7 +1114,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminSessionsResponse"
+                            "$ref": "#/definitions/internal_api_rest_v1.SessionsResponse"
                         }
                     },
                     "401": {
@@ -988,7 +1223,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.MessageResponse"
+                            "$ref": "#/definitions/internal_api_rest_v1.ChangePasswordResponse"
                         }
                     },
                     "400": {
@@ -1113,6 +1348,115 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "List the current user's sessions (I.12)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.SessionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke all of the current user's sessions except the present one (I.12)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions/{token_id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke one of the current user's sessions (I.12)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Session (refresh token) ID",
+                        "name": "token_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
                         }
@@ -1377,6 +1721,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Filter by terminal status (delivered/failed/expired)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number (min 1)",
@@ -1426,6 +1776,74 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/internal_api_rest_v1.DeliveryLatestListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/delivery/pending": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "delivery"
+                ],
+                "summary": "List the current user's in-flight delivery attempts (K.2)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.PendingAttemptsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/delivery/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "delivery"
+                ],
+                "summary": "Get the current user's delivery trend + today counters (B2.7/K.2)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Days to aggregate (default 7)",
+                        "name": "days",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryStatsResponse"
                         }
                     },
                     "401": {
@@ -1520,6 +1938,36 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/post-key/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Rotate the current user's post key (C2.5)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api_rest_v1.RotatePostKeyResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/post_key": {
             "get": {
                 "security": [
@@ -1565,6 +2013,12 @@ const docTemplate = `{
                 ],
                 "summary": "List the current user's posts",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Title/body search (B3.3)",
+                        "name": "search",
+                        "in": "query"
+                    },
                     {
                         "type": "integer",
                         "default": 1,
@@ -1735,38 +2189,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "internal_api_rest_v1.AdminAuditLogItem": {
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string"
-                },
-                "actor_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "ip": {
-                    "type": "string"
-                },
-                "metadata": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "target_id": {
-                    "type": "string"
-                },
-                "target_type": {
-                    "type": "string"
-                }
-            }
-        },
         "internal_api_rest_v1.AdminChannelItem": {
             "type": "object",
             "properties": {
@@ -1836,74 +2258,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string",
-                    "minLength": 6
+                    "type": "string"
                 },
                 "username": {
                     "type": "string"
                 }
             }
         },
-        "internal_api_rest_v1.AdminPostItem": {
+        "internal_api_rest_v1.AdminLockedChannelsResponse": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "qid": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_api_rest_v1.AdminResetUserPasswordRequest": {
-            "type": "object",
-            "required": [
-                "password"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string",
-                    "minLength": 6
-                }
-            }
-        },
-        "internal_api_rest_v1.AdminSessionItem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "expires_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "revoked": {
-                    "type": "boolean"
-                },
-                "token_hash": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_api_rest_v1.AdminSessionsResponse": {
-            "type": "object",
-            "properties": {
-                "sessions": {
+                "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.AdminSessionItem"
+                        "$ref": "#/definitions/markpost_internal_domain_delivery.LockedChannel"
                     }
+                }
+            }
+        },
+        "internal_api_rest_v1.AdminResetPasswordResponse": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
                 }
             }
         },
@@ -1947,10 +2324,19 @@ const docTemplate = `{
                 "history": {
                     "type": "integer"
                 },
+                "history_week_delta": {
+                    "type": "integer"
+                },
                 "posts": {
                     "type": "integer"
                 },
+                "posts_week_delta": {
+                    "type": "integer"
+                },
                 "users": {
+                    "type": "integer"
+                },
+                "users_week_delta": {
                     "type": "integer"
                 }
             }
@@ -1972,11 +2358,26 @@ const docTemplate = `{
                 "email": {
                     "type": "string"
                 },
+                "github_id": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "is_active": {
                     "type": "boolean"
+                },
+                "is_email_verified": {
+                    "type": "boolean"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "post_key": {
+                    "type": "string"
                 },
                 "role": {
                     "type": "string"
@@ -2000,6 +2401,20 @@ const docTemplate = `{
                 },
                 "user": {
                     "$ref": "#/definitions/internal_api_rest_v1.UserResponse"
+                }
+            }
+        },
+        "internal_api_rest_v1.ChangePasswordResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
                 }
             }
         },
@@ -2133,6 +2548,20 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api_rest_v1.DeliveryStatsResponse": {
+            "type": "object",
+            "properties": {
+                "today": {
+                    "$ref": "#/definitions/markpost_internal_domain_delivery.TodayCounts"
+                },
+                "trend": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/markpost_internal_domain_delivery.DailyStat"
+                    }
+                }
+            }
+        },
         "internal_api_rest_v1.GitHubLoginRequest": {
             "type": "object",
             "required": [
@@ -2175,59 +2604,21 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PaginatedAuditLogs": {
+        "internal_api_rest_v1.PaginatedItemsResponse": {
             "type": "object",
             "properties": {
-                "audit_logs": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.AdminAuditLogItem"
-                    }
+                "items": {},
+                "limit": {
+                    "type": "integer"
                 },
-                "pagination": {
-                    "$ref": "#/definitions/internal_api_rest_v1.Pagination"
-                }
-            }
-        },
-        "internal_api_rest_v1.PaginatedChannels": {
-            "type": "object",
-            "properties": {
-                "channels": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.AdminChannelItem"
-                    }
+                "page": {
+                    "type": "integer"
                 },
-                "pagination": {
-                    "$ref": "#/definitions/internal_api_rest_v1.Pagination"
-                }
-            }
-        },
-        "internal_api_rest_v1.PaginatedPosts": {
-            "type": "object",
-            "properties": {
-                "pagination": {
-                    "$ref": "#/definitions/internal_api_rest_v1.Pagination"
+                "total": {
+                    "type": "integer"
                 },
-                "posts": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.AdminPostItem"
-                    }
-                }
-            }
-        },
-        "internal_api_rest_v1.PaginatedUsers": {
-            "type": "object",
-            "properties": {
-                "pagination": {
-                    "$ref": "#/definitions/internal_api_rest_v1.Pagination"
-                },
-                "users": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
-                    }
+                "total_pages": {
+                    "type": "integer"
                 }
             }
         },
@@ -2258,8 +2649,18 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "new_password": {
-                    "type": "string",
-                    "minLength": 6
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api_rest_v1.PendingAttemptsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/markpost_internal_domain_delivery.PendingAttemptRow"
+                    }
                 }
             }
         },
@@ -2354,6 +2755,25 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api_rest_v1.RotatePostKeyResponse": {
+            "type": "object",
+            "properties": {
+                "post_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api_rest_v1.SessionsResponse": {
+            "type": "object",
+            "properties": {
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/markpost_internal_domain_user.RefreshToken"
+                    }
+                }
+            }
+        },
         "internal_api_rest_v1.SingleChannelResponse": {
             "type": "object",
             "properties": {
@@ -2396,6 +2816,12 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_email_verified": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -2466,6 +2892,113 @@ const docTemplate = `{
             "x-enum-varnames": [
                 "ChannelKindFeishu"
             ]
+        },
+        "markpost_internal_domain_delivery.DailyStat": {
+            "type": "object",
+            "properties": {
+                "day": {
+                    "description": "YYYY-MM-DD (UTC)",
+                    "type": "string"
+                },
+                "delivered": {
+                    "type": "integer"
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                }
+            }
+        },
+        "markpost_internal_domain_delivery.LockedChannel": {
+            "type": "object",
+            "properties": {
+                "channel_id": {
+                    "type": "integer"
+                },
+                "channel_name": {
+                    "type": "string"
+                },
+                "fails": {
+                    "type": "integer"
+                },
+                "failure_rate": {
+                    "type": "number"
+                },
+                "last_at": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "markpost_internal_domain_delivery.PendingAttemptRow": {
+            "type": "object",
+            "properties": {
+                "channel_id": {
+                    "type": "integer"
+                },
+                "channel_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "post_id": {
+                    "type": "integer"
+                },
+                "post_qid": {
+                    "type": "string"
+                },
+                "post_title": {
+                    "type": "string"
+                }
+            }
+        },
+        "markpost_internal_domain_delivery.TodayCounts": {
+            "type": "object",
+            "properties": {
+                "delivered": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "pending": {
+                    "type": "integer"
+                }
+            }
+        },
+        "markpost_internal_domain_user.RefreshToken": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "revoked": {
+                    "type": "boolean"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
         }
     },
     "securityDefinitions": {

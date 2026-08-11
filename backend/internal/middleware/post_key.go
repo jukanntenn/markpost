@@ -23,6 +23,14 @@ func PostKey(users user.Repository) gin.HandlerFunc {
 			return
 		}
 
+		// C3.1 漏洞补正（关键）：封禁必须切断发帖——被封禁用户的 post_key
+		// 即使不换也立即失效。封禁即时性闭环：登录挡住 + 发帖挡住 +
+		// token version 即时失效已存 session。
+		if !u.IsActive {
+			abortWithError(c, service.New(auth.ErrUserDisabled, "user is disabled"))
+			return
+		}
+
 		setUserFields(c, u)
 		c.Next()
 	}

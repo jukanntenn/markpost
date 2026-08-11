@@ -1,11 +1,14 @@
 export const adminRoute = {
   shouldShow: (isAuth: boolean, isAdmin: boolean) => isAuth && isAdmin,
-  redirectPath: '/dashboard',
+  redirectPath: '/login',
+  withNext: true,
+  showForbidden: true,
 }
 
 export const protectedRoute = {
   shouldShow: (isAuth: boolean) => isAuth,
   redirectPath: '/login',
+  withNext: true,
 }
 
 export const publicRoute = {

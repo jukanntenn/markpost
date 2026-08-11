@@ -4,20 +4,151 @@
 @custom-variant data-checked (&:where([data-checked]));
 @custom-variant data-unchecked (&:where([data-unchecked]));
 
+/* ============================================================
+   Layer 0 — Tailwind v4 基础：清空默认色板，深色绑定 .dark
+   ============================================================ */
 @theme inline {
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 9999px;
+  --color-*: initial;
+  --color-white: white;
+  --color-black: black;
+}
 
+/* ============================================================
+   Layer 1 — Ember Studio 物理色阶（对齐 Tailwind 命名 → 工具类可用）
+   K.1: stone 暖灰 hue≈49、terracotta hue≈41、amber hue≈75
+   ============================================================ */
+@theme inline {
+  --color-stone-50: oklch(0.985 0.001 106); /* #FAFAF9 暖白 */
+  --color-stone-100: oklch(0.967 0.001 106); /* #F5F5F4 surface/card */
+  --color-stone-200: oklch(0.922 0.003 49); /* #E7E5E4 surface-raised */
+  --color-stone-300: oklch(0.87 0.002 49); /* #D6D3D1 border/input */
+  --color-stone-500: oklch(0.553 0.013 58); /* #78716C muted-fg */
+  --color-stone-600: oklch(0.444 0.011 49); /* #57534E secondary-fg */
+  --color-stone-900: oklch(0.21 0.004 49); /* #1C1917 foreground */
+  --color-terracotta-500: oklch(0.51 0.18 41); /* #9A3412 primary-hover */
+  --color-terracotta-600: oklch(0.577 0.197 41); /* #C2410C primary */
+  --color-terracotta-700: oklch(0.627 0.193 41); /* 深色提亮 */
+  --color-amber-500: oklch(0.769 0.188 75); /* #F59E0B */
+}
+
+/* ============================================================
+   Layer 2 — Ember Studio 语义别名（承载 design.md 角色）
+   K.1 精确值。深色 "intentional, not inverted"。
+   ============================================================ */
+:root {
+  --background: var(--color-stone-50);
+  --foreground: var(--color-stone-900);
+  --surface: var(--color-stone-100);
+  --surface-foreground: var(--color-stone-900);
+  --surface-raised: var(--color-stone-200);
+  --card: var(--color-stone-100);
+  --card-foreground: var(--color-stone-900);
+  --popover: oklch(0.992 0.001 106);
+  --popover-foreground: var(--color-stone-900);
+  --primary: var(--color-terracotta-600);
+  --primary-hover: var(--color-terracotta-500);
+  --primary-foreground: oklch(0.985 0.001 106);
+  --secondary: var(--color-stone-100);
+  --secondary-foreground: var(--color-stone-600);
+  --muted: var(--color-stone-200);
+  --muted-foreground: var(--color-stone-500);
+  --accent: var(--color-stone-200); /* 中性 hover 表面（语义纠正，非琥珀） */
+  --accent-foreground: var(--color-stone-900);
+  --amber: var(--color-amber-500);
+  --amber-foreground: oklch(0.21 0.004 49);
+  --success: oklch(0.627 0.17 150);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.705 0.18 70);
+  --warning-foreground: oklch(0.21 0.004 49);
+  --danger: oklch(0.577 0.245 27);
+  --danger-foreground: oklch(0.985 0 0);
+  --info: oklch(0.444 0.011 49);
+  --info-foreground: oklch(0.985 0.001 106);
+  --border: var(--color-stone-300);
+  --input: var(--color-stone-300);
+  --ring: oklch(0.577 0.197 41 / 0.12);
+  --sidebar: var(--color-stone-50);
+  --sidebar-foreground: var(--color-stone-900);
+  --sidebar-border: var(--color-stone-300);
+  --sidebar-ring: var(--color-terracotta-600);
+  --chart-1: oklch(0.627 0.17 150); /* success 绿 */
+  --chart-2: oklch(0.577 0.245 27); /* danger 红 */
+  --chart-3: var(--color-terracotta-600);
+  --chart-4: var(--color-amber-500);
+  --chart-5: var(--color-stone-500);
+
+  /* A1.6 圆角：单一基准 + 倍数派生（design.md 4/8/12/9999 = sm/md/lg/2xl） */
+  --radius: 12px;
+  --radius-sm: calc(var(--radius) * 0.33); /* ≈4px code/badge */
+  --radius-md: calc(var(--radius) * 0.67); /* ≈8px button/input/dropdown */
+  --radius-lg: var(--radius); /* 12px card/panel/modal/popover */
+  --radius-2xl: 9999px; /* pill/avatar/chip/progress */
+
+  /* A1.8 阴影（design.md Elevation 三档，OKLCH 用 K.1 stone hue≈49） */
+  --shadow-card-hover: 0 4px 16px oklch(0.21 0.005 49 / 0.06);
+  --shadow-primary-glow: 0 4px 12px oklch(0.577 0.197 41 / 0.25);
+  --shadow-modal: 0 24px 48px oklch(0.21 0.005 49 / 0.12);
+
+  /* A2.10 布局 token */
+  --header-height: 3.5rem; /* 56px = h-14 */
+  --sidebar-width: 16rem; /* 256px */
+  --container-max: 75rem; /* 1200px */
+  --show-sidebar: 64rem; /* 1024px = Tailwind lg */
+}
+
+.dark {
+  --background: oklch(0.155 0.004 49); /* 暖深色（带色温） */
+  --foreground: oklch(0.985 0.001 106);
+  --surface: oklch(0.205 0.004 49);
+  --surface-foreground: oklch(0.985 0.001 106);
+  --surface-raised: oklch(0.26 0.005 49);
+  --card: oklch(0.205 0.004 49);
+  --card-foreground: oklch(0.985 0.001 106);
+  --popover: oklch(0.205 0.004 49);
+  --popover-foreground: oklch(0.985 0.001 106);
+  --primary: oklch(0.704 0.17 41); /* 提亮降饱和 */
+  --primary-hover: oklch(0.76 0.15 41);
+  --primary-foreground: oklch(0.21 0.004 49);
+  --secondary: oklch(0.26 0.005 49);
+  --secondary-foreground: oklch(0.985 0.001 106);
+  --muted: oklch(0.26 0.005 49);
+  --muted-foreground: oklch(0.709 0.01 49);
+  --accent: oklch(1 0 0 / 0.08); /* 半透明白 hover */
+  --accent-foreground: oklch(0.985 0.001 106);
+  --amber: oklch(0.79 0.17 75);
+  --amber-foreground: oklch(0.21 0.004 49);
+  --success: oklch(0.696 0.17 150);
+  --success-foreground: oklch(0.155 0.004 49);
+  --warning: oklch(0.79 0.17 75);
+  --warning-foreground: oklch(0.21 0.004 49);
+  --danger: oklch(0.704 0.191 22);
+  --danger-foreground: oklch(0.985 0.001 106);
+  --info: oklch(0.709 0.01 49);
+  --info-foreground: oklch(0.21 0.004 49);
+  --border: oklch(1 0 0 / 0.1); /* v4 范式，半透明白自适应 */
+  --input: oklch(1 0 0 / 0.15);
+  --ring: oklch(0.704 0.17 41 / 0.18);
+  --sidebar: oklch(0.155 0.004 49);
+  --sidebar-foreground: oklch(0.985 0.001 106);
+  --sidebar-border: oklch(1 0 0 / 0.1);
+  --sidebar-ring: oklch(0.704 0.17 41);
+}
+
+/* ============================================================
+   语义别名 → Tailwind 工具类映射（bg-background / bg-surface / bg-primary 等）
+   ============================================================ */
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-raised: var(--surface-raised);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -25,73 +156,56 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
+  --color-amber: var(--amber);
+  --color-amber-foreground: var(--amber-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-success: var(--success);
-  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 
   --font-display: var(--font-playfair-display);
   --font-body: var(--font-source-sans);
   --font-code: var(--font-fira-code);
 
-  --text-display: 64px;
-  --text-headline: 48px;
-  --text-section: 28px;
-  --text-subhead: 20px;
+  /* A1.7 Type Scale：固定字号（视口无关）+ 流体字号（clamp） */
+  --text-display: clamp(2.25rem, 5vw + 1rem, 4rem); /* 36↔64px */
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.02em;
+  --text-headline: clamp(1.75rem, 3vw + 1rem, 3rem); /* 28↔48px */
+  --text-headline--line-height: 1.1;
+  --text-headline--letter-spacing: -0.02em;
+  --text-section: clamp(1.375rem, 1.5vw + 1rem, 1.75rem); /* 22↔28px */
+  --text-section--line-height: 1.25;
+  --text-section--letter-spacing: -0.01em;
+  --text-subhead: clamp(1.125rem, 0.5vw + 1rem, 1.25rem); /* 18↔20px */
+  --text-subhead--line-height: 1.4;
   --text-body: 16px;
+  --text-body--line-height: 1.5;
   --text-small: 14px;
+  --text-small--line-height: 1.45;
   --text-caption: 12px;
+  --text-caption--line-height: 1.4;
   --text-overline: 11px;
+  --text-overline--line-height: 1.2;
+  --text-overline--letter-spacing: 0.08em;
 
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
-}
-
-:root {
-  --background: #f5f5f4;
-  --foreground: #1c1917;
-  --card: #fafaf9;
-  --card-foreground: #1c1917;
-  --popover: #fafaf9;
-  --popover-foreground: #1c1917;
-  --primary: #c2410c;
-  --primary-foreground: #ffffff;
-  --secondary: transparent;
-  --secondary-foreground: #57534e;
-  --muted: #e7e5e4;
-  --muted-foreground: #78716c;
-  --accent: #f59e0b;
-  --accent-foreground: #78716c;
-  --destructive: #dc2626;
-  --border: #d6d3d1;
-  --input: #d6d3d1;
-  --ring: rgba(194, 65, 12, 0.12);
-  --success: #16a34a;
-  --warning: #d97706;
-}
-
-.dark {
-  --background: #121212;
-  --foreground: #f5f5f4;
-  --card: #1e1e1e;
-  --card-foreground: #f5f5f4;
-  --popover: #1e1e1e;
-  --popover-foreground: #f5f5f4;
-  --primary: #c2410c;
-  --primary-foreground: #ffffff;
-  --secondary: transparent;
-  --secondary-foreground: #a8a29e;
-  --muted: #333333;
-  --muted-foreground: #a8a29e;
-  --accent: #f59e0b;
-  --accent-foreground: #a8a29e;
-  --destructive: #ef4444;
-  --border: #333333;
-  --input: #333333;
-  --ring: rgba(194, 65, 12, 0.15);
-  --success: #22c55e;
-  --warning: #f59e0b;
 }
 
 @layer base {
@@ -100,6 +214,28 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* base-ui Quick Start 要求：portal 浮层置顶 */
+  .root {
+    isolation: isolate;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  /* J.4 prefers-reduced-motion：降级动画 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  /* J.5 跳过链接 */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground;
   }
 }
 

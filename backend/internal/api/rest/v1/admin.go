@@ -5,28 +5,33 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	_ "markpost/internal/apierr"
 	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
+	"markpost/internal/service"
+	adminsvc "markpost/internal/service/admin"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AdminService defines the interface for admin-related operations.
 type AdminService interface {
-	ListAllUsers(ctx context.Context, offset, limit int) ([]user.User, int64, error)
-	ListAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error)
+	ListAllUsers(ctx context.Context, search string, offset, limit int) ([]user.User, int64, error)
+	ListAllPosts(ctx context.Context, search, username string, offset, limit int) ([]post.Post, int64, error)
 	ListAllDeliveryChannels(ctx context.Context, offset, limit int) ([]delivery.Channel, int64, error)
-	ListAllDeliveryHistory(ctx context.Context, offset, limit int) ([]*delivery.HistoryRow, int64, error)
-	ListAuditLogs(ctx context.Context, offset, limit int) ([]audit.Log, int64, error)
+	ListAllDeliveryHistory(ctx context.Context, filter delivery.HistoryFilter, offset, limit int) ([]*delivery.HistoryRow, int64, error)
+	ListAuditLogs(ctx context.Context, filter audit.AuditFilter, offset, limit int) ([]audit.LogRow, int64, error)
+	AuditActionCounts(ctx context.Context, filter audit.AuditFilter) (map[string]int64, error)
 	CreateUser(ctx context.Context, email, username, password string) (*user.User, error)
-	SetUserRole(ctx context.Context, userID int, role user.Role) error
-	ResetUserPassword(ctx context.Context, userID int, password string) error
-	SetUserActive(ctx context.Context, userID int, active bool) error
-	DeleteUser(ctx context.Context, userID int) (int64, error)
+	SetUserRole(ctx context.Context, actorID, userID int, role user.Role) error
+	ResetUserPassword(ctx context.Context, userID int) (string, error)
+	SetUserActive(ctx context.Context, actorID, userID int, active bool) error
+	DeleteUser(ctx context.Context, actorID, userID int) (int64, error)
 	GetUserByID(ctx context.Context, userID int) (*user.User, error)
 	CreateChannel(ctx context.Context, channel *delivery.Channel) error
 	GetChannelByID(ctx context.Context, id int, userID int) (*delivery.Channel, error)
@@ -36,6 +41,10 @@ type AdminService interface {
 	DeleteChannelByID(ctx context.Context, id int) (int64, error)
 	ListUserSessions(ctx context.Context, userID int) ([]user.RefreshToken, error)
 	RevokeUserSessions(ctx context.Context, userID int) error
+	RevokeSessionByID(ctx context.Context, tokenID int) error
+	GetStats(ctx context.Context) (*adminsvc.Stats, error)
+	DailyStatsAll(ctx context.Context, days int) ([]*delivery.DailyStat, error)
+	LockedChannels(ctx context.Context) ([]*delivery.LockedChannel, error)
 	RecordAudit(ctx context.Context, e audit.Entry) error
 }
 
@@ -44,20 +53,55 @@ type AdminService interface {
 // @Tags admin
 // @Produce json
 // @Security BearerAuth
+// @Param search query string false "Username search (LIKE)"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
-// @Success 200 {object} v1.PaginatedUsers
+// @Success 200 {object} v1.PaginatedItemsResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
 // @Router /api/v1/admin/users [get]
 func AdminListUsers(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		handlePaginatedQuery(c,
-			bindPaginationQuery,
-			adminSvc.ListAllUsers,
-			newAdminUserItem,
-			paginatedWrap[AdminUserItem]("users"),
-		)
+		var q AdminUsersQuery
+		if err := c.ShouldBindQuery(&q); err != nil {
+			writeBindingError(c, &q, err)
+			return
+		}
+		if !validatePaginationQuery(c, &q.PaginationQuery) {
+			return
+		}
+		items, total, err := adminSvc.ListAllUsers(c.Request.Context(), q.Search, q.Offset, q.Limit)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		writePaginatedList(c, items, total, q.PaginationQuery, newAdminUserItem, paginatedWrap[AdminUserItem]("users"))
+	}
+}
+
+// AdminGetUser godoc
+// @Summary Get a single user (admin) — detail profile data (D3.2)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Success 200 {object} v1.AdminUserItem
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/{id} [get]
+func AdminGetUser(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+		u, err := adminSvc.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, newAdminUserItem(*u))
 	}
 }
 
@@ -67,20 +111,29 @@ func AdminListUsers(adminSvc AdminService) gin.HandlerFunc {
 // @Produce json
 // @Security BearerAuth
 // @Param search query string false "Search keyword"
+// @Param username query string false "Username filter (F.9)"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
-// @Success 200 {object} v1.PaginatedPosts
+// @Success 200 {object} v1.PaginatedItemsResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
 // @Router /api/v1/admin/posts [get]
 func AdminListPosts(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		handleSearchPaginatedQuery(c,
-			bindAdminPostsQuery,
-			adminSvc.ListAllPosts,
-			newAdminPostItem,
-			paginatedWrap[AdminPostItem]("posts"),
-		)
+		var q AdminPostsQuery
+		if err := c.ShouldBindQuery(&q); err != nil {
+			writeBindingError(c, &q, err)
+			return
+		}
+		if !validatePaginationQuery(c, &q.PaginationQuery) {
+			return
+		}
+		items, total, err := adminSvc.ListAllPosts(c.Request.Context(), q.Search, q.Username, q.Offset, q.Limit)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		writePaginatedList(c, items, total, q.PaginationQuery, newAdminPostItem, paginatedWrap[AdminPostItem]("posts"))
 	}
 }
 
@@ -91,10 +144,10 @@ func AdminListPosts(adminSvc AdminService) gin.HandlerFunc {
 // @Security BearerAuth
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
-// @Success 200 {object} v1.PaginatedChannels
+// @Success 200 {object} v1.PaginatedItemsResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
-// @Router /api/v1/admin/channels [get]
+// @Router /api/v1/admin/delivery/channels [get]
 func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		handlePaginatedQuery(c,
@@ -111,21 +164,54 @@ func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 // @Tags admin
 // @Produce json
 // @Security BearerAuth
+// @Param user_id query int false "User ID filter"
+// @Param channel_id query int false "Channel ID filter"
+// @Param status query string false "Status filter (delivered/failed/expired)"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
 // @Success 200 {object} v1.DeliveryHistoryListResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
-// @Router /api/v1/admin/delivery-history [get]
+// @Router /api/v1/admin/delivery/history [get]
 func AdminListDeliveryHistory(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		handlePaginatedQuery(c,
-			bindPaginationQuery,
-			adminSvc.ListAllDeliveryHistory,
-			newDeliveryHistoryItem,
-			paginatedWrap[DeliveryHistoryItem]("history"),
-		)
+		var q AdminDeliveryHistoryQuery
+		if err := c.ShouldBindQuery(&q); err != nil {
+			writeBindingError(c, &q, err)
+			return
+		}
+		if !validatePaginationQuery(c, &q.PaginationQuery) {
+			return
+		}
+		status, ok := parseHistoryStatus(c, q.Status)
+		if !ok {
+			return
+		}
+		filter := delivery.HistoryFilter{OwnerID: q.UserID, ChannelID: q.ChannelID, Status: status}
+		items, total, err := adminSvc.ListAllDeliveryHistory(c.Request.Context(), filter, q.Offset, q.Limit)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		writePaginatedList(c, items, total, q.PaginationQuery, newDeliveryHistoryItem, paginatedWrap[DeliveryHistoryItem]("history"))
 	}
+}
+
+// parseHistoryStatus maps the status query string to a delivery.Status,
+// responding with a 422 on unknown values.
+func parseHistoryStatus(c *gin.Context, s string) (delivery.Status, bool) {
+	switch s {
+	case "", "all":
+		return 0, true
+	case "delivered":
+		return delivery.StatusDelivered, true
+	case "failed":
+		return delivery.StatusFailed, true
+	case "expired":
+		return delivery.StatusExpired, true
+	}
+	respondError(c, service.New(service.ErrInvalidRequest, "status must be one of: delivered, failed, expired"))
+	return 0, false
 }
 
 // AdminListAuditLogs godoc
@@ -133,28 +219,83 @@ func AdminListDeliveryHistory(adminSvc AdminService) gin.HandlerFunc {
 // @Tags admin
 // @Produce json
 // @Security BearerAuth
+// @Param actor_id query int false "Actor user ID filter"
+// @Param action query string false "Action filter"
+// @Param target_type query string false "Target type filter"
+// @Param target_id query string false "Target ID filter"
+// @Param since query string false "RFC3339 start time"
+// @Param until query string false "RFC3339 end time"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
-// @Success 200 {object} v1.PaginatedAuditLogs
+// @Success 200 {object} v1.PaginatedItemsResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
 // @Router /api/v1/admin/audit-logs [get]
 func AdminListAuditLogs(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		handlePaginatedQuery(c,
-			bindPaginationQuery,
-			adminSvc.ListAuditLogs,
-			newAdminAuditLogItem,
-			paginatedWrap[AdminAuditLogItem]("audit_logs"),
-		)
+		var q AdminAuditQuery
+		if err := c.ShouldBindQuery(&q); err != nil {
+			writeBindingError(c, &q, err)
+			return
+		}
+		if !validatePaginationQuery(c, &q.PaginationQuery) {
+			return
+		}
+		filter := audit.AuditFilter{
+			ActorID:    q.ActorID,
+			Action:     q.Action,
+			TargetType: q.TargetType,
+			TargetID:   q.TargetID,
+		}
+		if q.Since != "" {
+			t, err := time.Parse(time.RFC3339, q.Since)
+			if err != nil {
+				respondError(c, service.New(service.ErrInvalidRequest, "since must be an RFC3339 timestamp"))
+				return
+			}
+			filter.Since = &t
+		}
+		if q.Until != "" {
+			t, err := time.Parse(time.RFC3339, q.Until)
+			if err != nil {
+				respondError(c, service.New(service.ErrInvalidRequest, "until must be an RFC3339 timestamp"))
+				return
+			}
+			filter.Until = &t
+		}
+
+		rows, total, err := adminSvc.ListAuditLogs(c.Request.Context(), filter, q.Offset, q.Limit)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		facets, err := adminSvc.AuditActionCounts(c.Request.Context(), filter)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		items := make([]AdminAuditLogItem, len(rows))
+		for i, row := range rows {
+			items[i] = newAdminAuditLogItem(row)
+		}
+		// I.10 统一契约：所有列表端点返回扁平 items envelope。
+		c.JSON(http.StatusOK, gin.H{
+			"items":       items,
+			"total":       int(total),
+			"page":        q.Page,
+			"limit":       q.Limit,
+			"total_pages": service.CalcTotalPages(total, q.Limit),
+			"facets":      facets,
+		})
 	}
 }
 
 // AdminCreateUserRequest represents the request body for creating a user (admin).
+// Password length policy is enforced by the service layer (C2.3).
 type AdminCreateUserRequest struct {
 	Email    string `json:"email" binding:"omitempty,email"`
 	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required,min=6"`
+	Password string `json:"password" binding:"required"`
 }
 
 // AdminCreateUser godoc
@@ -172,8 +313,7 @@ type AdminCreateUserRequest struct {
 func AdminCreateUser(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AdminCreateUserRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
+		if !bindJSON(c, &req) {
 			return
 		}
 
@@ -188,6 +328,7 @@ func AdminCreateUser(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "user.create",
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", u.ID),
+			IP:         c.ClientIP(),
 		})
 
 		c.JSON(http.StatusCreated, newAdminUserItem(*u))
@@ -221,12 +362,11 @@ func AdminSetUserRole(adminSvc AdminService) gin.HandlerFunc {
 		}
 
 		var req AdminSetUserRoleRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
+		if !bindJSON(c, &req) {
 			return
 		}
 
-		if err := adminSvc.SetUserRole(c.Request.Context(), userID, user.Role(req.Role)); err != nil {
+		if err := adminSvc.SetUserRole(c.Request.Context(), currentUserID(c), userID, user.Role(req.Role)); err != nil {
 			respondError(c, err)
 			return
 		}
@@ -237,6 +377,7 @@ func AdminSetUserRole(adminSvc AdminService) gin.HandlerFunc {
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", userID),
 			Metadata:   map[string]any{"role": req.Role},
+			IP:         c.ClientIP(),
 		})
 
 		u, err := adminSvc.GetUserByID(c.Request.Context(), userID)
@@ -248,20 +389,14 @@ func AdminSetUserRole(adminSvc AdminService) gin.HandlerFunc {
 	}
 }
 
-// AdminResetUserPasswordRequest represents the request body for resetting a user's password (admin).
-type AdminResetUserPasswordRequest struct {
-	Password string `json:"password" binding:"required,min=6"`
-}
-
 // AdminResetUserPassword godoc
-// @Summary Reset a user's password (admin)
+// @Summary Reset a user's password (admin) — system generates a temporary
+// password returned in plaintext exactly once (D3.3 方案 B)
 // @Tags admin
-// @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "User ID"
-// @Param body body AdminResetUserPasswordRequest true "New password"
-// @Success 200 {object} v1.AdminUserItem
+// @Success 200 {object} v1.AdminResetPasswordResponse
 // @Failure 400 {object} apierr.ErrorResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
@@ -274,13 +409,8 @@ func AdminResetUserPassword(adminSvc AdminService) gin.HandlerFunc {
 			return
 		}
 
-		var req AdminResetUserPasswordRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
-			return
-		}
-
-		if err := adminSvc.ResetUserPassword(c.Request.Context(), userID, req.Password); err != nil {
+		password, err := adminSvc.ResetUserPassword(c.Request.Context(), userID)
+		if err != nil {
 			respondError(c, err)
 			return
 		}
@@ -290,14 +420,10 @@ func AdminResetUserPassword(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "user.reset_password",
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", userID),
+			IP:         c.ClientIP(),
 		})
 
-		u, err := adminSvc.GetUserByID(c.Request.Context(), userID)
-		if err != nil {
-			respondError(c, err)
-			return
-		}
-		c.JSON(http.StatusOK, newAdminUserItem(*u))
+		c.JSON(http.StatusOK, AdminResetPasswordResponse{Password: password})
 	}
 }
 
@@ -328,12 +454,11 @@ func AdminSetUserActive(adminSvc AdminService) gin.HandlerFunc {
 		}
 
 		var req AdminSetUserActiveRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
+		if !bindJSON(c, &req) {
 			return
 		}
 
-		if err := adminSvc.SetUserActive(c.Request.Context(), userID, req.Active); err != nil {
+		if err := adminSvc.SetUserActive(c.Request.Context(), currentUserID(c), userID, req.Active); err != nil {
 			respondError(c, err)
 			return
 		}
@@ -344,6 +469,7 @@ func AdminSetUserActive(adminSvc AdminService) gin.HandlerFunc {
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", userID),
 			Metadata:   map[string]any{"active": req.Active},
+			IP:         c.ClientIP(),
 		})
 
 		u, err := adminSvc.GetUserByID(c.Request.Context(), userID)
@@ -373,7 +499,7 @@ func AdminDeleteUser(adminSvc AdminService) gin.HandlerFunc {
 			return
 		}
 
-		deleted, err := adminSvc.DeleteUser(c.Request.Context(), userID)
+		deleted, err := adminSvc.DeleteUser(c.Request.Context(), currentUserID(c), userID)
 		if err != nil {
 			respondError(c, err)
 			return
@@ -384,6 +510,7 @@ func AdminDeleteUser(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "user.delete",
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", userID),
+			IP:         c.ClientIP(),
 		})
 
 		c.JSON(http.StatusOK, gin.H{"deleted": deleted})
@@ -414,8 +541,7 @@ type AdminCreateChannelRequest struct {
 func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req AdminCreateChannelRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
+		if !bindJSON(c, &req) {
 			return
 		}
 
@@ -444,6 +570,7 @@ func AdminCreateChannel(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "channel.create",
 			TargetType: "channel",
 			TargetID:   fmt.Sprintf("%d", ch.ID),
+			IP:         c.ClientIP(),
 		})
 
 		c.JSON(http.StatusCreated, newAdminChannelItem(*ch))
@@ -476,8 +603,7 @@ func AdminSetChannelEnabled(adminSvc AdminService) gin.HandlerFunc {
 		}
 
 		var req AdminSetChannelEnabledRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			writeBindingError(c, &req, err)
+		if !bindJSON(c, &req) {
 			return
 		}
 
@@ -492,6 +618,7 @@ func AdminSetChannelEnabled(adminSvc AdminService) gin.HandlerFunc {
 			TargetType: "channel",
 			TargetID:   fmt.Sprintf("%d", channelID),
 			Metadata:   map[string]any{"enabled": req.Enabled},
+			IP:         c.ClientIP(),
 		})
 
 		c.JSON(http.StatusOK, MessageResponse{Message: "Channel updated"})
@@ -527,6 +654,7 @@ func AdminDeleteChannel(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "channel.delete",
 			TargetType: "channel",
 			TargetID:   fmt.Sprintf("%d", channelID),
+			IP:         c.ClientIP(),
 		})
 
 		c.JSON(http.StatusOK, gin.H{"deleted": deleted})
@@ -534,7 +662,7 @@ func AdminDeleteChannel(adminSvc AdminService) gin.HandlerFunc {
 }
 
 // AdminGetStats godoc
-// @Summary Get admin dashboard statistics
+// @Summary Get admin dashboard statistics (D2.4, includes week deltas)
 // @Tags admin
 // @Produce json
 // @Security BearerAuth
@@ -544,37 +672,62 @@ func AdminDeleteChannel(adminSvc AdminService) gin.HandlerFunc {
 // @Router /api/v1/admin/stats [get]
 func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ctx := c.Request.Context()
+		stats, err := adminSvc.GetStats(c.Request.Context())
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"counts": stats})
+	}
+}
 
-		_, userCount, err := adminSvc.ListAllUsers(ctx, 0, 1)
+// AdminDeliveryStats godoc
+// @Summary Get site-wide delivery trend (admin, D2.5)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param days query int false "Days to aggregate (default 7)"
+// @Success 200 {object} v1.DeliveryStatsResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/delivery/stats [get]
+func AdminDeliveryStats(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		days := 7
+		if v := c.Query("days"); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 || n > 365 {
+				respondError(c, service.New(service.ErrInvalidRequest, "days must be a positive integer"))
+				return
+			}
+			days = n
+		}
+		trend, err := adminSvc.DailyStatsAll(c.Request.Context(), days)
 		if err != nil {
 			respondError(c, err)
 			return
 		}
-		_, postCount, err := adminSvc.ListAllPosts(ctx, "", 0, 1)
-		if err != nil {
-			respondError(c, err)
-			return
-		}
-		_, channelCount, err := adminSvc.ListAllDeliveryChannels(ctx, 0, 1)
-		if err != nil {
-			respondError(c, err)
-			return
-		}
-		_, historyCount, err := adminSvc.ListAllDeliveryHistory(ctx, 0, 1)
-		if err != nil {
-			respondError(c, err)
-			return
-		}
+		c.JSON(http.StatusOK, DeliveryStatsResponse{Trend: trend})
+	}
+}
 
-		c.JSON(http.StatusOK, gin.H{
-			"counts": gin.H{
-				"users":    userCount,
-				"posts":    postCount,
-				"channels": channelCount,
-				"history":  historyCount,
-			},
-		})
+// AdminLockedChannels godoc
+// @Summary List channels with persistent delivery failures (admin, D2.1)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} v1.AdminLockedChannelsResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/locked-channels [get]
+func AdminLockedChannels(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		items, err := adminSvc.LockedChannels(c.Request.Context())
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, AdminLockedChannelsResponse{Items: items})
 	}
 }
 
@@ -584,7 +737,7 @@ func AdminGetStats(adminSvc AdminService) gin.HandlerFunc {
 // @Produce json
 // @Security BearerAuth
 // @Param id path int true "User ID"
-// @Success 200 {object} v1.AdminSessionsResponse
+// @Success 200 {object} v1.SessionsResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 403 {object} apierr.ErrorResponse
 // @Failure 404 {object} apierr.ErrorResponse
@@ -602,18 +755,7 @@ func AdminListSessions(adminSvc AdminService) gin.HandlerFunc {
 			return
 		}
 
-		items := make([]AdminSessionItem, len(tokens))
-		for i, t := range tokens {
-			items[i] = AdminSessionItem{
-				ID:        t.ID,
-				TokenHash: t.TokenHash[:8] + "...",
-				Revoked:   t.Revoked,
-				ExpiresAt: t.ExpiresAt,
-				CreatedAt: t.CreatedAt,
-			}
-		}
-
-		c.JSON(http.StatusOK, gin.H{"sessions": items})
+		c.JSON(http.StatusOK, SessionsResponse{Sessions: tokens})
 	}
 }
 
@@ -645,7 +787,35 @@ func AdminRevokeUserSessions(adminSvc AdminService) gin.HandlerFunc {
 			Action:     "user.revoke_sessions",
 			TargetType: "user",
 			TargetID:   fmt.Sprintf("%d", userID),
+			IP:         c.ClientIP(),
 		})
+
+		c.JSON(http.StatusOK, gin.H{"revoked": true})
+	}
+}
+
+// AdminRevokeSession godoc
+// @Summary Revoke a single user session (admin, D3.2)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param token_id path int true "Session (refresh token) ID"
+// @Success 200 {object} map[string]bool
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/sessions/{token_id} [delete]
+func AdminRevokeSession(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenID, err := parseIDParam(c, "token_id")
+		if err != nil {
+			return
+		}
+
+		if err := adminSvc.RevokeSessionByID(c.Request.Context(), tokenID); err != nil {
+			respondError(c, err)
+			return
+		}
 
 		c.JSON(http.StatusOK, gin.H{"revoked": true})
 	}

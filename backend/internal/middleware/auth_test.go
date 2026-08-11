@@ -32,7 +32,7 @@ func TestAuth(t *testing.T) {
 		created, _ := userRepo.Create(t.Context(), "test@example.com", "testuser", "password")
 		_ = userRepo.SetRole(t.Context(), created.ID, user.RoleUser)
 
-		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user", 0)
 
 		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
 		router.Use(Auth(jwtSvc, userRepo))
@@ -91,7 +91,7 @@ func TestAuth(t *testing.T) {
 		jwtSvc, userRepo, _ := setupAuthMiddleware(t)
 
 		created, _ := userRepo.Create(t.Context(), "test@example.com", "testuser", "password")
-		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user", 0)
 
 		_, _ = userRepo.DeleteByID(t.Context(), created.ID)
 
@@ -106,8 +106,9 @@ func TestAuth(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		if w.Code != http.StatusNotFound {
-			t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+		// K.4 fail-close：user 查询失败（含用户已删除）一律 401，宁误杀不放行。
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
 		}
 	})
 }
@@ -117,7 +118,7 @@ func TestAuthWithBlacklist(t *testing.T) {
 		jwtSvc, userRepo, tokenRepo := setupAuthMiddleware(t)
 
 		created, _ := userRepo.Create(t.Context(), "test@example.com", "testuser", "password")
-		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user", 0)
 
 		tokenHash := utils.HashToken(token)
 		_ = tokenRepo.StoreBlacklistedToken(t.Context(), tokenHash, time.Now().Add(time.Hour))
@@ -174,7 +175,7 @@ func TestOptionalAuth(t *testing.T) {
 		jwtSvc, userRepo, _ := setupAuthMiddleware(t)
 
 		created, _ := userRepo.Create(t.Context(), "test@example.com", "testuser", "password")
-		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user", 0)
 
 		var gotUser *user.User
 		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
@@ -212,6 +213,66 @@ func TestOptionalAuth(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+		}
+	})
+}
+
+// C2.6：token version 即时失效 —— 改密/强制下线/封禁后旧 access token 被拒。
+func TestAuth_TokenVersion(t *testing.T) {
+	t.Run("rejects token with stale token_version (C2.6)", func(t *testing.T) {
+		jwtSvc, userRepo, _ := setupAuthMiddleware(t)
+
+		created, _ := userRepo.Create(t.Context(), "tv@example.com", "tvuser", "password")
+
+		// 用户当前 token_version=0，签发 tv=0 的 token → 通过。
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "tv@example.com", "tvuser", "user", 0)
+		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
+		router.Use(Auth(jwtSvc, userRepo))
+		router.GET("/protected", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200 with matching tv, got %d", w.Code)
+		}
+
+		// 模拟强制下线：token_version++ → 旧 token 立即失效。
+		if err := userRepo.BumpTokenVersion(t.Context(), created.ID); err != nil {
+			t.Fatalf("bump token version: %v", err)
+		}
+
+		w = httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 with stale tv, got %d", w.Code)
+		}
+	})
+
+	t.Run("rejects disabled user regardless of tv (user_disabled)", func(t *testing.T) {
+		jwtSvc, userRepo, _ := setupAuthMiddleware(t)
+		created, _ := userRepo.Create(t.Context(), "d@example.com", "duser", "password")
+		token, _ := jwtSvc.GenerateAccessToken(time.Now(), created.ID, "d@example.com", "duser", "user", 0)
+
+		router := testutil.NewTestEngine(testutil.TestEngineConfig{LocalesPath: "../../locales"})
+		router.Use(Auth(jwtSvc, userRepo))
+		router.GET("/protected", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
+
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200 before ban, got %d", w.Code)
+		}
+
+		_ = userRepo.SetActive(t.Context(), created.ID, false)
+
+		w = httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("expected 403 for disabled user, got %d", w.Code)
 		}
 	})
 }

@@ -5,25 +5,56 @@
     "confirm": "确认",
     "create": "创建",
     "save": "保存",
-    "done": "完成",
-    "processing": "处理中...",
+    "delete": "删除",
+    "edit": "编辑",
+    "copy": "复制",
+    "copied": "已复制",
+    "refresh": "刷新",
+    "retry": "重试",
+    "clear": "清除",
+    "search": "搜索",
+    "loading": "加载中...",
+    "error": "出错了",
+    "back": "返回",
+    "empty": "暂无数据",
+    "all": "全部",
     "yes": "是",
     "no": "否",
+    "done": "完成",
+    "processing": "处理中...",
+    "minutes": "{n} 分钟",
+    "hours": "{n} 小时前",
+    "days": "{n} 天前",
+    "pageLabel": "第 {page} 页",
+    "firstPage": "第一页",
+    "lastPage": "最后一页",
     "pageTitle": {
       "login": "登录 | Markpost",
-      "dashboard": "仪表盘 | Markpost",
+      "dashboard": "概览 | Markpost",
+      "posts": "帖子 | Markpost",
+      "postKey": "Post Key | Markpost",
       "settings": "设置 | Markpost",
-      "allPosts": "全部 Posts | Markpost",
-      "adminUsers": "用户 - 管理后台 | Markpost",
-      "adminPosts": "Posts - 管理后台 | Markpost",
-      "adminChannels": "渠道 - 管理后台 | Markpost",
-      "adminDeliveryHistory": "投递历史 - 管理后台 | Markpost"
-    }
+      "deliveryChannels": "投递渠道 | Markpost",
+      "deliveryChannel": "渠道 | Markpost",
+      "deliveryHistory": "投递历史 | Markpost",
+      "adminDashboard": "管理概览 | Markpost",
+      "adminUsers": "用户管理 | Markpost",
+      "adminUserDetail": "用户详情 | Markpost",
+      "adminPosts": "帖子管理 | Markpost",
+      "adminChannels": "渠道管理 | Markpost",
+      "adminDeliveryHistory": "投递历史管理 | Markpost",
+      "adminAuditLogs": "审计日志 | Markpost",
+      "notFound": "页面不存在 | Markpost"
+    },
+    "required": "为必填",
+    "previous": "上一页",
+    "next": "下一页",
+    "total": "共 {n} 条"
   },
   "language": {
     "english": "English",
     "chinese": "中文",
-    "changeLanguage": "切换语言"
+    "changeLanguage": "更改语言"
   },
   "theme": {
     "light": "浅色模式",
@@ -32,129 +63,226 @@
     "toggleTheme": "切换主题"
   },
   "navigation": {
-    "dashboard": "仪表盘",
-    "posts": "文章",
+    "dashboard": "概览",
+    "posts": "帖子",
     "delivery": "投递",
+    "channels": "渠道",
+    "history": "历史",
+    "postKey": "Post Key",
+    "settings": "设置",
+    "adminGroup": "管理",
     "userMenu": {
-      "admin": "管理员",
+      "admin": "管理后台",
       "settings": "设置",
-      "logout": "登出"
-    }
+      "logout": "退出登录",
+      "theme": "主题"
+    },
+    "aria": {
+      "sidebar": "主导航",
+      "mobileSidebar": "导航",
+      "openMenu": "打开导航菜单",
+      "closeMenu": "关闭导航菜单",
+      "skipToContent": "跳到主要内容"
+    },
+    "users": "用户",
+    "adminHistory": "投递历史",
+    "auditLogs": "审计日志"
   },
   "login": {
+    "title": "登录 markpost",
+    "subtitle": "输入你的凭据继续",
     "username": "用户名",
+    "usernamePlaceholder": "输入用户名",
     "password": "密码",
+    "passwordPlaceholder": "输入密码",
     "loginButton": "登录",
     "signingIn": "登录中...",
     "or": "或",
-    "githubLogin": "使用 GitHub 登录",
-    "processingGitHubLogin": "正在处理 GitHub 登录，请稍后...",
-    "usernamePlaceholder": "输入您的用户名",
-    "passwordPlaceholder": "输入您的密码",
-    "cannotOpenAuthWindow": "无法打开授权窗口，请检查浏览器设置",
-    "loginFailed": "登录失败",
-    "loginError": "登录异常，请稍后重试",
-    "unknownError": "未知错误"
+    "githubLogin": "使用 GitHub 继续",
+    "processingGitHubLogin": "正在处理 GitHub 登录...",
+    "sessionExpired": "登录已过期，请重新登录",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "fieldRequired": {
+      "username": "请输入用户名",
+      "password": "请输入密码"
+    },
+    "formAlert": {
+      "invalid_credentials": "用户名或密码不正确",
+      "user_disabled": "账号已被停用，如需帮助请联系管理员",
+      "internal": "登录服务暂时不可用，请稍后重试",
+      "network": "无法连接到服务器，请检查网络连接"
+    },
+    "oauthError": "无法发起 GitHub 登录，请稍后重试"
   },
   "loginCallback": {
-    "loading": "登录中...",
-    "authError": "登录异常",
-    "authFailed": "授权失败",
-    "unknownError": "未知错误"
-  },
-  "dashboard": {
-    "postKey": {
-      "title": "Post Key",
-      "loadingKey": "正在加载您的 Post Key...",
-      "errorTitle": "加载 Post Key 失败",
-      "errorLoadingKey": "加载您的 Post Key 失败，请稍后重试。",
-      "showKey": "显示 Post Key",
-      "hideKey": "隐藏 Post Key",
-      "copyKey": "复制 Post Key",
-      "createdAt": "创建于",
-      "copied": "已复制到粘贴板！",
-      "copyFailed": "复制失败",
-      "createTestPost": "创建测试内容",
-      "createTestPostTip": "快速创建一条 Markdown 示例",
-      "copyPostKey": "复制 Post 密钥",
-      "copyPostUrl": "复制完整 Post 地址"
-    },
-    "recentPosts": {
-      "title": "最新 Posts",
-      "viewAll": "查看全部",
-      "loading": "加载最新 Posts...",
-      "empty": "暂无内容",
-      "error": "加载失败，请稍后重试"
-    },
-    "documentation": {
-      "title": "文档",
-      "content": "请参考",
-      "apiLink": "Markpost APIs",
-      "content2": "以获取完整的文档，了解如何将 Markpost 集成到您的应用程序中。",
-      "viewDocs": "查看文档"
+    "loading": "正在完成登录...",
+    "errors": {
+      "missing_state": "GitHub 授权信息缺失，请重新登录",
+      "missing_code": "GitHub 授权信息缺失，请重新登录",
+      "invalid_state": "登录会话已过期，请重新尝试",
+      "oauth_exchange_failed": "GitHub 授权失败，请重试或联系管理员",
+      "github_user_fetch_failed": "无法获取 GitHub 账号信息，请稍后重试",
+      "timeout": "GitHub 登录超时，请重试"
     }
   },
-  "createTestPost": {
-    "title": "创建测试内容",
-    "titleLabel": "标题（可选）",
-    "titlePlaceholder": "输入标题，或留空",
-    "bodyLabel": "正文",
-    "bodyPlaceholder": "写一点 Markdown 内容...",
-    "cancel": "取消",
-    "create": "创建",
-    "creating": "正在创建...",
-    "successHeader": "创建成功",
-    "successBody": "测试内容已成功创建。",
-    "errorServer": "创建失败，请稍后重试",
-    "errorEmptyBody": "正文不能为空"
-  },
-  "posts": {
-    "title": "全部 Posts",
-    "loading": "加载中...",
-    "error": "加载失败，请稍后重试",
-    "empty": "暂无内容",
-    "table": {
-      "title": "标题",
-      "createdAt": "创建时间"
+  "dashboard": {
+    "welcome": "欢迎，{name}",
+    "pipeline": {
+      "running": "管道运行中",
+      "partialFailure": "部分投递异常",
+      "allFailed": "投递失败",
+      "idle": "暂无投递",
+      "unconfigured": "未配置投递渠道"
     },
-    "pagination": {
-      "prev": "上一页",
-      "next": "下一页"
+    "todayDelivery": "今日投递 {total} 次 · {success}✓ {failed}✗",
+    "activity": {
+      "title": "活动事件",
+      "viewAll": "查看全部活动",
+      "delivered": "{done}/{total} 已投递 ✓",
+      "partialFail": "{done}/{total} 已投递 ⚠",
+      "allFailed": "{done}/{total} 已投递 ✗",
+      "pending": "投递中...",
+      "viewDetail": "查看详情",
+      "openPost": "打开文章",
+      "showDetails": "展开投递详情",
+      "hideDetails": "收起投递详情"
+    },
+    "channelHealth": {
+      "title": "渠道健康",
+      "normal": "正常",
+      "abnormal": "异常",
+      "noDelivery": "空闲"
+    },
+    "trend": {
+      "title": "投递趋势",
+      "days7": "7 天",
+      "days30": "30 天",
+      "success": "成功",
+      "failed": "失败",
+      "empty": "暂无投递数据"
+    },
+    "empty": {
+      "noChannel": {
+        "title": "还没有投递渠道",
+        "desc": "创建一个渠道，markpost 就能把你的文章自动投递到飞书等目的地",
+        "cta": "创建第一个渠道"
+      }
+    },
+    "onboarding": {
+      "title": "开始使用 markpost",
+      "progress": "完成进度：{done}/{total} 步",
+      "step1Title": "创建投递渠道",
+      "step1Desc": "把文章投递到飞书等目的地",
+      "step1Cta": "创建渠道",
+      "step2Title": "获取你的 Post Key",
+      "step2Desc": "用它接收文章",
+      "step2Cta": "查看 Post Key",
+      "step3Title": "发送第一篇文章",
+      "step3Desc": "测试整个投递链路",
+      "step3Cta": "发送测试文章"
+    },
+    "recentPosts": {
+      "title": "最近帖子",
+      "viewAll": "查看全部",
+      "empty": "还没有帖子"
+    }
+  },
+  "postKey": {
+    "title": "Post Key",
+    "explanation": "Post Key 是 markpost 接收文章的凭证。外部工具通过它向你的账号发送文章。",
+    "showKey": "显示",
+    "hideKey": "隐藏",
+    "copyKey": "复制 Key",
+    "copyPostUrl": "复制投递地址",
+    "createdAt": "创建于",
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "testPost": "生成测试文章",
+    "rotate": "轮换 Key",
+    "rotateConfirm": {
+      "title": "轮换 Post Key",
+      "desc": "轮换将生成一个全新的 Post Key。旧 Key 立即失效，已配置的外部工具需更新。历史帖子不受影响。"
+    },
+    "rotateSuccess": "Post Key 已轮换",
+    "howToSend": {
+      "title": "如何发送文章",
+      "desc": "向下面的地址发送 POST 请求即可创建文章",
+      "apiDocs": "查看完整 API 文档",
+      "copyCurl": "复制 curl 示例",
+      "curlCopied": "curl 示例已复制"
     }
   },
   "settings": {
     "title": "设置",
+    "preferences": "偏好",
+    "security": "安全",
     "applicationSettings": "应用设置",
     "language": "语言",
-    "languageDescription": "选择您偏好的语言",
+    "languageDescription": "界面语言将立即生效",
     "changePassword": "修改密码",
-    "currentPassword": "当前密码",
-    "currentPasswordPlaceholder": "输入您的当前密码",
-    "currentPasswordHelp": "如果您通过 GitHub 登录且从未设置过密码，可留空当前密码",
-    "newPassword": "新密码",
-    "newPasswordPlaceholder": "至少6个字符",
-    "confirmPassword": "确认新密码",
-    "confirmPasswordPlaceholder": "再次输入新密码",
-    "enterCurrentPassword": "请输入当前密码",
-    "enterNewPassword": "请输入新密码",
-    "confirmPasswordRequired": "请确认新密码",
-    "passwordStrengthValid": "密码强度符合要求",
-    "passwordMinLength": "密码至少需要6个字符",
-    "passwordsMatch": "密码匹配",
-    "passwordsNotMatch": "两次输入的密码不一致",
-    "passwordSameAsCurrent": "新密码不能与当前密码相同",
-    "changingPassword": "修改密码中...",
-    "passwordChangeSuccess": "密码修改成功！",
-    "passwordChangeFailed": "密码修改失败，请重试"
+    "password": {
+      "current": "当前密码",
+      "currentPlaceholder": "输入当前密码",
+      "currentHelp": "若通过 GitHub 登录且从未设置密码，可留空",
+      "new": "新密码",
+      "newPlaceholder": "输入新密码",
+      "confirm": "确认新密码",
+      "confirmPlaceholder": "再次输入新密码",
+      "minLength": "至少 8 个字符",
+      "notMatch": "两次输入的密码不一致",
+      "submit": "修改密码",
+      "changing": "修改中...",
+      "success": "密码修改成功",
+      "strength": {
+        "weak": "弱",
+        "fair": "中",
+        "strong": "强"
+      },
+      "show": "显示密码",
+      "hide": "隐藏密码",
+      "maxLength": "密码不能超过 72 个字符"
+    },
+    "sessions": {
+      "title": "我的会话",
+      "empty": "无活跃会话",
+      "issued": "颁发于",
+      "expires": "过期于",
+      "active": "活跃",
+      "revoked": "已吊销",
+      "revoke": "吊销",
+      "revokeTitle": "吊销会话",
+      "revokeConfirm": "吊销这条会话？该设备将需要重新登录。",
+      "logoutAll": "全部下线",
+      "logoutAllConfirm": "退出其他所有会话？当前设备保持登录。",
+      "revokedToast": "会话已吊销",
+      "allSignedOut": "其他会话已全部退出"
+    },
+    "securityDescription": "管理你的密码与活跃会话"
+  },
+  "posts": {
+    "title": "帖子",
+    "searchPlaceholder": "搜索标题...",
+    "loading": "加载中...",
+    "error": "加载失败",
+    "empty": "还没有帖子",
+    "emptyHint": "通过 Post Key 发送文章",
+    "time": "时间",
+    "pagination": {
+      "prev": "上一页",
+      "next": "下一页",
+      "total": "共 {n} 条"
+    }
   },
   "delivery": {
     "channels": {
-      "title": "投递频道",
-      "add": "添加频道",
+      "title": "投递渠道",
+      "add": "新建渠道",
       "loading": "加载中...",
-      "loadFailed": "加载频道失败",
-      "empty": "暂无投递频道",
-      "unnamed": "未命名频道",
+      "loadFailed": "加载失败",
+      "empty": "还没有投递渠道",
+      "emptyCta": "创建一个渠道开始接收投递",
+      "unnamed": "未命名",
       "colName": "名称",
       "colType": "类型",
       "colEnabled": "启用",
@@ -162,237 +290,416 @@
       "colLatest": "最近投递",
       "colActions": "操作",
       "edit": "编辑",
-      "enabledToast": "频道已启用",
-      "disabledToast": "频道已禁用"
+      "enabledToast": "渠道已启用",
+      "disabledToast": "渠道已禁用",
+      "latest": {
+        "never": "从未"
+      }
+    },
+    "dialog": {
+      "createTitle": "新建渠道",
+      "editTitle": "编辑渠道",
+      "name": "渠道名称",
+      "namePlaceholder": "例如：飞书工作群",
+      "webhookURL": "Webhook URL",
+      "webhookPlaceholder": "https://open.feishu.cn/...",
+      "cardLinkURL": "卡片链接",
+      "cardLinkURLPlaceholder": "可选，投递卡片点击跳转地址",
+      "keywords": "关键词过滤",
+      "keywordsPlaceholder": "mark, post",
+      "keywordsHelp": "仅匹配包含这些关键词的文章（留空=全部匹配）",
+      "keywordsSyntax": "语法：逗号/竖线=或，&=且，!=非，\"\"=精确短语，()=分组",
+      "keywordsInvalid": "语法错误：{error}",
+      "create": "创建",
+      "save": "保存",
+      "cancel": "取消",
+      "delete": "删除",
+      "confirmDelete": "确认删除",
+      "deleting": "删除中...",
+      "test": "发送测试投递",
+      "testing": "发送中...",
+      "testSent": "已发送",
+      "testRetry": "失败 重试",
+      "saving": "保存中...",
+      "created": "渠道已创建",
+      "updated": "渠道已更新",
+      "deleted": "渠道已删除",
+      "testSuccess": "测试投递已发送，请检查渠道",
+      "testFailed": "测试投递失败",
+      "deleteConfirm": {
+        "title": "删除渠道",
+        "desc": "确定删除\"{name}\"吗？该渠道的历史投递记录会保留，但不会再投递新内容，关联的待处理投递会失败。"
+      },
+      "nameRequired": "请输入渠道名称",
+      "webhookRequired": "请输入 Webhook URL",
+      "invalidUrl": "必须是有效的 URL",
+      "nameTooLong": "渠道名称不能超过 64 个字符"
+    },
+    "channelDetail": {
+      "back": "返回渠道列表",
+      "enabled": "启用",
+      "disabled": "禁用",
+      "edit": "编辑",
+      "test": "测试",
+      "delete": "删除",
+      "configTitle": "配置",
+      "webhookURL": "Webhook URL",
+      "cardLinkURL": "卡片链接",
+      "keywords": "关键词过滤",
+      "createdAt": "创建时间",
+      "historyTitle": "最近投递",
+      "loading": "加载中...",
+      "empty": "暂无投递记录",
+      "notFound": "未找到该渠道"
     },
     "history": {
       "title": "投递历史",
-      "loading": "加载中...",
-      "loadFailed": "加载历史失败",
-      "empty": "暂无投递历史",
+      "filter": {
+        "channel": "渠道",
+        "status": "状态"
+      },
+      "status": {
+        "delivered": "已投递",
+        "failed": "失败",
+        "expired": "已过期",
+        "pending": "投递中"
+      },
       "colPost": "文章",
-      "colChannel": "频道",
+      "colChannel": "渠道",
       "colStatus": "状态",
       "colTime": "时间",
       "colError": "错误",
-      "postDeleted": "原文章已删除",
-      "channelDeleted": "投递频道已删除",
-      "status_delivered": "已投递",
-      "status_failed": "失败",
-      "status_expired": "已过期",
+      "postDeleted": "文章已删除",
+      "channelDeleted": "渠道已删除",
+      "detail": "详情",
+      "empty": "无投递记录",
+      "emptyFiltered": "没有匹配的投递记录",
+      "loading": "加载中...",
+      "loadFailed": "加载失败",
       "prev": "上一页",
-      "next": "下一页"
-    },
-    "latest": {
-      "never": "从未"
-    },
-    "channelDetail": {
-      "loading": "加载频道中...",
-      "notFound": "频道不存在",
-      "back": "返回频道列表",
-      "enabled": "已启用",
-      "disabled": "已禁用",
-      "edit": "编辑",
-      "configTitle": "配置",
-      "webhookURL": "Webhook 地址",
-      "cardLinkURL": "卡片跳转链接",
-      "keywords": "关键词",
-      "createdAt": "创建时间",
-      "historyTitle": "投递历史"
-    },
-    "dialog": {
-      "createTitle": "添加投递频道",
-      "editTitle": "编辑投递频道",
-      "name": "名称",
-      "namePlaceholder": "可选名称",
-      "webhookURL": "Webhook 地址",
-      "webhookPlaceholder": "飞书机器人 Webhook 地址",
-      "cardLinkURL": "卡片跳转链接",
-      "cardLinkURLPlaceholder": "可选,支持 QID 模板变量",
-      "keywords": "关键词",
-      "keywordsPlaceholder": "可选,如 技术 & (Go | Rust)",
-      "keywordsInvalid": "表达式无效:{error}",
-      "keywordsPreview": "匹配:{preview}",
-      "cancel": "取消",
-      "save": "保存",
-      "create": "创建",
-      "saving": "保存中...",
-      "delete": "删除",
-      "deleting": "删除中...",
-      "confirmDelete": "确认删除",
-      "test": "测试",
-      "testing": "发送中...",
-      "created": "频道已创建",
-      "updated": "频道已更新",
-      "deleted": "频道已删除",
-      "testSuccess": "测试消息已发送",
-      "testFailed": "测试消息发送失败"
+      "next": "下一页",
+      "total": "共 {n} 条",
+      "emptyHint": "文章投递后这里会显示记录"
     }
+  },
+  "network": {
+    "offline": "无法连接到服务器，请检查网络连接",
+    "timeout": "请求超时，请重试",
+    "parseError": "服务器响应异常，请稍后重试",
+    "sessionExpired": "登录已过期，请重新登录",
+    "logoutPartial": "已退出登录（部分会话可能未完全关闭）"
   },
   "admin": {
     "id": "ID",
     "username": "用户名",
+    "email": "邮箱",
+    "githubId": "GitHub",
     "role": "角色",
     "roleAdmin": "管理员",
     "roleUser": "普通用户",
-    "githubId": "GitHub ID",
-    "createdAt": "创建时间",
-    "updatedAt": "更新时间",
-    "loading": "加载中...",
-    "error": "加载用户失败",
-    "noUsers": "未找到用户",
+    "status": {
+      "normal": "正常",
+      "disabled": "已停用"
+    },
+    "createdAt": "创建于",
+    "lastLoginAt": "最后登录",
     "previous": "上一页",
     "next": "下一页",
-    "page": "{current} / {total}",
-    "totalUsers": "总计：{count} 位用户",
-    "nav": {
-      "title": "管理后台",
-      "users": "用户",
-      "posts": "Posts",
-      "channels": "渠道",
-      "history": "投递历史",
-      "dashboard": "仪表盘"
+    "searchUserPlaceholder": "搜索用户名...",
+    "searchPlaceholder": "搜索...",
+    "confirm": "确认",
+    "cancel": "取消",
+    "loading": "加载中...",
+    "error": "加载失败",
+    "empty": "暂无数据",
+    "total": "共 {n} 条",
+    "dashboard": {
+      "title": "管理概览",
+      "systemOk": "系统正常",
+      "needsAttention": {
+        "title": "需要关注",
+        "allGood": "一切正常",
+        "noIssue": "没有需要关注的异常项",
+        "detectError": "异常检测暂不可用",
+        "channelFailing": "{name} 投递失败 {n} 次",
+        "usersBanned": "{n} 个用户被封禁",
+        "viewChannel": "查看渠道",
+        "viewUser": "查看用户"
+      },
+      "recentActions": {
+        "title": "最近管理操作",
+        "viewAll": "查看全部"
+      },
+      "stats": {
+        "users": "用户",
+        "posts": "帖子",
+        "channels": "渠道",
+        "history": "投递",
+        "weekDelta": "本周 +{n}"
+      },
+      "trend": {
+        "title": "投递趋势",
+        "days7": "7 天",
+        "days30": "30 天",
+        "success": "成功",
+        "failed": "失败",
+        "empty": "暂无投递数据"
+      }
     },
-    "errors": {
-      "forbidden": "无权限访问",
-      "notFound": "资源不存在",
-      "deleteFailed": "删除失败",
-      "updateFailed": "更新失败",
-      "createFailed": "创建用户失败",
-      "default": "发生错误"
+    "audit": {
+      "title": "审计日志",
+      "filter": {
+        "actor": "操作者",
+        "action": "动作",
+        "targetType": "对象类型",
+        "timeRange": "时间范围",
+        "today": "今天",
+        "days7": "最近 7 天",
+        "days30": "最近 30 天"
+      },
+      "colTime": "时间",
+      "colActor": "操作者",
+      "colAction": "动作",
+      "colTarget": "对象",
+      "colIp": "IP",
+      "metadata": "元数据",
+      "copyJson": "复制 JSON",
+      "showFullIp": "显示完整 IP",
+      "empty": "暂无审计记录",
+      "emptyFiltered": "没有匹配的审计记录",
+      "loadFailed": "审计日志加载失败",
+      "action": {
+        "user": {
+          "create": "创建了用户 {target}",
+          "set_role": "将 {target} 切换为 {role}",
+          "reset_password": "重置了 {target} 的密码",
+          "disable": "封禁了 {target}",
+          "enable": "解封了 {target}",
+          "delete": "删除了用户 {target}",
+          "revoke_sessions": "强制 {target} 下线"
+        },
+        "post": {
+          "delete": "删除了帖子 {target}"
+        },
+        "channel": {
+          "create": "创建了渠道 {target}",
+          "enable": "启用了渠道 {target}",
+          "disable": "禁用了渠道 {target}",
+          "delete": "删除了渠道 {target}"
+        }
+      },
+      "meta": {
+        "transition": "从 {from} → {to}",
+        "reason": "原因：{value}",
+        "via": "来源：{value}"
+      }
     },
     "users": {
-      "title": "用户管理",
-      "actions": "操作",
-      "changeRole": "更改角色",
-      "changeRoleFor": "修改 {username} 的角色",
-      "roleUpdated": "角色已更新",
-      "addUser": "添加用户",
-      "addUserDescription": "创建新用户账户",
-      "usernamePlaceholder": "请输入用户名",
-      "passwordPlaceholder": "至少 6 个字符",
-      "confirmPasswordPlaceholder": "再次输入密码",
-      "passwordsNotMatch": "两次密码不一致",
-      "passwordMinLength": "密码至少需要 6 个字符",
-      "usernameRequired": "用户名不能为空",
-      "userCreated": "用户创建成功",
+      "title": "用户",
+      "addUser": "新建用户",
+      "viewDetail": "详情",
+      "moreActions": "更多操作",
+      "changeRole": "切换角色",
       "resetPassword": "重置密码",
-      "resetPasswordFor": "为 {username} 重置密码",
-      "setPassword": "设置密码",
-      "generateRandom": "随机生成",
-      "generateRandomDescription": "生成安全的随机密码",
-      "generate": "生成",
-      "passwordResetSuccess": "密码重置成功",
-      "passwordGenerated": "密码已生成",
-      "passwordCopied": "密码已复制到剪贴板",
-      "delete": "删除",
-      "deleteTitle": "删除用户",
-      "deleteConfirm": "删除用户 {username}？这将同时删除其文章和渠道。",
-      "deleteConfirmEmpty": "确认删除该用户？该用户的 Posts 和渠道也会被删除。",
-      "deleted": "用户已删除",
-      "email": "邮箱",
-      "emailPlaceholder": "user@example.com",
-      "emailRequired": "邮箱不能为空",
-      "emailInvalid": "邮箱格式无效",
-      "password": "密码",
-      "passwordRequired": "密码不能为空",
-      "cancel": "取消",
-      "create": "创建",
-      "creating": "创建中...",
-      "changeRoleConfirm": "将 {username} 的角色更改为 {role}？",
       "enableUser": "启用用户",
-      "disableUser": "禁用用户",
-      "enableUserConfirm": "启用用户 {username}？",
-      "disableUserConfirm": "禁用用户 {username}？该用户将无法登录。",
-      "roleChanged": "角色更改成功",
-      "activeChanged": "用户状态已更新",
-      "confirm": "确认"
+      "disableUser": "封禁用户",
+      "forceLogout": "强制下线",
+      "deleteTitle": "删除用户",
+      "detail": {
+        "back": "返回用户列表",
+        "profile": "资料",
+        "actions": "操作",
+        "sessions": "活跃会话",
+        "sessionsEmpty": "无活跃会话",
+        "logoutAll": "全部下线",
+        "history": "操作历史",
+        "historyEmpty": "该用户暂无管理操作记录",
+        "historyViewAll": "查看全部",
+        "fullName": "全名",
+        "emailUnbound": "未绑定",
+        "githubUnbound": "未绑定",
+        "githubLinked": "已绑定 #{id}",
+        "postKey": "Post Key",
+        "copyPostKey": "复制 Post Key",
+        "postKeyCopied": "Post Key 已复制",
+        "sessionsRevokedToast": "会话已吊销",
+        "emailVerified": "已验证",
+        "emailNotVerified": "未验证"
+      },
+      "reset": {
+        "title": "重置 {name} 的密码",
+        "desc": "系统将为 {name} 生成一个临时密码，且：· 所有会话立即失效（需用新密码登录）· 该密码仅显示一次，请安全地转交",
+        "confirm": "确认重置",
+        "success": "密码已重置，用户需重新登录",
+        "result": {
+          "title": "密码已重置",
+          "warning": "⚠ 此密码仅显示一次，关闭后无法再次查看。请立即安全地转交给 {name}。",
+          "copy": "复制",
+          "close": "我已转交，关闭"
+        }
+      },
+      "role": {
+        "toUser": {
+          "title": "切换为普通用户",
+          "desc": "{name} 将失去管理后台访问权限。此操作不影响其登录和发帖能力。{name} 当前若有 admin 会话，会立即失效。"
+        },
+        "toAdmin": {
+          "title": "切换为管理员",
+          "desc": "{name} 将获得管理后台的完全访问权限，包括管理所有用户、帖子、渠道和审计。请谨慎授予。"
+        },
+        "selfDemote": "不能对自己执行此操作"
+      },
+      "disable": {
+        "title": "封禁 {name}",
+        "desc": "封禁后，{name} 将：· 无法登录 · 无法发帖（Post Key 立即失效）· 所有现有会话立即失效。投递渠道配置仍保留（但不会再收到新投递）。{name} 可由你或其他管理员解封。"
+      },
+      "enable": {
+        "title": "解除封禁 {name}",
+        "desc": "{name} 将可以重新登录和发帖。其 Post Key 保持不变（若已泄露建议让 {name} 轮换）。"
+      },
+      "logout": {
+        "title": "强制 {name} 所有设备下线",
+        "desc": "{name} 的所有会话将立即失效，需重新登录。不影响封禁状态（{name} 仍可正常登录）。"
+      },
+      "delete": {
+        "title": "删除 {name}",
+        "desc": "⚠ 此操作不可撤销。永久删除 {name} 将同时删除：· 所有帖子 · 所有投递渠道 · refresh tokens。投递历史记录会保留（标记为匿名）。为防止误操作，请输入 {name} 的用户名确认：",
+        "typePlaceholder": "输入用户名确认",
+        "permanent": "永久删除",
+        "mismatch": "用户名不匹配"
+      },
+      "toasts": {
+        "roleChanged": "角色已更新",
+        "disabled": "已封禁 {name}",
+        "enabled": "已解封 {name}",
+        "signOut": "已强制 {name} 下线",
+        "deleted": "用户已删除"
+      },
+      "actions": "操作"
+    },
+    "userDialog": {
+      "title": "新建用户",
+      "username": "用户名",
+      "email": "邮箱（可选）",
+      "password": "密码",
+      "passwordHelp": "至少 8 个字符",
+      "create": "创建",
+      "created": "用户已创建",
+      "emailInvalid": "邮箱格式不正确",
+      "usernameRequired": "请输入用户名",
+      "passwordRequired": "请输入密码",
+      "passwordMin": "密码至少 8 个字符"
     },
     "posts": {
-      "title": "Posts 管理",
-      "id": "ID",
-      "titleCol": "标题",
-      "body": "正文",
-      "user": "用户",
-      "createdAt": "创建时间",
-      "updatedAt": "更新时间",
-      "actions": "操作",
-      "searchPlaceholder": "按标题搜索...",
-      "error": "加载 Posts 失败",
-      "empty": "未找到 Posts",
-      "total": "总计：{count} 条 Posts",
-      "edit": "编辑",
-      "editTitle": "编辑 Post",
-      "updated": "Post 已更新",
+      "title": "帖子",
+      "searchPlaceholder": "搜索标题...",
+      "filterUser": "筛选用户名...",
+      "deleteTitle": "删除帖子",
+      "deleteConfirm": "确定删除\"{title}\"吗？",
+      "deleteConfirmEmpty": "确定删除这篇帖子吗？",
       "delete": "删除",
-      "deleteTitle": "删除 Post",
-      "deleteConfirm": "确认删除 Post「{title}」？",
-      "deleteConfirmEmpty": "确认删除该 Post？",
-      "deleted": "Post 已删除"
+      "deleted": "已删除",
+      "empty": "暂无帖子",
+      "error": "加载失败",
+      "time": "创建于",
+      "username": "用户"
     },
     "channels": {
-      "title": "渠道管理",
-      "id": "ID",
-      "user": "用户",
-      "kind": "类型",
-      "name": "名称",
-      "enabled": "启用",
-      "createdAt": "创建时间",
-      "updatedAt": "更新时间",
-      "actions": "操作",
-      "error": "加载渠道失败",
-      "empty": "未找到渠道",
-      "edit": "编辑",
-      "editTitle": "编辑渠道",
-      "webhookUrl": "Webhook URL",
-      "keywords": "关键词",
-      "keywordsPlaceholder": "keyword1, keyword2",
-      "enabledHelp": "开关投递",
-      "updated": "渠道已更新",
-      "delete": "删除",
-      "deleteTitle": "删除渠道",
-      "deleteConfirm": "删除渠道 {name}？此操作不可撤销。",
-      "deleteConfirmEmpty": "确认删除该渠道？",
-      "deleted": "渠道已删除",
+      "title": "渠道",
       "enableTitle": "启用渠道",
       "disableTitle": "禁用渠道",
-      "enableConfirm": "启用渠道 {name}？",
-      "disableConfirm": "禁用渠道 {name}？新的投递将暂停。",
-      "enabledChanged": "渠道状态已更新",
-      "active": "活跃",
-      "inactive": "停用",
+      "enableConfirm": "启用\"{name}\"？这将恢复该用户（{user}）的投递。",
+      "disableConfirm": "禁用\"{name}\"？这将停止该用户（{user}）的投递。",
+      "deleteTitle": "删除渠道",
+      "deleteConfirm": "删除\"{name}\"？",
+      "delete": "删除",
+      "cancel": "取消",
       "confirm": "确认",
-      "cancel": "取消"
+      "name": "名称",
+      "kind": "类型",
+      "enabled": "状态",
+      "active": "启用",
+      "inactive": "禁用",
+      "actions": "操作",
+      "user": "用户名",
+      "empty": "暂无渠道",
+      "error": "加载失败",
+      "deleted": "渠道已删除",
+      "enabledToast": "渠道已启用",
+      "disabledToast": "渠道已禁用",
+      "searchPlaceholder": "搜索名称/用户名...",
+      "createdAt": "创建于"
     },
     "history": {
       "title": "投递历史",
-      "createdAt": "时间",
-      "post": "文章",
-      "channel": "渠道",
-      "user": "用户",
-      "status": "状态",
-      "error": "错误",
+      "filter": {
+        "user": "用户",
+        "channel": "渠道",
+        "status": "状态"
+      },
+      "status": {
+        "delivered": "已投递",
+        "failed": "失败",
+        "expired": "已过期"
+      },
+      "colPost": "文章",
+      "colChannel": "渠道",
+      "colUser": "用户",
+      "colStatus": "状态",
+      "colTime": "时间",
+      "colError": "错误",
       "postDeleted": "文章已删除",
       "channelDeleted": "渠道已删除",
-      "userDeleted": "用户已注销",
-      "status_delivered": "已投递",
-      "status_failed": "失败",
-      "status_expired": "已过期",
-      "empty": "暂无投递历史"
-    },
-    "dashboard": {
-      "title": "仪表盘",
-      "users": "用户",
-      "posts": "文章",
-      "channels": "通道",
-      "history": "投递历史"
+      "userDeleted": "用户已删除",
+      "detail": "详情",
+      "empty": "暂无投递记录",
+      "emptyFiltered": "没有匹配的投递记录",
+      "error": "加载失败",
+      "total": "共 {n} 条"
+    }
+  },
+  "forbidden": {
+    "title": "无权访问",
+    "description": "你没有权限查看此页面。",
+    "backToDashboard": "返回概览"
+  },
+  "error": {
+    "title": "出了点问题",
+    "description": "页面加载时遇到错误。你可以重试或返回。",
+    "retry": "重试",
+    "backHome": "返回首页",
+    "global": {
+      "title": "应用出错",
+      "description": "严重的系统错误已发生。请刷新页面。",
+      "reload": "刷新页面"
     }
   },
   "notFound": {
-    "title": "404",
-    "pageNotFound": "页面不存在",
-    "pageNotFoundLoginRequired": "页面不存在，请先登录",
-    "backToDashboard": "返回仪表板",
-    "goToLogin": "去登录"
+    "title": "页面不存在",
+    "pageNotFound": "你访问的页面不存在或已被移动。",
+    "backToDashboard": "返回概览",
+    "goToLogin": "前往登录"
+  },
+  "createTestPost": {
+    "title": "生成测试文章",
+    "titleLabel": "标题",
+    "titlePlaceholder": "输入标题",
+    "bodyLabel": "正文",
+    "bodyPlaceholder": "输入正文",
+    "cancel": "取消",
+    "create": "创建",
+    "creating": "创建中...",
+    "success": "测试文章已发送",
+    "titleRequired": "请输入标题",
+    "bodyRequired": "请输入正文",
+    "titleTooLong": "标题不能超过 150 个字符",
+    "required": "此项为必填"
+  },
+  "passwordChange": {
+    "error": {
+      "invalid_password": "当前密码不正确",
+      "rate_limited": "操作过于频繁，请 {seconds} 秒后再试",
+      "internal": "修改密码失败，请稍后重试"
+    }
   }
 }

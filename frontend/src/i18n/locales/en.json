@@ -5,20 +5,51 @@
     "confirm": "Confirm",
     "create": "Create",
     "save": "Save",
-    "done": "Done",
-    "processing": "Processing...",
+    "delete": "Delete",
+    "edit": "Edit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "clear": "Clear",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "back": "Back",
+    "empty": "No data",
+    "all": "All",
     "yes": "Yes",
     "no": "No",
+    "done": "Done",
+    "processing": "Processing...",
+    "minutes": "{n} minutes",
+    "hours": "{n} hours ago",
+    "days": "{n} days ago",
+    "pageLabel": "Page {page}",
+    "firstPage": "First page",
+    "lastPage": "Last page",
     "pageTitle": {
-      "login": "Login | Markpost",
+      "login": "Sign in | Markpost",
       "dashboard": "Dashboard | Markpost",
+      "posts": "Posts | Markpost",
+      "postKey": "Post Key | Markpost",
       "settings": "Settings | Markpost",
-      "allPosts": "All Posts | Markpost",
+      "deliveryChannels": "Delivery Channels | Markpost",
+      "deliveryChannel": "Channel | Markpost",
+      "deliveryHistory": "Delivery History | Markpost",
+      "adminDashboard": "Admin Overview | Markpost",
       "adminUsers": "Users - Admin | Markpost",
+      "adminUserDetail": "User - Admin | Markpost",
       "adminPosts": "Posts - Admin | Markpost",
       "adminChannels": "Channels - Admin | Markpost",
-      "adminDeliveryHistory": "Delivery History - Admin | Markpost"
-    }
+      "adminDeliveryHistory": "Delivery History - Admin | Markpost",
+      "adminAuditLogs": "Audit Logs - Admin | Markpost",
+      "notFound": "Page Not Found | Markpost"
+    },
+    "required": "is required",
+    "previous": "Previous",
+    "next": "Next",
+    "total": "{n} total"
   },
   "language": {
     "english": "English",
@@ -32,144 +63,307 @@
     "toggleTheme": "Toggle Theme"
   },
   "navigation": {
-    "dashboard": "Dashboard",
+    "dashboard": "Overview",
     "posts": "Posts",
     "delivery": "Delivery",
+    "channels": "Channels",
+    "history": "History",
+    "postKey": "Post Key",
+    "settings": "Settings",
+    "adminGroup": "Administration",
     "userMenu": {
-      "admin": "Admin",
+      "admin": "Admin Console",
       "settings": "Settings",
-      "logout": "Logout"
-    }
+      "logout": "Sign out",
+      "theme": "Theme"
+    },
+    "aria": {
+      "sidebar": "Main navigation",
+      "mobileSidebar": "Navigation",
+      "openMenu": "Open navigation menu",
+      "closeMenu": "Close navigation menu",
+      "skipToContent": "Skip to main content"
+    },
+    "users": "Users",
+    "adminHistory": "Delivery history",
+    "auditLogs": "Audit logs"
   },
   "login": {
+    "title": "Sign in to markpost",
+    "subtitle": "Enter your credentials to continue",
     "username": "Username",
+    "usernamePlaceholder": "Enter username",
     "password": "Password",
-    "loginButton": "Log in",
+    "passwordPlaceholder": "Enter password",
+    "loginButton": "Sign in",
     "signingIn": "Signing in...",
     "or": "or",
-    "githubLogin": "Log in with GitHub",
-    "processingGitHubLogin": "Processing GitHub login, please wait...",
-    "usernamePlaceholder": "Enter your username",
-    "passwordPlaceholder": "Enter your password",
-    "cannotOpenAuthWindow": "Unable to open authorization window, please check browser settings",
-    "loginFailed": "Login failed",
-    "loginError": "Login error, please try again later",
-    "unknownError": "Unknown error"
+    "githubLogin": "Continue with GitHub",
+    "processingGitHubLogin": "Processing GitHub login...",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "fieldRequired": {
+      "username": "Username is required",
+      "password": "Password is required"
+    },
+    "formAlert": {
+      "invalid_credentials": "Incorrect username or password",
+      "user_disabled": "This account has been disabled. Contact your administrator if you need help.",
+      "internal": "Sign-in service is temporarily unavailable. Please try again later.",
+      "network": "Unable to connect to the server. Check your network connection."
+    },
+    "oauthError": "Could not start GitHub sign-in. Please try again later."
   },
   "loginCallback": {
-    "loading": "Login...",
-    "authError": "Login error",
-    "authFailed": "Authorization failed",
-    "unknownError": "Unknown error"
-  },
-  "dashboard": {
-    "postKey": {
-      "title": "Post Key",
-      "loadingKey": "Loading your post key...",
-      "errorTitle": "Error loading post key",
-      "errorLoadingKey": "Failed to load post key. Please try again later.",
-      "showKey": "Show key",
-      "hideKey": "Hide key",
-      "copyKey": "Copy key",
-      "createdAt": "Created at",
-      "copied": "copied to clipboard!",
-      "copyFailed": "Failed to copy",
-      "createTestPost": "Create Test Post",
-      "createTestPostTip": "Quickly create a sample Markdown post",
-      "copyPostKey": "Copy Post Key",
-      "copyPostUrl": "Copy Full Post URL"
-    },
-    "recentPosts": {
-      "title": "Latest Posts",
-      "viewAll": "View All",
-      "loading": "Loading recent posts...",
-      "empty": "No posts yet",
-      "error": "Failed to load, please try again later"
-    },
-    "documentation": {
-      "title": "Documentation",
-      "content": "Please refer to",
-      "apiLink": "Markpost APIs",
-      "content2": "for complete documentation on how to integrate Markpost into your applications.",
-      "viewDocs": "View Documentation"
+    "loading": "Completing sign-in...",
+    "errors": {
+      "missing_state": "GitHub authorization information is missing. Please try again.",
+      "missing_code": "GitHub authorization information is missing. Please try again.",
+      "invalid_state": "Sign-in session expired. Please try again.",
+      "oauth_exchange_failed": "GitHub authorization failed. Please retry or contact your administrator.",
+      "github_user_fetch_failed": "Could not retrieve GitHub account information. Please try again later.",
+      "timeout": "GitHub sign-in timed out. Please try again."
     }
   },
-  "createTestPost": {
-    "title": "Create Test Post",
-    "titleLabel": "Title (optional)",
-    "titlePlaceholder": "Enter a title, or leave empty",
-    "bodyLabel": "Body",
-    "bodyPlaceholder": "Write some Markdown content...",
-    "cancel": "Cancel",
-    "create": "Create",
-    "creating": "Creating...",
-    "successHeader": "Post Created",
-    "successBody": "Your test post has been created successfully.",
-    "errorServer": "Failed to create post, please try again later",
-    "errorEmptyBody": "Body cannot be empty"
-  },
-  "posts": {
-    "title": "All Posts",
-    "loading": "Loading...",
-    "error": "Failed to load, please try again later",
-    "empty": "No posts yet",
-    "table": {
-      "title": "Title",
-      "createdAt": "Created At"
+  "dashboard": {
+    "welcome": "Welcome, {name}",
+    "pipeline": {
+      "running": "Pipeline running",
+      "partialFailure": "Some deliveries failing",
+      "allFailed": "Delivery failing",
+      "idle": "No deliveries yet",
+      "unconfigured": "No channels configured"
     },
-    "pagination": {
-      "prev": "Previous",
-      "next": "Next"
+    "todayDelivery": "Today: {total} deliveries · {success}✓ {failed}✗",
+    "activity": {
+      "title": "Activity",
+      "viewAll": "View all activity",
+      "delivered": "{done}/{total} delivered ✓",
+      "partialFail": "{done}/{total} delivered ⚠",
+      "allFailed": "{done}/{total} delivered ✗",
+      "pending": "Delivering...",
+      "viewDetail": "View detail",
+      "showDetails": "Show delivery details",
+      "hideDetails": "Hide delivery details",
+      "openPost": "Open post"
+    },
+    "channelHealth": {
+      "title": "Channel health",
+      "normal": "Healthy",
+      "abnormal": "Failing",
+      "noDelivery": "Idle"
+    },
+    "trend": {
+      "title": "Delivery trend",
+      "days7": "7 days",
+      "days30": "30 days",
+      "success": "Success",
+      "failed": "Failed",
+      "empty": "No delivery data yet"
+    },
+    "empty": {
+      "noChannel": {
+        "title": "No delivery channels yet",
+        "desc": "Create a channel and markpost will deliver your posts to Feishu and other destinations",
+        "cta": "Create your first channel"
+      }
+    },
+    "onboarding": {
+      "title": "Getting started with markpost",
+      "progress": "Progress: {done} of {total} steps",
+      "step1Title": "Create a delivery channel",
+      "step1Desc": "Deliver posts to Feishu and other destinations",
+      "step1Cta": "Create channel",
+      "step2Title": "Get your Post Key",
+      "step2Desc": "Use it to receive posts",
+      "step2Cta": "View Post Key",
+      "step3Title": "Send your first post",
+      "step3Desc": "Test the whole delivery pipeline",
+      "step3Cta": "Send test post"
+    },
+    "recentPosts": {
+      "title": "Recent posts",
+      "viewAll": "View all",
+      "empty": "No posts yet"
+    }
+  },
+  "postKey": {
+    "title": "Post Key",
+    "explanation": "Your Post Key is the credential markpost uses to receive articles. External tools send posts to your account via it.",
+    "showKey": "Show",
+    "hideKey": "Hide",
+    "copyKey": "Copy key",
+    "copyPostUrl": "Copy post URL",
+    "createdAt": "Created",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "testPost": "Send test post",
+    "rotate": "Rotate key",
+    "rotateConfirm": {
+      "title": "Rotate Post Key",
+      "desc": "A new Post Key will be generated. The old key stops working immediately; configured external tools need updating. Past posts are unaffected."
+    },
+    "rotateSuccess": "Post Key rotated",
+    "howToSend": {
+      "title": "How to send posts",
+      "desc": "Send a POST request to the address below to create a post",
+      "apiDocs": "View full API docs",
+      "copyCurl": "Copy curl example",
+      "curlCopied": "curl example copied"
     }
   },
   "settings": {
     "title": "Settings",
-    "applicationSettings": "Application Settings",
+    "preferences": "Preferences",
+    "security": "Security",
+    "applicationSettings": "Application settings",
     "language": "Language",
-    "languageDescription": "Select your preferred language",
-    "changePassword": "Change Password",
-    "currentPassword": "Current Password",
-    "currentPasswordPlaceholder": "Enter your current password",
-    "currentPasswordHelp": "If you logged in via GitHub and never set a password, you can leave current password empty",
-    "newPassword": "New Password",
-    "newPasswordPlaceholder": "At least 6 characters",
-    "confirmPassword": "Confirm Password",
-    "confirmPasswordPlaceholder": "Enter new password again",
-    "enterCurrentPassword": "Please enter current password",
-    "enterNewPassword": "Please enter new password",
-    "confirmPasswordRequired": "Please confirm new password",
-    "passwordStrengthValid": "Password strength is valid",
-    "passwordMinLength": "Password must be at least 6 characters",
-    "passwordsMatch": "Passwords match",
-    "passwordsNotMatch": "Passwords do not match",
-    "passwordSameAsCurrent": "New password cannot be the same as current password",
-    "changingPassword": "Changing password...",
-    "passwordChangeSuccess": "Password changed successfully!",
-    "passwordChangeFailed": "Password change failed, please try again"
+    "languageDescription": "The interface language applies immediately",
+    "changePassword": "Change password",
+    "password": {
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "currentHelp": "Leave empty if you signed in via GitHub and never set a password",
+      "new": "New password",
+      "newPlaceholder": "Enter new password",
+      "confirm": "Confirm new password",
+      "confirmPlaceholder": "Re-enter new password",
+      "minLength": "At least 8 characters",
+      "notMatch": "Passwords do not match",
+      "submit": "Change password",
+      "changing": "Changing...",
+      "success": "Password changed successfully",
+      "strength": {
+        "weak": "Weak",
+        "fair": "Fair",
+        "strong": "Strong"
+      },
+      "show": "Show password",
+      "hide": "Hide password",
+      "maxLength": "Password must not exceed 72 characters"
+    },
+    "sessions": {
+      "title": "My sessions",
+      "empty": "No active sessions",
+      "issued": "Issued",
+      "expires": "Expires",
+      "active": "Active",
+      "revoked": "Revoked",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke session",
+      "revokeConfirm": "Revoke this session? You will need to sign in again on that device.",
+      "logoutAll": "Sign out all",
+      "logoutAllConfirm": "Sign out of all other sessions? You will stay signed in here.",
+      "revokedToast": "Session revoked",
+      "allSignedOut": "All other sessions signed out"
+    },
+    "securityDescription": "Manage your password and active sessions"
+  },
+  "posts": {
+    "title": "Posts",
+    "searchPlaceholder": "Search titles...",
+    "loading": "Loading...",
+    "error": "Failed to load",
+    "empty": "No posts yet",
+    "emptyHint": "Send posts via your Post Key",
+    "time": "Time",
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "total": "{n} total"
+    }
   },
   "delivery": {
     "channels": {
-      "title": "Delivery Channels",
-      "add": "Add Channel",
+      "title": "Delivery channels",
+      "add": "Add channel",
       "loading": "Loading channels...",
       "loadFailed": "Failed to load channels",
       "empty": "No delivery channels yet",
-      "unnamed": "Unnamed channel",
+      "emptyCta": "Create a channel to start receiving deliveries",
+      "unnamed": "Unnamed",
       "colName": "Name",
       "colType": "Type",
       "colEnabled": "Enabled",
       "colKeywords": "Keywords",
-      "colLatest": "Latest Delivery",
+      "colLatest": "Latest",
       "colActions": "Actions",
       "edit": "Edit",
       "enabledToast": "Channel enabled",
-      "disabledToast": "Channel disabled"
+      "disabledToast": "Channel disabled",
+      "latest": {
+        "never": "Never"
+      }
+    },
+    "dialog": {
+      "createTitle": "New channel",
+      "editTitle": "Edit channel",
+      "name": "Channel name",
+      "namePlaceholder": "e.g. Feishu Workgroup",
+      "webhookURL": "Webhook URL",
+      "webhookPlaceholder": "https://open.feishu.cn/...",
+      "cardLinkURL": "Card link URL",
+      "cardLinkURLPlaceholder": "Optional, card click-through URL",
+      "keywords": "Keyword filter",
+      "keywordsPlaceholder": "mark, post",
+      "keywordsHelp": "Only posts containing these keywords match (empty = all)",
+      "keywordsSyntax": "Syntax: ,/=OR, &=AND, !=NOT, \"\"=exact phrase, ()=group",
+      "keywordsInvalid": "Syntax error: {error}",
+      "create": "Create",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "confirmDelete": "Confirm delete",
+      "deleting": "Deleting...",
+      "test": "Send test",
+      "testing": "Sending...",
+      "testSent": "Sent",
+      "testRetry": "Failed — retry",
+      "saving": "Saving...",
+      "created": "Channel created",
+      "updated": "Channel updated",
+      "deleted": "Channel deleted",
+      "testSuccess": "Test delivery sent. Check your channel.",
+      "testFailed": "Test delivery failed",
+      "deleteConfirm": {
+        "title": "Delete channel",
+        "desc": "Delete \"{name}\"? Historical deliveries are kept, but no new deliveries will be made. Pending deliveries will fail."
+      },
+      "nameRequired": "Channel name is required",
+      "webhookRequired": "Webhook URL is required",
+      "invalidUrl": "Must be a valid URL",
+      "nameTooLong": "Channel name must be at most 64 characters"
+    },
+    "channelDetail": {
+      "back": "Back to channels",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "edit": "Edit",
+      "test": "Test",
+      "delete": "Delete",
+      "configTitle": "Configuration",
+      "webhookURL": "Webhook URL",
+      "cardLinkURL": "Card link URL",
+      "keywords": "Keyword filter",
+      "createdAt": "Created",
+      "historyTitle": "Recent deliveries",
+      "loading": "Loading...",
+      "empty": "No deliveries yet",
+      "notFound": "Channel not found"
     },
     "history": {
-      "title": "Delivery History",
-      "loading": "Loading history...",
-      "loadFailed": "Failed to load history",
-      "empty": "No delivery history yet",
+      "title": "Delivery history",
+      "filter": {
+        "channel": "Channel",
+        "status": "Status"
+      },
+      "status": {
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "expired": "Expired",
+        "pending": "Delivering"
+      },
       "colPost": "Post",
       "colChannel": "Channel",
       "colStatus": "Status",
@@ -177,222 +371,335 @@
       "colError": "Error",
       "postDeleted": "Post deleted",
       "channelDeleted": "Channel deleted",
-      "status_delivered": "Delivered",
-      "status_failed": "Failed",
-      "status_expired": "Expired",
+      "detail": "Detail",
+      "empty": "No deliveries",
+      "emptyFiltered": "No deliveries match your filters",
+      "loading": "Loading...",
+      "loadFailed": "Failed to load",
       "prev": "Previous",
-      "next": "Next"
-    },
-    "latest": {
-      "never": "Never"
-    },
-    "channelDetail": {
-      "loading": "Loading channel...",
-      "notFound": "Channel not found",
-      "back": "Back to channels",
-      "enabled": "Enabled",
-      "disabled": "Disabled",
-      "edit": "Edit",
-      "configTitle": "Configuration",
-      "webhookURL": "Webhook URL",
-      "cardLinkURL": "Card Link URL",
-      "keywords": "Keywords",
-      "createdAt": "Created at",
-      "historyTitle": "Delivery History"
-    },
-    "dialog": {
-      "createTitle": "Add Delivery Channel",
-      "editTitle": "Edit Delivery Channel",
-      "name": "Name",
-      "namePlaceholder": "Optional name",
-      "webhookURL": "Webhook URL",
-      "webhookPlaceholder": "Feishu bot webhook URL",
-      "cardLinkURL": "Card Link URL",
-      "cardLinkURLPlaceholder": "Optional, supports QID templating",
-      "keywords": "Keywords",
-      "keywordsPlaceholder": "Optional, e.g. tech & (go | rust)",
-      "keywordsInvalid": "Invalid expression: {error}",
-      "keywordsPreview": "Matches: {preview}",
-      "cancel": "Cancel",
-      "save": "Save",
-      "create": "Create",
-      "saving": "Saving...",
-      "delete": "Delete",
-      "deleting": "Deleting...",
-      "confirmDelete": "Confirm Delete",
-      "test": "Test",
-      "testing": "Sending...",
-      "created": "Channel created",
-      "updated": "Channel updated",
-      "deleted": "Channel deleted",
-      "testSuccess": "Test message sent",
-      "testFailed": "Test message failed"
+      "next": "Next",
+      "total": "{n} total",
+      "emptyHint": "Posts are delivered here after you send them"
     }
+  },
+  "network": {
+    "offline": "Unable to connect to the server. Check your network connection.",
+    "timeout": "The request timed out. Please try again.",
+    "parseError": "Unexpected server response. Please try again later.",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "logoutPartial": "Signed out (some sessions may remain active)."
   },
   "admin": {
     "id": "ID",
     "username": "Username",
+    "email": "Email",
+    "githubId": "GitHub",
     "role": "Role",
     "roleAdmin": "Admin",
     "roleUser": "User",
-    "githubId": "GitHub ID",
-    "createdAt": "Created At",
-    "updatedAt": "Updated At",
-    "loading": "Loading...",
-    "error": "Failed to load users",
-    "noUsers": "No users found",
+    "status": {
+      "normal": "Active",
+      "disabled": "Disabled"
+    },
+    "createdAt": "Created",
+    "lastLoginAt": "Last login",
     "previous": "Previous",
     "next": "Next",
-    "page": "{current} / {total}",
-    "totalUsers": "Total: {count} users",
-    "nav": {
-      "title": "Admin",
-      "users": "Users",
-      "posts": "Posts",
-      "channels": "Channels",
-      "history": "Delivery History",
-      "dashboard": "Dashboard"
+    "searchUserPlaceholder": "Search username...",
+    "searchPlaceholder": "Search...",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "Failed to load",
+    "empty": "No data",
+    "total": "{n} total",
+    "dashboard": {
+      "title": "Overview",
+      "systemOk": "System healthy",
+      "needsAttention": {
+        "title": "Needs attention",
+        "allGood": "All good",
+        "noIssue": "No issues need your attention",
+        "detectError": "Anomaly detection unavailable",
+        "channelFailing": "{name} failing {n} deliveries",
+        "usersBanned": "{n} users banned",
+        "viewChannel": "View channel",
+        "viewUser": "View user"
+      },
+      "recentActions": {
+        "title": "Recent admin actions",
+        "viewAll": "View all"
+      },
+      "stats": {
+        "users": "Users",
+        "posts": "Posts",
+        "channels": "Channels",
+        "history": "Deliveries",
+        "weekDelta": "+{n} this week"
+      },
+      "trend": {
+        "title": "Delivery trend",
+        "days7": "7 days",
+        "days30": "30 days",
+        "success": "Success",
+        "failed": "Failed",
+        "empty": "No delivery data yet"
+      }
     },
-    "errors": {
-      "forbidden": "Access denied",
-      "notFound": "Resource not found",
-      "deleteFailed": "Failed to delete",
-      "updateFailed": "Failed to update",
-      "createFailed": "Failed to create user",
-      "default": "Something went wrong"
+    "audit": {
+      "title": "Audit logs",
+      "filter": {
+        "actor": "Actor",
+        "action": "Action",
+        "targetType": "Target type",
+        "timeRange": "Time range",
+        "today": "Today",
+        "days7": "Last 7 days",
+        "days30": "Last 30 days"
+      },
+      "colTime": "Time",
+      "colActor": "Actor",
+      "colAction": "Action",
+      "colTarget": "Target",
+      "colIp": "IP",
+      "metadata": "Metadata",
+      "copyJson": "Copy JSON",
+      "showFullIp": "Show full IP",
+      "empty": "No audit logs",
+      "emptyFiltered": "No logs match your filters",
+      "loadFailed": "Failed to load audit logs",
+      "action": {
+        "user": {
+          "create": "created user {target}",
+          "set_role": "changed {target}'s role to {role}",
+          "reset_password": "reset {target}'s password",
+          "disable": "disabled {target}",
+          "enable": "enabled {target}",
+          "delete": "deleted user {target}",
+          "revoke_sessions": "forced {target} sign-out"
+        },
+        "post": {
+          "delete": "deleted post {target}"
+        },
+        "channel": {
+          "create": "created channel {target}",
+          "enable": "enabled channel {target}",
+          "disable": "disabled channel {target}",
+          "delete": "deleted channel {target}"
+        }
+      },
+      "meta": {
+        "transition": "From {from} → {to}",
+        "reason": "Reason: {value}",
+        "via": "Via: {value}"
+      }
     },
     "users": {
-      "title": "User Management",
-      "actions": "Actions",
-      "changeRole": "Change Role",
-      "changeRoleFor": "Change role for {username}",
-      "roleUpdated": "Role updated",
-      "addUser": "Add User",
-      "addUserDescription": "Create a new user account",
-      "usernamePlaceholder": "Enter username",
-      "passwordPlaceholder": "Min 6 characters",
-      "confirmPasswordPlaceholder": "Confirm password",
-      "passwordsNotMatch": "Passwords do not match",
-      "passwordMinLength": "Password must be at least 6 characters",
-      "usernameRequired": "Username is required",
-      "userCreated": "User created successfully",
-      "resetPassword": "Reset Password",
-      "resetPasswordFor": "Reset password for {username}",
-      "setPassword": "Set Password",
-      "generateRandom": "Generate Random",
-      "generateRandomDescription": "Generate a secure random password",
-      "generate": "Generate",
-      "passwordResetSuccess": "Password reset successfully",
-      "passwordGenerated": "Password generated",
-      "passwordCopied": "Password copied to clipboard",
-      "delete": "Delete",
-      "deleteTitle": "Delete User",
-      "deleteConfirm": "Delete user {username}? This will also remove their posts and channels.",
-      "deleteConfirmEmpty": "Delete this user? This will also remove their posts and channels.",
-      "deleted": "User deleted",
-      "email": "Email",
-      "emailPlaceholder": "user@example.com",
-      "emailRequired": "Email is required",
-      "emailInvalid": "Invalid email format",
+      "title": "Users",
+      "addUser": "Add user",
+      "viewDetail": "Detail",
+      "moreActions": "More actions",
+      "changeRole": "Change role",
+      "resetPassword": "Reset password",
+      "enableUser": "Enable user",
+      "disableUser": "Disable user",
+      "forceLogout": "Force sign-out",
+      "deleteTitle": "Delete user",
+      "detail": {
+        "back": "Back to users",
+        "profile": "Profile",
+        "actions": "Actions",
+        "sessions": "Active sessions",
+        "sessionsEmpty": "No active sessions",
+        "logoutAll": "Sign out all",
+        "history": "Action history",
+        "historyEmpty": "No admin actions on this user",
+        "historyViewAll": "View all",
+        "fullName": "Full name",
+        "emailUnbound": "Not linked",
+        "githubUnbound": "Not linked",
+        "githubLinked": "Linked as #{id}",
+        "postKey": "Post Key",
+        "copyPostKey": "Copy Post Key",
+        "postKeyCopied": "Post Key copied",
+        "sessionsRevokedToast": "Sessions revoked",
+        "emailVerified": "Verified",
+        "emailNotVerified": "Not verified"
+      },
+      "reset": {
+        "title": "Reset {name}'s password",
+        "desc": "A temporary password will be generated for {name}: · All sessions end immediately · The password shows only once — deliver it safely.",
+        "confirm": "Confirm reset",
+        "success": "Password reset. User must sign in again.",
+        "result": {
+          "title": "Password reset",
+          "warning": "⚠ This password is shown only once. Deliver it to {name} securely before closing.",
+          "copy": "Copy",
+          "close": "Delivered, close"
+        }
+      },
+      "role": {
+        "toUser": {
+          "title": "Demote to user",
+          "desc": "{name} will lose admin access. Login and posting are unaffected. Any admin session ends immediately."
+        },
+        "toAdmin": {
+          "title": "Promote to admin",
+          "desc": "{name} gains full admin access — all users, posts, channels, and audit. Grant carefully."
+        },
+        "selfDemote": "Cannot perform this on yourself"
+      },
+      "disable": {
+        "title": "Disable {name}",
+        "desc": "Once disabled, {name} cannot: · sign in · post (Post Key void immediately) · keep any session. Channel config is retained but receives no new deliveries. Reversible by any admin."
+      },
+      "enable": {
+        "title": "Enable {name}",
+        "desc": "{name} can sign in and post again. Post Key is unchanged (rotate it if compromised)."
+      },
+      "logout": {
+        "title": "Force {name} sign-out on all devices",
+        "desc": "All sessions for {name} end immediately. Ban status is unaffected."
+      },
+      "delete": {
+        "title": "Delete {name}",
+        "desc": "⚠ Irreversible. Deleting {name} also removes: · all posts · all channels · refresh tokens. Delivery history is retained (anonymized). Type {name}'s username to confirm:",
+        "typePlaceholder": "Type username to confirm",
+        "permanent": "Delete permanently",
+        "mismatch": "Username mismatch"
+      },
+      "toasts": {
+        "roleChanged": "Role changed",
+        "disabled": "Disabled {name}",
+        "enabled": "Enabled {name}",
+        "signOut": "Forced {name} sign-out",
+        "deleted": "User deleted"
+      },
+      "actions": "Actions"
+    },
+    "userDialog": {
+      "title": "New user",
+      "username": "Username",
+      "email": "Email (optional)",
       "password": "Password",
-      "passwordRequired": "Password is required",
-      "cancel": "Cancel",
+      "passwordHelp": "At least 8 characters",
       "create": "Create",
-      "creating": "Creating...",
-      "changeRoleConfirm": "Change {username}'s role to {role}?",
-      "enableUser": "Enable User",
-      "disableUser": "Disable User",
-      "enableUserConfirm": "Enable user {username}?",
-      "disableUserConfirm": "Disable user {username}? They won't be able to log in.",
-      "roleChanged": "Role changed successfully",
-      "activeChanged": "User status updated",
-      "confirm": "Confirm"
+      "created": "User created",
+      "emailInvalid": "Invalid email",
+      "usernameRequired": "Username is required",
+      "passwordRequired": "Password is required",
+      "passwordMin": "Password must be at least 8 characters"
     },
     "posts": {
-      "title": "Post Management",
-      "id": "ID",
-      "titleCol": "Title",
-      "body": "Body",
-      "user": "User",
-      "createdAt": "Created At",
-      "updatedAt": "Updated At",
-      "actions": "Actions",
-      "searchPlaceholder": "Search title...",
-      "error": "Failed to load posts",
-      "empty": "No posts found",
-      "total": "Total: {count} posts",
-      "edit": "Edit",
-      "editTitle": "Edit post",
-      "updated": "Post updated",
-      "delete": "Delete",
+      "title": "Posts",
+      "searchPlaceholder": "Search titles...",
+      "filterUser": "Filter username...",
       "deleteTitle": "Delete post",
-      "deleteConfirm": "Delete post \"{title}\"?",
+      "deleteConfirm": "Delete \"{title}\"?",
       "deleteConfirmEmpty": "Delete this post?",
-      "deleted": "Post deleted"
+      "delete": "Delete",
+      "deleted": "Post deleted",
+      "empty": "No posts found",
+      "error": "Failed to load posts",
+      "time": "Created",
+      "username": "User"
     },
     "channels": {
-      "title": "Delivery Channel Management",
-      "id": "ID",
-      "user": "User",
-      "kind": "Type",
-      "name": "Name",
-      "enabled": "Enabled",
-      "createdAt": "Created At",
-      "updatedAt": "Updated At",
-      "actions": "Actions",
-      "error": "Failed to load channels",
-      "empty": "No channels found",
-      "edit": "Edit",
-      "editTitle": "Edit channel",
-      "webhookUrl": "Webhook URL",
-      "keywords": "Keywords",
-      "keywordsPlaceholder": "keyword1, keyword2",
-      "enabledHelp": "Toggle delivery",
-      "updated": "Channel updated",
+      "title": "Channels",
+      "enableTitle": "Enable channel",
+      "disableTitle": "Disable channel",
+      "enableConfirm": "Enable \"{name}\"? This resumes deliveries for {user}.",
+      "disableConfirm": "Disable \"{name}\"? This stops deliveries for {user}.",
+      "deleteTitle": "Delete channel",
+      "deleteConfirm": "Delete \"{name}\"?",
       "delete": "Delete",
-      "deleteTitle": "Delete Channel",
-      "deleteConfirm": "Delete channel {name}? This action cannot be undone.",
-      "deleteConfirmEmpty": "Delete this channel?",
-      "deleted": "Channel deleted",
-      "enableTitle": "Enable Channel",
-      "disableTitle": "Disable Channel",
-      "enableConfirm": "Enable channel {name}?",
-      "disableConfirm": "Disable channel {name}? New deliveries will be paused.",
-      "enabledChanged": "Channel status updated",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "name": "Name",
+      "kind": "Kind",
+      "enabled": "Status",
       "active": "Active",
       "inactive": "Inactive",
-      "confirm": "Confirm",
-      "cancel": "Cancel"
+      "actions": "Actions",
+      "user": "User",
+      "empty": "No channels found",
+      "error": "Failed to load channels",
+      "deleted": "Channel deleted",
+      "enabledToast": "Channel enabled",
+      "disabledToast": "Channel disabled",
+      "searchPlaceholder": "Search name/username...",
+      "createdAt": "Created"
     },
     "history": {
-      "title": "Delivery History",
-      "createdAt": "Time",
-      "post": "Post",
-      "channel": "Channel",
-      "user": "User",
-      "status": "Status",
-      "error": "Error",
+      "title": "Delivery history",
+      "filter": {
+        "user": "User",
+        "channel": "Channel",
+        "status": "Status"
+      },
+      "status": {
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "expired": "Expired"
+      },
+      "colPost": "Post",
+      "colChannel": "Channel",
+      "colUser": "User",
+      "colStatus": "Status",
+      "colTime": "Time",
+      "colError": "Error",
       "postDeleted": "Post deleted",
       "channelDeleted": "Channel deleted",
       "userDeleted": "User deleted",
-      "status_delivered": "Delivered",
-      "status_failed": "Failed",
-      "status_expired": "Expired",
-      "empty": "No delivery history found"
-    },
-    "dashboard": {
-      "title": "Dashboard",
-      "users": "Users",
-      "posts": "Posts",
-      "channels": "Channels",
-      "history": "Delivery History"
+      "detail": "Detail",
+      "empty": "No delivery history found",
+      "emptyFiltered": "No deliveries match your filters",
+      "error": "Failed to load",
+      "total": "{n} total"
+    }
+  },
+  "forbidden": {
+    "title": "No access",
+    "description": "You don't have permission to view this page.",
+    "backToDashboard": "Back to overview"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "An error occurred while loading this page. You can retry or go back.",
+    "retry": "Retry",
+    "backHome": "Back to home",
+    "global": {
+      "title": "Application error",
+      "description": "A critical system error occurred. Please reload.",
+      "reload": "Reload"
     }
   },
   "notFound": {
-    "title": "404",
-    "pageNotFound": "Page not found",
-    "pageNotFoundLoginRequired": "Page not found, please login first",
-    "backToDashboard": "Back to Dashboard",
-    "goToLogin": "Go to Login"
+    "title": "Page not found",
+    "pageNotFound": "The page you're looking for doesn't exist or has moved.",
+    "backToDashboard": "Back to overview",
+    "goToLogin": "Go to sign in"
+  },
+  "createTestPost": {
+    "title": "Send test post",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Enter title",
+    "bodyLabel": "Body",
+    "bodyPlaceholder": "Enter body",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating...",
+    "success": "Test post sent",
+    "titleRequired": "Title is required",
+    "bodyRequired": "Body is required",
+    "titleTooLong": "Title must be at most 150 characters",
+    "required": "This field is required"
+  },
+  "passwordChange": {
+    "error": {
+      "invalid_password": "Current password is incorrect",
+      "rate_limited": "Too many requests. Please try again in {seconds} seconds.",
+      "internal": "Could not change password. Please try again later."
+    }
   }
 }

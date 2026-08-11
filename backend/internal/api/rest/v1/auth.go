@@ -42,8 +42,12 @@ type AuthService interface {
 	LoginWithEmail(ctx context.Context, username, password string) (*user.User, *auth.JWTTokenPair, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*user.User, *auth.JWTTokenPair, error)
 	Logout(ctx context.Context, accessToken string) error
-	ChangePassword(ctx context.Context, userID int, current, newPassword string) error
+	ChangePassword(ctx context.Context, userID int, current, newPassword string) (*auth.JWTTokenPair, error)
 	QueryPostKey(ctx context.Context, userID int) (string, time.Time, error)
+	RotatePostKey(ctx context.Context, userID int) (string, error)
+	ListSessions(ctx context.Context, userID int) ([]user.RefreshToken, error)
+	RevokeSession(ctx context.Context, userID, tokenID int) error
+	RevokeAllSessions(ctx context.Context, userID int) error
 }
 
 func writeAuthResult(c *gin.Context, u *user.User, tokens *auth.JWTTokenPair, err error) {
@@ -150,7 +154,7 @@ func Logout(authSvc AuthService) gin.HandlerFunc {
 // @Produce json
 // @Security BearerAuth
 // @Param body body PasswordChangeRequest true "Current and new password"
-// @Success 200 {object} MessageResponse
+// @Success 200 {object} v1.ChangePasswordResponse
 // @Failure 400 {object} apierr.ErrorResponse
 // @Failure 401 {object} apierr.ErrorResponse
 // @Router /api/v1/auth/change-password [post]
@@ -162,14 +166,103 @@ func ChangePassword(authSvc AuthService) gin.HandlerFunc {
 				return
 			}
 
-			if err := authSvc.ChangePassword(c.Request.Context(), u.ID, req.CurrentPassword, req.NewPassword); err != nil {
+			tokens, err := authSvc.ChangePassword(c.Request.Context(), u.ID, req.CurrentPassword, req.NewPassword)
+			if err != nil {
 				apierr.RespondError(c, err)
 				return
 			}
 
-			c.JSON(http.StatusOK, MessageResponse{
-				Message: getI18nMessage(c, "Password changed successfully", "error.password_changed_success"),
+			c.JSON(http.StatusOK, ChangePasswordResponse{
+				TokenFields: tokenFieldsFromPair(tokens),
 			})
+		})
+	}
+}
+
+// RotatePostKey godoc
+// @Summary Rotate the current user's post key (C2.5)
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} v1.RotatePostKeyResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/post-key/rotate [post]
+func RotatePostKey(authSvc AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUser(c, func(u *user.User) {
+			postKey, err := authSvc.RotatePostKey(c.Request.Context(), u.ID)
+			if err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, RotatePostKeyResponse{PostKey: postKey})
+		})
+	}
+}
+
+// ListSessions godoc
+// @Summary List the current user's sessions (I.12)
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} v1.SessionsResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/sessions [get]
+func ListSessions(authSvc AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUser(c, func(u *user.User) {
+			tokens, err := authSvc.ListSessions(c.Request.Context(), u.ID)
+			if err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, SessionsResponse{Sessions: tokens})
+		})
+	}
+}
+
+// RevokeSession godoc
+// @Summary Revoke one of the current user's sessions (I.12)
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Param token_id path int true "Session (refresh token) ID"
+// @Success 200 {object} map[string]bool
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/sessions/{token_id} [delete]
+func RevokeSession(authSvc AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUser(c, func(u *user.User) {
+			tokenID, err := parseIDParam(c, "token_id")
+			if err != nil {
+				return
+			}
+			if err := authSvc.RevokeSession(c.Request.Context(), u.ID, tokenID); err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"revoked": true})
+		})
+	}
+}
+
+// RevokeAllSessions godoc
+// @Summary Revoke all of the current user's sessions except the present one (I.12)
+// @Tags auth
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]bool
+// @Failure 401 {object} apierr.ErrorResponse
+// @Router /api/v1/auth/sessions [delete]
+func RevokeAllSessions(authSvc AuthService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		withUser(c, func(u *user.User) {
+			if err := authSvc.RevokeAllSessions(c.Request.Context(), u.ID); err != nil {
+				apierr.RespondError(c, err)
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"revoked": true})
 		})
 	}
 }

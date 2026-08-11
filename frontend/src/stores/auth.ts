@@ -8,10 +8,14 @@ export interface AuthState {
   refreshToken: string | null
   user: User | null
   _hasHydrated: boolean
+  // B1.8 场景 D：refresh 失败 → 标记会话过期，守卫跳转 /login?reason=session_expired。
+  sessionExpired: boolean
 
   setAuth: (token: string, user: User, refreshToken?: string) => void
   setTokens: (token: string, refreshToken: string) => void
   logout: () => void
+  markSessionExpired: () => void
+  clearSessionExpired: () => void
   setHasHydrated: (state: boolean) => void
 }
 
@@ -24,13 +28,24 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       _hasHydrated: false,
+      sessionExpired: false,
 
       setAuth: (token, user, refreshToken) =>
-        set({ token, user, refreshToken: refreshToken || null }),
+        set({
+          token,
+          user,
+          refreshToken: refreshToken || null,
+          sessionExpired: false,
+        }),
 
-      setTokens: (token, refreshToken) => set({ token, refreshToken }),
+      setTokens: (token, refreshToken) =>
+        set({ token, refreshToken, sessionExpired: false }),
 
       logout: () => set({ token: null, refreshToken: null, user: null }),
+
+      markSessionExpired: () => set({ sessionExpired: true }),
+
+      clearSessionExpired: () => set({ sessionExpired: false }),
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),

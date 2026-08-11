@@ -75,24 +75,48 @@ func (r *PostRepository) CountByUserID(ctx context.Context, userID int) (int64, 
 	return countQuery(ctx, r.db.Model(&post.Post{}).Where("user_id = ?", userID), "CountByUserID")
 }
 
-// GetByUserID retrieves posts for a specific user with pagination.
-func (r *PostRepository) GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]post.Post, error) {
-	return findMany[post.Post](ctx, r.db.Where("user_id = ?", userID).Order("created_at DESC, id DESC"), offset, limit, "GetByUserID")
+// GetByUserID retrieves posts for a specific user with pagination. search
+// filters by title/body (B3.3/F.5 user posts search).
+func (r *PostRepository) GetByUserID(ctx context.Context, userID int, search string, offset int, limit int) ([]post.Post, error) {
+	query := applySearch(r.db.Model(&post.Post{}).Where("user_id = ?", userID), search, "title", "body").Order("created_at DESC, id DESC")
+	return findMany[post.Post](ctx, query, offset, limit, "GetByUserID")
+}
+
+// CountByUserIDSearch counts posts for a specific user matching the search.
+func (r *PostRepository) CountByUserIDSearch(ctx context.Context, userID int, search string) (int64, error) {
+	query := applySearch(r.db.Model(&post.Post{}).Where("user_id = ?", userID), search, "title", "body")
+	return countQuery(ctx, query, "CountByUserIDSearch")
 }
 
 func (r *PostRepository) searchQuery(search string) *gorm.DB {
 	return applySearch(r.db.Model(&post.Post{}), search, "title", "body")
 }
 
-// ListAll retrieves all posts with optional search and pagination.
-func (r *PostRepository) ListAll(ctx context.Context, search string, offset int, limit int) ([]post.Post, error) {
+// ListAll retrieves all posts with optional search and pagination. When
+// username is non-empty, only posts by a user with that username are returned
+// (F.9 admin 帖子用户筛选).
+func (r *PostRepository) ListAll(ctx context.Context, search, username string, offset int, limit int) ([]post.Post, error) {
 	query := r.searchQuery(search).Preload("User").Order("created_at DESC, id DESC")
+	if username != "" {
+		query = query.Joins("JOIN users ON users.id = posts.user_id").
+			Where("users.username ILIKE ?", likeContains(username))
+	}
 	return findMany[post.Post](ctx, query, offset, limit, "ListAll")
 }
 
-// CountAll counts all posts with optional search filter.
-func (r *PostRepository) CountAll(ctx context.Context, search string) (int64, error) {
-	return countQuery(ctx, r.searchQuery(search), "CountAll")
+// CountAll counts all posts with optional search + username filter.
+func (r *PostRepository) CountAll(ctx context.Context, search, username string) (int64, error) {
+	query := r.searchQuery(search)
+	if username != "" {
+		query = query.Joins("JOIN users ON users.id = posts.user_id").
+			Where("users.username ILIKE ?", likeContains(username))
+	}
+	return countQuery(ctx, query, "CountAll")
+}
+
+// CountSince counts posts created at or after since (stats week delta, D2.4).
+func (r *PostRepository) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	return countQuery(ctx, r.db.Model(&post.Post{}).Where("created_at >= ?", since), "CountSince")
 }
 
 // DeleteByID deletes a post by its ID.

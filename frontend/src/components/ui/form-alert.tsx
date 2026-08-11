@@ -8,7 +8,7 @@ interface FormAlertProps {
 export function FormAlert({ message }: FormAlertProps) {
   if (!message) return null
   return (
-    <Alert variant="destructive">
+    <Alert variant="danger">
       <TriangleAlertIcon />
       <AlertDescription>{message}</AlertDescription>
     </Alert>

@@ -46,6 +46,22 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    image: e2e-app:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    entrypoint: ["markpost", "migrate", "up"]
+    environment:
+      - MARKPOST_DB__DRIVER=postgresql
+      - MARKPOST_DB__DSN=postgres://markpost:markpost@postgres:5432/markpost_e2e?sslmode=disable
+      - MARKPOST_JWT__ACCESS_SIGNING_KEY=e2e-access-secret-key-min-32-characters!!
+      - MARKPOST_JWT__REFRESH_SIGNING_KEY=e2e-refresh-secret-key-min-32-characters!!
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build:
       context: ..
@@ -57,6 +73,8 @@ services:
         condition: service_healthy
       webhook-mock:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - postgres-socket:/var/run/postgresql
       - ./config.toml:/app/config.toml:ro
@@ -72,6 +90,9 @@ services:
       - MARKPOST_RATELIMIT__PUBLIC_WRITE__DAILY_BURST=1000
       - MARKPOST_RATELIMIT__AUTHED_WRITE__PER_SECOND=100
       - MARKPOST_RATELIMIT__AUTHED_WRITE__BURST=100
+      # 登录限流（C2.1）：e2e 高频登录，放宽 IP 级阈值。
+      - MARKPOST_RATELIMIT__LOGIN__PER_SECOND=100
+      - MARKPOST_RATELIMIT__LOGIN__BURST=100
       - GIN_MODE=release
       - MARKPOST_DB__DRIVER=postgresql
       - MARKPOST_DB__DSN=postgres://markpost:markpost@postgres:5432/markpost_e2e?sslmode=disable

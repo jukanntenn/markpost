@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"math"
 	"strconv"
 
 	"markpost/internal/service"
@@ -9,6 +10,26 @@ import (
 	"github.com/didip/tollbooth/v8/limiter"
 	"github.com/gin-gonic/gin"
 )
+
+// retryAfterSeconds estimates when the tollbooth token bucket for key refills
+// to a usable token (C2.4: 429 加 Retry-After；常规限流 = 桶填满时间)。
+// Uses the bucket's current token count when available, else the burst/rate
+// upper bound.
+func retryAfterSeconds(lmt *limiter.Limiter, key string) int {
+	perSecond := lmt.GetMax()
+	if perSecond <= 0 {
+		return 1
+	}
+	tokens := float64(lmt.Tokens(key))
+	seconds := (1 - tokens) / perSecond
+	if seconds < 1 {
+		seconds = math.Ceil(float64(lmt.GetBurst()) / perSecond)
+	}
+	if seconds < 1 {
+		seconds = 1
+	}
+	return int(math.Ceil(seconds))
+}
 
 // RateLimitByIP returns a rate limiting middleware keyed on the gin-resolved
 // client IP (which applies the trusted-proxy logic in SetTrustedProxies). The
@@ -23,6 +44,7 @@ func RateLimitByIP(lmt *limiter.Limiter) gin.HandlerFunc {
 			return
 		}
 		if httpErr := tollbooth.LimitByKeys(lmt, []string{ip}); httpErr != nil {
+			c.Header("Retry-After", strconv.Itoa(retryAfterSeconds(lmt, ip)))
 			abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 			return
 		}
@@ -48,6 +70,7 @@ func RateLimitByUserID(limiters ...*limiter.Limiter) gin.HandlerFunc {
 		}
 		for _, lmt := range limiters {
 			if httpErr := tollbooth.LimitByKeys(lmt, []string{userID}); httpErr != nil {
+				c.Header("Retry-After", strconv.Itoa(retryAfterSeconds(lmt, userID)))
 				abortWithError(c, service.New(service.ErrRateLimited, "rate limit exceeded"))
 				return
 			}

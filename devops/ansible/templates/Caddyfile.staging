@@ -50,6 +50,15 @@
 		file_server
 	}
 
+	# BUG-1: serve the branded 404.html (built by the static export) instead of
+	# Caddy's blank default when no static file or rewritten .html matches.
+	# handle_errors keeps the 404 status code; the rewrite only swaps the body.
+	handle_errors 404 {
+		root * /app/frontend
+		rewrite * /404.html
+		file_server
+	}
+
 	log {
 		output stderr
 		format console

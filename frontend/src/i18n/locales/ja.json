@@ -5,25 +5,56 @@
     "confirm": "確認",
     "create": "作成",
     "save": "保存",
-    "done": "完了",
-    "processing": "処理中...",
+    "delete": "削除",
+    "edit": "編集",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "refresh": "更新",
+    "retry": "再試行",
+    "clear": "クリア",
+    "search": "検索",
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "back": "戻る",
+    "empty": "データなし",
+    "all": "すべて",
     "yes": "はい",
     "no": "いいえ",
+    "done": "完了",
+    "processing": "処理中...",
+    "minutes": "{n} 分",
+    "hours": "{n} 時間前",
+    "days": "{n} 日前",
+    "pageLabel": "{page} ページ",
+    "firstPage": "最初のページ",
+    "lastPage": "最後のページ",
     "pageTitle": {
       "login": "ログイン | Markpost",
       "dashboard": "ダッシュボード | Markpost",
+      "posts": "投稿 | Markpost",
+      "postKey": "Post Key | Markpost",
       "settings": "設定 | Markpost",
-      "allPosts": "すべての Posts | Markpost",
-      "adminUsers": "ユーザー - 管理画面 | Markpost",
-      "adminPosts": "Posts - 管理画面 | Markpost",
-      "adminChannels": "チャネル - 管理画面 | Markpost",
-      "adminDeliveryHistory": "配信履歴 - 管理画面 | Markpost"
-    }
+      "deliveryChannels": "配信チャンネル | Markpost",
+      "deliveryChannel": "チャンネル | Markpost",
+      "deliveryHistory": "配信履歴 | Markpost",
+      "adminDashboard": "管理概要 | Markpost",
+      "adminUsers": "ユーザー管理 | Markpost",
+      "adminUserDetail": "ユーザー詳細 | Markpost",
+      "adminPosts": "投稿管理 | Markpost",
+      "adminChannels": "チャンネル管理 | Markpost",
+      "adminDeliveryHistory": "配信履歴管理 | Markpost",
+      "adminAuditLogs": "監査ログ | Markpost",
+      "notFound": "ページが見つかりません | Markpost"
+    },
+    "required": "は必須です",
+    "previous": "前へ",
+    "next": "次へ",
+    "total": "全 {n} 件"
   },
   "language": {
     "english": "English",
     "chinese": "中文",
-    "changeLanguage": "言語を切り替え"
+    "changeLanguage": "言語を変更"
   },
   "theme": {
     "light": "ライトモード",
@@ -32,367 +63,643 @@
     "toggleTheme": "テーマを切り替え"
   },
   "navigation": {
-    "dashboard": "ダッシュボード",
-    "posts": "記事",
+    "dashboard": "概要",
+    "posts": "投稿",
     "delivery": "配信",
+    "channels": "チャンネル",
+    "history": "履歴",
+    "postKey": "Post Key",
+    "settings": "設定",
+    "adminGroup": "管理",
     "userMenu": {
-      "admin": "管理者",
+      "admin": "管理コンソール",
       "settings": "設定",
-      "logout": "ログアウト"
-    }
+      "logout": "ログアウト",
+      "theme": "テーマ"
+    },
+    "aria": {
+      "sidebar": "メインナビゲーション",
+      "mobileSidebar": "ナビゲーション",
+      "openMenu": "ナビゲーションメニューを開く",
+      "closeMenu": "ナビゲーションメニューを閉じる",
+      "skipToContent": "メインコンテンツへスキップ"
+    },
+    "users": "ユーザー",
+    "adminHistory": "配信履歴",
+    "auditLogs": "監査ログ"
   },
   "login": {
+    "title": "markpost にログイン",
+    "subtitle": "認証情報を入力して続行",
     "username": "ユーザー名",
+    "usernamePlaceholder": "ユーザー名を入力",
     "password": "パスワード",
+    "passwordPlaceholder": "パスワードを入力",
     "loginButton": "ログイン",
     "signingIn": "ログイン中...",
     "or": "または",
-    "githubLogin": "GitHub でログイン",
-    "processingGitHubLogin": "GitHub ログインを処理中です。お待ちください...",
-    "usernamePlaceholder": "ユーザー名を入力",
-    "passwordPlaceholder": "パスワードを入力",
-    "cannotOpenAuthWindow": "認可ウィンドウを開けません。ブラウザの設定を確認してください",
-    "loginFailed": "ログインに失敗しました",
-    "loginError": "ログインエラーが発生しました。後でもう一度お試しください",
-    "unknownError": "不明なエラー"
+    "githubLogin": "GitHub で続行",
+    "processingGitHubLogin": "GitHub ログインを処理中...",
+    "sessionExpired": "セッションが期限切れです。もう一度ログインしてください。",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す",
+    "fieldRequired": {
+      "username": "ユーザー名を入力してください",
+      "password": "パスワードを入力してください"
+    },
+    "formAlert": {
+      "invalid_credentials": "ユーザー名またはパスワードが正しくありません",
+      "user_disabled": "このアカウントは無効化されています。必要があれば管理者に連絡してください。",
+      "internal": "ログインサービスは一時的に利用できません。しばらくしてから再試行してください。",
+      "network": "サーバーに接続できません。ネットワーク接続を確認してください。"
+    },
+    "oauthError": "GitHub ログインを開始できませんでした。しばらくしてから再試行してください。"
   },
   "loginCallback": {
-    "loading": "ログイン中...",
-    "authError": "ログインエラー",
-    "authFailed": "認可に失敗しました",
-    "unknownError": "不明なエラー"
-  },
-  "dashboard": {
-    "postKey": {
-      "title": "Post Key",
-      "loadingKey": "Post Key を読み込み中...",
-      "errorTitle": "Post Key の読み込みに失敗",
-      "errorLoadingKey": "Post Key の読み込みに失敗しました。後でもう一度お試しください。",
-      "showKey": "Post Key を表示",
-      "hideKey": "Post Key を非表示",
-      "copyKey": "Post Key をコピー",
-      "createdAt": "作成日時",
-      "copied": "クリップボードにコピーしました！",
-      "copyFailed": "コピーに失敗しました",
-      "createTestPost": "テスト投稿を作成",
-      "createTestPostTip": "Markdown サンプルをすばやく作成",
-      "copyPostKey": "Post キーをコピー",
-      "copyPostUrl": "完全な Post URL をコピー"
-    },
-    "recentPosts": {
-      "title": "最新の Posts",
-      "viewAll": "すべて表示",
-      "loading": "最新の Posts を読み込み中...",
-      "empty": "投稿はまだありません",
-      "error": "読み込みに失敗しました。後でもう一度お試しください"
-    },
-    "documentation": {
-      "title": "ドキュメント",
-      "content": "参照",
-      "apiLink": "Markpost APIs",
-      "content2": "で完全なドキュメントを確認し、Markpost をアプリケーションに統合する方法をご覧ください。",
-      "viewDocs": "ドキュメントを表示"
+    "loading": "ログインを完了しています...",
+    "errors": {
+      "missing_state": "GitHub 認証情報が不足しています。もう一度ログインしてください。",
+      "missing_code": "GitHub 認証情報が不足しています。もう一度ログインしてください。",
+      "invalid_state": "ログインセッションが期限切れです。もう一度お試しください。",
+      "oauth_exchange_failed": "GitHub 認証に失敗しました。再試行するか管理者に連絡してください。",
+      "github_user_fetch_failed": "GitHub アカウント情報を取得できませんでした。しばらくしてから再試行してください。",
+      "timeout": "GitHub ログインがタイムアウトしました。もう一度お試しください。"
     }
   },
-  "createTestPost": {
-    "title": "テスト投稿を作成",
-    "titleLabel": "タイトル（任意）",
-    "titlePlaceholder": "タイトルを入力、または空欄",
-    "bodyLabel": "本文",
-    "bodyPlaceholder": "Markdown を入力...",
-    "cancel": "キャンセル",
-    "create": "作成",
-    "creating": "作成中...",
-    "successHeader": "作成成功",
-    "successBody": "テスト投稿が正常に作成されました。",
-    "errorServer": "作成に失敗しました。後でもう一度お試しください",
-    "errorEmptyBody": "本文は空にできません"
-  },
-  "posts": {
-    "title": "すべての Posts",
-    "loading": "読み込み中...",
-    "error": "読み込みに失敗しました。後でもう一度お試しください",
-    "empty": "投稿はまだありません",
-    "table": {
-      "title": "タイトル",
-      "createdAt": "作成日時"
+  "dashboard": {
+    "welcome": "ようこそ、{name}",
+    "pipeline": {
+      "running": "パイプライン稼働中",
+      "partialFailure": "一部の配信に失敗",
+      "allFailed": "配信失敗",
+      "idle": "配信はまだありません",
+      "unconfigured": "チャンネル未設定"
     },
-    "pagination": {
-      "prev": "前へ",
-      "next": "次へ"
+    "todayDelivery": "今日: {total} 件配信 · {success}✓ {failed}✗",
+    "activity": {
+      "title": "アクティビティ",
+      "viewAll": "すべてのアクティビティを見る",
+      "delivered": "{done}/{total} 配信済み ✓",
+      "partialFail": "{done}/{total} 配信済み ⚠",
+      "allFailed": "{done}/{total} 配信済み ✗",
+      "pending": "配信中...",
+      "viewDetail": "詳細を見る",
+      "openPost": "投稿を開く",
+      "showDetails": "配達詳細を表示",
+      "hideDetails": "配達詳細を非表示"
+    },
+    "channelHealth": {
+      "title": "チャンネルの健全性",
+      "normal": "正常",
+      "abnormal": "異常",
+      "noDelivery": "アイドル"
+    },
+    "trend": {
+      "title": "配信トレンド",
+      "days7": "7 日",
+      "days30": "30 日",
+      "success": "成功",
+      "failed": "失敗",
+      "empty": "配信データはまだありません"
+    },
+    "empty": {
+      "noChannel": {
+        "title": "配信チャンネルがまだありません",
+        "desc": "チャンネルを作成すると、markpost が投稿を Feishu などの宛先に自動配信します",
+        "cta": "最初のチャンネルを作成"
+      }
+    },
+    "onboarding": {
+      "title": "markpost を始める",
+      "progress": "進捗: {done}/{total} ステップ",
+      "step1Title": "配信チャンネルを作成",
+      "step1Desc": "投稿を Feishu などの宛先に配信",
+      "step1Cta": "チャンネルを作成",
+      "step2Title": "Post Key を取得",
+      "step2Desc": "投稿を受け取るために使用",
+      "step2Cta": "Post Key を見る",
+      "step3Title": "最初の投稿を送信",
+      "step3Desc": "配信パイプライン全体をテスト",
+      "step3Cta": "テスト投稿を送信"
+    },
+    "recentPosts": {
+      "title": "最近の投稿",
+      "viewAll": "すべて見る",
+      "empty": "投稿はまだありません"
+    }
+  },
+  "postKey": {
+    "title": "Post Key",
+    "explanation": "Post Key は markpost が投稿を受け取るための資格情報です。外部ツールがこれを介してあなたのアカウントに投稿を送信します。",
+    "showKey": "表示",
+    "hideKey": "非表示",
+    "copyKey": "キーをコピー",
+    "copyPostUrl": "投稿 URL をコピー",
+    "createdAt": "作成日",
+    "copied": "コピーしました",
+    "copyFailed": "コピーに失敗しました",
+    "testPost": "テスト投稿を送信",
+    "rotate": "キーをローテーション",
+    "rotateConfirm": {
+      "title": "Post Key をローテーション",
+      "desc": "新しい Post Key が生成されます。古いキーはすぐに無効になり、設定済みの外部ツールの更新が必要です。過去の投稿には影響しません。"
+    },
+    "rotateSuccess": "Post Key をローテーションしました",
+    "howToSend": {
+      "title": "投稿の送信方法",
+      "desc": "以下のアドレスに POST リクエストを送信すると投稿が作成されます",
+      "apiDocs": "API ドキュメントを見る",
+      "copyCurl": "curl サンプルをコピー",
+      "curlCopied": "curl サンプルをコピーしました"
     }
   },
   "settings": {
     "title": "設定",
+    "preferences": "設定",
+    "security": "セキュリティ",
     "applicationSettings": "アプリケーション設定",
     "language": "言語",
-    "languageDescription": "優先する言語を選択",
+    "languageDescription": "インターフェース言語はすぐに適用されます",
     "changePassword": "パスワード変更",
-    "currentPassword": "現在のパスワード",
-    "currentPasswordPlaceholder": "現在のパスワードを入力",
-    "currentPasswordHelp": "GitHub でログインし、パスワードを設定したことがない場合は空欄のままにできます",
-    "newPassword": "新しいパスワード",
-    "newPasswordPlaceholder": "6 文字以上",
-    "confirmPassword": "新しいパスワード（確認）",
-    "confirmPasswordPlaceholder": "新しいパスワードを再入力",
-    "enterCurrentPassword": "現在のパスワードを入力してください",
-    "enterNewPassword": "新しいパスワードを入力してください",
-    "confirmPasswordRequired": "新しいパスワードを確認してください",
-    "passwordStrengthValid": "パスワードの強度が要件を満たしています",
-    "passwordMinLength": "パスワードは 6 文字以上必要です",
-    "passwordsMatch": "パスワードが一致します",
-    "passwordsNotMatch": "入力したパスワードが一致しません",
-    "passwordSameAsCurrent": "新しいパスワードは現在のパスワードと同じにできません",
-    "changingPassword": "パスワードを変更中...",
-    "passwordChangeSuccess": "パスワードが変更されました！",
-    "passwordChangeFailed": "パスワードの変更に失敗しました。もう一度お試しください"
+    "password": {
+      "current": "現在のパスワード",
+      "currentPlaceholder": "現在のパスワードを入力",
+      "currentHelp": "GitHub でログインしていてパスワードを設定したことがない場合は空のままにできます",
+      "new": "新しいパスワード",
+      "newPlaceholder": "新しいパスワードを入力",
+      "confirm": "新しいパスワードを確認",
+      "confirmPlaceholder": "新しいパスワードをもう一度入力",
+      "minLength": "8 文字以上",
+      "notMatch": "パスワードが一致しません",
+      "submit": "パスワードを変更",
+      "changing": "変更中...",
+      "success": "パスワードを変更しました",
+      "strength": {
+        "weak": "弱",
+        "fair": "中",
+        "strong": "強"
+      },
+      "show": "パスワードを表示",
+      "hide": "パスワードを隠す",
+      "maxLength": "パスワードは 72 文字以内にしてください"
+    },
+    "sessions": {
+      "title": "自分のセッション",
+      "empty": "アクティブなセッションはありません",
+      "issued": "発行日時",
+      "expires": "有効期限",
+      "active": "アクティブ",
+      "revoked": "失効済み",
+      "revoke": "失効",
+      "revokeTitle": "セッションを失効",
+      "revokeConfirm": "このセッションを失効させますか？そのデバイスでは再ログインが必要です。",
+      "logoutAll": "すべてログアウト",
+      "logoutAllConfirm": "他のすべてのセッションをログアウトしますか？現在のデバイスは維持されます。",
+      "revokedToast": "セッションを失効しました",
+      "allSignedOut": "他のセッションはすべてログアウトしました"
+    },
+    "securityDescription": "パスワードとアクティブなセッションを管理します"
+  },
+  "posts": {
+    "title": "投稿",
+    "searchPlaceholder": "タイトルを検索...",
+    "loading": "読み込み中...",
+    "error": "読み込みに失敗しました",
+    "empty": "投稿はまだありません",
+    "emptyHint": "Post Key で投稿を送信",
+    "time": "時間",
+    "pagination": {
+      "prev": "前へ",
+      "next": "次へ",
+      "total": "全 {n} 件"
+    }
   },
   "delivery": {
     "channels": {
-      "title": "配信チャネル",
-      "add": "チャネルを追加",
+      "title": "配信チャンネル",
+      "add": "チャンネルを追加",
       "loading": "読み込み中...",
-      "loadFailed": "チャネルの読み込みに失敗しました",
-      "empty": "配信チャネルがありません",
-      "unnamed": "無名チャネル",
+      "loadFailed": "読み込みに失敗しました",
+      "empty": "配信チャンネルはまだありません",
+      "emptyCta": "チャンネルを作成して配信を開始",
+      "unnamed": "無名",
       "colName": "名前",
       "colType": "種類",
       "colEnabled": "有効",
       "colKeywords": "キーワード",
-      "colLatest": "最新の配信",
+      "colLatest": "最新配信",
       "colActions": "操作",
       "edit": "編集",
-      "enabledToast": "チャネルを有効にしました",
-      "disabledToast": "チャネルを無効にしました"
+      "enabledToast": "チャンネルを有効化しました",
+      "disabledToast": "チャンネルを無効化しました",
+      "latest": {
+        "never": "なし"
+      }
     },
-    "history": {
-      "title": "配信履歴",
-      "loading": "読み込み中...",
-      "loadFailed": "履歴の読み込みに失敗しました",
-      "empty": "配信履歴がありません",
-      "colPost": "記事",
-      "colChannel": "チャネル",
-      "colStatus": "ステータス",
-      "colTime": "時刻",
-      "colError": "エラー",
-      "postDeleted": "元の記事は削除されました",
-      "channelDeleted": "配信チャネルは削除されました",
-      "status_delivered": "配信済み",
-      "status_failed": "失敗",
-      "status_expired": "期限切れ",
-      "prev": "前へ",
-      "next": "次へ"
-    },
-    "latest": {
-      "never": "なし"
+    "dialog": {
+      "createTitle": "チャンネルを追加",
+      "editTitle": "チャンネルを編集",
+      "name": "チャンネル名",
+      "namePlaceholder": "例: Feishu ワークグループ",
+      "webhookURL": "Webhook URL",
+      "webhookPlaceholder": "https://open.feishu.cn/...",
+      "cardLinkURL": "カードリンク URL",
+      "cardLinkURLPlaceholder": "任意、カードクリック時の遷移先",
+      "keywords": "キーワードフィルター",
+      "keywordsPlaceholder": "mark, post",
+      "keywordsHelp": "これらのキーワードを含む投稿のみが一致（空=すべて一致）",
+      "keywordsSyntax": "構文: ,/=OR、&=AND、!=NOT、\"\"=完全一致、()=グループ",
+      "keywordsInvalid": "構文エラー: {error}",
+      "create": "作成",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "confirmDelete": "削除を確認",
+      "deleting": "削除中...",
+      "test": "テスト送信",
+      "testing": "送信中...",
+      "testSent": "送信済み",
+      "testRetry": "失敗 — 再試行",
+      "saving": "保存中...",
+      "created": "チャンネルを作成しました",
+      "updated": "チャンネルを更新しました",
+      "deleted": "チャンネルを削除しました",
+      "testSuccess": "テスト配信を送信しました。チャンネルを確認してください。",
+      "testFailed": "テスト配信に失敗しました",
+      "deleteConfirm": {
+        "title": "チャンネルを削除",
+        "desc": "\"{name}\" を削除しますか？過去の配信履歴は保持されますが、新しい配信は行われず、保留中の配信は失敗します。"
+      },
+      "nameRequired": "チャンネル名を入力してください",
+      "webhookRequired": "Webhook URL を入力してください",
+      "invalidUrl": "有効な URL にしてください",
+      "nameTooLong": "チャンネル名は 64 文字以内にしてください"
     },
     "channelDetail": {
-      "loading": "チャネルを読み込み中...",
-      "notFound": "チャネルが見つかりません",
-      "back": "チャネル一覧に戻る",
+      "back": "チャンネル一覧に戻る",
       "enabled": "有効",
       "disabled": "無効",
       "edit": "編集",
+      "test": "テスト",
+      "delete": "削除",
       "configTitle": "設定",
       "webhookURL": "Webhook URL",
       "cardLinkURL": "カードリンク URL",
-      "keywords": "キーワード",
+      "keywords": "キーワードフィルター",
       "createdAt": "作成日時",
-      "historyTitle": "配信履歴"
+      "historyTitle": "最近の配信",
+      "loading": "読み込み中...",
+      "empty": "配信記録はありません",
+      "notFound": "チャンネルが見つかりません"
     },
-    "dialog": {
-      "createTitle": "配信チャネルを追加",
-      "editTitle": "配信チャネルを編集",
-      "name": "名前",
-      "namePlaceholder": "任意の名前",
-      "webhookURL": "Webhook URL",
-      "webhookPlaceholder": "Feishu ボットの Webhook URL",
-      "cardLinkURL": "カードリンク URL",
-      "cardLinkURLPlaceholder": "任意、QID テンプレート対応",
-      "keywords": "キーワード",
-      "keywordsPlaceholder": "任意、例: 技術 & (Go | Rust)",
-      "keywordsInvalid": "無効な式です:{error}",
-      "keywordsPreview": "一致:{preview}",
-      "cancel": "キャンセル",
-      "save": "保存",
-      "create": "作成",
-      "saving": "保存中...",
-      "delete": "削除",
-      "deleting": "削除中...",
-      "confirmDelete": "削除を確認",
-      "test": "テスト",
-      "testing": "送信中...",
-      "created": "チャネルを作成しました",
-      "updated": "チャネルを更新しました",
-      "deleted": "チャネルを削除しました",
-      "testSuccess": "テストメッセージを送信しました",
-      "testFailed": "テストメッセージの送信に失敗しました"
+    "history": {
+      "title": "配信履歴",
+      "filter": {
+        "channel": "チャンネル",
+        "status": "ステータス"
+      },
+      "status": {
+        "delivered": "配信済み",
+        "failed": "失敗",
+        "expired": "期限切れ",
+        "pending": "配信中"
+      },
+      "colPost": "投稿",
+      "colChannel": "チャンネル",
+      "colStatus": "ステータス",
+      "colTime": "時間",
+      "colError": "エラー",
+      "postDeleted": "投稿は削除されました",
+      "channelDeleted": "チャンネルは削除されました",
+      "detail": "詳細",
+      "empty": "配信記録はありません",
+      "emptyFiltered": "条件に一致する配信記録はありません",
+      "loading": "読み込み中...",
+      "loadFailed": "読み込みに失敗しました",
+      "prev": "前へ",
+      "next": "次へ",
+      "total": "全 {n} 件",
+      "emptyHint": "投稿を送信するとここに記録が表示されます"
     }
+  },
+  "network": {
+    "offline": "サーバーに接続できません。ネットワーク接続を確認してください。",
+    "timeout": "リクエストがタイムアウトしました。もう一度お試しください。",
+    "parseError": "サーバーの応答が異常です。しばらくしてから再試行してください。",
+    "sessionExpired": "セッションが期限切れです。もう一度ログインしてください。",
+    "logoutPartial": "ログアウトしました（一部のセッションが残っている可能性があります）"
   },
   "admin": {
     "id": "ID",
     "username": "ユーザー名",
-    "role": "ロール",
+    "email": "メール",
+    "githubId": "GitHub",
+    "role": "役割",
     "roleAdmin": "管理者",
     "roleUser": "一般ユーザー",
-    "githubId": "GitHub ID",
+    "status": {
+      "normal": "正常",
+      "disabled": "無効"
+    },
     "createdAt": "作成日時",
-    "updatedAt": "更新日時",
-    "loading": "読み込み中...",
-    "error": "ユーザーの読み込みに失敗しました",
-    "noUsers": "ユーザーが見つかりません",
+    "lastLoginAt": "最終ログイン",
     "previous": "前へ",
     "next": "次へ",
-    "page": "{current} / {total}",
-    "totalUsers": "合計：{count} ユーザー",
-    "nav": {
-      "title": "管理画面",
-      "users": "ユーザー",
-      "posts": "Posts",
-      "channels": "チャネル",
-      "history": "配信履歴",
-      "dashboard": "ダッシュボード"
+    "searchUserPlaceholder": "ユーザー名を検索...",
+    "searchPlaceholder": "検索...",
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "loading": "読み込み中...",
+    "error": "読み込みに失敗しました",
+    "empty": "データなし",
+    "total": "全 {n} 件",
+    "dashboard": {
+      "title": "管理概要",
+      "systemOk": "システム正常",
+      "needsAttention": {
+        "title": "要対応",
+        "allGood": "すべて正常",
+        "noIssue": "対応が必要な異常はありません",
+        "detectError": "異常検知は現在利用できません",
+        "channelFailing": "{name} 配信失敗 {n} 回",
+        "usersBanned": "{n} 人のユーザーが無効化されています",
+        "viewChannel": "チャンネルを見る",
+        "viewUser": "ユーザーを見る"
+      },
+      "recentActions": {
+        "title": "最近の管理操作",
+        "viewAll": "すべて見る"
+      },
+      "stats": {
+        "users": "ユーザー",
+        "posts": "投稿",
+        "channels": "チャンネル",
+        "history": "配信",
+        "weekDelta": "今週 +{n}"
+      },
+      "trend": {
+        "title": "配信トレンド",
+        "days7": "7 日",
+        "days30": "30 日",
+        "success": "成功",
+        "failed": "失敗",
+        "empty": "配信データはまだありません"
+      }
     },
-    "errors": {
-      "forbidden": "アクセス権限がありません",
-      "notFound": "リソースが存在しません",
-      "deleteFailed": "削除に失敗しました",
-      "updateFailed": "更新に失敗しました",
-      "createFailed": "ユーザーの作成に失敗しました",
-      "default": "エラーが発生しました"
+    "audit": {
+      "title": "監査ログ",
+      "filter": {
+        "actor": "操作者",
+        "action": "アクション",
+        "targetType": "対象タイプ",
+        "timeRange": "期間",
+        "today": "今日",
+        "days7": "過去 7 日",
+        "days30": "過去 30 日"
+      },
+      "colTime": "時間",
+      "colActor": "操作者",
+      "colAction": "アクション",
+      "colTarget": "対象",
+      "colIp": "IP",
+      "metadata": "メタデータ",
+      "copyJson": "JSON をコピー",
+      "showFullIp": "完全な IP を表示",
+      "empty": "監査ログはありません",
+      "emptyFiltered": "条件に一致する監査ログはありません",
+      "loadFailed": "監査ログの読み込みに失敗しました",
+      "action": {
+        "user": {
+          "create": "{target} を作成しました",
+          "set_role": "{target} の役割を {role} に変更しました",
+          "reset_password": "{target} のパスワードをリセットしました",
+          "disable": "{target} を無効化しました",
+          "enable": "{target} を再有効化しました",
+          "delete": "ユーザー {target} を削除しました",
+          "revoke_sessions": "{target} を強制ログアウトしました"
+        },
+        "post": {
+          "delete": "投稿 {target} を削除しました"
+        },
+        "channel": {
+          "create": "チャンネル {target} を作成しました",
+          "enable": "チャンネル {target} を有効化しました",
+          "disable": "チャンネル {target} を無効化しました",
+          "delete": "チャンネル {target} を削除しました"
+        }
+      },
+      "meta": {
+        "transition": "{from} → {to}",
+        "reason": "理由: {value}",
+        "via": "経由: {value}"
+      }
     },
     "users": {
-      "title": "ユーザー管理",
-      "actions": "操作",
-      "changeRole": "役割変更",
-      "changeRoleFor": "{username} のロールを変更",
-      "roleUpdated": "ロールが更新されました",
-      "addUser": "ユーザー追加",
-      "addUserDescription": "新しいユーザーアカウントを作成",
-      "usernamePlaceholder": "ユーザー名を入力",
-      "passwordPlaceholder": "6文字以上",
-      "confirmPasswordPlaceholder": "パスワードを再入力",
-      "passwordsNotMatch": "パスワードが一致しません",
-      "passwordMinLength": "パスワードは6文字以上必要です",
-      "usernameRequired": "ユーザー名は必須です",
-      "userCreated": "ユーザーが作成されました",
-      "resetPassword": "パスワードリセット",
-      "resetPasswordFor": "{username} のパスワードをリセット",
-      "setPassword": "パスワードを設定",
-      "generateRandom": "ランダム生成",
-      "generateRandomDescription": "安全なランダムパスワードを生成",
-      "generate": "生成",
-      "passwordResetSuccess": "パスワードがリセットされました",
-      "passwordGenerated": "パスワードが生成されました",
-      "passwordCopied": "パスワードがクリップボードにコピーされました",
-      "delete": "削除",
-      "deleteTitle": "ユーザーを削除",
-      "deleteConfirm": "ユーザー {username} を削除しますか？投稿とチャンネルも削除されます。",
-      "deleteConfirmEmpty": "このユーザーを削除しますか？このユーザーの Posts とチャネルも削除されます。",
-      "deleted": "ユーザーが削除されました",
-      "email": "メールアドレス",
-      "emailPlaceholder": "user@example.com",
-      "emailRequired": "メールアドレスは必須です",
-      "emailInvalid": "メールアドレスの形式が無効です",
-      "password": "パスワード",
-      "passwordRequired": "パスワードは必須です",
-      "cancel": "キャンセル",
-      "create": "作成",
-      "creating": "作成中...",
-      "changeRoleConfirm": "{username} の役割を {role} に変更しますか？",
+      "title": "ユーザー",
+      "addUser": "ユーザーを追加",
+      "viewDetail": "詳細",
+      "moreActions": "その他の操作",
+      "changeRole": "役割を変更",
+      "resetPassword": "パスワードをリセット",
       "enableUser": "ユーザーを有効化",
       "disableUser": "ユーザーを無効化",
-      "enableUserConfirm": "ユーザー {username} を有効化しますか？",
-      "disableUserConfirm": "ユーザー {username} を無効化しますか？ログインできなくなります。",
-      "roleChanged": "役割が変更されました",
-      "activeChanged": "ユーザーのステータスが更新されました",
-      "confirm": "確認"
+      "forceLogout": "強制ログアウト",
+      "deleteTitle": "ユーザーを削除",
+      "detail": {
+        "back": "ユーザー一覧に戻る",
+        "profile": "プロフィール",
+        "actions": "操作",
+        "sessions": "アクティブセッション",
+        "sessionsEmpty": "アクティブなセッションはありません",
+        "logoutAll": "すべてログアウト",
+        "history": "操作履歴",
+        "historyEmpty": "このユーザーへの管理操作はありません",
+        "historyViewAll": "すべて見る",
+        "fullName": "フルネーム",
+        "emailUnbound": "未連携",
+        "githubUnbound": "未連携",
+        "githubLinked": "#{id} として連携",
+        "postKey": "Post Key",
+        "copyPostKey": "Post Key をコピー",
+        "postKeyCopied": "Post Key をコピーしました",
+        "sessionsRevokedToast": "セッションを失効しました",
+        "emailVerified": "認証済み",
+        "emailNotVerified": "未認証"
+      },
+      "reset": {
+        "title": "{name} のパスワードをリセット",
+        "desc": "{name} 用に一時パスワードが生成されます: · すべてのセッションが即時終了 · パスワードは一度だけ表示されます。安全に渡してください。",
+        "confirm": "リセットを確認",
+        "success": "パスワードをリセットしました。ユーザーは再ログインが必要です。",
+        "result": {
+          "title": "パスワードをリセットしました",
+          "warning": "⚠ このパスワードは一度だけ表示されます。閉じる前に {name} に安全に渡してください。",
+          "copy": "コピー",
+          "close": "渡しました、閉じる"
+        }
+      },
+      "role": {
+        "toUser": {
+          "title": "一般ユーザーに変更",
+          "desc": "{name} は管理アクセスを失います。ログインと投稿には影響しません。管理者セッションは即時に終了します。"
+        },
+        "toAdmin": {
+          "title": "管理者に変更",
+          "desc": "{name} はすべてのユーザー、投稿、チャンネル、監査を含む完全な管理アクセスを取得します。慎重に付与してください。"
+        },
+        "selfDemote": "自分自身には実行できません"
+      },
+      "disable": {
+        "title": "{name} を無効化",
+        "desc": "無効化すると {name} は: · ログイン不可 · 投稿不可（Post Key は即時無効）· セッション保持不可。チャンネル設定は保持されます（新しい配信は行われません）。任意の管理者が再有効化できます。"
+      },
+      "enable": {
+        "title": "{name} を再有効化",
+        "desc": "{name} は再びログイン・投稿できます。Post Key は変更されません（漏洩した場合はローテーションを推奨）。"
+      },
+      "logout": {
+        "title": "{name} の全デバイスを強制ログアウト",
+        "desc": "{name} のすべてのセッションが即時に終了し、再ログインが必要です。無効化状態には影響しません。"
+      },
+      "delete": {
+        "title": "{name} を削除",
+        "desc": "⚠ 元に戻せません。{name} を削除すると同時に: · すべての投稿 · すべてのチャンネル · refresh tokens が削除されます。配信履歴は保持されます（匿名化）。誤操作を防ぐため、{name} のユーザー名を入力して確認してください:",
+        "typePlaceholder": "ユーザー名を入力して確認",
+        "permanent": "完全削除",
+        "mismatch": "ユーザー名が一致しません"
+      },
+      "toasts": {
+        "roleChanged": "役割を変更しました",
+        "disabled": "{name} を無効化しました",
+        "enabled": "{name} を再有効化しました",
+        "signOut": "{name} を強制ログアウトしました",
+        "deleted": "ユーザーを削除しました"
+      },
+      "actions": "操作"
+    },
+    "userDialog": {
+      "title": "ユーザーを追加",
+      "username": "ユーザー名",
+      "email": "メール（任意）",
+      "password": "パスワード",
+      "passwordHelp": "8 文字以上",
+      "create": "作成",
+      "created": "ユーザーを作成しました",
+      "emailInvalid": "メールアドレスの形式が正しくありません",
+      "usernameRequired": "ユーザー名を入力してください",
+      "passwordRequired": "パスワードを入力してください",
+      "passwordMin": "パスワードは 8 文字以上にしてください"
     },
     "posts": {
-      "title": "Posts 管理",
-      "id": "ID",
-      "titleCol": "タイトル",
-      "body": "本文",
-      "user": "ユーザー",
-      "createdAt": "作成日時",
-      "updatedAt": "更新日時",
-      "actions": "操作",
-      "searchPlaceholder": "タイトルで検索...",
-      "error": "Posts の読み込みに失敗しました",
-      "empty": "Posts が見つかりません",
-      "total": "合計：{count} 件の Posts",
-      "edit": "編集",
-      "editTitle": "Post を編集",
-      "updated": "Post が更新されました",
+      "title": "投稿",
+      "searchPlaceholder": "タイトルを検索...",
+      "filterUser": "ユーザー名で絞り込み...",
+      "deleteTitle": "投稿を削除",
+      "deleteConfirm": "\"{title}\" を削除しますか？",
+      "deleteConfirmEmpty": "この投稿を削除しますか？",
       "delete": "削除",
-      "deleteTitle": "Post を削除",
-      "deleteConfirm": "Post「{title}」を削除しますか？",
-      "deleteConfirmEmpty": "この Post を削除しますか？",
-      "deleted": "Post が削除されました"
+      "deleted": "削除しました",
+      "empty": "投稿はありません",
+      "error": "読み込みに失敗しました",
+      "time": "作成日時",
+      "username": "ユーザー"
     },
     "channels": {
-      "title": "チャネル管理",
-      "id": "ID",
-      "user": "ユーザー",
-      "kind": "タイプ",
-      "name": "名前",
-      "enabled": "有効",
-      "createdAt": "作成日時",
-      "updatedAt": "更新日時",
-      "actions": "操作",
-      "error": "チャネルの読み込みに失敗しました",
-      "empty": "チャネルが見つかりません",
-      "edit": "編集",
-      "editTitle": "チャネルを編集",
-      "webhookUrl": "Webhook URL",
-      "keywords": "キーワード",
-      "keywordsPlaceholder": "keyword1, keyword2",
-      "enabledHelp": "配信のオン/オフ",
-      "updated": "チャネルが更新されました",
-      "delete": "削除",
-      "deleteTitle": "チャンネルを削除",
-      "deleteConfirm": "チャンネル {name} を削除しますか？この操作は元に戻せません。",
-      "deleteConfirmEmpty": "このチャネルを削除しますか？",
-      "deleted": "チャンネルが削除されました",
+      "title": "チャンネル",
       "enableTitle": "チャンネルを有効化",
       "disableTitle": "チャンネルを無効化",
-      "enableConfirm": "チャンネル {name} を有効化しますか？",
-      "disableConfirm": "チャンネル {name} を無効化しますか？新しい配信が一時停止されます。",
-      "enabledChanged": "チャンネルのステータスが更新されました",
+      "enableConfirm": "\"{name}\" を有効化しますか？{user} の配信が再開されます。",
+      "disableConfirm": "\"{name}\" を無効化しますか？{user} の配信が停止します。",
+      "deleteTitle": "チャンネルを削除",
+      "deleteConfirm": "\"{name}\" を削除しますか？",
+      "delete": "削除",
+      "cancel": "キャンセル",
+      "confirm": "確認",
+      "name": "名前",
+      "kind": "種類",
+      "enabled": "ステータス",
       "active": "有効",
       "inactive": "無効",
-      "confirm": "確認",
-      "cancel": "キャンセル"
+      "actions": "操作",
+      "user": "ユーザー",
+      "empty": "チャンネルはありません",
+      "error": "読み込みに失敗しました",
+      "deleted": "チャンネルを削除しました",
+      "enabledToast": "チャンネルを有効化しました",
+      "disabledToast": "チャンネルを無効化しました",
+      "searchPlaceholder": "名前/ユーザー名で検索...",
+      "createdAt": "作成日時"
     },
     "history": {
       "title": "配信履歴",
-      "createdAt": "日時",
-      "post": "記事",
-      "channel": "チャネル",
-      "user": "ユーザー",
-      "status": "ステータス",
-      "error": "エラー",
-      "postDeleted": "記事は削除されました",
-      "channelDeleted": "チャネルは削除されました",
-      "userDeleted": "ユーザーは退会しました",
-      "status_delivered": "配信済み",
-      "status_failed": "失敗",
-      "status_expired": "期限切れ",
-      "empty": "配信履歴はまだありません"
-    },
-    "dashboard": {
-      "title": "ダッシュボード",
-      "users": "ユーザー",
-      "posts": "投稿",
-      "channels": "チャンネル",
-      "history": "配信履歴"
+      "filter": {
+        "user": "ユーザー",
+        "channel": "チャンネル",
+        "status": "ステータス"
+      },
+      "status": {
+        "delivered": "配信済み",
+        "failed": "失敗",
+        "expired": "期限切れ"
+      },
+      "colPost": "投稿",
+      "colChannel": "チャンネル",
+      "colUser": "ユーザー",
+      "colStatus": "ステータス",
+      "colTime": "時間",
+      "colError": "エラー",
+      "postDeleted": "投稿は削除されました",
+      "channelDeleted": "チャンネルは削除されました",
+      "userDeleted": "ユーザーは削除されました",
+      "detail": "詳細",
+      "empty": "配信履歴はありません",
+      "emptyFiltered": "条件に一致する配信履歴はありません",
+      "error": "読み込みに失敗しました",
+      "total": "全 {n} 件"
+    }
+  },
+  "forbidden": {
+    "title": "アクセス権限がありません",
+    "description": "このページを表示する権限がありません。",
+    "backToDashboard": "概要に戻る"
+  },
+  "error": {
+    "title": "問題が発生しました",
+    "description": "ページの読み込み中にエラーが発生しました。再試行するか戻ってください。",
+    "retry": "再試行",
+    "backHome": "ホームに戻る",
+    "global": {
+      "title": "アプリケーションエラー",
+      "description": "重大なシステムエラーが発生しました。ページを再読み込みしてください。",
+      "reload": "再読み込み"
     }
   },
   "notFound": {
-    "title": "404",
-    "pageNotFound": "ページが存在しません",
-    "pageNotFoundLoginRequired": "ページが存在しません。まずログインしてください",
-    "backToDashboard": "ダッシュボードに戻る",
+    "title": "ページが見つかりません",
+    "pageNotFound": "お探しのページは存在しないか、移動しました。",
+    "backToDashboard": "概要に戻る",
     "goToLogin": "ログインへ"
+  },
+  "createTestPost": {
+    "title": "テスト投稿を送信",
+    "titleLabel": "タイトル",
+    "titlePlaceholder": "タイトルを入力",
+    "bodyLabel": "本文",
+    "bodyPlaceholder": "本文を入力",
+    "cancel": "キャンセル",
+    "create": "作成",
+    "creating": "作成中...",
+    "success": "テスト投稿を送信しました",
+    "titleRequired": "タイトルを入力してください",
+    "bodyRequired": "本文を入力してください",
+    "titleTooLong": "タイトルは 150 文字以内にしてください",
+    "required": "この項目は必須です"
+  },
+  "passwordChange": {
+    "error": {
+      "invalid_password": "現在のパスワードが正しくありません",
+      "rate_limited": "操作が多すぎます。{seconds} 秒後にもう一度お試しください。",
+      "internal": "パスワードを変更できませんでした。しばらくしてから再試行してください。"
+    }
   }
 }

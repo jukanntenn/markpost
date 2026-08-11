@@ -310,7 +310,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	_, _ = repo.Create(ctx, "Title 3", "Body 3", uid2)
 
 	t.Run("returns posts for user", func(t *testing.T) {
-		posts, total, err := svc.GetUserPosts(ctx, uid1, 0, 10)
+		posts, total, err := svc.GetUserPosts(ctx, uid1, "", 0, 10)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -323,7 +323,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	})
 
 	t.Run("returns empty for user with no posts", func(t *testing.T) {
-		posts, total, err := svc.GetUserPosts(ctx, 999, 0, 10)
+		posts, total, err := svc.GetUserPosts(ctx, 999, "", 0, 10)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
@@ -345,7 +345,7 @@ func TestService_GetAllPosts(t *testing.T) {
 	_, _ = repo.Create(ctx, "Alpha", "Body", uid1)
 	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
-	posts, total, err := svc.GetAllPosts(ctx, "", 0, 10)
+	posts, total, err := svc.GetAllPosts(ctx, "", "", 0, 10)
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}

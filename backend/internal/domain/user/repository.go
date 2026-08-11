@@ -18,11 +18,29 @@ type Repository interface {
 	GetOrCreateFromGitHub(ctx context.Context, githubUser *GitHubUser) (*User, error)
 	ValidatePassword(ctx context.Context, username, password string) (*User, error)
 	SetPassword(ctx context.Context, userID int, password string) error
+	// BumpTokenVersion increments token_version — the single primitive behind
+	// instant invalidation of all of a user's tokens (C2.6).
+	BumpTokenVersion(ctx context.Context, userID int) error
+	// UpdatePostKey rotates a user's post key (C2.5).
+	UpdatePostKey(ctx context.Context, userID int, postKey string) error
+	// RotatePostKey generates a fresh unique post key and stores it (C2.5).
+	RotatePostKey(ctx context.Context, userID int) (string, error)
 	SetRole(ctx context.Context, userID int, role Role) error
 	SetActive(ctx context.Context, userID int, active bool) error
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	GetAll(ctx context.Context, offset, limit int) ([]User, error)
+	// Search returns users whose username matches the LIKE pattern (admin user
+	// list search, D3.1), ordered by id.
+	Search(ctx context.Context, search string, offset, limit int) ([]User, error)
+	// CountSearch returns the total users matching the search pattern.
+	CountSearch(ctx context.Context, search string) (int64, error)
 	Count(ctx context.Context) (int64, error)
+	// CountByRole counts users with the given role (last-admin guard, K.7 D3-3).
+	CountByRole(ctx context.Context, role Role) (int64, error)
+	// CountBanned counts disabled users (admin 需要关注, D2.1).
+	CountBanned(ctx context.Context) (int64, error)
+	// CountSince counts users created at or after since (stats week delta, D2.4).
+	CountSince(ctx context.Context, since time.Time) (int64, error)
 	UpdateLastLoginAt(ctx context.Context, userID int, lastLoginAt time.Time) error
 }
 
@@ -47,6 +65,13 @@ type TokenRepository interface {
 	GetRevokedRefreshToken(ctx context.Context, tokenHash string) (*RefreshToken, error)
 	// RevokeRefreshToken soft-revokes a single refresh token (sets Revoked=true).
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	// RevokeRefreshTokenByID soft-revokes a single active refresh token, scoped
+	// to the user when userID > 0 (I.12); userID == 0 revokes regardless of
+	// owner (D3.2 admin). Returns domain.ErrNotFound when no active row matches.
+	RevokeRefreshTokenByID(ctx context.Context, tokenID, userID int) error
+	// GetRefreshTokenByID returns a refresh token row by primary key, or
+	// domain.ErrNotFound (admin single-session revoke owner resolution).
+	GetRefreshTokenByID(ctx context.Context, tokenID int) (*RefreshToken, error)
 	// RevokeAllByUserID soft-revokes every active refresh token for the user.
 	// Called on logout and on detected token theft.
 	RevokeAllByUserID(ctx context.Context, userID int) error

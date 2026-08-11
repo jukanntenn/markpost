@@ -368,7 +368,7 @@ func TestNormalizeAndValidateKind(t *testing.T) {
 
 func TestValidateConfiguration(t *testing.T) {
 	t.Run("valid feishu configuration", func(t *testing.T) {
-		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", ""))
+		config, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", ""))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -379,7 +379,7 @@ func TestValidateConfiguration(t *testing.T) {
 	})
 
 	t.Run("valid feishu configuration with card_link_url", func(t *testing.T) {
-		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", "https://custom.com/{{.QID}}"))
+		config, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, feishuConfigJSON("https://example.com/hook", "https://custom.com/{{.QID}}"))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -391,7 +391,7 @@ func TestValidateConfiguration(t *testing.T) {
 
 	t.Run("defaults card_link_url to empty", func(t *testing.T) {
 		raw := json.RawMessage(`{"webhook_url":"https://example.com/hook"}`)
-		config, err := validateConfiguration(delivery.ChannelKindFeishu, raw)
+		config, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, raw)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -402,28 +402,28 @@ func TestValidateConfiguration(t *testing.T) {
 	})
 
 	t.Run("rejects invalid JSON", func(t *testing.T) {
-		_, err := validateConfiguration(delivery.ChannelKindFeishu, json.RawMessage(`not json`))
+		_, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, json.RawMessage(`not json`))
 		if err == nil {
 			t.Fatal("expected error")
 		}
 	})
 
 	t.Run("rejects empty webhook URL", func(t *testing.T) {
-		_, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("", ""))
+		_, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, feishuConfigJSON("", ""))
 		if err == nil {
 			t.Fatal("expected error for empty webhook URL")
 		}
 	})
 
 	t.Run("rejects invalid webhook URL scheme", func(t *testing.T) {
-		_, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("ftp://example.com", ""))
+		_, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, feishuConfigJSON("ftp://example.com", ""))
 		if err == nil {
 			t.Fatal("expected error for invalid URL scheme")
 		}
 	})
 
 	t.Run("trims whitespace from webhook URL", func(t *testing.T) {
-		config, err := validateConfiguration(delivery.ChannelKindFeishu, feishuConfigJSON("  https://example.com/hook  ", ""))
+		config, err := validateConfiguration(context.Background(), delivery.ChannelKindFeishu, feishuConfigJSON("  https://example.com/hook  ", ""))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -438,7 +438,6 @@ func TestService_LatestPerChannel(t *testing.T) {
 	ctx := context.Background()
 	svc, repo, _, db := setupDeliveryServiceWithHistory(t)
 	uid := createTestUser(t, db)
-
 	ch1 := &delivery.Channel{
 		UserID:        uid,
 		Kind:          delivery.ChannelKindFeishu,
@@ -582,3 +581,43 @@ func TestService_SendTest(t *testing.T) {
 }
 
 func ptrTo(s string) *string { return &s }
+
+// I.10 契约回归：空列表必须序列化为 [] 而非 null（pending/stats 曾返回 nil
+// slice，前端会收到 null）。
+func TestService_EmptyListsSerializeAsEmpty(t *testing.T) {
+	ctx := context.Background()
+	svc, _, _, db := setupDeliveryServiceWithHistory(t)
+	uid := createTestUser(t, db)
+
+	pending, err := svc.PendingAttempts(ctx, uid)
+	if err != nil {
+		t.Fatalf("PendingAttempts: %v", err)
+	}
+	if pending == nil {
+		t.Error("PendingAttempts must return a non-nil slice")
+	}
+
+	stats, err := svc.DailyStats(ctx, uid, 7)
+	if err != nil {
+		t.Fatalf("DailyStats: %v", err)
+	}
+	if stats == nil {
+		t.Error("DailyStats must return a non-nil slice")
+	}
+
+	all, err := svc.DailyStatsAll(ctx, 7)
+	if err != nil {
+		t.Fatalf("DailyStatsAll: %v", err)
+	}
+	if all == nil {
+		t.Error("DailyStatsAll must return a non-nil slice")
+	}
+
+	locked, err := svc.LockedChannels(ctx)
+	if err != nil {
+		t.Fatalf("LockedChannels: %v", err)
+	}
+	if locked == nil {
+		t.Error("LockedChannels must return a non-nil slice")
+	}
+}

@@ -321,22 +321,34 @@ func etagHex(s string) string {
 	return fmt.Sprintf("%016x", xxhash.Sum64String(s))
 }
 
-// GetUserPosts retrieves posts for a specific user with pagination.
-func (s *Service) GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error) {
+// GetUserPosts retrieves posts for a specific user with pagination and an
+// optional title/body search (B3.3/F.5).
+func (s *Service) GetUserPosts(ctx context.Context, userID int, search string, offset, limit int) ([]post.Post, int64, error) {
 	return service.Paginate(
-		func() ([]post.Post, error) { return s.postRepo.GetByUserID(ctx, userID, offset, limit) },
-		func() (int64, error) { return s.postRepo.CountByUserID(ctx, userID) },
+		func() ([]post.Post, error) { return s.postRepo.GetByUserID(ctx, userID, search, offset, limit) },
+		func() (int64, error) { return s.postRepo.CountByUserIDSearch(ctx, userID, search) },
 		"user posts",
 	)
 }
 
-// GetAllPosts retrieves all posts with optional search and pagination.
-func (s *Service) GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error) {
+// GetAllPosts retrieves all posts with optional search + username filter
+// (admin; F.9).
+func (s *Service) GetAllPosts(ctx context.Context, search, username string, offset, limit int) ([]post.Post, int64, error) {
 	return service.Paginate(
-		func() ([]post.Post, error) { return s.postRepo.ListAll(ctx, search, offset, limit) },
-		func() (int64, error) { return s.postRepo.CountAll(ctx, search) },
+		func() ([]post.Post, error) { return s.postRepo.ListAll(ctx, search, username, offset, limit) },
+		func() (int64, error) { return s.postRepo.CountAll(ctx, search, username) },
 		"all posts",
 	)
+}
+
+// CountAllPosts returns the total post count (admin stats, D2.4).
+func (s *Service) CountAllPosts(ctx context.Context) (int64, error) {
+	return s.postRepo.CountAll(ctx, "", "")
+}
+
+// CountSince counts posts created at or after since (admin stats delta, D2.4).
+func (s *Service) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	return s.postRepo.CountSince(ctx, since)
 }
 
 // DeletePost deletes a post by its ID. Prefer DeletePostByQID for the active

@@ -1,5 +1,6 @@
 import type { Page, Locator } from "@playwright/test";
 
+// F.4 渠道列表 + D5 渠道编辑 Dialog（RHF + zod + 测试状态机 + 删除 AlertDialog）。
 export class DeliveryPage {
   readonly page: Page;
   readonly heading: Locator;
@@ -10,14 +11,14 @@ export class DeliveryPage {
   constructor(page: Page) {
     this.page = page;
     this.heading = page.getByRole("heading", {
-      name: "Delivery Channels",
+      name: "Delivery channels",
       exact: true,
     });
     this.table = page.getByRole("table").first();
     this.emptyState = page.getByText("No delivery channels yet", {
       exact: true,
     });
-    this.dialog = page.locator("[data-slot='dialog-content']");
+    this.dialog = page.getByRole("dialog").first();
   }
 
   async goto() {
@@ -29,31 +30,35 @@ export class DeliveryPage {
   }
 
   async clickAddChannel() {
-    await this.page.getByRole("button", { name: "Add Channel" }).first().click();
+    await this.page.getByRole("button", { name: "Add channel" }).first().click();
   }
 
   get channelNameInput(): Locator {
-    return this.dialog.locator("#channel-name");
+    return this.dialog.getByLabel("Channel name");
   }
 
   get channelWebhookInput(): Locator {
-    return this.dialog.locator("#channel-webhook");
+    return this.dialog.getByLabel("Webhook URL");
   }
 
   get channelCardLinkInput(): Locator {
-    return this.dialog.locator("#channel-card-link-url");
+    return this.dialog.getByLabel("Card link URL");
   }
 
   get channelKeywordsInput(): Locator {
-    return this.dialog.locator("#channel-keywords");
+    return this.dialog.getByPlaceholder("mark, post");
   }
 
   async submitCreate() {
-    await this.dialog.getByRole("button", { name: "Create", exact: true }).click();
+    await this.dialog
+      .getByRole("button", { name: "Create", exact: true })
+      .click();
   }
 
   async submitSave() {
-    await this.dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await this.dialog
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
   }
 
   async createChannel(name: string, webhookUrl: string, keywords?: string) {
@@ -75,15 +80,20 @@ export class DeliveryPage {
   }
 
   async clickTestInDialog() {
-    await this.dialog.getByRole("button", { name: "Test", exact: true }).click();
+    await this.dialog
+      .getByRole("button", { name: "Send test", exact: true })
+      .click();
   }
 
   async clickDeleteInDialog() {
-    await this.dialog.getByRole("button", { name: "Delete" }).click();
+    await this.dialog.getByRole("button", { name: "Delete" }).first().click();
   }
 
   async confirmDelete() {
-    await this.dialog.getByRole("button", { name: "Confirm Delete" }).click();
+    await this.page
+      .getByRole("button", { name: "Delete", exact: true })
+      .last()
+      .click();
   }
 
   getLatestCell(name: string): Locator {

@@ -1,6 +1,9 @@
 package post
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Repository defines the interface for post data access.
 type Repository interface {
@@ -9,9 +12,16 @@ type Repository interface {
 	GetByQID(ctx context.Context, qid string) (*Post, error)
 	GetByID(ctx context.Context, id int) (*Post, error)
 	CountByUserID(ctx context.Context, userID int) (int64, error)
-	GetByUserID(ctx context.Context, userID int, offset int, limit int) ([]Post, error)
-	ListAll(ctx context.Context, search string, offset int, limit int) ([]Post, error)
-	CountAll(ctx context.Context, search string) (int64, error)
+	// GetByUserID retrieves a user's own posts with optional title/body search
+	// (B3.3/F.5).
+	GetByUserID(ctx context.Context, userID int, search string, offset int, limit int) ([]Post, error)
+	CountByUserIDSearch(ctx context.Context, userID int, search string) (int64, error)
+	// ListAll retrieves all posts with optional search and username filter
+	// (admin; F.9).
+	ListAll(ctx context.Context, search, username string, offset int, limit int) ([]Post, error)
+	CountAll(ctx context.Context, search, username string) (int64, error)
+	// CountSince counts posts created at or after since (stats week delta, D2.4).
+	CountSince(ctx context.Context, since time.Time) (int64, error)
 	DeleteByID(ctx context.Context, id int) (int64, error)
 	// DeleteByQID deletes a post by its QID. When ownerID is non-zero, the row
 	// is only deleted if it belongs to that owner (returns affected=0 otherwise);

@@ -1,44 +1,45 @@
 import '@testing-library/jest-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
-import { renderWithProviders, mockMatchMedia } from '@/test/utils'
-import { ThemeProvider } from '@/components/theme-provider'
-import AdminDashboardPage from './page'
-
-vi.mock('@/stores/toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}))
+import { describe, expect, it, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import {
+  renderWithProviders,
+  mockMatchMedia,
+  mockNavigation,
+} from '@/test/utils'
+import AdminDashboardPage from '@/components/admin/AdminDashboardPage'
 
 beforeEach(() => {
-  vi.clearAllMocks()
   mockMatchMedia()
+  mockNavigation()
 })
 
+// D2 态势感知仪表盘：需要关注（正常态确认感）+ 存量指标 + 趋势图。
 describe('AdminDashboardPage', () => {
   it('renders the dashboard heading', async () => {
-    renderWithProviders(<AdminDashboardPage />, { wrapper: ThemeProvider })
-    await waitFor(() => {
-      expect(
-        screen.getByRole('heading', { name: /dashboard/i }),
-      ).toBeInTheDocument()
-    })
+    renderWithProviders(<AdminDashboardPage />)
+    expect(
+      await screen.findByRole('heading', { name: /overview/i }),
+    ).toBeInTheDocument()
   })
 
-  it('shows loading state initially', () => {
-    renderWithProviders(<AdminDashboardPage />, { wrapper: ThemeProvider })
-    const dashes = screen.getAllByText('-')
-    expect(dashes.length).toBeGreaterThanOrEqual(1)
+  it('shows loading skeleton initially', () => {
+    renderWithProviders(<AdminDashboardPage />)
+    expect(document.querySelector('.animate-shimmer')).not.toBeNull()
   })
 
-  it('renders card content after data loads', async () => {
-    renderWithProviders(<AdminDashboardPage />, { wrapper: ThemeProvider })
-    await waitFor(() => {
-      const values = screen.getAllByText(/^\d+$/)
-      expect(values.length).toBeGreaterThanOrEqual(4)
-    })
+  it('renders stats after data loads', async () => {
+    renderWithProviders(<AdminDashboardPage />)
+    expect(await screen.findByText('Users')).toBeInTheDocument()
+    expect(await screen.findByText('Posts')).toBeInTheDocument()
+  })
+
+  it('shows "all good" attention state when no issues', async () => {
+    renderWithProviders(<AdminDashboardPage />)
+    expect(await screen.findByText('All good')).toBeInTheDocument()
+  })
+
+  it('shows recent admin actions feed', async () => {
+    renderWithProviders(<AdminDashboardPage />)
+    expect(await screen.findByText('Recent admin actions')).toBeInTheDocument()
   })
 })

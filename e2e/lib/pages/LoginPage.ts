@@ -1,20 +1,24 @@
 import type { Page, Locator } from "@playwright/test";
 
+// B1.7 登录页（base-ui Form/Field + RHF）：按钮不再因空字段禁用，
+// 错误显示在 FormAlert（role="alert"）。
 export class LoginPage {
   readonly page: Page;
   readonly usernameInput: Locator;
   readonly passwordInput: Locator;
   readonly submitButton: Locator;
-  readonly alertDanger: Locator;
-  readonly errorAlert: Locator;
+  readonly formAlert: Locator;
+  readonly sessionExpiredBanner: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.usernameInput = page.locator('input[name="username"]');
     this.passwordInput = page.locator('input[name="password"]');
-    this.submitButton = page.locator('button[type="submit"]');
-    this.alertDanger = page.locator(".alert-danger");
-    this.errorAlert = page.locator("[data-slot='alert']");
+    this.submitButton = page.getByRole("button", { name: "Sign in" });
+    this.formAlert = page.getByRole("alert").filter({ hasText: /./ });
+    this.sessionExpiredBanner = page.getByText(
+      "Your session has expired. Please sign in again.",
+    );
   }
 
   async goto() {
@@ -27,19 +31,7 @@ export class LoginPage {
     await this.submitButton.click();
   }
 
-  async submitByPressingEnter() {
-    await this.passwordInput.press("Enter");
-  }
-
   async getErrorMessage() {
-    return this.errorAlert;
-  }
-
-  async isSubmitDisabled() {
-    return await this.submitButton.isDisabled();
-  }
-
-  async isSubmitEnabled() {
-    return await this.submitButton.isEnabled();
+    return this.formAlert;
   }
 }

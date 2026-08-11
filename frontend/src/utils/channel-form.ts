@@ -11,12 +11,20 @@ export type UpdateChannelMutationVars = {
   data: UpdateChannelPayload
 }
 
+// D5.2 字段规格：webhook_url required + url；card_link_url 可选但填了须 url
+// （原 default('') 不校验 → optional().or(url())）。校验文案用 i18n key 标识，
+// 由表单组件通过 next-intl 解析（错误消息不硬编码英文）。
 export const feishuConfigurationSchema = z.object({
   webhook_url: z
-    .string()
-    .min(1, 'Webhook URL is required')
-    .url('Must be a valid URL'),
-  card_link_url: z.string().default(''),
+    .string({ error: 'required' })
+    .min(1, { error: 'required' })
+    .url({ error: 'invalid_url' }),
+  card_link_url: z
+    .string({ error: 'invalid_url' })
+    .url({ error: 'invalid_url' })
+    .or(z.literal(''))
+    .optional()
+    .transform((v) => v ?? ''),
 })
 
 export const channelConfigurationSchemas: Record<

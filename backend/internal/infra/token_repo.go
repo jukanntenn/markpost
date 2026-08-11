@@ -104,6 +104,42 @@ func (r *TokenRepository) RevokeAllByUserID(ctx context.Context, userID int) err
 	return nil
 }
 
+// RevokeRefreshTokenByID soft-revokes a single active refresh token, scoped to
+// the user when userID > 0 (I.12 user self-revoke); userID == 0 revokes
+// regardless of owner (D3.2 admin single-session revoke). Returns
+// domain.ErrNotFound when no active matching row exists.
+func (r *TokenRepository) RevokeRefreshTokenByID(ctx context.Context, tokenID, userID int) error {
+	q := r.db.WithContext(ctx).
+		Model(&user.RefreshToken{}).
+		Where("id = ? AND revoked = ?", tokenID, false)
+	if userID > 0 {
+		q = q.Where("user_id = ?", userID)
+	}
+	result := q.Update("revoked", true)
+	if result.Error != nil {
+		return fmt.Errorf("RevokeRefreshTokenByID: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("RevokeRefreshTokenByID: %w", domain.ErrNotFound)
+	}
+	return nil
+}
+
+// GetRefreshTokenByID returns a refresh token row by its primary key, or
+// domain.ErrNotFound. Used by the admin single-session revoke path to resolve
+// the token's owner.
+func (r *TokenRepository) GetRefreshTokenByID(ctx context.Context, tokenID int) (*user.RefreshToken, error) {
+	t, err := findFirst[user.RefreshToken](
+		ctx,
+		r.db.Where("id = ?", tokenID),
+		domain.ErrNotFound,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("GetRefreshTokenByID: %w", err)
+	}
+	return t, nil
+}
+
 // ListByUserID returns all refresh tokens for a user (for session management).
 func (r *TokenRepository) ListByUserID(ctx context.Context, userID int) ([]user.RefreshToken, error) {
 	var tokens []user.RefreshToken

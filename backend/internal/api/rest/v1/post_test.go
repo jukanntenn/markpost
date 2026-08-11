@@ -62,7 +62,7 @@ func (m *mockPostService) GetPostMarkdown(_ context.Context, qid string) (string
 	return "", "", "", time.Time{}, service.New(service.ErrNotFound, "post not found")
 }
 
-func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _, _ int) ([]post.Post, int64, error) {
+func (m *mockPostService) GetUserPosts(_ context.Context, userID int, _ string, _, _ int) ([]post.Post, int64, error) {
 	var result []post.Post
 	for _, p := range m.posts {
 		if p.UserID == userID {
@@ -359,7 +359,7 @@ func TestDeleteAnyPost_AdminDeletesAnyOwner(t *testing.T) {
 	mockSvc := newMockPostService()
 	router := newTestEngine()
 	_, _ = mockSvc.CreatePost(context.Background(), "T", "B", 42)
-	router.DELETE("/admin/posts/:id", DeleteAnyPost(mockSvc))
+	router.DELETE("/admin/posts/:id", DeleteAnyPost(mockSvc, nil))
 
 	req := httptest.NewRequest(http.MethodDelete, "/admin/posts/test-qid", nil)
 	w := httptest.NewRecorder()
@@ -400,7 +400,7 @@ func (m *errorPostService) RenderPostHTML(_ context.Context, _ string) (string, 
 func (m *errorPostService) GetPostMarkdown(_ context.Context, _ string) (string, string, string, time.Time, error) {
 	return "", "", "", time.Time{}, nil
 }
-func (m *errorPostService) GetUserPosts(_ context.Context, _ int, _, _ int) ([]post.Post, int64, error) {
+func (m *errorPostService) GetUserPosts(_ context.Context, _ int, _ string, _, _ int) ([]post.Post, int64, error) {
 	return nil, 0, nil
 }
 func (m *errorPostService) DeletePostByQID(_ context.Context, _ string, _ int) error {

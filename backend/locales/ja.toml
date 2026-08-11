@@ -106,3 +106,15 @@ other = "チャネルが削除されました"
 
 ["health.running"]
 other = "markpost は実行中です"
+
+["error.account_locked"]
+other = "ログイン試行回数が多すぎます。{{.Minutes}} 分後にもう一度お試しください"
+
+["error.self_forbidden"]
+other = "自分自身には実行できません"
+
+["error.last_admin"]
+other = "最後の管理者は降格できません"
+
+["error.webhook_url_forbidden"]
+other = "この Webhook アドレスは許可されていません"

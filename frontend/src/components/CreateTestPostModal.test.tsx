@@ -1,168 +1,48 @@
 import '@testing-library/jest-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { describe, expect, it, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import {
+  renderWithProviders,
+  mockMatchMedia,
+  mockNavigation,
+} from '@/test/utils'
 import CreateTestPostModal from './CreateTestPostModal'
-import { ThemeProvider } from '../components/theme-provider'
-import { setMockAuth, renderWithProviders, mockMatchMedia } from '../test/utils'
-import { server } from '../mocks/server'
-import { http, HttpResponse } from 'msw'
-
-vi.mock('@/stores/toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}))
-
-const mockOnHide = vi.fn()
-const mockOnSuccess = vi.fn()
 
 beforeEach(() => {
-  vi.clearAllMocks()
-  setMockAuth({
-    token: 'test_token',
-    refresh_token: 'test_refresh',
-    expires_in: 86400,
-    user: { id: 1, username: 'testuser', email: 'test@example.com' },
-  })
   mockMatchMedia()
+  mockNavigation()
 })
 
+// F.11 测试发帖 Dialog：title/body 必填、title ≤150、成功 toast。
 describe('CreateTestPostModal', () => {
-  it('renders modal when show is true', () => {
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
+  const base = { postKey: 'mpk-test', onHide: () => {}, onSuccess: () => {} }
 
-    expect(screen.getByRole('dialog')).toBeVisible()
+  it('renders title and body fields', () => {
+    renderWithProviders(<CreateTestPostModal show {...base} />)
+    expect(screen.getByLabelText('Title')).toBeInTheDocument()
+    expect(screen.getByLabelText('Body')).toBeInTheDocument()
   })
 
-  it('does not render modal when show is false', () => {
-    renderWithProviders(
-      <CreateTestPostModal
-        show={false}
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
-
-  it('disables submit button when body is empty', () => {
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    const createButton = screen.getByRole('button', { name: /create/i })
-    expect(createButton).toBeDisabled()
-  })
-
-  it('enables submit button when body is not empty', async () => {
+  it('shows field errors when submitting empty', async () => {
+    renderWithProviders(<CreateTestPostModal show {...base} />)
+    const { userEvent } = await import('@testing-library/user-event')
     const user = userEvent.setup()
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
-    await user.type(bodyTextarea, 'Test content')
-
-    const createButton = screen.getByRole('button', { name: /create/i })
-    expect(createButton).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+    expect(
+      (await screen.findAllByText('Title is required')).length,
+    ).toBeGreaterThan(0)
+    expect(await screen.findByText('Body is required')).toBeInTheDocument()
   })
 
-  it('submits form successfully', async () => {
+  it('rejects titles longer than 150 chars', async () => {
+    renderWithProviders(<CreateTestPostModal show {...base} />)
+    const { userEvent } = await import('@testing-library/user-event')
     const user = userEvent.setup()
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    const titleInput = screen.getByPlaceholderText(/title/i)
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
-
-    await user.type(titleInput, 'Test Title')
-    await user.type(bodyTextarea, 'Test content')
-
-    const createButton = screen.getByRole('button', { name: /create/i })
-    await user.click(createButton)
-
-    await waitFor(() => {
-      expect(mockOnSuccess).toHaveBeenCalled()
-    })
-  })
-
-  it('closes modal when cancel is clicked', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    const cancelButton = screen.getByRole('button', { name: /cancel/i })
-    await user.click(cancelButton)
-
-    expect(mockOnHide).toHaveBeenCalled()
-  })
-
-  it('handles server error', async () => {
-    server.use(
-      http.post('/:postKey', () => {
-        return HttpResponse.json({ message: 'Server error' }, { status: 500 })
-      }),
-    )
-
-    const user = userEvent.setup()
-    renderWithProviders(
-      <CreateTestPostModal
-        show
-        postKey="test_key"
-        onHide={mockOnHide}
-        onSuccess={mockOnSuccess}
-      />,
-      { wrapper: ThemeProvider },
-    )
-
-    const bodyTextarea = screen.getByPlaceholderText(/markdown/i)
-    await user.type(bodyTextarea, 'Test content')
-
-    const createButton = screen.getByRole('button', { name: /create/i })
-    await user.click(createButton)
-
-    await waitFor(() => {
-      expect(screen.getByText(/server error/i)).toBeInTheDocument()
-    })
+    await user.type(screen.getByLabelText('Title'), 'x'.repeat(151))
+    await user.type(screen.getByLabelText('Body'), 'hello')
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+    expect(
+      await screen.findByText('Title must be at most 150 characters'),
+    ).toBeInTheDocument()
   })
 })

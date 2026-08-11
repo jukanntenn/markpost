@@ -1,21 +1,15 @@
 import type { Page, Locator } from "@playwright/test";
 
+// F.5 帖子列表：搜索 + 分页（页码/总条数）。
 export class PostsPage {
   readonly page: Page;
-  readonly allPostsHeading: Locator;
-  readonly titleColumnHeader: Locator;
-  readonly previousButton: Locator;
-  readonly nextButton: Locator;
+  readonly heading: Locator;
+  readonly searchInput: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.allPostsHeading = page.getByRole("heading", {
-      name: "All Posts",
-      exact: true,
-    });
-    this.titleColumnHeader = page.getByRole("columnheader", { name: "Title" });
-    this.previousButton = page.getByRole("button", { name: "Previous" });
-    this.nextButton = page.getByRole("button", { name: "Next" });
+    this.heading = page.getByRole("heading", { name: "Posts", exact: true });
+    this.searchInput = page.getByPlaceholder("Search titles...");
   }
 
   async goto() {
@@ -24,9 +18,5 @@ export class PostsPage {
 
   async getPostLink(title: string) {
     return this.page.getByRole("link", { name: title });
-  }
-
-  getNoPostsMessage() {
-    return this.page.getByText("No posts yet", { exact: true });
   }
 }

@@ -21,19 +21,26 @@ func (t *JWTTokenPair) ExpiresInSeconds() int64 {
 	return int64(time.Until(t.ExpiresAt).Seconds())
 }
 
-// AccessClaims contains the claims embedded in access tokens.
+// AccessClaims contains the claims embedded in access tokens. TokenVersion
+// (tv) carries the user's token_version at issuance: the auth middleware
+// rejects any access token whose tv differs from the user's current value
+// (C2.6 — one primitive covering password change / forced sign-out / ban).
 type AccessClaims struct {
-	UserID   int    `json:"user_id"`
-	Email    string `json:"email"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	UserID       int    `json:"user_id"`
+	Email        string `json:"email"`
+	Username     string `json:"username"`
+	Role         string `json:"role"`
+	TokenVersion int64  `json:"tv"`
 	jwt.RegisteredClaims
 }
 
-// RefreshClaims contains the claims embedded in refresh tokens.
+// RefreshClaims contains the claims embedded in refresh tokens. tv is checked
+// on refresh so a stale refresh token (issued before a token_version bump)
+// fails and forces the client back to re-authentication (C2.6/K.4).
 type RefreshClaims struct {
-	UserID int    `json:"user_id"`
-	Role   string `json:"role"`
+	UserID       int    `json:"user_id"`
+	Role         string `json:"role"`
+	TokenVersion int64  `json:"tv"`
 	jwt.RegisteredClaims
 }
 
@@ -56,14 +63,14 @@ func NewJWTService(accessSigningKey, refreshSigningKey string, accessTokenExpire
 }
 
 // GenerateTokenPair generates a new access and refresh token pair for the user.
-func (s *JWTService) GenerateTokenPair(userID int, email, username, role string) (*JWTTokenPair, error) {
+func (s *JWTService) GenerateTokenPair(userID int, email, username, role string, tokenVersion int64) (*JWTTokenPair, error) {
 	now := time.Now()
-	accessToken, err := s.GenerateAccessToken(now, userID, email, username, role)
+	accessToken, err := s.GenerateAccessToken(now, userID, email, username, role, tokenVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.GenerateRefreshToken(now, userID, role)
+	refreshToken, err := s.GenerateRefreshToken(now, userID, role, tokenVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +83,14 @@ func (s *JWTService) GenerateTokenPair(userID int, email, username, role string)
 }
 
 // GenerateAccessToken generates a new access token for the user.
-func (s *JWTService) GenerateAccessToken(now time.Time, userID int, email, username, role string) (string, error) {
+func (s *JWTService) GenerateAccessToken(now time.Time, userID int, email, username, role string, tokenVersion int64) (string, error) {
 	expiresAt := now.Add(s.accessTokenExpire)
 	claims := AccessClaims{
-		UserID:   userID,
-		Email:    email,
-		Username: username,
-		Role:     role,
+		UserID:       userID,
+		Email:        email,
+		Username:     username,
+		Role:         role,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -99,10 +107,11 @@ func (s *JWTService) GenerateAccessToken(now time.Time, userID int, email, usern
 // value — required for one-time rotation: without it, two token pairs issued
 // in the same second for the same user would collide on the token_hash unique
 // constraint.
-func (s *JWTService) GenerateRefreshToken(now time.Time, userID int, role string) (string, error) {
+func (s *JWTService) GenerateRefreshToken(now time.Time, userID int, role string, tokenVersion int64) (string, error) {
 	claims := RefreshClaims{
-		UserID: userID,
-		Role:   role,
+		UserID:       userID,
+		Role:         role,
+		TokenVersion: tokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ID:        randomJTI(),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.refreshTokenExpire)),

@@ -9,5 +9,6 @@ export {
   adminKeys,
   deliveryKeys,
   postKeyKeys,
+  sessionsKeys,
   invalidateKey,
 } from './query-keys'

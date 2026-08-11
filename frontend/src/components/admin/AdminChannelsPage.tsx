@@ -2,18 +2,30 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { PowerIcon, Trash2Icon } from 'lucide-react'
-import { adminApi, adminKeys, invalidateKey } from '@/lib/api'
-import { mutationOptions } from '@/lib/mutation-helpers'
-import { toast } from '@/stores/toast'
-import { useAdminTablePage } from '@/hooks/useAdminTablePage'
-import { formatToLocalTime } from '@/utils/time'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { SendIcon } from 'lucide-react'
+import { adminApi, adminKeys } from '@/lib/api'
+import { useUrlQueryState } from '@/hooks/useUrlQueryState'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { relativeTime } from '@/utils/relative-time'
+import { useLocaleContext } from '@/components/providers/LocaleProvider'
+import { PageHeading } from '@/components/ui/page-heading'
 import { Button } from '@/components/ui/button'
-import { TableHead, TableRow, TableCell } from '@/components/ui/table'
+import { SearchInput } from '@/components/ui/search-input'
 import { Badge } from '@/components/ui/badge'
-import { AdminTablePage } from '@/components/admin/AdminTablePage'
+import { ListState } from '@/components/ui/list-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PaginationControls } from '@/components/ui/pagination-controls'
+import { Switch } from '@/components/ui/switch'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,204 +36,260 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { toastManager } from '@/stores/toast'
+import type { AdminChannel } from '@/types/delivery'
 
-type ChannelAction =
-  | { type: 'enabled'; channelId: number; name: string; enabled: boolean }
-  | { type: 'delete'; channelId: number; name: string }
-
+// F.7 Admin 渠道管理页：搜索（名称/用户名）+ 开关/删除（确认文案如实告知
+// 对用户投递的影响）+ 移动卡片。不见 webhook URL 配置（隐私，I.4）。
 export function AdminChannelsPage() {
-  const t = useTranslations('admin')
+  const t = useTranslations('admin.channels')
+  const tCommon = useTranslations('common')
+  const { locale } = useLocaleContext()
   const queryClient = useQueryClient()
-  const [action, setAction] = useState<ChannelAction | null>(null)
 
-  const {
-    items: channels,
-    pagination,
-    onPageChange,
-    ...queryState
-  } = useAdminTablePage({
-    queryKey: adminKeys.channels.all(),
-    queryFn: (page, limit) => adminApi.listChannels(page, limit),
-    t,
+  const { state, setState, setPage } = useUrlQueryState<{
+    page: string
+    search: string
+  }>({ page: '1', search: '' })
+
+  const page = Math.max(1, Number.parseInt(state.page, 10) || 1)
+  const debouncedSearch = useDebouncedValue(state.search, 300)
+
+  const [toggleTarget, setToggleTarget] = useState<AdminChannel | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminChannel | null>(null)
+
+  const query = useQuery({
+    queryKey: adminKeys.channels.list(page),
+    queryFn: () => adminApi.listChannels(page),
+    staleTime: 30_000,
   })
 
-  const enabledMutation = useMutation(
-    mutationOptions({
-      mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
-        adminApi.setChannelEnabled(id, enabled),
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.channels.all())
-        toast.success(t('channels.enabledChanged'))
-        setAction(null)
-      },
-    }),
-  )
-
-  const deleteMutation = useMutation(
-    mutationOptions({
-      mutationFn: (id: number) => adminApi.deleteChannel(id),
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.channels.all())
-        invalidateKey(queryClient, adminKeys.stats())
-        toast.success(t('channels.deleted'))
-        setAction(null)
-      },
-    }),
-  )
-
-  function handleAction() {
-    if (!action) return
-    switch (action.type) {
-      case 'enabled':
-        enabledMutation.mutate({
-          id: action.channelId,
-          enabled: action.enabled,
-        })
-        break
-      case 'delete':
-        deleteMutation.mutate(action.channelId)
-        break
-    }
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: adminKeys.channels.all() })
+    queryClient.invalidateQueries({ queryKey: adminKeys.stats() })
   }
 
-  function getActionTitle() {
-    if (!action) return ''
-    switch (action.type) {
-      case 'enabled':
-        return action.enabled
-          ? t('channels.enableTitle')
-          : t('channels.disableTitle')
-      case 'delete':
-        return t('channels.deleteTitle')
-    }
-  }
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, enabled }: { id: number; enabled: boolean }) =>
+      adminApi.setChannelEnabled(id, enabled),
+    onSuccess: (_d, vars) => {
+      setToggleTarget(null)
+      invalidate()
+      toastManager.add({
+        type: 'success',
+        title: vars.enabled ? t('enabledToast') : t('disabledToast'),
+      })
+    },
+    onError: (err: Error) =>
+      toastManager.add({ type: 'error', title: err.message }),
+  })
 
-  function getActionDescription() {
-    if (!action) return ''
-    switch (action.type) {
-      case 'enabled':
-        return action.enabled
-          ? t('channels.enableConfirm', { name: action.name })
-          : t('channels.disableConfirm', { name: action.name })
-      case 'delete':
-        return t('channels.deleteConfirm', { name: action.name })
-    }
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => adminApi.deleteChannel(id),
+    onSuccess: () => {
+      setDeleteTarget(null)
+      invalidate()
+      toastManager.add({ type: 'success', title: t('deleted') })
+    },
+    onError: (err: Error) =>
+      toastManager.add({ type: 'error', title: err.message }),
+  })
+
+  const channels = (query.data?.items ?? []).filter((c) => {
+    if (!debouncedSearch) return true
+    const q = debouncedSearch.toLowerCase()
+    return (
+      c.name.toLowerCase().includes(q) || c.username.toLowerCase().includes(q)
+    )
+  })
+  const total = query.data?.total ?? 0
+  const totalPages = query.data?.total_pages ?? 0
 
   return (
-    <>
-      <AdminTablePage
-        title={t('channels.title')}
-        {...queryState}
-        emptyText={t('channels.empty')}
-        headers={
-          <>
-            <TableHead>{t('channels.id')}</TableHead>
-            <TableHead>{t('channels.name')}</TableHead>
-            <TableHead>{t('channels.kind')}</TableHead>
-            <TableHead>{t('username')}</TableHead>
-            <TableHead>{t('channels.enabled')}</TableHead>
-            <TableHead>{t('createdAt')}</TableHead>
-            <TableHead className="w-24">{t('channels.actions')}</TableHead>
-          </>
-        }
-        colSpan={7}
-        items={channels}
-        renderRow={(channel) => (
-          <TableRow key={channel.id}>
-            <TableCell>{channel.id}</TableCell>
-            <TableCell>{channel.name}</TableCell>
-            <TableCell>
-              <Badge variant="outline">{channel.kind}</Badge>
-            </TableCell>
-            <TableCell>{channel.username}</TableCell>
-            <TableCell>
-              <Badge variant={channel.enabled ? 'default' : 'secondary'}>
-                {channel.enabled
-                  ? t('channels.active')
-                  : t('channels.inactive')}
-              </Badge>
-            </TableCell>
-            <TableCell>{formatToLocalTime(channel.created_at)}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-1">
+    <div className="space-y-6">
+      <PageHeading>{t('title')}</PageHeading>
+
+      <div className="mb-4">
+        <SearchInput
+          placeholder={t('searchPlaceholder')}
+          value={state.search}
+          onChange={(v) => setState({ search: v })}
+        />
+      </div>
+
+      <ListState
+        isLoading={query.isLoading}
+        error={query.error}
+        loadingSkeleton={<Skeleton className="h-64 w-full" />}
+        emptyWhen={channels.length === 0}
+        empty={<EmptyState icon={SendIcon} title={t('empty')} />}
+        onRetry={() => query.refetch()}
+      >
+        <div className="hidden overflow-hidden rounded-lg border lg:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('name')}</TableHead>
+                <TableHead>{t('kind')}</TableHead>
+                <TableHead>{t('user')}</TableHead>
+                <TableHead>{t('enabled')}</TableHead>
+                <TableHead>{t('createdAt')}</TableHead>
+                <TableHead className="w-32 text-right"> </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {channels.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.kind}
+                  </TableCell>
+                  <TableCell>{c.username || '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant={c.enabled ? 'success' : 'outline'}>
+                      {c.enabled ? t('active') : t('inactive')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {relativeTime(c.created_at, locale)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Switch
+                        size="sm"
+                        checked={c.enabled}
+                        onCheckedChange={(checked) =>
+                          setToggleTarget({ ...c, enabled: checked })
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-danger hover:text-danger"
+                        onClick={() => setDeleteTarget(c)}
+                      >
+                        {t('delete')}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        <ul className="space-y-3 lg:hidden">
+          {channels.map((c) => (
+            <li key={c.id} className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="truncate font-semibold">{c.name || '—'}</span>
+                <Badge variant={c.enabled ? 'success' : 'outline'}>
+                  {c.enabled ? t('active') : t('inactive')}
+                </Badge>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {c.username || '—'} · {relativeTime(c.created_at, locale)}
+              </p>
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <Switch
+                  size="sm"
+                  checked={c.enabled}
+                  onCheckedChange={(checked) =>
+                    setToggleTarget({ ...c, enabled: checked })
+                  }
+                />
                 <Button
+                  type="button"
                   variant="ghost"
-                  size="icon"
-                  title={
-                    channel.enabled
-                      ? t('channels.disableTitle')
-                      : t('channels.enableTitle')
-                  }
-                  onClick={() =>
-                    setAction({
-                      type: 'enabled',
-                      channelId: channel.id,
-                      name: channel.name,
-                      enabled: !channel.enabled,
-                    })
-                  }
+                  size="sm"
+                  className="text-danger hover:text-danger"
+                  onClick={() => setDeleteTarget(c)}
                 >
-                  <PowerIcon
-                    className={`size-4 ${!channel.enabled ? 'text-muted-foreground' : ''}`}
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={t('channels.deleteTitle')}
-                  onClick={() =>
-                    setAction({
-                      type: 'delete',
-                      channelId: channel.id,
-                      name: channel.name,
-                    })
-                  }
-                >
-                  <Trash2Icon className="size-4 text-destructive" />
+                  {t('delete')}
                 </Button>
               </div>
-            </TableCell>
-          </TableRow>
-        )}
-      />
-      {pagination && pagination.total_pages > 1 && (
+            </li>
+          ))}
+        </ul>
+
         <PaginationControls
-          page={pagination.page}
-          totalPages={pagination.total_pages}
-          onPageChange={onPageChange}
-          prevLabel={t('previous')}
-          nextLabel={t('next')}
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={setPage}
+          prevLabel={tCommon('previous')}
+          nextLabel={tCommon('next')}
+          totalLabel={(n) => tCommon('total', { n })}
         />
-      )}
+      </ListState>
 
       <AlertDialog
-        open={action !== null}
-        onOpenChange={(open) => !open && setAction(null)}
+        open={toggleTarget !== null}
+        onOpenChange={(open) => !open && setToggleTarget(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{getActionTitle()}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {toggleTarget?.enabled ? t('enableTitle') : t('disableTitle')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {getActionDescription()}
+              {toggleTarget?.enabled
+                ? t('enableConfirm', {
+                    name: toggleTarget?.name ?? '',
+                    user: toggleTarget?.username ?? '',
+                  })
+                : t('disableConfirm', {
+                    name: toggleTarget?.name ?? '',
+                    user: toggleTarget?.username ?? '',
+                  })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('channels.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleAction}
-              className={
-                action?.type === 'delete'
-                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                  : ''
+              onClick={() =>
+                toggleTarget &&
+                toggleMutation.mutate({
+                  id: toggleTarget.id,
+                  enabled: toggleTarget.enabled,
+                })
               }
             >
-              {t('channels.confirm')}
+              {tCommon('confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('deleteConfirm', { name: deleteTarget?.name ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              {tCommon('cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="danger"
+              disabled={deleteMutation.isPending}
+              onClick={() =>
+                deleteTarget && deleteMutation.mutate(deleteTarget.id)
+              }
+            >
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }
 

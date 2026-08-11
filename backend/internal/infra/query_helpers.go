@@ -12,6 +12,12 @@ var likeEscaper = strings.NewReplacer(
 	`_`, `\_`,
 )
 
+// escapeLike escapes the LIKE wildcard characters in s for use inside a
+// pattern the caller wraps with '%'.
+func escapeLike(s string) string {
+	return likeEscaper.Replace(s)
+}
+
 func likeContains(s string) string {
 	return "%" + likeEscaper.Replace(s) + "%"
 }

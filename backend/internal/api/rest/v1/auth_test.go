@@ -163,7 +163,7 @@ func TestQueryPostKey_Success(t *testing.T) {
 	created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "password")
 	_ = userRepo.SetRole(ctx, created.ID, user.RoleUser)
 
-	token, _ := auth.NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24).GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user")
+	token, _ := auth.NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24).GenerateAccessToken(time.Now(), created.ID, "test@example.com", "testuser", "user", 0)
 
 	router := newTestEngine()
 	router.GET("/post_key", func(c *gin.Context) {
@@ -187,6 +187,54 @@ func TestQueryPostKey_Success(t *testing.T) {
 	}
 	if resp.PostKey == "" {
 		t.Error("expected post_key in response")
+	}
+}
+
+// D3.2/I.12 契约：sessions 响应必须暴露 revoked（已吊销会话前端才能显示
+// 状态与隐藏吊销按钮；token_hash 保持隐藏）。
+func TestListSessions_ExposesRevoked(t *testing.T) {
+	svc, userRepo := setupRealAuthService(t)
+	ctx := t.Context()
+	created, _ := userRepo.Create(ctx, "sess@example.com", "sessuser", "correctpassword")
+
+	// 先真实登录一次，生成一条 refresh token（ListSessions 的数据源）。
+	if _, _, err := svc.LoginWithEmail(ctx, "sessuser", "correctpassword"); err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	router := newTestEngine()
+	router.GET("/sessions", func(c *gin.Context) {
+		c.Set("user", &user.User{ID: created.ID, Email: "sess@example.com", Username: "sessuser", Role: user.RoleUser})
+		c.Next()
+	}, ListSessions(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/sessions", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(w.Body.Bytes(), &raw); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+	if _, ok := raw["sessions"]; !ok {
+		t.Fatal("expected sessions key in response")
+	}
+	var sessions []map[string]json.RawMessage
+	if err := json.Unmarshal(raw["sessions"], &sessions); err != nil {
+		t.Fatalf("failed to unmarshal sessions: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("expected 1 session, got %d", len(sessions))
+	}
+	if _, ok := sessions[0]["revoked"]; !ok {
+		t.Error("expected revoked field in session payload (D3.2/I.12)")
+	}
+	if _, ok := sessions[0]["token_hash"]; ok {
+		t.Error("token_hash must stay hidden from the API")
 	}
 }
 
@@ -369,7 +417,23 @@ func (m *mockAuthServiceForGitHub) RefreshToken(_ context.Context, _ string) (*u
 	return nil, nil, nil
 }
 func (m *mockAuthServiceForGitHub) Logout(_ context.Context, _ string) error { return nil }
-func (m *mockAuthServiceForGitHub) ChangePassword(_ context.Context, _ int, _, _ string) error {
+func (m *mockAuthServiceForGitHub) ChangePassword(_ context.Context, _ int, _, _ string) (*auth.JWTTokenPair, error) {
+	return nil, nil //nolint:nilnil // test double
+}
+
+func (m *mockAuthServiceForGitHub) RotatePostKey(_ context.Context, _ int) (string, error) {
+	return "", nil
+}
+
+func (m *mockAuthServiceForGitHub) ListSessions(_ context.Context, _ int) ([]user.RefreshToken, error) {
+	return nil, nil
+}
+
+func (m *mockAuthServiceForGitHub) RevokeSession(_ context.Context, _, _ int) error {
+	return nil
+}
+
+func (m *mockAuthServiceForGitHub) RevokeAllSessions(_ context.Context, _ int) error {
 	return nil
 }
 func (m *mockAuthServiceForGitHub) QueryPostKey(_ context.Context, _ int) (string, time.Time, error) {
@@ -378,7 +442,7 @@ func (m *mockAuthServiceForGitHub) QueryPostKey(_ context.Context, _ int) (strin
 
 func TestLoginGitHub_Success(t *testing.T) {
 	jwtSvc := auth.NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
-	pair, _ := jwtSvc.GenerateTokenPair(1, "gh@example.com", "ghuser", "user")
+	pair, _ := jwtSvc.GenerateTokenPair(1, "gh@example.com", "ghuser", "user", 0)
 
 	mock := &mockAuthServiceForGitHub{
 		u:      &user.User{ID: 1, Email: "gh@example.com", Username: "ghuser", Role: user.RoleUser},

@@ -33,9 +33,10 @@ export function ThemeToggle() {
           <Button
             type="button"
             variant="ghost"
-            size="icon"
+            size="icon-lg"
             aria-label={t('toggleTheme')}
             title={t('toggleTheme')}
+            className="size-11"
           />
         }
       >

@@ -106,3 +106,15 @@ other = "渠道删除成功"
 
 ["health.running"]
 other = "markpost 正在运行"
+
+["error.account_locked"]
+other = "登录尝试次数过多，请 {{.Minutes}} 分钟后再试"
+
+["error.self_forbidden"]
+other = "不能对自己执行此操作"
+
+["error.last_admin"]
+other = "不能降级最后一个管理员"
+
+["error.webhook_url_forbidden"]
+other = "该 Webhook 地址不被允许"

@@ -65,6 +65,14 @@ var (
 		HTTP:    502,
 		Message: &i18n.Message{ID: "error.github_user_fetch_failed", Other: "Failed to fetch GitHub account information"},
 	}
+
+	// C2.1: account-level login lockout (5 consecutive failures → 15 min).
+	// Carries dynamic template data {Minutes, RetryAfter} via service.WithData.
+	ErrAccountLocked = &service.ErrCode{
+		Value:   "account_locked",
+		HTTP:    429,
+		Message: &i18n.Message{ID: "error.account_locked", Other: "Too many attempts. Please try again in {{.Minutes}} minutes"},
+	}
 )
 
 // Password policy codes used by change-password validation. ParamProvider

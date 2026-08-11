@@ -1,73 +1,57 @@
 import '@testing-library/jest-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
-import { renderWithProviders, mockMatchMedia } from '@/test/utils'
-import { ThemeProvider } from '@/components/theme-provider'
-import { PostsPage } from './PostsPage'
-
-vi.mock('@/stores/toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-}))
+import { describe, expect, it, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
+import {
+  renderWithProviders,
+  mockMatchMedia,
+  mockNavigation,
+} from '@/test/utils'
+import PostsPage from './PostsPage'
 
 beforeEach(() => {
-  vi.clearAllMocks()
   mockMatchMedia()
+  mockNavigation()
 })
 
+// F.5 帖子列表：搜索 + 四态 + 分页增强（页码/总条数）。
 describe('PostsPage', () => {
-  it('renders post list items', async () => {
-    renderWithProviders(<PostsPage />, { wrapper: ThemeProvider })
-
-    // mockPosts 提供 "Test Post 1" / "Test Post 2"（见 handlers.ts mockPosts）
-    await waitFor(() => {
-      expect(screen.getByText('Test Post 1')).toBeInTheDocument()
-      expect(screen.getByText('Test Post 2')).toBeInTheDocument()
-    })
+  it('renders the page heading', async () => {
+    renderWithProviders(<PostsPage />)
+    expect(
+      await screen.findByRole('heading', { name: /posts/i }),
+    ).toBeInTheDocument()
   })
 
-  it('requests posts with a limit query parameter', async () => {
-    const { server } = await import('@/mocks/server')
-    const { http, HttpResponse } = await import('msw')
-    const { mockPosts } = await import('@/mocks/handlers')
-
-    let capturedLimit: string | null = null
-    server.use(
-      http.get('/api/v1/posts', ({ request }) => {
-        const url = new URL(request.url)
-        capturedLimit = url.searchParams.get('limit')
-        return HttpResponse.json(mockPosts)
-      }),
-    )
-
-    renderWithProviders(<PostsPage />, { wrapper: ThemeProvider })
-
-    await waitFor(() => {
-      expect(screen.getByText('Test Post 1')).toBeInTheDocument()
-    })
-
-    // 验证前端确实传了 limit 参数（不绑死具体数值，避免脆性）
-    expect(capturedLimit).not.toBeNull()
-    expect(Number(capturedLimit)).toBeGreaterThan(0)
+  it('renders post rows with relative links', async () => {
+    renderWithProviders(<PostsPage />)
+    const link = await screen.findByRole('link', { name: 'Test Post 1' })
+    expect(link).toHaveAttribute('href', '/p-qid-1')
+    expect(link).toHaveAttribute('target', '_blank')
   })
 
-  it('shows empty state when no posts', async () => {
+  it('shows the total count', async () => {
+    renderWithProviders(<PostsPage />)
+    expect(await screen.findByText('2 total')).toBeInTheDocument()
+  })
+
+  it('shows empty state with hint when no posts', async () => {
     const { server } = await import('@/mocks/server')
     const { http, HttpResponse } = await import('msw')
-    const { mockEmptyPosts } = await import('@/mocks/handlers')
-
     server.use(
-      http.get('/api/v1/posts', () => HttpResponse.json(mockEmptyPosts)),
+      http.get('/api/v1/posts', () =>
+        HttpResponse.json({
+          items: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          total_pages: 0,
+        }),
+      ),
     )
-
-    renderWithProviders(<PostsPage />, { wrapper: ThemeProvider })
-
-    // 等 loading 结束；空态文案取自 en.json posts 命名空间的空态
-    await waitFor(() => {
-      expect(screen.queryByText('Test Post 1')).not.toBeInTheDocument()
-    })
+    renderWithProviders(<PostsPage />)
+    expect(await screen.findByText('No posts yet')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Send posts via your Post Key'),
+    ).toBeInTheDocument()
   })
 })

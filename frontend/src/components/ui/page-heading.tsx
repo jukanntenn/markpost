@@ -15,11 +15,11 @@ export function PageHeading({
     return (
       <div
         className={cn(
-          'mb-6 flex items-center justify-between md:mb-8 lg:mb-12',
+          'mb-6 flex items-center justify-between gap-3 md:mb-8 lg:mb-12',
           className,
         )}
       >
-        <h1 className="font-display text-[28px] font-bold tracking-tight">
+        <h1 className="font-display text-section font-bold tracking-tight">
           {children}
         </h1>
         {actions}
@@ -30,7 +30,7 @@ export function PageHeading({
   return (
     <h1
       className={cn(
-        'mb-6 font-display text-[28px] font-bold tracking-tight md:mb-8 lg:mb-12',
+        'mb-6 font-display text-section font-bold tracking-tight md:mb-8 lg:mb-12',
         className,
       )}
     >

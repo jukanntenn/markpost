@@ -3,7 +3,9 @@ package infra
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"testing"
+	"time"
 
 	"markpost/internal/domain/audit"
 )
@@ -26,7 +28,7 @@ func TestAuditRepository_Record(t *testing.T) {
 			t.Fatalf("Record: %v", err)
 		}
 
-		logs, total, err := repo.List(ctx, 0, 10)
+		logs, total, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -72,7 +74,7 @@ func TestAuditRepository_Record(t *testing.T) {
 			t.Fatalf("Record: %v", err)
 		}
 
-		_, total, err := repo.List(ctx, 0, 10)
+		_, total, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -93,7 +95,7 @@ func TestAuditRepository_Record(t *testing.T) {
 			t.Fatalf("Record: %v", err)
 		}
 
-		logs, total, err := repo.List(ctx, 0, 10)
+		logs, total, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -119,7 +121,7 @@ func TestAuditRepository_List(t *testing.T) {
 	db.Exec("DELETE FROM audit_logs")
 
 	t.Run("returns empty list when no logs", func(t *testing.T) {
-		logs, total, err := repo.List(ctx, 0, 10)
+		logs, total, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -141,7 +143,7 @@ func TestAuditRepository_List(t *testing.T) {
 			})
 		}
 
-		logs, total, err := repo.List(ctx, 0, 3)
+		logs, total, err := repo.List(ctx, audit.AuditFilter{}, 0, 3)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -152,7 +154,7 @@ func TestAuditRepository_List(t *testing.T) {
 			t.Errorf("expected 3 logs, got %d", len(logs))
 		}
 
-		logs2, total2, err := repo.List(ctx, 3, 3)
+		logs2, total2, err := repo.List(ctx, audit.AuditFilter{}, 3, 3)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -165,7 +167,7 @@ func TestAuditRepository_List(t *testing.T) {
 	})
 
 	t.Run("returns empty when offset exceeds total", func(t *testing.T) {
-		logs, total, err := repo.List(ctx, 100, 10)
+		logs, total, err := repo.List(ctx, audit.AuditFilter{}, 100, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -178,7 +180,7 @@ func TestAuditRepository_List(t *testing.T) {
 	})
 
 	t.Run("orders by created_at DESC", func(t *testing.T) {
-		logs, _, err := repo.List(ctx, 0, 10)
+		logs, _, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
 		if err != nil {
 			t.Fatalf("List: %v", err)
 		}
@@ -189,4 +191,131 @@ func TestAuditRepository_List(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestAuditRepository_TimeFilter is a regression test for the SQLSTATE 42702
+// (ambiguous column) bug: List joins users (which also has a created_at), so a
+// Since/Until filter on an unqualified created_at exploded. Both the count and
+// the row query must qualify the column with the "l." alias.
+func TestAuditRepository_TimeFilter(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewAuditRepository(db)
+	ctx := context.Background()
+
+	db.Exec("DELETE FROM audit_logs")
+
+	now := time.Now().UTC()
+	past := now.Add(-2 * time.Hour)
+	future := now.Add(2 * time.Hour)
+
+	for range 3 {
+		if err := repo.Record(ctx, audit.Entry{
+			ActorID:    1,
+			Action:     "user.set_active",
+			TargetType: "user",
+			TargetID:   "1",
+		}); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+	}
+
+	t.Run("Since filter does not 500", func(t *testing.T) {
+		logs, total, err := repo.List(ctx, audit.AuditFilter{Since: &past}, 0, 10)
+		if err != nil {
+			t.Fatalf("List with Since returned error (regression): %v", err)
+		}
+		if total != 3 {
+			t.Errorf("total = %d, want 3", total)
+		}
+		if len(logs) != 3 {
+			t.Errorf("len = %d, want 3", len(logs))
+		}
+	})
+
+	t.Run("Until filter does not 500", func(t *testing.T) {
+		logs, total, err := repo.List(ctx, audit.AuditFilter{Until: &future}, 0, 10)
+		if err != nil {
+			t.Fatalf("List with Until returned error (regression): %v", err)
+		}
+		if total != 3 {
+			t.Errorf("total = %d, want 3", total)
+		}
+		if len(logs) != 3 {
+			t.Errorf("len = %d, want 3", len(logs))
+		}
+	})
+
+	t.Run("Since in the future excludes everything", func(t *testing.T) {
+		logs, total, err := repo.List(ctx, audit.AuditFilter{Since: &future}, 0, 10)
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		if total != 0 || len(logs) != 0 {
+			t.Errorf("expected 0, got total=%d len=%d", total, len(logs))
+		}
+	})
+
+	t.Run("ActionCounts honors time filter", func(t *testing.T) {
+		counts, err := repo.ActionCounts(ctx, audit.AuditFilter{Since: &past})
+		if err != nil {
+			t.Fatalf("ActionCounts with Since returned error (regression): %v", err)
+		}
+		if counts["user.set_active"] != 3 {
+			t.Errorf("action count = %d, want 3", counts["user.set_active"])
+		}
+	})
+}
+
+// TestAuditRepository_TargetUsername verifies the DEV-1 target-username JOIN:
+// user-targeted rows resolve to the target's username, while non-user targets
+// leave TargetUsername nil.
+func TestAuditRepository_TargetUsername(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewAuditRepository(db)
+	ctx := context.Background()
+
+	db.Exec("DELETE FROM audit_logs")
+
+	actor := createTestUser(t, db, 10)  // username "user10"
+	target := createTestUser(t, db, 11) // username "user11"
+
+	if err := repo.Record(ctx, audit.Entry{
+		ActorID: actor, Action: "user.set_active", TargetType: "user", TargetID: strconv.Itoa(target),
+	}); err != nil {
+		t.Fatalf("Record user-target: %v", err)
+	}
+	if err := repo.Record(ctx, audit.Entry{
+		ActorID: actor, Action: "post.delete", TargetType: "post", TargetID: "mpk-xyz",
+	}); err != nil {
+		t.Fatalf("Record post-target: %v", err)
+	}
+
+	logs, _, err := repo.List(ctx, audit.AuditFilter{}, 0, 10)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+
+	var userRow, postRow *audit.LogRow
+	for i := range logs {
+		switch logs[i].Action {
+		case "user.set_active":
+			userRow = &logs[i]
+		case "post.delete":
+			postRow = &logs[i]
+		}
+	}
+	if userRow == nil || postRow == nil {
+		t.Fatalf("missing rows: userRow=%v postRow=%v", userRow, postRow)
+	}
+
+	if userRow.TargetUsername == nil || *userRow.TargetUsername != "user11" {
+		got := "<nil>"
+		if userRow.TargetUsername != nil {
+			got = *userRow.TargetUsername
+		}
+		t.Errorf("user-target TargetUsername = %q, want %q", got, "user11")
+	}
+	if postRow.TargetUsername != nil {
+		t.Errorf("post-target TargetUsername = %v, want nil", *postRow.TargetUsername)
+	}
 }

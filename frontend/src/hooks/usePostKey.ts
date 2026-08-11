@@ -5,7 +5,7 @@ import { authApi, postKeyKeys } from '@/lib/api'
 
 export function usePostKey() {
   return useQuery({
-    queryKey: postKeyKeys.detail(),
+    queryKey: postKeyKeys.current(),
     queryFn: authApi.queryPostKey,
   })
 }

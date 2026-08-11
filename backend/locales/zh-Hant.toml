@@ -106,3 +106,15 @@ other = "頻道刪除成功"
 
 ["health.running"]
 other = "markpost 正在執行"
+
+["error.account_locked"]
+other = "登入嘗試次數過多，請 {{.Minutes}} 分鐘後再試"
+
+["error.self_forbidden"]
+other = "不能對自己執行此操作"
+
+["error.last_admin"]
+other = "不能降級最後一個管理員"
+
+["error.webhook_url_forbidden"]
+other = "該 Webhook 位址不被允許"

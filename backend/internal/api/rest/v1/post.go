@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"markpost/internal/apierr"
+	"markpost/internal/domain/audit"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
 	"markpost/internal/web"
@@ -19,7 +20,7 @@ type PostService interface {
 	CreatePost(ctx context.Context, title, body string, userID int) (string, error)
 	RenderPostHTML(ctx context.Context, qid string) (title, html, etag string, createdAt time.Time, err error)
 	GetPostMarkdown(ctx context.Context, qid string) (title, body, etag string, createdAt time.Time, err error)
-	GetUserPosts(ctx context.Context, userID int, offset, limit int) ([]post.Post, int64, error)
+	GetUserPosts(ctx context.Context, userID int, search string, offset, limit int) ([]post.Post, int64, error)
 	DeletePostByQID(ctx context.Context, qid string, ownerID int) error
 }
 
@@ -115,6 +116,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 // @Tags posts
 // @Produce json
 // @Security BearerAuth
+// @Param search query string false "Title/body search (B3.3)"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
 // @Success 200 {object} PostsListResponse
@@ -122,9 +124,24 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 // @Router /api/v1/posts [get]
 func PostsList(postSvc PostService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		withUserPaginatedQuery(c, postSvc.GetUserPosts, newPostListItem,
-			paginatedWrap[PostListItem]("posts"),
-		)
+		var q PostsQuery
+		if err := c.ShouldBindQuery(&q); err != nil {
+			writeBindingError(c, &q, err)
+			return
+		}
+		if !validatePaginationQuery(c, &q.PaginationQuery) {
+			return
+		}
+		u, ok := requireUser(c)
+		if !ok {
+			return
+		}
+		items, total, err := postSvc.GetUserPosts(c.Request.Context(), u.ID, q.Search, q.Offset, q.Limit)
+		if err != nil {
+			apierr.RespondError(c, err)
+			return
+		}
+		writePaginatedList(c, items, total, q.PaginationQuery, newPostListItem, paginatedWrap[PostListItem]("posts"))
 	}
 }
 
@@ -161,13 +178,30 @@ func DeleteOwnPost(postSvc PostService) gin.HandlerFunc {
 // @Failure 401 {object} apierr.ErrorResponse
 // @Failure 404 {object} apierr.ErrorResponse
 // @Router /api/v1/admin/posts/{id} [delete]
-func DeleteAnyPost(postSvc PostService) gin.HandlerFunc {
+func DeleteAnyPost(postSvc PostService, auditSvc AuditRecorderPort) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		qid := c.Param("id")
 		if err := postSvc.DeletePostByQID(c.Request.Context(), qid, 0); err != nil {
 			apierr.RespondError(c, err)
 			return
 		}
+
+		// C3.2 漏洞补正：admin 删帖补审计（原 handler 无 RecordAudit）。
+		if auditSvc != nil {
+			_ = auditSvc.RecordAudit(c.Request.Context(), audit.Entry{
+				ActorID:    currentUserID(c),
+				Action:     "post.delete",
+				TargetType: "post",
+				TargetID:   qid,
+				IP:         c.ClientIP(),
+			})
+		}
 		c.Status(http.StatusNoContent)
 	}
+}
+
+// AuditRecorderPort is the minimal audit-recording dependency used by
+// DeleteAnyPost (C3.2).
+type AuditRecorderPort interface {
+	RecordAudit(ctx context.Context, e audit.Entry) error
 }

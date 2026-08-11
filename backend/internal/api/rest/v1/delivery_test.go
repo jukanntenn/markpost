@@ -63,7 +63,7 @@ func (m *mockDeliveryService) ListByUserID(_ context.Context, userID int) ([]del
 	return result, nil
 }
 
-func (m *mockDeliveryService) ListHistory(_ context.Context, _, _, _, _ int) ([]*delivery.HistoryRow, int64, error) {
+func (m *mockDeliveryService) ListHistory(_ context.Context, _, _ int, _ delivery.Status, _, _ int) ([]*delivery.HistoryRow, int64, error) {
 	return nil, 0, nil
 }
 
@@ -142,6 +142,18 @@ func (m *mockDeliveryService) SendTest(_ context.Context, userID int, id int) er
 		return service.New(service.ErrNotFound, "channel not found")
 	}
 	return nil
+}
+
+func (m *mockDeliveryService) PendingAttempts(_ context.Context, userID int) ([]*delivery.PendingAttemptRow, error) {
+	return nil, nil
+}
+
+func (m *mockDeliveryService) DailyStats(_ context.Context, userID, days int) ([]*delivery.DailyStat, error) {
+	return nil, nil
+}
+
+func (m *mockDeliveryService) TodayCounts(_ context.Context, userID int) (*delivery.TodayCounts, error) {
+	return &delivery.TodayCounts{}, nil
 }
 
 func (m *mockDeliveryService) LatestPerChannel(_ context.Context, userID int) ([]*delivery.HistoryRow, error) {

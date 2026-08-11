@@ -217,20 +217,74 @@ func TestService_Logout(t *testing.T) {
 }
 
 func TestService_ChangePassword(t *testing.T) {
-	t.Run("changes password successfully", func(t *testing.T) {
+	t.Run("changes password successfully and returns a fresh token pair", func(t *testing.T) {
 		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
 		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
 
-		err := svc.ChangePassword(ctx, created.ID, "oldpassword", "newpassword")
+		pair, err := svc.ChangePassword(ctx, created.ID, "oldpassword", "newpassword")
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
+		}
+		if pair == nil || pair.AccessToken == "" || pair.RefreshToken == "" {
+			t.Fatal("expected a fresh token pair (C2.2)")
+		}
+
+		// 新 token 对可用。
+		if _, err := svc.jwt.ValidateAccess(pair.AccessToken); err != nil {
+			t.Errorf("new access token invalid: %v", err)
 		}
 
 		_, _, err = svc.LoginWithEmail(ctx, "testuser", "newpassword")
 		if err != nil {
 			t.Fatalf("expected login with new password to work, got: %v", err)
+		}
+	})
+
+	t.Run("bumps token_version and invalidates old tokens (C2.6)", func(t *testing.T) {
+		svc, userRepo, tokenRepo := setupAuthService(t)
+		ctx := context.Background()
+
+		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
+		_, pair, _ := svc.LoginWithEmail(ctx, "testuser", "oldpassword")
+
+		u, _ := userRepo.GetByID(ctx, created.ID)
+		if u.TokenVersion != 0 {
+			t.Fatalf("expected initial token_version 0, got %d", u.TokenVersion)
+		}
+		claims, err := svc.jwt.ValidateAccess(pair.AccessToken)
+		if err != nil || claims.TokenVersion != 0 {
+			t.Fatalf("expected old token valid with tv=0, got err=%v", err)
+		}
+
+		newPair, err := svc.ChangePassword(ctx, created.ID, "oldpassword", "newpassword")
+		if err != nil {
+			t.Fatalf("change password failed: %v", err)
+		}
+
+		u, _ = userRepo.GetByID(ctx, created.ID)
+		if u.TokenVersion != 1 {
+			t.Errorf("expected token_version 1 after change, got %d", u.TokenVersion)
+		}
+
+		// 旧 access token 携带旧 tv —— 中间件层会拒绝。
+		oldClaims, err := svc.jwt.ValidateAccess(pair.AccessToken)
+		if err != nil {
+			t.Fatalf("old token should still parse: %v", err)
+		}
+		if oldClaims.TokenVersion != 0 {
+			t.Errorf("old token should carry tv=0, got %d", oldClaims.TokenVersion)
+		}
+		if claims2, _ := svc.jwt.ValidateAccess(newPair.AccessToken); claims2.TokenVersion != 1 {
+			t.Errorf("new token should carry tv=1, got %d", claims2.TokenVersion)
+		}
+
+		// 旧 refresh token 已吊销（C2.2 revoke all）。
+		oldHash := utils.HashToken(pair.RefreshToken)
+		revoked, _ := tokenRepo.IsRefreshTokenRevoked(ctx, oldHash)
+		if !revoked {
+			t.Error("expected the pre-change refresh token to be revoked")
 		}
 	})
 
@@ -240,7 +294,7 @@ func TestService_ChangePassword(t *testing.T) {
 
 		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
 
-		err := svc.ChangePassword(ctx, created.ID, "wrongpassword", "newpassword")
+		_, err := svc.ChangePassword(ctx, created.ID, "wrongpassword", "newpassword")
 		if err == nil {
 			t.Fatal("expected error for wrong current password")
 		}
@@ -253,11 +307,40 @@ func TestService_ChangePassword(t *testing.T) {
 		}
 	})
 
+	t.Run("rejects passwords violating the policy (C2.3)", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		created, _ := userRepo.Create(ctx, "test@example.com", "testuser", "oldpassword")
+
+		for _, short := range []string{"", "abc", "1234567"} {
+			if _, err := svc.ChangePassword(ctx, created.ID, "oldpassword", short); err == nil {
+				t.Errorf("expected policy error for %q", short)
+			}
+		}
+		// 多字节场景：73 个中文字符（RuneCount 超 72）→ 拒绝。
+		long := ""
+		for range 73 {
+			long += "界"
+		}
+		if _, err := svc.ChangePassword(ctx, created.ID, "oldpassword", long); err == nil {
+			t.Error("expected policy error for 73 multi-byte runes")
+		}
+		// 字节超 72 但 RuneCount 未超（auth.md §4.3 双校验）。
+		mixed := ""
+		for range 25 { // 25 个 3 字节字符 = 75 字节
+			mixed += "界"
+		}
+		if _, err := svc.ChangePassword(ctx, created.ID, "oldpassword", mixed); err == nil {
+			t.Error("expected policy error for >72 bytes")
+		}
+	})
+
 	t.Run("returns error for non-existent user", func(t *testing.T) {
 		svc, _, _ := setupAuthService(t)
 		ctx := context.Background()
 
-		err := svc.ChangePassword(ctx, 999, "old", "new")
+		_, err := svc.ChangePassword(ctx, 999, "old", "new")
 		if err == nil {
 			t.Fatal("expected error for non-existent user")
 		}
@@ -273,12 +356,11 @@ func TestService_ChangePassword(t *testing.T) {
 			Email: "gh@example.com",
 		})
 
-		err := svc.ChangePassword(ctx, created.ID, "", "newpassword")
-		if err != nil {
+		if _, err := svc.ChangePassword(ctx, created.ID, "", "newpassword"); err != nil {
 			t.Fatalf("expected no error for passwordless user, got: %v", err)
 		}
 
-		_, _, err = svc.LoginWithEmail(ctx, "ghuser", "newpassword")
+		_, _, err := svc.LoginWithEmail(ctx, "ghuser", "newpassword")
 		if err != nil {
 			t.Fatalf("expected login with new password to work, got: %v", err)
 		}

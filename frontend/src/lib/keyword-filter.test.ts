@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compileKeywordFilter, describeFilter } from './keyword-filter'
+import { compileKeywordFilter } from './keyword-filter'
 
 describe('compileKeywordFilter', () => {
   it('returns null node for empty input', () => {
@@ -122,38 +122,5 @@ describe('compileKeywordFilter', () => {
     for (const expr of invalid) {
       expect(compileKeywordFilter(expr).error, `expr=${expr}`).not.toBeNull()
     }
-  })
-})
-
-describe('describeFilter', () => {
-  it('returns null for empty expression', () => {
-    expect(describeFilter(null)).toBeNull()
-  })
-
-  it('renders a keyword', () => {
-    expect(describeFilter(compileKeywordFilter('alpha').node)).toBe('alpha')
-  })
-
-  it('renders OR and AND with precedence parentheses', () => {
-    expect(describeFilter(compileKeywordFilter('a, b, c').node)).toBe(
-      'a | b | c',
-    )
-    expect(describeFilter(compileKeywordFilter('a & b & c').node)).toBe(
-      'a & b & c',
-    )
-    expect(describeFilter(compileKeywordFilter('a | b & c').node)).toBe(
-      'a | (b & c)',
-    )
-  })
-
-  it('renders NOT', () => {
-    expect(describeFilter(compileKeywordFilter('!a').node)).toBe('!a')
-    expect(describeFilter(compileKeywordFilter('!(a & b)').node)).toBe(
-      '!(a & b)',
-    )
-  })
-
-  it('quotes keyword values containing operator characters', () => {
-    expect(describeFilter(compileKeywordFilter(`"a,b"`).node)).toBe(`"a,b"`)
   })
 })

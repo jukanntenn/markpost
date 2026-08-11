@@ -8,6 +8,8 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
     <AuthGate
       shouldShow={adminRoute.shouldShow}
       redirectPath={adminRoute.redirectPath}
+      withNext={adminRoute.withNext}
+      showForbidden={adminRoute.showForbidden}
     >
       {children}
     </AuthGate>

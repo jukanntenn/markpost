@@ -12,7 +12,7 @@ export class OAuthCallbackPage {
   }
 
   async waitForRedirectToLogin() {
-    await this.page.waitForURL("**/login");
+    await this.page.waitForURL("**/login**");
   }
 
   async expectLoading() {

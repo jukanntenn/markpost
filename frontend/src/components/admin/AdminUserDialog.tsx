@@ -1,20 +1,20 @@
 'use client'
 
-import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-
-import { adminApi, adminKeys, invalidateKey } from '@/lib/api'
-import { mutationOptions } from '@/lib/mutation-helpers'
-import { toast } from '@/stores/toast'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Controller, useForm } from 'react-hook-form'
+import { Field } from '@base-ui/react/field'
+import { Form } from '@base-ui/react/form'
+import { adminApi, adminKeys } from '@/lib/api'
+import { adminCreateUserSchema } from '@/lib/schemas'
+import { toastManager } from '@/stores/toast'
 import { Button } from '@/components/ui/button'
-import { LoadingButton } from '@/components/ui/loading-button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { PasswordStrengthMeter } from '@/components/ui/password-strength-meter'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -25,138 +25,203 @@ interface AdminUserDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-interface UserFormState {
-  email: string
+interface CreateUserValues {
   username: string
+  email?: string
   password: string
 }
 
-const EMPTY_FORM: UserFormState = {
-  email: '',
-  username: '',
-  password: '',
-}
-
+// F.10 新建用户 Dialog：RHF + zod（用户名必填、邮箱可选但填了须 email、
+// 密码 min 8/max 72）+ 强度指示器。
 export function AdminUserDialog({ open, onOpenChange }: AdminUserDialogProps) {
-  const t = useTranslations('admin')
+  const t = useTranslations('admin.userDialog')
+  const tCommon = useTranslations('common')
   const queryClient = useQueryClient()
-  const [form, setForm] = useState<UserFormState>(EMPTY_FORM)
-  const [errors, setErrors] = useState<Partial<UserFormState>>({})
 
-  function validate(): boolean {
-    const newErrors: Partial<UserFormState> = {}
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      newErrors.email = t('users.emailInvalid')
-    if (!form.username) newErrors.username = t('users.usernameRequired')
-    if (!form.password) newErrors.password = t('users.passwordRequired')
-    else if (form.password.length < 6)
-      newErrors.password = t('users.passwordMinLength')
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { isSubmitting },
+  } = useForm<CreateUserValues>({
+    resolver: zodResolver(adminCreateUserSchema),
+    defaultValues: { username: '', email: '', password: '' },
+    mode: 'onSubmit',
+  })
 
-  const createMutation = useMutation(
-    mutationOptions({
-      mutationFn: adminApi.createUser,
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.users.all())
-        invalidateKey(queryClient, adminKeys.stats())
-        toast.success(t('users.userCreated'))
-        onOpenChange(false)
-        setForm(EMPTY_FORM)
-        setErrors({})
-      },
-    }),
-  )
+  const { mutate } = useMutation({
+    mutationFn: (values: CreateUserValues) =>
+      adminApi.createUser({
+        username: values.username,
+        email: values.email ?? '',
+        password: values.password,
+      }),
+    onSuccess: () => {
+      reset()
+      queryClient.invalidateQueries({ queryKey: adminKeys.users.all() })
+      queryClient.invalidateQueries({ queryKey: adminKeys.stats() })
+      toastManager.add({ type: 'success', title: t('created') })
+      onOpenChange(false)
+    },
+    onError: (err: unknown) => {
+      const apiErr = err as {
+        fieldErrors?: { field?: string; message: string }[]
+        message?: string
+      }
+      if (apiErr.fieldErrors?.length) {
+        for (const fe of apiErr.fieldErrors) {
+          if (fe.field === 'username')
+            setError('username', { message: fe.message })
+          else if (fe.field === 'email')
+            setError('email', { message: fe.message })
+          else if (fe.field === 'password')
+            setError('password', { message: fe.message })
+        }
+        return
+      }
+      toastManager.add({ type: 'error', title: apiErr.message ?? '' })
+    },
+  })
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
-    createMutation.mutate(form)
-  }
-
-  function handleOpenChange(isOpen: boolean) {
-    if (!isOpen) {
-      setForm(EMPTY_FORM)
-      setErrors({})
+  const fieldMsg = (
+    message: string | undefined,
+    field: 'username' | 'email' | 'password',
+  ) => {
+    if (!message) return ''
+    switch (message) {
+      case 'required':
+        return field === 'username'
+          ? t('usernameRequired')
+          : field === 'password'
+            ? t('passwordRequired')
+            : ''
+      case 'min_length':
+        return t('passwordMin')
+      case 'invalid_email':
+        return t('emailInvalid')
+      default:
+        return message
     }
-    onOpenChange(isOpen)
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('users.addUser')}</DialogTitle>
-          <DialogDescription>{t('users.addUserDescription')}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div className="space-y-2">
-            <Label htmlFor="email">{t('users.email')}</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder={t('users.emailPlaceholder')}
-              value={form.email}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, email: e.target.value }))
-              }
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email}</p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <Form
+          onSubmit={handleSubmit((v) => mutate(v))}
+          className="space-y-4"
+          aria-label={t('title')}
+        >
+          <DialogHeader>
+            <DialogTitle>{t('title')}</DialogTitle>
+          </DialogHeader>
+
+          <Controller
+            name="username"
+            control={control}
+            render={({
+              field: { ref, name, value, onChange, onBlur },
+              fieldState: { invalid, isTouched, isDirty, error },
+            }) => (
+              <Field.Root
+                name={name}
+                invalid={invalid}
+                touched={isTouched}
+                dirty={isDirty}
+              >
+                <Field.Label>{t('username')}</Field.Label>
+                <Field.Control
+                  ref={ref}
+                  value={value}
+                  onValueChange={onChange}
+                  onBlur={onBlur}
+                  render={<Input autoComplete="off" autoFocus />}
+                />
+                <Field.Error match={!!error}>
+                  {fieldMsg(error?.message, 'username')}
+                </Field.Error>
+              </Field.Root>
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="username">{t('username')}</Label>
-            <Input
-              id="username"
-              placeholder={t('users.usernamePlaceholder')}
-              value={form.username}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, username: e.target.value }))
-              }
-            />
-            {errors.username && (
-              <p className="text-sm text-destructive">{errors.username}</p>
+          />
+
+          <Controller
+            name="email"
+            control={control}
+            render={({
+              field: { ref, name, value, onChange, onBlur },
+              fieldState: { invalid, isTouched, isDirty, error },
+            }) => (
+              <Field.Root
+                name={name}
+                invalid={invalid}
+                touched={isTouched}
+                dirty={isDirty}
+              >
+                <Field.Label>{t('email')}</Field.Label>
+                <Field.Control
+                  ref={ref}
+                  value={value}
+                  onValueChange={onChange}
+                  onBlur={onBlur}
+                  render={<Input type="email" autoComplete="off" />}
+                />
+                <Field.Error match={!!error}>
+                  {fieldMsg(error?.message, 'email')}
+                </Field.Error>
+              </Field.Root>
             )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t('users.password')}</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder={t('users.passwordPlaceholder')}
-              value={form.password}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, password: e.target.value }))
-              }
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password}</p>
+          />
+
+          <Controller
+            name="password"
+            control={control}
+            render={({
+              field: { ref, name, value, onChange, onBlur },
+              fieldState: { invalid, isTouched, isDirty, error },
+            }) => (
+              <Field.Root
+                name={name}
+                invalid={invalid}
+                touched={isTouched}
+                dirty={isDirty}
+              >
+                <Field.Label>{t('password')}</Field.Label>
+                <Field.Control
+                  ref={ref}
+                  value={value}
+                  onValueChange={onChange}
+                  onBlur={onBlur}
+                  type="password"
+                  render={<Input autoComplete="new-password" />}
+                />
+                <Field.Description>
+                  <PasswordStrengthMeter password={value} />
+                </Field.Description>
+                <Field.Error match={!!error}>
+                  {fieldMsg(error?.message, 'password')}
+                </Field.Error>
+              </Field.Root>
             )}
-          </div>
+          />
+
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
-              onClick={() => {
-                onOpenChange(false)
-                setForm(EMPTY_FORM)
-                setErrors({})
-              }}
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
             >
-              {t('users.cancel')}
+              {tCommon('cancel')}
             </Button>
-            <LoadingButton
-              type="submit"
-              loading={createMutation.isPending}
-              loadingText={t('users.creating')}
-              disabled={createMutation.isPending}
-            >
-              {t('users.create')}
-            </LoadingButton>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? tCommon('processing') : t('create')}
+            </Button>
           </DialogFooter>
-        </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
 }
+
+export default AdminUserDialog

@@ -12,7 +12,7 @@ type RefreshToken struct {
 	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserID    int       `json:"user_id" gorm:"not null;index"`
 	TokenHash string    `json:"-" gorm:"unique;not null"`
-	Revoked   bool      `json:"-" gorm:"not null;default:false"`
+	Revoked   bool      `json:"revoked" gorm:"not null;default:false"`
 	ExpiresAt time.Time `json:"expires_at" gorm:"not null"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }

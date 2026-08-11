@@ -38,11 +38,3 @@ func GeneratePostKey(byteLength int) (string, error) {
 	}
 	return "mpk-" + s, nil
 }
-
-// GenerateRandomPassword creates a cryptographically random password of the given length.
-func GenerateRandomPassword(length int) (string, error) {
-	if length <= 0 {
-		length = 12
-	}
-	return randomString(length, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*")
-}

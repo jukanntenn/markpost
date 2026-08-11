@@ -8,6 +8,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     <AuthGate
       shouldShow={protectedRoute.shouldShow}
       redirectPath={protectedRoute.redirectPath}
+      withNext={protectedRoute.withNext}
     >
       {children}
     </AuthGate>

@@ -216,6 +216,9 @@ func (r *AttemptRepository) ListHistory(ctx context.Context, filter delivery.His
 	if filter.ChannelID > 0 {
 		q = q.Where("h.channel_id = ?", filter.ChannelID)
 	}
+	if filter.Status > 0 {
+		q = q.Where("h.status = ?", filter.Status)
+	}
 	var rows []*delivery.HistoryRow
 	if err := q.Offset(offset).Limit(limit).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("AttemptRepository.ListHistory: %w", err)
@@ -232,6 +235,9 @@ func (r *AttemptRepository) CountHistory(ctx context.Context, filter delivery.Hi
 	}
 	if filter.ChannelID > 0 {
 		q = q.Where("channel_id = ?", filter.ChannelID)
+	}
+	if filter.Status > 0 {
+		q = q.Where("status = ?", filter.Status)
 	}
 	var count int64
 	if err := q.Count(&count).Error; err != nil {
@@ -266,6 +272,124 @@ func (r *AttemptRepository) LatestPerChannel(ctx context.Context, userID int) ([
 	var rows []*delivery.HistoryRow
 	if err := r.db.WithContext(ctx).Raw(sql, userID).Scan(&rows).Error; err != nil {
 		return nil, fmt.Errorf("AttemptRepository.LatestPerChannel: %w", err)
+	}
+	return rows, nil
+}
+
+// ListPending returns the user's in-flight (status=Pending) attempts joined to
+// their post (title/qid) and channel (name). Used by the dashboard activity
+// feed's "投递中" state (K.2).
+func (r *AttemptRepository) ListPending(ctx context.Context, userID int) ([]*delivery.PendingAttemptRow, error) {
+	const sql = `SELECT a.id, a.post_id, a.channel_id,
+	                    p.title AS post_title, p.qid AS post_qid,
+	                    c.name AS channel_name,
+	                    a.created_at
+	               FROM delivery_attempts AS a
+	               LEFT JOIN posts p             ON p.id = a.post_id
+	               LEFT JOIN delivery_channels c ON c.id = a.channel_id
+	              WHERE a.user_id = ? AND a.status = ?
+	              ORDER BY a.created_at DESC`
+	var rows []*delivery.PendingAttemptRow
+	if err := r.db.WithContext(ctx).Raw(sql, userID, delivery.StatusPending).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("AttemptRepository.ListPending: %w", err)
+	}
+	return rows, nil
+}
+
+// dailyStatsQuery is the shared GROUP BY day/status aggregation (B2.7/D2.5).
+// Scope is appended by the caller.
+func dailyStatsQuery(db *gorm.DB, ctx context.Context, userID int, days int, scope string, args ...any) ([]*delivery.DailyStat, error) {
+	sql := `SELECT TO_CHAR(DATE(created_at), 'YYYY-MM-DD') AS day,
+	                    COUNT(*) FILTER (WHERE status = ?) AS delivered,
+	                    COUNT(*) FILTER (WHERE status = ?) AS failed,
+	                    COUNT(*) FILTER (WHERE status = ?) AS expired
+	               FROM delivery_history
+	              WHERE created_at >= ? ` + scope + `
+	              GROUP BY DATE(created_at)
+	              ORDER BY day ASC`
+	params := append([]any{delivery.StatusDelivered, delivery.StatusFailed, delivery.StatusExpired, time.Now().AddDate(0, 0, -days+1)}, args...)
+	var rows []*delivery.DailyStat
+	if err := db.WithContext(ctx).Raw(sql, params...).Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// DailyStats aggregates delivery_history rows by UTC day and status for the
+// user over the last days days (trend chart, B2.7).
+func (r *AttemptRepository) DailyStats(ctx context.Context, userID, days int) ([]*delivery.DailyStat, error) {
+	rows, err := dailyStatsQuery(r.db, ctx, userID, days, "AND user_id = ?", userID)
+	if err != nil {
+		return nil, fmt.Errorf("AttemptRepository.DailyStats: %w", err)
+	}
+	return rows, nil
+}
+
+// DailyStatsAll is the admin cross-user variant of DailyStats (D2.5).
+func (r *AttemptRepository) DailyStatsAll(ctx context.Context, days int) ([]*delivery.DailyStat, error) {
+	rows, err := dailyStatsQuery(r.db, ctx, 0, days, "")
+	if err != nil {
+		return nil, fmt.Errorf("AttemptRepository.DailyStatsAll: %w", err)
+	}
+	return rows, nil
+}
+
+// TodayCounts returns the user's today counters (K.2): delivered/failed from
+// today's history plus pending from in-flight attempts.
+func (r *AttemptRepository) TodayCounts(ctx context.Context, userID int) (*delivery.TodayCounts, error) {
+	const sql = `SELECT
+	                (SELECT COUNT(*) FROM delivery_history
+	                  WHERE user_id = ? AND status = ? AND created_at >= date_trunc('day', now())) AS delivered,
+	                (SELECT COUNT(*) FROM delivery_history
+	                  WHERE user_id = ? AND status IN (?, ?) AND created_at >= date_trunc('day', now())) AS failed,
+	                (SELECT COUNT(*) FROM delivery_attempts
+	                  WHERE user_id = ? AND status = ?) AS pending`
+	var out delivery.TodayCounts
+	if err := r.db.WithContext(ctx).Raw(sql,
+		userID, delivery.StatusDelivered,
+		userID, delivery.StatusFailed, delivery.StatusExpired,
+		userID, delivery.StatusPending,
+	).Scan(&out).Error; err != nil {
+		return nil, fmt.Errorf("AttemptRepository.TodayCounts: %w", err)
+	}
+	return &out, nil
+}
+
+// CountSince counts delivery_history rows created at or after since (admin
+// stats week delta, D2.4).
+func (r *AttemptRepository) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	return countQuery(ctx, r.db.Model(&delivery.History{}).Where("created_at >= ?", since), "CountSince")
+}
+
+// LockedChannels returns channels whose 24h history window shows all failures
+// or a >50% failure rate (K.7 D2-1 SQL), for the admin "需要关注" card (D2.1).
+func (r *AttemptRepository) LockedChannels(ctx context.Context) ([]*delivery.LockedChannel, error) {
+	const sql = `SELECT h.channel_id,
+	                    c.name AS channel_name,
+	                    u.username AS username,
+	                    COUNT(*) FILTER (WHERE h.status IN (?, ?)) AS fails,
+	                    COUNT(*) AS total,
+	                    (COUNT(*) FILTER (WHERE h.status IN (?, ?)))::float / COUNT(*) AS failure_rate,
+	                    (SELECT h2.last_error FROM delivery_history h2
+	                      WHERE h2.channel_id = h.channel_id
+	                      ORDER BY h2.created_at DESC LIMIT 1) AS last_error,
+	                    MAX(h.created_at) AS last_at
+	               FROM delivery_history AS h
+	               LEFT JOIN delivery_channels c ON c.id = h.channel_id
+	               LEFT JOIN users u             ON u.id = h.user_id
+	              WHERE h.created_at > now() - INTERVAL '24 hours'
+	              GROUP BY h.channel_id, c.name, u.username
+	             HAVING (COUNT(*) FILTER (WHERE h.status IN (?, ?)) = COUNT(*))
+	                 OR (COUNT(*) FILTER (WHERE h.status IN (?, ?))) * 100 / COUNT(*) > 50
+	              ORDER BY total DESC`
+	var rows []*delivery.LockedChannel
+	if err := r.db.WithContext(ctx).Raw(sql,
+		delivery.StatusFailed, delivery.StatusExpired,
+		delivery.StatusFailed, delivery.StatusExpired,
+		delivery.StatusFailed, delivery.StatusExpired,
+		delivery.StatusFailed, delivery.StatusExpired,
+	).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("AttemptRepository.LockedChannels: %w", err)
 	}
 	return rows, nil
 }

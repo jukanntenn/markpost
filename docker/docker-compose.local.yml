@@ -23,10 +23,12 @@
 # Everything else — Postgres sibling, Unix-socket connection, GUC tuning,
 # healthchecks — matches production exactly.
 
+name: markpost-local
+
 # Both the app and the migrate one-shot run the same locally built image against
 # the same config, so the build and the config mount are declared once.
 x-build: &build
-  image: markpost:acceptance
+  image: markpost:local
   build:
     context: ..
     dockerfile: docker/Dockerfile
@@ -34,15 +36,13 @@ x-build: &build
 services:
   markpost:
     <<: *build
-    container_name: markpost-acceptance
+    container_name: markpost-local
     ports:
       - "2053:2053"
     volumes:
-      - ../.local/config.acceptance.toml:/app/config.toml:ro
+      - ./config.local.toml:/app/config.toml:ro
       - ./Caddyfile.local:/etc/caddy/Caddyfile:ro
       - postgres-socket:/var/run/postgresql
-    environment:
-      - MARKPOST_DEBUG=false
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,10 +66,10 @@ services:
   # here before the app boots.
   migrate:
     <<: *build
-    container_name: markpost-acceptance-migrate
+    container_name: markpost-migrate-local
     entrypoint: ["markpost", "-c", "/app/config.toml", "migrate", "up"]
     volumes:
-      - ../.local/config.acceptance.toml:/app/config.toml:ro
+      - ./config.local.toml:/app/config.toml:ro
       - postgres-socket:/var/run/postgresql
     depends_on:
       postgres:
@@ -78,7 +78,7 @@ services:
 
   postgres:
     image: postgres:17-alpine
-    container_name: markpost-acceptance-postgres
+    container_name: markpost-postgres-local
     environment:
       - POSTGRES_DB=markpost
       - POSTGRES_USER=markpost

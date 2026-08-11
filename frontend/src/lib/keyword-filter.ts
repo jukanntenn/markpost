@@ -218,38 +218,3 @@ export function compileKeywordFilter(expr: string): CompileResult {
     return { node: null, error: 'parse failed' }
   }
 }
-
-/** Quote a keyword value for display inside the human-readable description. */
-function displayKeyword(value: string): string {
-  if (/[,|&!()" ]/.test(value) || value === '') {
-    return `"${value}"`
-  }
-  return value
-}
-
-/**
- * Render a compiled node as a human-readable description. Parentheses are
- * inserted only where needed to make the precedence unambiguous to a reader
- * (an AND under an OR, or an AND/OR under a NOT). Returns null when the
- * expression is empty (matches everything).
- */
-export function describeFilter(node: FilterNode | null): string | null {
-  if (node === null) return null
-  const walk = (n: FilterNode): string => {
-    switch (n.type) {
-      case 'or':
-        return `${parenIfAnd(n.left)} | ${parenIfAnd(n.right)}`
-      case 'and':
-        return `${walk(n.left)} & ${walk(n.right)}`
-      case 'not':
-        return `!${parenIfCompound(n.operand)}`
-      case 'keyword':
-        return displayKeyword(n.value)
-    }
-  }
-  const parenIfAnd = (n: FilterNode): string =>
-    n.type === 'and' ? `(${walk(n)})` : walk(n)
-  const parenIfCompound = (n: FilterNode): string =>
-    n.type === 'and' || n.type === 'or' ? `(${walk(n)})` : walk(n)
-  return walk(node)
-}

@@ -14,9 +14,9 @@ import { toastManager } from '@/stores/toast'
 
 const iconMap: Record<string, React.ReactNode> = {
   success: <CircleCheckIcon className="size-4 text-success" />,
-  error: <OctagonXIcon className="size-4 text-destructive" />,
+  error: <OctagonXIcon className="size-4 text-danger" />,
   warning: <TriangleAlertIcon className="size-4 text-warning" />,
-  info: <InfoIcon className="size-4 text-accent" />,
+  info: <InfoIcon className="size-4 text-info" />,
   loading: <Spinner className="size-4 text-muted-foreground" />,
 }
 

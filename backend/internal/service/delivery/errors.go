@@ -20,4 +20,12 @@ var (
 		HTTP:    422,
 		Message: &i18n.Message{ID: "error.unsupported_channel_kind", Other: "Unsupported channel kind"},
 	}
+
+	// ErrWebhookURLForbidden (I.3 SSRF 防护): the configured webhook URL
+	// resolves to a private/reserved address or a non-http(s) scheme.
+	ErrWebhookURLForbidden = &service.ErrCode{
+		Value:   "webhook_url_forbidden",
+		HTTP:    422,
+		Message: &i18n.Message{ID: "error.webhook_url_forbidden", Other: "This webhook address is not allowed"},
+	}
 )

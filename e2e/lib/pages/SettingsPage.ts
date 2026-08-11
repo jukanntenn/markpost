@@ -1,30 +1,33 @@
 import type { Page, Locator } from "@playwright/test";
 
+// F.2 设置页：偏好（base-ui Select）+ 安全（改密 + 我的会话）。
 export class SettingsPage {
   readonly page: Page;
-  readonly appSettingsHeading: Locator;
-  readonly languageLabel: Locator;
+  readonly preferencesHeading: Locator;
   readonly changePasswordHeading: Locator;
   readonly currentPasswordInput: Locator;
   readonly newPasswordInput: Locator;
   readonly confirmPasswordInput: Locator;
   readonly changePasswordButton: Locator;
-  readonly localeSelect: Locator;
+  readonly localeTrigger: Locator;
+  readonly sessionsHeading: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.appSettingsHeading = page.getByText("Application Settings", {
+    this.preferencesHeading = page.getByText("Preferences", { exact: true });
+    this.changePasswordHeading = page.getByText("Change password", {
       exact: true,
     });
-    this.languageLabel = page.getByText("Language", { exact: true });
-    this.changePasswordHeading = page.getByText("Change Password", {
-      exact: true,
+    this.currentPasswordInput = page.getByPlaceholder("Enter current password");
+    this.newPasswordInput = page.getByPlaceholder("Enter new password", { exact: true });
+    this.confirmPasswordInput = page.getByPlaceholder(
+      "Re-enter new password",
+    );
+    this.changePasswordButton = page.getByRole("button", {
+      name: "Change password",
     });
-    this.currentPasswordInput = page.locator("#current-password");
-    this.newPasswordInput = page.locator("#new-password");
-    this.confirmPasswordInput = page.locator("#confirm-password");
-    this.changePasswordButton = page.getByRole("button", { name: "Save" });
-    this.localeSelect = page.locator("#locale-select");
+    this.localeTrigger = page.getByRole("combobox");
+    this.sessionsHeading = page.getByText("My sessions", { exact: true });
   }
 
   async goto() {
@@ -39,19 +42,5 @@ export class SettingsPage {
 
   async clickChangePassword() {
     await this.changePasswordButton.click();
-  }
-
-  async getSuccessMessage() {
-    return this.page.getByText("Password changed successfully!", {
-      exact: true,
-    });
-  }
-
-  getAlert() {
-    return this.page.locator("[data-slot='alert']");
-  }
-
-  async selectLocale(value: string) {
-    await this.localeSelect.selectOption(value);
   }
 }

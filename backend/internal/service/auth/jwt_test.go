@@ -17,7 +17,7 @@ func newTestJWTService() *JWTService {
 func TestJWTService_GenerateTokenPair(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
-	pair, err := jwtSvc.GenerateTokenPair(1, "test@example.com", "testuser", "user")
+	pair, err := jwtSvc.GenerateTokenPair(1, "test@example.com", "testuser", "user", 0)
 	if err != nil {
 		t.Fatalf("GenerateTokenPair error: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestJWTService_GenerateTokenPair(t *testing.T) {
 func TestJWTService_ValidateAccess(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
-	token, err := jwtSvc.GenerateAccessToken(time.Now(), 1, "test@example.com", "testuser", "user")
+	token, err := jwtSvc.GenerateAccessToken(time.Now(), 1, "test@example.com", "testuser", "user", 0)
 	if err != nil {
 		t.Fatalf("GenerateAccessToken error: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestJWTService_ValidateAccess(t *testing.T) {
 func TestJWTService_ValidateRefresh(t *testing.T) {
 	jwtSvc := newTestJWTService()
 
-	token, err := jwtSvc.GenerateRefreshToken(time.Now(), 1, "user")
+	token, err := jwtSvc.GenerateRefreshToken(time.Now(), 1, "user", 0)
 	if err != nil {
 		t.Fatalf("GenerateRefreshToken error: %v", err)
 	}

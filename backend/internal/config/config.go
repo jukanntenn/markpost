@@ -96,9 +96,10 @@ type JWTConfig struct {
 // bucket capacity. L2 carries an additional daily cap expressed as a per-second
 // rate (1000/86400).
 type RatelimitConfig struct {
-	Read RateLimitConfig `mapstructure:"read"`
-	L2   RateLimitConfig `mapstructure:"public_write"`
-	L3   RateLimitConfig `mapstructure:"authed_write"`
+	Read  RateLimitConfig `mapstructure:"read"`
+	L2    RateLimitConfig `mapstructure:"public_write"`
+	L3    RateLimitConfig `mapstructure:"authed_write"`
+	Login RateLimitConfig `mapstructure:"login"`
 }
 
 // RateLimitConfig holds a single limiter's rate and burst, plus an optional
@@ -260,6 +261,8 @@ func setDefaults(v *viper.Viper) {
 		"RateLimit-Limit",
 		"RateLimit-Reset",
 		"RateLimit-Remaining",
+		// C2.4：429 的 Retry-After 必须暴露给浏览器读取（B1.10 倒计时）。
+		"Retry-After",
 	})
 	v.SetDefault("oauth.github.client_id", "")
 	v.SetDefault("oauth.github.client_secret", "")
@@ -284,6 +287,10 @@ func setDefaults(v *viper.Viper) {
 	// L3 authenticated write: per user_id from the JWT. 30/min.
 	v.SetDefault("ratelimit.authed_write.per_second", 0.5)
 	v.SetDefault("ratelimit.authed_write.burst", 60)
+	// C2.1 层 A: login endpoint IP limiter — 5/min per IP (dedicated limiter,
+	// not shared with L1/L3).
+	v.SetDefault("ratelimit.login.per_second", 5.0/60)
+	v.SetDefault("ratelimit.login.burst", 5)
 	v.SetDefault("delivery.body_preview_chars", 200)
 	v.SetDefault("delivery.request_timeout", "5s")
 	v.SetDefault("delivery.workers", 32)

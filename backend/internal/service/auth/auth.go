@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -58,6 +59,7 @@ type Service struct {
 	stateStore      OAuthStateStore      // OAuth state→verifier store (PKCE + CSRF)
 	userURL         string               // Override for GitHub user API URL (for testing)
 	initialPassword string               // Password for the initial admin user (created on first startup)
+	attempts        *LoginAttemptTracker // C2.1 层 B：账号级登录失败锁定
 }
 
 // NewService creates a new Service instance with the provided dependencies.
@@ -70,6 +72,7 @@ func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth
 		issuer:          issuer,
 		stateStore:      noopOAuthStateStore{},
 		initialPassword: initialPassword,
+		attempts:        NewLoginAttemptTracker(),
 	}
 }
 
@@ -207,13 +210,35 @@ func (s *Service) getGitHubUserEmails(ctx context.Context, client *http.Client) 
 	return fallback, nil
 }
 
+// accountLockedError builds the account_locked service error carrying the
+// remaining lock time: Minutes feeds the i18n template, RetryAfter feeds the
+// handler's Retry-After header (Q12 一致性裁决).
+func accountLockedError(remaining time.Duration) error {
+	seconds := int(math.Ceil(remaining.Seconds()))
+	minutes := int(math.Ceil(remaining.Minutes()))
+	return service.WithData(ErrAccountLocked, "account is locked", map[string]any{
+		"Minutes":    minutes,
+		"RetryAfter": seconds,
+	})
+}
+
 // LoginWithEmail authenticates a user with email and password, returning user info with JWT tokens.
 func (s *Service) LoginWithEmail(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
+	// C2.1 层 B：锁定期间（含正确密码）一律返回 account_locked + 剩余时间。
+	if locked, remaining := s.attempts.CheckLocked(username); locked {
+		return nil, nil, accountLockedError(remaining)
+	}
+
 	u, err := s.users.ValidatePassword(ctx, username, password)
 	if err != nil {
+		// C2.1：记录失败；第 5 次失败触发锁定，本次即返回 account_locked。
+		if locked, remaining := s.attempts.RecordFailure(username); locked {
+			return nil, nil, accountLockedError(remaining)
+		}
 		return nil, nil, service.Wrap(ErrInvalidCredentials, "invalid username or password", err)
 	}
 
+	s.attempts.Reset(username)
 	return s.completeLogin(ctx, u)
 }
 
@@ -253,6 +278,13 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 	u, err := s.getUserByID(ctx, tokenData.UserID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// C2.6/K.4：refresh token 的 tv 必须等于用户当前 token_version，否则
+	// 视为已失效（改密/强制下线/封禁后旧 refresh 不可再换新 access）。
+	if claims, vErr := s.jwt.ValidateRefresh(refreshToken); vErr == nil && claims.TokenVersion != u.TokenVersion {
+		_ = s.tokens.RevokeRefreshToken(ctx, tokenHash)
+		return nil, nil, service.New(ErrInvalidToken, "refresh token token_version mismatch")
 	}
 
 	// One-time rotation: revoke the consumed token, then issue a fresh pair.
@@ -309,7 +341,7 @@ func (s *Service) Logout(ctx context.Context, accessToken string) error {
 }
 
 func (s *Service) generateAndPersistTokenPair(ctx context.Context, u *user.User) (*JWTTokenPair, error) {
-	pair, err := s.jwt.GenerateTokenPair(u.ID, u.Email, u.Username, string(u.Role))
+	pair, err := s.jwt.GenerateTokenPair(u.ID, u.Email, u.Username, string(u.Role), u.TokenVersion)
 	if err != nil {
 		return nil, service.Wrap(service.ErrInternal, "generate token pair failed", err)
 	}
@@ -363,22 +395,45 @@ func (s *Service) verifyCurrentPassword(u *user.User, current string) error {
 	return nil
 }
 
-// ChangePassword updates a user's password after validating the current password.
-func (s *Service) ChangePassword(ctx context.Context, userID int, current, newPassword string) error {
+// ChangePassword updates a user's password after validating the current
+// password. On success it enforces C2.2: revoke all refresh tokens + bump
+// token_version (all existing access tokens die instantly) + return a fresh
+// token pair so the client continues seamlessly without re-authentication.
+func (s *Service) ChangePassword(ctx context.Context, userID int, current, newPassword string) (*JWTTokenPair, error) {
+	if err := utils.ValidatePasswordPolicy(newPassword); err != nil {
+		if utils.TooShort(newPassword) {
+			return nil, service.New(ErrPasswordTooShort, "password too short")
+		}
+		return nil, service.New(ErrPasswordTooLong, "password too long")
+	}
+
 	u, err := s.getUserByID(ctx, userID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := s.verifyCurrentPassword(u, current); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := s.users.SetPassword(ctx, userID, newPassword); err != nil {
-		return service.Wrap(service.ErrInternal, "set password failed", err)
+		return nil, service.Wrap(service.ErrInternal, "set password failed", err)
 	}
 
-	return nil
+	// C2.6 统一失效原语：改密成功 → token_version++；refresh tokens 一并吊销。
+	if err := s.users.BumpTokenVersion(ctx, userID); err != nil {
+		return nil, service.Wrap(service.ErrInternal, "bump token version failed", err)
+	}
+	if err := s.tokens.RevokeAllByUserID(ctx, userID); err != nil {
+		return nil, service.Wrap(service.ErrInternal, "revoke refresh tokens failed", err)
+	}
+
+	// 重新读取用户以拿到最新 token_version，签发新 token 对。
+	u, err = s.getUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return s.generateAndPersistTokenPair(ctx, u)
 }
 
 // QueryPostKey retrieves the post key and creation time for a user.
@@ -390,8 +445,57 @@ func (s *Service) QueryPostKey(ctx context.Context, userID int) (string, time.Ti
 	return u.PostKey, u.CreatedAt, nil
 }
 
+// RotatePostKey generates and persists a fresh post key for the user (C2.5).
+// The old key stops resolving immediately (GetByPostKey finds nothing). Banned
+// users are rejected earlier by the auth middleware's is_active check.
+func (s *Service) RotatePostKey(ctx context.Context, userID int) (string, error) {
+	key, err := s.users.RotatePostKey(ctx, userID)
+	if err != nil {
+		return "", service.Wrap(service.ErrInternal, "rotate post key failed", err)
+	}
+	return key, nil
+}
+
+// ListSessions returns the user's own refresh tokens (I.12 用户透明).
+func (s *Service) ListSessions(ctx context.Context, userID int) ([]user.RefreshToken, error) {
+	tokens, err := s.tokens.ListByUserID(ctx, userID)
+	if err != nil {
+		return nil, service.Wrap(service.ErrInternal, "list sessions failed", err)
+	}
+	// I.10 契约：空列表序列化为 [] 而非 null。
+	if tokens == nil {
+		tokens = []user.RefreshToken{}
+	}
+	return tokens, nil
+}
+
+// RevokeSession revokes a single refresh token belonging to the user
+// (I.12 用户吊销单条会话).
+func (s *Service) RevokeSession(ctx context.Context, userID, tokenID int) error {
+	if err := s.tokens.RevokeRefreshTokenByID(ctx, tokenID, userID); err != nil {
+		return service.WrapNotFoundOrInternal(err, "session not found", "revoke session failed")
+	}
+	return nil
+}
+
+// RevokeAllSessions revokes all of the user's refresh tokens while keeping the
+// current access token alive (I.12 "全部下线"; access tokens are independent
+// of refresh tokens — the client keeps working until token expiry, then must
+// sign in again).
+func (s *Service) RevokeAllSessions(ctx context.Context, userID int) error {
+	if err := s.tokens.RevokeAllByUserID(ctx, userID); err != nil {
+		return service.Wrap(service.ErrInternal, "revoke all sessions failed", err)
+	}
+	return nil
+}
+
 // InitializeFirstAdmin creates (if absent) and promotes the specified user to admin role.
 func (s *Service) InitializeFirstAdmin(ctx context.Context, initialUsername string) error {
+	// C2.3 统一预检：初始管理员密码同样遵守密码策略。
+	if err := utils.ValidatePasswordPolicy(s.initialPassword); err != nil {
+		return fmt.Errorf("initial admin password violates policy: %w", err)
+	}
+
 	u, err := s.users.GetByUsername(ctx, initialUsername)
 	if err != nil {
 		created, cerr := s.users.Create(ctx, initialUsername+"@localhost", initialUsername, s.initialPassword)

@@ -108,3 +108,15 @@ other = "Channel deleted successfully"
 
 ["health.running"]
 other = "markpost is running"
+
+["error.account_locked"]
+other = "Too many attempts. Please try again in {{.Minutes}} minutes"
+
+["error.self_forbidden"]
+other = "Cannot perform this action on yourself"
+
+["error.last_admin"]
+other = "Cannot demote the last administrator"
+
+["error.webhook_url_forbidden"]
+other = "This webhook address is not allowed"

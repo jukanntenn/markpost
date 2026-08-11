@@ -38,6 +38,7 @@ type User struct {
 	IsActive        bool       `json:"is_active" gorm:"default:true"`
 	IsEmailVerified bool       `json:"is_email_verified" gorm:"default:false"`
 	LastLoginAt     *time.Time `json:"last_login_at"`
+	TokenVersion    int64      `json:"-" gorm:"not null;default:0"`
 	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
@@ -15,6 +16,7 @@ import (
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/service/admin"
+	"markpost/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,16 +50,24 @@ type postListerAdapter struct {
 	repo post.Repository
 }
 
-func (a *postListerAdapter) GetAllPosts(ctx context.Context, search string, offset, limit int) ([]post.Post, int64, error) {
-	items, err := a.repo.ListAll(ctx, search, offset, limit)
+func (a *postListerAdapter) GetAllPosts(ctx context.Context, search, username string, offset, limit int) ([]post.Post, int64, error) {
+	items, err := a.repo.ListAll(ctx, search, username, offset, limit)
 	if err != nil {
 		return nil, 0, err
 	}
-	count, err := a.repo.CountAll(ctx, search)
+	count, err := a.repo.CountAll(ctx, search, username)
 	if err != nil {
 		return nil, 0, err
 	}
 	return items, count, nil
+}
+
+func (a *postListerAdapter) CountAllPosts(ctx context.Context) (int64, error) {
+	return a.repo.CountAll(ctx, "", "")
+}
+
+func (a *postListerAdapter) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	return a.repo.CountSince(ctx, since)
 }
 
 type channelListerAdapter struct {
@@ -76,6 +86,10 @@ func (a *channelListerAdapter) ListAll(ctx context.Context, offset, limit int) (
 	return items, count, nil
 }
 
+func (a *channelListerAdapter) CountAll(ctx context.Context) (int64, error) {
+	return a.repo.CountAll(ctx)
+}
+
 type mockAuditRecorder struct {
 	logs []audit.Log
 }
@@ -90,7 +104,7 @@ func (m *mockAuditRecorder) Record(ctx context.Context, e audit.Entry) error {
 	return nil
 }
 
-func (m *mockAuditRecorder) List(ctx context.Context, offset, limit int) ([]audit.Log, int64, error) {
+func (m *mockAuditRecorder) List(ctx context.Context, filter audit.AuditFilter, offset, limit int) ([]audit.LogRow, int64, error) {
 	total := int64(len(m.logs))
 	if offset >= len(m.logs) {
 		return nil, total, nil
@@ -99,7 +113,15 @@ func (m *mockAuditRecorder) List(ctx context.Context, offset, limit int) ([]audi
 	if end > len(m.logs) {
 		end = len(m.logs)
 	}
-	return m.logs[offset:end], total, nil
+	rows := make([]audit.LogRow, 0, end-offset)
+	for _, l := range m.logs[offset:end] {
+		rows = append(rows, audit.LogRow{Log: l})
+	}
+	return rows, total, nil
+}
+
+func (m *mockAuditRecorder) ActionCounts(ctx context.Context, filter audit.AuditFilter) (map[string]int64, error) {
+	return map[string]int64{}, nil
 }
 
 type mockSessionLister struct{}
@@ -110,6 +132,14 @@ func (m *mockSessionLister) ListByUserID(ctx context.Context, userID int) ([]use
 
 func (m *mockSessionLister) RevokeAllByUserID(ctx context.Context, userID int) error {
 	return nil
+}
+
+func (m *mockSessionLister) RevokeRefreshTokenByID(ctx context.Context, tokenID, userID int) error {
+	return nil
+}
+
+func (m *mockSessionLister) GetRefreshTokenByID(ctx context.Context, tokenID int) (*user.RefreshToken, error) {
+	return nil, nil //nolint:nilnil // test double
 }
 
 func TestAdminListUsers_Success(t *testing.T) {
@@ -398,11 +428,12 @@ func TestAdminCreateUser_InvalidBody(t *testing.T) {
 
 func TestAdminSetUserRole_Success(t *testing.T) {
 	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	actor, _ := userRepo.Create(t.Context(), "actor@role.com", "actorrole", "pass")
 	u, _ := userRepo.Create(t.Context(), "role@example.com", "roleuser", "pass")
 
 	router := newTestEngine()
 	router.PATCH("/admin/users/:id/role", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Set("user", &user.User{ID: actor.ID, Role: user.RoleAdmin})
 		c.Next()
 	}, AdminSetUserRole(svc))
 
@@ -468,45 +499,48 @@ func TestAdminResetUserPassword_Success(t *testing.T) {
 		c.Next()
 	}, AdminResetUserPassword(svc))
 
-	body := `{"password":"newpassword123"}`
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/users/%d/password", u.ID), strings.NewReader(body))
+	// 方案 B (D3.3)：无请求体，系统生成临时密码一次性返回。
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/users/%d/password", u.ID), nil)
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
-}
+	var resp struct {
+		Password string `json:"password"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("parse response: %v", err)
+	}
+	if len(resp.Password) != 12 {
+		t.Errorf("expected a 12-char temporary password, got %q", resp.Password)
+	}
 
-func TestAdminResetUserPassword_ShortPassword(t *testing.T) {
-	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
-	u, _ := userRepo.Create(t.Context(), "pw@example.com", "pwuser", "oldpass")
-
-	router := newTestEngine()
-	router.POST("/admin/users/:id/password", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
-		c.Next()
-	}, AdminResetUserPassword(svc))
-
-	body := `{"password":"ab"}`
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/users/%d/password", u.ID), strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusUnprocessableEntity && w.Code != http.StatusBadRequest {
-		t.Errorf("expected 422 or 400, got %d", w.Code)
+	// 旧密码已失效（password 已被替换）。
+	u2, err := userRepo.GetByID(t.Context(), u.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok, _ := utils.CheckPassword("oldpass", u2.Password)
+	if ok {
+		t.Error("old password still validates after reset")
+	}
+	ok, _ = utils.CheckPassword(resp.Password, u2.Password)
+	if !ok {
+		t.Error("returned temporary password does not validate")
 	}
 }
 
 func TestAdminSetUserActive_Success(t *testing.T) {
 	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	actor, _ := userRepo.Create(t.Context(), "actor@active.com", "actoractive", "pass")
 	u, _ := userRepo.Create(t.Context(), "active@example.com", "activeuser", "pass")
 
 	router := newTestEngine()
 	router.PATCH("/admin/users/:id/active", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Set("user", &user.User{ID: actor.ID, Role: user.RoleAdmin})
 		c.Next()
 	}, AdminSetUserActive(svc))
 
@@ -523,11 +557,12 @@ func TestAdminSetUserActive_Success(t *testing.T) {
 
 func TestAdminDeleteUser_Success(t *testing.T) {
 	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	actor, _ := userRepo.Create(t.Context(), "actor@delete.com", "actordelete", "pass")
 	u, _ := userRepo.Create(t.Context(), "delete@example.com", "deleteuser", "pass")
 
 	router := newTestEngine()
 	router.DELETE("/admin/users/:id", func(c *gin.Context) {
-		c.Set("user", &user.User{ID: 1, Role: user.RoleAdmin})
+		c.Set("user", &user.User{ID: actor.ID, Role: user.RoleAdmin})
 		c.Next()
 	}, AdminDeleteUser(svc))
 
@@ -746,7 +781,8 @@ func TestAdminListSessions_InvalidID(t *testing.T) {
 }
 
 func TestAdminRevokeUserSessions_Success(t *testing.T) {
-	svc, _, _ := setupAdminHandlerWithMutators(t)
+	svc, userRepo, _ := setupAdminHandlerWithMutators(t)
+	target, _ := userRepo.Create(t.Context(), "sess@example.com", "sessuser", "pass")
 
 	router := newTestEngine()
 	router.DELETE("/admin/users/:id/sessions", func(c *gin.Context) {
@@ -754,7 +790,7 @@ func TestAdminRevokeUserSessions_Success(t *testing.T) {
 		c.Next()
 	}, AdminRevokeUserSessions(svc))
 
-	req := httptest.NewRequest(http.MethodDelete, "/admin/users/1/sessions", nil)
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/admin/users/%d/sessions", target.ID), nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -809,8 +845,11 @@ func TestAdminListAuditLogs_Success(t *testing.T) {
 	if _, ok := resp["items"]; !ok {
 		t.Error("expected items in response")
 	}
-	if _, ok := resp["total"]; !ok {
-		t.Error("expected total in response")
+	if _, ok := resp["total_pages"]; !ok {
+		t.Error("expected total_pages in response")
+	}
+	if _, ok := resp["facets"]; !ok {
+		t.Error("expected facets in response")
 	}
 }
 

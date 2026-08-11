@@ -47,12 +47,15 @@ type FieldDetail struct {
 // Error represents a service-level error. Code points at the authoritative
 // ErrCode singleton (carrying HTTP/i18n mapping); Description is developer
 // context (never sent to clients); Err is the wrapped underlying error; Details
-// holds field-level validation errors for form binding.
+// holds field-level validation errors for form binding; Data carries dynamic
+// i18n template data for non-validation codes (e.g. account_locked's Minutes)
+// and is also readable by handlers for header plumbing (e.g. Retry-After).
 type Error struct {
 	Code        *ErrCode
 	Description string
 	Err         error
 	Details     []FieldDetail
+	Data        map[string]any
 }
 
 // Error returns the error message, preferring the description, then the wrapped
@@ -97,6 +100,12 @@ func Wrap(code *ErrCode, description string, err error) *Error {
 // WithDetails constructs an Error carrying field-level validation details.
 func WithDetails(code *ErrCode, description string, details []FieldDetail) *Error {
 	return &Error{Code: code, Description: description, Details: details}
+}
+
+// WithData constructs an Error carrying dynamic i18n template data (and any
+// handler-plumbing values such as Retry-After). See account_locked.
+func WithData(code *ErrCode, description string, data map[string]any) *Error {
+	return &Error{Code: code, Description: description, Data: data}
 }
 
 // NewValidation is the convenience constructor for binding/validation errors:

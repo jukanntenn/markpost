@@ -108,7 +108,7 @@ func TestPostRepository_GetByUserID(t *testing.T) {
 	_, _ = repo.Create(ctx, "T2", "B2", uid1)
 	_, _ = repo.Create(ctx, "T3", "B3", uid2)
 
-	posts, err := repo.GetByUserID(ctx, uid1, 0, 10)
+	posts, err := repo.GetByUserID(ctx, uid1, "", 0, 10)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestPostRepository_ListAll(t *testing.T) {
 	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
 	t.Run("returns all posts", func(t *testing.T) {
-		posts, err := repo.ListAll(ctx, "", 0, 10)
+		posts, err := repo.ListAll(ctx, "", "", 0, 10)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -138,7 +138,7 @@ func TestPostRepository_ListAll(t *testing.T) {
 	})
 
 	t.Run("filters by search", func(t *testing.T) {
-		posts, err := repo.ListAll(ctx, "Alpha", 0, 10)
+		posts, err := repo.ListAll(ctx, "Alpha", "", 0, 10)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -158,7 +158,7 @@ func TestPostRepository_CountAll(t *testing.T) {
 	_, _ = repo.Create(ctx, "Alpha", "Body", uid1)
 	_, _ = repo.Create(ctx, "Beta", "Body", uid2)
 
-	count, err := repo.CountAll(ctx, "")
+	count, err := repo.CountAll(ctx, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestPostRepository_PruneExpired(t *testing.T) {
 		t.Errorf("pruned QIDs = %v, want [%s]", pruned, p.QID)
 	}
 
-	count, _ := repo.CountAll(ctx, "")
+	count, _ := repo.CountAll(ctx, "", "")
 	if count != 1 {
 		t.Errorf("count = %d, want 1", count)
 	}
@@ -366,7 +366,7 @@ func TestPostRepository_OrderStabilityTiebreak(t *testing.T) {
 
 		want := []int{p3.ID, p2.ID, p1.ID} // newest id first
 		for range 3 {
-			got, err := repo.GetByUserID(ctx, uid, 0, 10)
+			got, err := repo.GetByUserID(ctx, uid, "", 0, 10)
 			if err != nil {
 				t.Fatalf("GetByUserID: %v", err)
 			}
@@ -395,7 +395,7 @@ func TestPostRepository_OrderStabilityTiebreak(t *testing.T) {
 
 		want := []int{p2.ID, p1.ID}
 		for range 3 {
-			got, err := repo.ListAll(ctx, "", 0, 10)
+			got, err := repo.ListAll(ctx, "", "", 0, 10)
 			if err != nil {
 				t.Fatalf("ListAll: %v", err)
 			}

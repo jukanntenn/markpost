@@ -264,6 +264,17 @@ refresh_signing_key = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_REFRESH_KEY"
 # [OPTIONAL]  Env: MARKPOST_RATELIMIT__AUTHED_WRITE__BURST  Default: 60
 # burst = 60
 
+# Login endpoint IP limiter (C2.1 层 A): POST /auth/login + /oauth/login,
+# keyed on the client IP. Dedicated bucket — not shared with the L1/L3
+# limiters. Account-level failed-attempt locking is separate (5 fails → 15 min
+# lock, in-memory).
+[ratelimit.login]
+# 5 per minute per IP.
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__LOGIN__PER_SECOND  Default: 0.0833333333
+# per_second = 0.0833333333
+# [OPTIONAL]  Env: MARKPOST_RATELIMIT__LOGIN__BURST  Default: 5
+# burst = 5
+
 
 # --- Delivery ------------------------------------------------------------------
 

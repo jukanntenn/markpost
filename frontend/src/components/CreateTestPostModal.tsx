@@ -1,25 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation } from '@tanstack/react-query'
-import { toast } from '@/stores/toast'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Controller, useForm } from 'react-hook-form'
+import { Field } from '@base-ui/react/field'
+import { Form } from '@base-ui/react/form'
+import { toastManager } from '@/stores/toast'
 import { request } from '@/lib/api'
-import { setErrorOnError } from '@/lib/mutation-helpers'
-
-import { FormAlert } from '@/components/ui/form-alert'
+import { createTestPostSchema } from '@/lib/schemas'
 import { Button } from '@/components/ui/button'
-import { LoadingButton } from '@/components/ui/loading-button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import type {
   CreateTestPostRequest,
@@ -33,6 +32,11 @@ interface CreateTestPostModalProps {
   onSuccess: () => void
 }
 
+interface TestPostValues {
+  title: string
+  body: string
+}
+
 async function createTestPost(
   postKey: string,
   data: CreateTestPostRequest,
@@ -44,6 +48,8 @@ async function createTestPost(
   })
 }
 
+// F.11 测试发帖 Dialog：base-ui Form + RHF + zod（title/body 必填，
+// title ≤150 字符）。成功 toast + invalidate 活动流（H.3 清单）。
 function CreateTestPostModal({
   show,
   postKey,
@@ -51,103 +57,134 @@ function CreateTestPostModal({
   onSuccess,
 }: CreateTestPostModalProps) {
   const t = useTranslations('createTestPost')
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [error, setError] = useState<string>('')
 
-  const { mutate, isPending, reset } = useMutation({
-    mutationFn: (data: CreateTestPostRequest) => createTestPost(postKey, data),
-    onSuccess: () => {
-      toast.success(t('successHeader'), {
-        description: t('successBody'),
-      })
-      handleReset()
-      onSuccess()
-    },
-    onError: setErrorOnError(setError),
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<TestPostValues>({
+    resolver: zodResolver(createTestPostSchema),
+    defaultValues: { title: '', body: '' },
+    mode: 'onSubmit',
   })
 
-  function handleReset() {
-    setTitle('')
-    setBody('')
-    setError('')
-    reset()
-  }
+  useEffect(() => {
+    if (show) reset()
+  }, [show, reset])
 
-  function handleHide() {
-    handleReset()
-    onHide()
-  }
+  const { mutate } = useMutation({
+    mutationFn: (data: TestPostValues) =>
+      createTestPost(postKey, {
+        title: data.title.trim() || 'Untitled',
+        body: data.body,
+      }),
+    onSuccess: () => {
+      toastManager.add({ type: 'success', title: t('success') })
+      reset()
+      onSuccess()
+      onHide()
+    },
+    onError: (err: Error) => {
+      toastManager.add({ type: 'error', title: err.message })
+    },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!body.trim()) {
-      setError(t('errorEmptyBody'))
-      return
-    }
-    mutate({ title: title.trim() || 'Untitled', body })
+  const fieldMessage = (
+    message: string | undefined,
+    field: 'title' | 'body',
+  ) => {
+    if (!message) return ''
+    if (message === 'required')
+      return field === 'title' ? t('titleRequired') : t('bodyRequired')
+    if (message === 'title_too_long') return t('titleTooLong')
+    return t(message)
   }
 
   return (
-    <Dialog
-      open={show}
-      onOpenChange={(open) => (!open ? handleHide() : undefined)}
-    >
+    <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
       <DialogContent className="sm:max-w-2xl">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <Form
+          onSubmit={handleSubmit((v) => mutate(v))}
+          className="space-y-4"
+          aria-label={t('title')}
+        >
           <DialogHeader>
             <DialogTitle>{t('title')}</DialogTitle>
-            <DialogDescription className="sr-only">
-              {t('title')}
-            </DialogDescription>
           </DialogHeader>
 
-          <FormAlert message={error} />
+          <Controller
+            name="title"
+            control={control}
+            render={({
+              field: { ref, name, value, onChange, onBlur },
+              fieldState: { invalid, isTouched, isDirty, error },
+            }) => (
+              <Field.Root
+                name={name}
+                invalid={invalid}
+                touched={isTouched}
+                dirty={isDirty}
+              >
+                <Field.Label>{t('titleLabel')}</Field.Label>
+                <Field.Control
+                  ref={ref}
+                  value={value}
+                  onValueChange={onChange}
+                  onBlur={onBlur}
+                  render={<Input autoComplete="off" autoFocus />}
+                  placeholder={t('titlePlaceholder')}
+                />
+                <Field.Error match={!!error}>
+                  {fieldMessage(error?.message, 'title')}
+                </Field.Error>
+              </Field.Root>
+            )}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="test-post-title">{t('titleLabel')}</Label>
-            <Input
-              id="test-post-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('titlePlaceholder')}
-              disabled={isPending}
-              autoComplete="off"
-              autoFocus
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="test-post-body">{t('bodyLabel')}</Label>
-            <Textarea
-              id="test-post-body"
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={t('bodyPlaceholder')}
-              disabled={isPending}
-              rows={8}
-            />
-          </div>
+          <Controller
+            name="body"
+            control={control}
+            render={({
+              field: { ref, name, value, onChange, onBlur },
+              fieldState: { invalid, isTouched, isDirty, error },
+            }) => (
+              <Field.Root
+                name={name}
+                invalid={invalid}
+                touched={isTouched}
+                dirty={isDirty}
+              >
+                <Field.Label>{t('bodyLabel')}</Field.Label>
+                <Field.Control
+                  ref={ref}
+                  value={value}
+                  onValueChange={onChange}
+                  onBlur={onBlur}
+                  render={<Textarea rows={8} />}
+                  placeholder={t('bodyPlaceholder')}
+                />
+                <Field.Error match={!!error}>
+                  {fieldMessage(error?.message, 'body')}
+                </Field.Error>
+              </Field.Root>
+            )}
+          />
 
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={handleHide}
-              disabled={isPending}
+              onClick={onHide}
+              disabled={isSubmitting}
             >
               {t('cancel')}
             </Button>
-            <LoadingButton
-              type="submit"
-              disabled={isPending || !body.trim()}
-              loading={isPending}
-              loadingText={t('creating')}
-            >
-              {t('create')}
-            </LoadingButton>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? t('creating') : t('create')}
+            </Button>
           </DialogFooter>
-        </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

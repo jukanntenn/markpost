@@ -57,11 +57,18 @@ func validateBearerToken(c *gin.Context, tokenString string, jwtSvc *auth.JWTSer
 
 	u, err := users.GetByID(c.Request.Context(), claims.UserID)
 	if err != nil {
-		return nil, nil, service.WrapNotFoundOrInternal(err, "user not found", "failed to get user information")
+		// K.4 fail-close：user 查询失败（含用户已删除）一律 401，宁误杀不放行。
+		return nil, nil, service.Wrap(auth.ErrInvalidToken, "failed to load user", err)
 	}
 
 	if !u.IsActive {
 		return nil, nil, service.New(auth.ErrUserDisabled, "user account is disabled")
+	}
+
+	// C2.6：token 的 tv 必须等于用户当前 token_version，否则该 token 已随
+	// 改密/强制下线/封禁而失效（合并到现有 user 查询，零额外 DB 开销）。
+	if claims.TokenVersion != u.TokenVersion {
+		return nil, nil, service.New(auth.ErrInvalidToken, "token version mismatch")
 	}
 
 	return u, claims, nil

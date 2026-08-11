@@ -1,5 +1,5 @@
 import { test, expect } from "../lib/fixtures";
-import { waitForBackend } from "../lib/helpers";
+import { waitForBackend, apiLogin } from "../lib/helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await waitForBackend(request);
@@ -8,24 +8,13 @@ test.beforeEach(async ({ page, request }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test("renders login page and enables submit when inputs filled", async ({ loginPage }) => {
+// B1.7 登录：成功跳转 /dashboard；失败 FormAlert；会话过期横幅。
+test("renders login page with username and password fields", async ({
+  loginPage,
+}) => {
   await expect(loginPage.usernameInput).toBeVisible();
   await expect(loginPage.passwordInput).toBeVisible();
-  await expect(loginPage.submitButton).toBeDisabled();
-
-  await loginPage.usernameInput.fill("testuser");
-  await loginPage.passwordInput.fill("testpass");
-
-  await expect(loginPage.submitButton).toBeEnabled();
-});
-
-test("keeps submit disabled when only one field is filled", async ({ loginPage }) => {
-  await loginPage.usernameInput.fill("onlyuser");
-  await expect(loginPage.submitButton).toBeDisabled();
-
-  await loginPage.usernameInput.fill("");
-  await loginPage.passwordInput.fill("onlypass");
-  await expect(loginPage.submitButton).toBeDisabled();
+  await expect(loginPage.submitButton).toBeVisible();
 });
 
 test("logs in with valid credentials and redirects to dashboard", async ({
@@ -37,51 +26,48 @@ test("logs in with valid credentials and redirects to dashboard", async ({
 
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard", { timeout: 30000 });
-  await expect(dashboardPage.postKeyHeading).toBeVisible({ timeout: 15000 });
+  await expect(dashboardPage.welcomeHeading).toBeVisible({ timeout: 15000 });
 });
 
 test("shows error on invalid credentials", async ({ page, loginPage }) => {
   await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.login("markpost", "wrongpassword");
-  const error = await loginPage.getErrorMessage();
-  await expect(error).toBeVisible();
+  await expect(loginPage.formAlert).toContainText(
+    "Incorrect username or password",
+  );
 });
 
-test("clears error alert when inputs change", async ({ page, loginPage }) => {
-  await page.evaluate(() => localStorage.setItem("locale", "en"));
-
-  await loginPage.login("markpost", "wrongpassword");
-  const error = await loginPage.getErrorMessage();
-  await expect(error).toBeVisible();
-
-  await loginPage.usernameInput.fill("x");
-  await expect(loginPage.errorAlert).toHaveCount(0, { timeout: 10000 });
-});
-
-test("submits form when pressing Enter in password field", async ({
+test("account locks after 5 failed attempts (C2.1)", async ({
   page,
   loginPage,
-  dashboardPage,
+  request,
 }) => {
   await page.evaluate(() => localStorage.setItem("locale", "en"));
 
-  await loginPage.usernameInput.fill("markpost");
-  await loginPage.passwordInput.fill("markpost");
-  await loginPage.submitByPressingEnter();
+  // 用独立账号锁定，避免把 markpost 锁死 15 分钟污染后续测试。
+  const auth = await apiLogin(request);
+  await request.post(`https://localhost:2053/api/v1/admin/users`, {
+    headers: { Authorization: `Bearer ${auth.token}` },
+    data: { username: "locktarget", password: "password123" },
+  });
 
-  await page.waitForURL("**/dashboard", { timeout: 30000 });
-  await expect(dashboardPage.postKeyHeading).toBeVisible({ timeout: 15000 });
+  for (let i = 0; i < 5; i++) {
+    await loginPage.login("locktarget", "wrongpassword");
+    await expect(loginPage.formAlert).toBeVisible();
+  }
+  // 锁定期间正确密码也返回 account_locked（429 文案带分钟）。
+  await loginPage.login("locktarget", "password123");
+  await expect(loginPage.formAlert).toContainText(/Too many attempts/);
 });
 
-test("redirects to dashboard when already authenticated", async ({
-  authenticatedPage,
-  dashboardPage,
+test("keeps next= target after login (K.3)", async ({
+  page,
+  loginPage,
 }) => {
-  await authenticatedPage.goto("/dashboard");
-  await expect(dashboardPage.postKeyHeading).toBeVisible({ timeout: 15000 });
-});
-
-test("displays divider text", async ({ page }) => {
-  await expect(page.getByText("or", { exact: true })).toBeVisible();
+  await page.evaluate(() => localStorage.setItem("locale", "en"));
+  await page.goto("/posts");
+  await page.waitForURL("**/login?next=**");
+  await loginPage.login("markpost", "markpost");
+  await page.waitForURL("**/posts", { timeout: 30000 });
 });

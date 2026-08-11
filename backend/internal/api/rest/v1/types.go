@@ -14,24 +14,29 @@ import (
 
 // --- Auth types ---
 
-// UserResponse represents the user data returned in API responses.
+// UserResponse represents the user data returned in API responses. is_active /
+// is_email_verified let the frontend sense ban state (B1.12).
 type UserResponse struct {
-	ID        int     `json:"id"`
-	Email     string  `json:"email"`
-	Username  string  `json:"username"`
-	Name      string  `json:"name"`
-	AvatarURL *string `json:"avatar_url"`
-	Role      string  `json:"role"`
+	ID              int     `json:"id"`
+	Email           string  `json:"email"`
+	Username        string  `json:"username"`
+	Name            string  `json:"name"`
+	AvatarURL       *string `json:"avatar_url"`
+	Role            string  `json:"role"`
+	IsActive        bool    `json:"is_active"`
+	IsEmailVerified bool    `json:"is_email_verified"`
 }
 
 func newUserResponse(u user.User) UserResponse {
 	return UserResponse{
-		ID:        u.ID,
-		Email:     u.Email,
-		Username:  u.Username,
-		Name:      u.Name,
-		AvatarURL: u.AvatarURL,
-		Role:      string(u.Role),
+		ID:              u.ID,
+		Email:           u.Email,
+		Username:        u.Username,
+		Name:            u.Name,
+		AvatarURL:       u.AvatarURL,
+		Role:            string(u.Role),
+		IsActive:        u.IsActive,
+		IsEmailVerified: u.IsEmailVerified,
 	}
 }
 
@@ -51,6 +56,17 @@ type AuthResponse struct {
 // RefreshTokenResponse represents the response for a successful token refresh.
 type RefreshTokenResponse struct {
 	TokenFields
+}
+
+// ChangePasswordResponse is the change-password success body: a fresh token
+// pair so the client continues seamlessly (C2.2, no re-login).
+type ChangePasswordResponse struct {
+	TokenFields
+}
+
+// SessionsResponse is the user/admin session listing body (I.12/D3.2).
+type SessionsResponse struct {
+	Sessions []user.RefreshToken `json:"sessions"`
 }
 
 // PostKeyResponse represents the response containing a user's post key.
@@ -85,10 +101,11 @@ type RefreshTokenRequest struct {
 // PasswordChangeRequest represents the request body for changing a user's password.
 // CurrentPassword is optional: users created via OAuth without a local password
 // may leave it empty; the service layer validates it against the stored hash and
-// skips verification when no password is set.
+// skips verification when no password is set. Length policy (min 8/max 72) is
+// enforced by the service layer — C2.3 单一真相源, no binding tag here.
 type PasswordChangeRequest struct {
 	CurrentPassword string `json:"current_password"`
-	NewPassword     string `json:"new_password" binding:"required,min=6"`
+	NewPassword     string `json:"new_password" binding:"required"`
 }
 
 // --- Post types ---
@@ -113,6 +130,12 @@ type PostsListResponse struct {
 	Page       int            `json:"page"`
 	Limit      int            `json:"limit"`
 	TotalPages int            `json:"total_pages"`
+}
+
+// PostsQuery binds the user posts listing query (B3.3 search + pagination).
+type PostsQuery struct {
+	PaginationQuery
+	Search string `form:"search"`
 }
 
 // PostRequest represents the request body for creating a new post.
@@ -262,24 +285,35 @@ type DeliveryLatestListResponse struct {
 
 // --- Admin types ---
 
-// AdminUserItem represents a user entry in the admin user list.
+// AdminUserItem represents a user entry in the admin user list / detail
+// (D3.1/D3.2): post_key + last_login_at exposed for the detail profile page.
 type AdminUserItem struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              int        `json:"id"`
+	Username        string     `json:"username"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	IsEmailVerified bool       `json:"is_email_verified"`
+	GitHubID        *int64     `json:"github_id"`
+	Role            string     `json:"role"`
+	IsActive        bool       `json:"is_active"`
+	PostKey         string     `json:"post_key"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	CreatedAt       time.Time  `json:"created_at"`
 }
 
 func newAdminUserItem(u user.User) AdminUserItem {
 	return AdminUserItem{
-		ID:        u.ID,
-		Username:  u.Username,
-		Email:     u.Email,
-		Role:      string(u.Role),
-		IsActive:  u.IsActive,
-		CreatedAt: u.CreatedAt,
+		ID:              u.ID,
+		Username:        u.Username,
+		Name:            u.Name,
+		Email:           u.Email,
+		IsEmailVerified: u.IsEmailVerified,
+		GitHubID:        u.GitHubID,
+		Role:            string(u.Role),
+		IsActive:        u.IsActive,
+		PostKey:         u.PostKey,
+		LastLoginAt:     u.LastLoginAt,
+		CreatedAt:       u.CreatedAt,
 	}
 }
 
@@ -334,33 +368,77 @@ func newAdminChannelItem(ch delivery.Channel) AdminChannelItem {
 // AdminPostsQuery represents the query parameters for admin post listing.
 type AdminPostsQuery struct {
 	PaginationQuery
+	Search   string `form:"search"`
+	Username string `form:"username"`
+}
+
+// AdminUsersQuery represents the query parameters for the admin user listing
+// (D3.1 username LIKE search).
+type AdminUsersQuery struct {
+	PaginationQuery
 	Search string `form:"search"`
 }
 
+// AdminAuditQuery binds the admin audit log filters (D4.3).
+type AdminAuditQuery struct {
+	PaginationQuery
+	ActorID    int    `form:"actor_id"`
+	Action     string `form:"action"`
+	TargetType string `form:"target_type"`
+	TargetID   string `form:"target_id"`
+	Since      string `form:"since"` // RFC3339
+	Until      string `form:"until"` // RFC3339
+}
+
 // DeliveryHistoryQuery binds the query parameters for a user's delivery history
-// listing: pagination plus an optional channel_id filter (0 or absent = no
-// channel filter).
+// listing: pagination plus optional channel_id / status filters (B3.4).
 type DeliveryHistoryQuery struct {
 	PaginationQuery
-	ChannelID int `form:"channel_id"`
+	ChannelID int    `form:"channel_id"`
+	Status    string `form:"status"`
 }
 
-// PaginatedUsers represents a paginated list of admin user items.
-type PaginatedUsers struct {
-	Users      []AdminUserItem `json:"users"`
-	Pagination Pagination      `json:"pagination"`
+// AdminDeliveryHistoryQuery binds the query parameters for the admin delivery
+// history listing: user_id / channel_id / status filters (F.8, I.10).
+type AdminDeliveryHistoryQuery struct {
+	PaginationQuery
+	UserID    int    `form:"user_id"`
+	ChannelID int    `form:"channel_id"`
+	Status    string `form:"status"`
 }
 
-// PaginatedPosts represents a paginated list of admin post items.
-type PaginatedPosts struct {
-	Posts      []AdminPostItem `json:"posts"`
-	Pagination Pagination      `json:"pagination"`
+// DeliveryStatsResponse is the user delivery stats body (B2.7/K.2):
+// today counters for the pipeline status bar plus the per-day trend.
+type DeliveryStatsResponse struct {
+	Today delivery.TodayCounts  `json:"today"`
+	Trend []*delivery.DailyStat `json:"trend"`
 }
 
-// PaginatedChannels represents a paginated list of admin channel items.
-type PaginatedChannels struct {
-	Channels   []AdminChannelItem `json:"channels"`
-	Pagination Pagination         `json:"pagination"`
+// PendingAttemptsResponse lists the user's in-flight attempts (K.2).
+type PendingAttemptsResponse struct {
+	Items []*delivery.PendingAttemptRow `json:"items"`
+}
+
+// AdminLockedChannelsResponse lists channels flagged by the failing-channel
+// query (D2.1/K.7).
+type AdminLockedChannelsResponse struct {
+	Items []*delivery.LockedChannel `json:"items"`
+}
+
+// RotatePostKeyResponse returns the new post key (C2.5).
+type RotatePostKeyResponse struct {
+	PostKey string `json:"post_key"`
+}
+
+// PaginatedItemsResponse is the flat paginated envelope mandated by I.10:
+// { items, total, page, limit, total_pages }. The items field carries the
+// resource-specific item type; swag documents it as an opaque object.
+type PaginatedItemsResponse struct {
+	Items      any   `json:"items"`
+	Total      int64 `json:"total"`
+	Page       int   `json:"page"`
+	Limit      int   `json:"limit"`
+	TotalPages int   `json:"total_pages"`
 }
 
 // --- Health types ---
@@ -373,34 +451,34 @@ type HealthResponse struct {
 // --- Audit types ---
 
 // AdminAuditLogItem represents an audit log entry in the admin audit log list.
+// actor_username is JOINed at read time (D4.1). target_username is JOINed only
+// for user-targeted rows (DEV-1); nil otherwise.
 type AdminAuditLogItem struct {
-	ID         int64           `json:"id"`
-	ActorID    int             `json:"actor_id"`
-	Action     string          `json:"action"`
-	TargetType string          `json:"target_type"`
-	TargetID   string          `json:"target_id"`
-	Metadata   json.RawMessage `json:"metadata"`
-	IP         string          `json:"ip"`
-	CreatedAt  time.Time       `json:"created_at"`
+	ID             int64           `json:"id"`
+	ActorID        int             `json:"actor_id"`
+	ActorUsername  string          `json:"actor_username"`
+	Action         string          `json:"action"`
+	TargetType     string          `json:"target_type"`
+	TargetID       string          `json:"target_id"`
+	TargetUsername *string         `json:"target_username"`
+	Metadata       json.RawMessage `json:"metadata"`
+	IP             string          `json:"ip"`
+	CreatedAt      time.Time       `json:"created_at"`
 }
 
-func newAdminAuditLogItem(log audit.Log) AdminAuditLogItem {
+func newAdminAuditLogItem(row audit.LogRow) AdminAuditLogItem {
 	return AdminAuditLogItem{
-		ID:         log.ID,
-		ActorID:    log.ActorID,
-		Action:     log.Action,
-		TargetType: log.TargetType,
-		TargetID:   log.TargetID,
-		Metadata:   log.Metadata,
-		IP:         log.IP,
-		CreatedAt:  log.CreatedAt,
+		ID:             row.ID,
+		ActorID:        row.ActorID,
+		ActorUsername:  row.ActorUsername,
+		Action:         row.Action,
+		TargetType:     row.TargetType,
+		TargetID:       row.TargetID,
+		TargetUsername: row.TargetUsername,
+		Metadata:       row.Metadata,
+		IP:             row.IP,
+		CreatedAt:      row.CreatedAt,
 	}
-}
-
-// PaginatedAuditLogs represents a paginated list of admin audit log items.
-type PaginatedAuditLogs struct {
-	AuditLogs  []AdminAuditLogItem `json:"audit_logs"`
-	Pagination Pagination          `json:"pagination"`
 }
 
 // AdminSessionItem represents a user session in the admin session list.
@@ -417,15 +495,25 @@ type AdminSessionsResponse struct {
 	Sessions []AdminSessionItem `json:"sessions"`
 }
 
-// AdminStatsResponse represents the aggregate counts shown on the admin dashboard.
+// AdminStatsResponse represents the aggregate counts shown on the admin
+// dashboard, including the 7-day deltas (D2.4).
 type AdminStatsResponse struct {
 	Counts AdminStatsCounts `json:"counts"`
 }
 
-// AdminStatsCounts holds the per-resource totals for the admin dashboard.
+// AdminStatsCounts holds the per-resource totals and week deltas.
 type AdminStatsCounts struct {
-	Users    int64 `json:"users"`
-	Posts    int64 `json:"posts"`
-	Channels int64 `json:"channels"`
-	History  int64 `json:"history"`
+	Users            int64 `json:"users"`
+	Posts            int64 `json:"posts"`
+	Channels         int64 `json:"channels"`
+	History          int64 `json:"history"`
+	UsersWeekDelta   int64 `json:"users_week_delta"`
+	PostsWeekDelta   int64 `json:"posts_week_delta"`
+	HistoryWeekDelta int64 `json:"history_week_delta"`
+}
+
+// AdminResetPasswordResponse returns the generated temporary password in
+// plaintext exactly once (D3.3 方案 B).
+type AdminResetPasswordResponse struct {
+	Password string `json:"password"`
 }

@@ -47,8 +47,18 @@ func RunResetPassword(configPath, username, password string) error {
 		password = pwd
 	}
 
+	// C2.3 统一预检：CLI 路径同样遵守密码策略（显式传入的密码）。
+	if err := utils.ValidatePasswordPolicy(password); err != nil {
+		return fmt.Errorf("password violates policy: %w", err)
+	}
+
 	if err := userRepo.SetPassword(context.Background(), u.ID, password); err != nil {
 		return fmt.Errorf("failed to reset password: %w", err)
+	}
+
+	// C2.6 统一失效原语：重置密码同样自增 token_version，立即踢掉存量会话。
+	if err := userRepo.BumpTokenVersion(context.Background(), u.ID); err != nil {
+		return fmt.Errorf("failed to bump token version: %w", err)
 	}
 
 	if err := tokenRepo.RevokeAllByUserID(context.Background(), u.ID); err != nil {

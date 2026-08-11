@@ -6,6 +6,7 @@ package apierr
 
 import (
 	"log/slog"
+	"strconv"
 
 	"markpost/internal/service"
 
@@ -42,6 +43,23 @@ func RespondError(c *gin.Context, err error) {
 		writeError(c, service.ErrInternal, nil, nil)
 		return
 	}
+	// C2.4 429 Retry-After：错误携带动态 RetryAfter 时透出 header。
+	if v, ok := se.Data["RetryAfter"]; ok {
+		switch n := v.(type) {
+		case int:
+			if n > 0 {
+				c.Header("Retry-After", strconv.Itoa(n))
+			}
+		case int64:
+			if n > 0 {
+				c.Header("Retry-After", strconv.FormatInt(n, 10))
+			}
+		case float64:
+			if n > 0 {
+				c.Header("Retry-After", strconv.Itoa(int(n)))
+			}
+		}
+	}
 	var fieldErrors []FieldError
 	var data map[string]any
 	if se.Code == service.ErrValidation {
@@ -49,6 +67,10 @@ func RespondError(c *gin.Context, err error) {
 		if len(se.Details) > 0 {
 			data = buildTemplateData(se)
 		}
+	} else if len(se.Data) > 0 {
+		// Non-validation codes carrying dynamic i18n template data
+		// (e.g. account_locked's {{.Minutes}}). Q12 一致性裁决.
+		data = se.Data
 	}
 	writeError(c, se.Code, data, fieldErrors)
 }

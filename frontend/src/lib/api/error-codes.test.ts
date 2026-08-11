@@ -35,8 +35,18 @@ describe('ApiErrorCodes sync with backend', () => {
   }
   const frontendCodes = Object.values(ApiErrorCodes)
 
+  // D.5 附录：network_error/timeout/parse_error 是前端构造码（base.ts），
+  // 不在后端错误码集合中；其余前端码必须与后端同步。
+  const FRONTEND_ONLY_CODES = new Set<string>([
+    ApiErrorCodes.NetworkError,
+    ApiErrorCodes.Timeout,
+    ApiErrorCodes.ParseError,
+  ])
+
   it('has no frontend codes missing from the backend', () => {
-    const missing = frontendCodes.filter((c) => !backendCodes.has(c))
+    const missing = frontendCodes.filter(
+      (c) => !backendCodes.has(c) && !FRONTEND_ONLY_CODES.has(c),
+    )
     expect(
       missing,
       `Frontend codes not in backend: ${missing.join(', ')}`,
@@ -49,7 +59,7 @@ describe('ApiErrorCodes sync with backend', () => {
     // and are intentionally absent from the frontend enum. We check the inverse
     // direction (frontend ⊆ backend) strictly above.
     const missing = Array.from(backendCodes).filter(
-      (c) => !frontendCodes.includes(c),
+      (c) => !(frontendCodes as string[]).includes(c),
     )
     // Log for visibility but do not fail: the frontend only needs a subset.
     expect(

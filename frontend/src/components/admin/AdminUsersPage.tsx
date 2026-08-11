@@ -2,275 +2,236 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  UserPlusIcon,
-  ShieldIcon,
-  UserMinusIcon,
-  Trash2Icon,
-} from 'lucide-react'
-import { adminApi, adminKeys, invalidateKey } from '@/lib/api'
-import { mutationOptions } from '@/lib/mutation-helpers'
-import { toast } from '@/stores/toast'
-import { useAdminTablePage } from '@/hooks/useAdminTablePage'
-import { formatToLocalTime } from '@/utils/time'
+import { useQuery } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import { PlusIcon, UsersIcon } from 'lucide-react'
+import { adminApi, adminKeys } from '@/lib/api'
+import { useUrlQueryState } from '@/hooks/useUrlQueryState'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { PageHeading } from '@/components/ui/page-heading'
 import { Button } from '@/components/ui/button'
-import { TableHead, TableRow, TableCell } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { AdminTablePage } from '@/components/admin/AdminTablePage'
-import { AdminUserDialog } from '@/components/admin/AdminUserDialog'
+import { SearchInput } from '@/components/ui/search-input'
+import { ListState } from '@/components/ui/list-state'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PaginationControls } from '@/components/ui/pagination-controls'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { relativeTime } from '@/utils/relative-time'
+import { useLocaleContext } from '@/components/providers/LocaleProvider'
+import { AdminUserDialog } from './AdminUserDialog'
+import {
+  UserActionsMenu,
+  UserGovernanceDialogs,
+  type PendingAction,
+} from './UserGovernance'
+import type { AdminUser } from '@/types/users'
 
-type UserAction =
-  | { type: 'role'; userId: number; username: string; newRole: string }
-  | { type: 'password'; userId: number; username: string }
-  | { type: 'active'; userId: number; username: string; active: boolean }
-  | { type: 'delete'; userId: number; username: string }
-
+// D3.1 用户列表：搜索（debounce 300ms）+ 状态 badge + 详情入口 + ⋮ 快捷操作。
 export function AdminUsersPage() {
   const t = useTranslations('admin')
-  const queryClient = useQueryClient()
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [action, setAction] = useState<UserAction | null>(null)
+  const tUsers = useTranslations('admin.users')
+  const { locale } = useLocaleContext()
+  const { state, setState, setPage } = useUrlQueryState<{
+    page: string
+    search: string
+  }>({ page: '1', search: '' })
 
-  const {
-    items: users,
-    pagination,
-    onPageChange,
-    ...queryState
-  } = useAdminTablePage({
-    queryKey: adminKeys.users.all(),
-    queryFn: (page, limit) => adminApi.listUsers(page, limit),
-    t,
+  const page = Math.max(1, Number.parseInt(state.page, 10) || 1)
+  const debouncedSearch = useDebouncedValue(state.search, 300)
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [action, setAction] = useState<PendingAction | null>(null)
+  const [actionUser, setActionUser] = useState<AdminUser | null>(null)
+  const router = useRouter()
+
+  const query = useQuery({
+    queryKey: adminKeys.users.list(page, debouncedSearch),
+    queryFn: () => adminApi.listUsers(page, debouncedSearch),
+    staleTime: 30_000,
   })
 
-  const roleMutation = useMutation(
-    mutationOptions({
-      mutationFn: ({ id, role }: { id: number; role: string }) =>
-        adminApi.setUserRole(id, role),
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.users.all())
-        toast.success(t('users.roleChanged'))
-        setAction(null)
-      },
-    }),
-  )
-
-  const activeMutation = useMutation(
-    mutationOptions({
-      mutationFn: ({ id, active }: { id: number; active: boolean }) =>
-        adminApi.setUserActive(id, active),
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.users.all())
-        toast.success(t('users.activeChanged'))
-        setAction(null)
-      },
-    }),
-  )
-
-  const deleteMutation = useMutation(
-    mutationOptions({
-      mutationFn: (id: number) => adminApi.deleteUser(id),
-      onSuccess: () => {
-        invalidateKey(queryClient, adminKeys.users.all())
-        invalidateKey(queryClient, adminKeys.stats())
-        toast.success(t('users.deleted'))
-        setAction(null)
-      },
-    }),
-  )
-
-  function handleAction() {
-    if (!action) return
-    switch (action.type) {
-      case 'role':
-        roleMutation.mutate({
-          id: action.userId,
-          role: action.newRole,
-        })
-        break
-      case 'active':
-        activeMutation.mutate({
-          id: action.userId,
-          active: action.active,
-        })
-        break
-      case 'delete':
-        deleteMutation.mutate(action.userId)
-        break
-    }
-  }
-
-  function getActionTitle() {
-    if (!action) return ''
-    switch (action.type) {
-      case 'role':
-        return t('users.changeRole')
-      case 'password':
-        return t('users.resetPassword')
-      case 'active':
-        return action.active ? t('users.enableUser') : t('users.disableUser')
-      case 'delete':
-        return t('users.deleteTitle')
-    }
-  }
-
-  function getActionDescription() {
-    if (!action) return ''
-    switch (action.type) {
-      case 'role':
-        return t('users.changeRoleConfirm', {
-          username: action.username,
-          role: action.newRole,
-        })
-      case 'active':
-        return action.active
-          ? t('users.enableUserConfirm', { username: action.username })
-          : t('users.disableUserConfirm', { username: action.username })
-      case 'delete':
-        return t('users.deleteConfirm', { username: action.username })
-    }
-  }
+  const users = query.data?.items ?? []
+  const total = query.data?.total ?? 0
+  const totalPages = query.data?.total_pages ?? 0
 
   return (
-    <>
-      <AdminTablePage
-        title={t('users.title')}
-        toolbar={
-          <Button onClick={() => setDialogOpen(true)}>
-            <UserPlusIcon className="mr-2 size-4" />
-            {t('users.addUser')}
+    <div className="space-y-6">
+      <PageHeading
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <PlusIcon className="mr-1 size-4" />
+            {tUsers('addUser')}
           </Button>
         }
-        {...queryState}
-        emptyText={t('noUsers')}
-        headers={
-          <>
-            <TableHead>{t('id')}</TableHead>
-            <TableHead>{t('username')}</TableHead>
-            <TableHead>{t('role')}</TableHead>
-            <TableHead>{t('createdAt')}</TableHead>
-            <TableHead className="w-32">{t('users.actions')}</TableHead>
-          </>
+      >
+        {tUsers('title')}
+      </PageHeading>
+
+      <div className="mb-4">
+        <SearchInput
+          placeholder={t('searchUserPlaceholder')}
+          value={state.search}
+          onChange={(v) => setState({ search: v })}
+        />
+      </div>
+
+      <ListState
+        isLoading={query.isLoading}
+        error={query.error}
+        loadingSkeleton={
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         }
-        colSpan={5}
-        items={users}
-        renderRow={(user) => (
-          <TableRow key={user.id}>
-            <TableCell>{user.id}</TableCell>
-            <TableCell>{user.username}</TableCell>
-            <TableCell>
-              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                {user.role === 'admin' ? t('roleAdmin') : t('roleUser')}
-              </Badge>
-            </TableCell>
-            <TableCell>{formatToLocalTime(user.created_at)}</TableCell>
-            <TableCell>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={t('users.changeRole')}
-                  onClick={() =>
-                    setAction({
-                      type: 'role',
-                      userId: user.id,
-                      username: user.username,
-                      newRole: user.role === 'admin' ? 'user' : 'admin',
-                    })
-                  }
+        emptyWhen={users.length === 0}
+        empty={
+          <EmptyState
+            icon={UsersIcon}
+            title={t('empty')}
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                {tUsers('addUser')}
+              </Button>
+            }
+          />
+        }
+        onRetry={() => query.refetch()}
+      >
+        {/* 桌面表格 */}
+        <div className="hidden overflow-hidden rounded-lg border lg:block">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('id')}</TableHead>
+                <TableHead>{t('username')}</TableHead>
+                <TableHead>{t('role')}</TableHead>
+                <TableHead>{t('status.normal')}</TableHead>
+                <TableHead>{t('createdAt')}</TableHead>
+                <TableHead className="w-32 text-right">
+                  {tUsers('actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {u.id}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <a
+                      href={`/admin/users?id=${u.id}`}
+                      className="hover:underline"
+                    >
+                      {u.username}
+                    </a>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>
+                      {u.role === 'admin' ? t('roleAdmin') : t('roleUser')}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge active={u.is_active} />
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {relativeTime(u.created_at, locale)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <UserActionsMenu
+                      user={u}
+                      onOpenDetail={(target) =>
+                        router.push(`/admin/users?id=${target.id}`)
+                      }
+                      onAction={(a) => {
+                        setActionUser(u)
+                        setAction(a)
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* 移动卡片 */}
+        <ul className="space-y-3 lg:hidden">
+          {users.map((u) => (
+            <li key={u.id} className="rounded-lg border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <a
+                  href={`/admin/users?id=${u.id}`}
+                  className="min-w-0 truncate font-semibold hover:underline"
                 >
-                  <ShieldIcon className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={
-                    user.is_active
-                      ? t('users.disableUser')
-                      : t('users.enableUser')
-                  }
-                  onClick={() =>
-                    setAction({
-                      type: 'active',
-                      userId: user.id,
-                      username: user.username,
-                      active: !user.is_active,
-                    })
-                  }
-                >
-                  <UserMinusIcon
-                    className={`size-4 ${!user.is_active ? 'text-muted-foreground' : ''}`}
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title={t('users.deleteTitle')}
-                  onClick={() =>
-                    setAction({
-                      type: 'delete',
-                      userId: user.id,
-                      username: user.username,
-                    })
-                  }
-                >
-                  <Trash2Icon className="size-4 text-destructive" />
-                </Button>
+                  {u.username}
+                </a>
+                <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>
+                  {u.role === 'admin' ? t('roleAdmin') : t('roleUser')}
+                </Badge>
               </div>
-            </TableCell>
-          </TableRow>
-        )}
-      />
-      {pagination && pagination.total_pages > 1 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('id')} {u.id} · {t('createdAt')}{' '}
+                {relativeTime(u.created_at, locale)}
+              </p>
+              <div className="mt-2 flex items-center justify-between">
+                <StatusBadge active={u.is_active} />
+                <a
+                  href={`/admin/users?id=${u.id}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {tUsers('viewDetail')}
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
+
         <PaginationControls
-          page={pagination.page}
-          totalPages={pagination.total_pages}
-          onPageChange={onPageChange}
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          onPageChange={setPage}
           prevLabel={t('previous')}
           nextLabel={t('next')}
+          totalLabel={(n) => t('total', { n })}
         />
+      </ListState>
+
+      {createOpen && (
+        <AdminUserDialog open={createOpen} onOpenChange={setCreateOpen} />
       )}
 
-      <AdminUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      {actionUser && (
+        <UserGovernanceDialogs
+          user={actionUser}
+          action={action}
+          onClose={() => setAction(null)}
+        />
+      )}
+    </div>
+  )
+}
 
-      <AlertDialog
-        open={action !== null && action.type !== 'password'}
-        onOpenChange={(open) => !open && setAction(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{getActionTitle()}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {getActionDescription()}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('users.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleAction}
-              className={
-                action?.type === 'delete'
-                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                  : ''
-              }
-            >
-              {t('users.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+export function StatusBadge({ active }: { active: boolean }) {
+  const t = useTranslations('admin.status')
+  return (
+    <Badge variant={active ? 'success' : 'danger'}>
+      <span
+        className={`mr-1 size-1.5 rounded-full ${active ? 'bg-success-foreground' : 'bg-danger-foreground'}`}
+      />
+      {active ? t('normal') : t('disabled')}
+    </Badge>
   )
 }
 

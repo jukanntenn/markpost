@@ -11,6 +11,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import type { AbstractIntlMessages } from 'next-intl'
 import { availableLocales, defaultLocale, type Locale } from '@/i18n/constants'
 import { setCurrentLocale } from '@/i18n/current'
+import { setClientMessages } from '@/i18n/messages'
 import { getDefaultLocale, loadMessages, persistLocale } from '@/utils/i18n'
 import { setDefaultLocale } from '@/utils/time'
 import { AppShellSkeleton } from './AppShellSkeleton'
@@ -21,7 +22,7 @@ interface LocaleContextValue {
   availableLocales: readonly Locale[]
 }
 
-const LocaleContext = createContext<LocaleContextValue | null>(null)
+export const LocaleContext = createContext<LocaleContextValue | null>(null)
 
 export function useLocaleContext() {
   const ctx = useContext(LocaleContext)
@@ -49,6 +50,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     (newLocale: Locale, m: AbstractIntlMessages) => {
       setLocaleState(newLocale)
       setMessages(m)
+      setClientMessages(m)
       document.documentElement.lang = newLocale
       setCurrentLocale(newLocale)
       setDefaultLocale(newLocale)

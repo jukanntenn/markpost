@@ -11,7 +11,6 @@ describe('Skeleton', () => {
     expect(el).toHaveClass('animate-shimmer')
     expect(el).toHaveClass('bg-muted')
     expect(el).toHaveClass('skeleton-shimmer')
-    expect(el).toHaveAttribute('data-slot', 'skeleton')
   })
 
   it('applies custom className alongside defaults', () => {

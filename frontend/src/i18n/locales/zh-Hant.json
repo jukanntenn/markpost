@@ -5,25 +5,56 @@
     "confirm": "確認",
     "create": "建立",
     "save": "儲存",
-    "done": "完成",
-    "processing": "處理中...",
+    "delete": "刪除",
+    "edit": "編輯",
+    "copy": "複製",
+    "copied": "已複製",
+    "refresh": "重新整理",
+    "retry": "重試",
+    "clear": "清除",
+    "search": "搜尋",
+    "loading": "載入中...",
+    "error": "發生錯誤",
+    "back": "返回",
+    "empty": "暫無資料",
+    "all": "全部",
     "yes": "是",
     "no": "否",
+    "done": "完成",
+    "processing": "處理中...",
+    "minutes": "{n} 分鐘",
+    "hours": "{n} 小時前",
+    "days": "{n} 天前",
+    "pageLabel": "第 {page} 頁",
+    "firstPage": "第一頁",
+    "lastPage": "最後一頁",
     "pageTitle": {
       "login": "登入 | Markpost",
-      "dashboard": "儀表板 | Markpost",
+      "dashboard": "概覽 | Markpost",
+      "posts": "文章 | Markpost",
+      "postKey": "Post Key | Markpost",
       "settings": "設定 | Markpost",
-      "allPosts": "全部 Posts | Markpost",
-      "adminUsers": "使用者 - 管理後台 | Markpost",
-      "adminPosts": "Posts - 管理後台 | Markpost",
-      "adminChannels": "頻道 - 管理後台 | Markpost",
-      "adminDeliveryHistory": "投遞歷史 - 管理後台 | Markpost"
-    }
+      "deliveryChannels": "投遞管道 | Markpost",
+      "deliveryChannel": "管道 | Markpost",
+      "deliveryHistory": "投遞紀錄 | Markpost",
+      "adminDashboard": "管理概覽 | Markpost",
+      "adminUsers": "使用者管理 | Markpost",
+      "adminUserDetail": "使用者詳情 | Markpost",
+      "adminPosts": "文章管理 | Markpost",
+      "adminChannels": "管道管理 | Markpost",
+      "adminDeliveryHistory": "投遞紀錄管理 | Markpost",
+      "adminAuditLogs": "稽核日誌 | Markpost",
+      "notFound": "頁面不存在 | Markpost"
+    },
+    "required": "為必填",
+    "previous": "上一頁",
+    "next": "下一頁",
+    "total": "共 {n} 筆"
   },
   "language": {
     "english": "English",
     "chinese": "中文",
-    "changeLanguage": "切換語言"
+    "changeLanguage": "變更語言"
   },
   "theme": {
     "light": "淺色模式",
@@ -32,367 +63,643 @@
     "toggleTheme": "切換主題"
   },
   "navigation": {
-    "dashboard": "儀表板",
+    "dashboard": "概覽",
     "posts": "文章",
     "delivery": "投遞",
+    "channels": "管道",
+    "history": "紀錄",
+    "postKey": "Post Key",
+    "settings": "設定",
+    "adminGroup": "管理",
     "userMenu": {
-      "admin": "管理員",
+      "admin": "管理後台",
       "settings": "設定",
-      "logout": "登出"
-    }
+      "logout": "登出",
+      "theme": "主題"
+    },
+    "aria": {
+      "sidebar": "主導覽",
+      "mobileSidebar": "導覽",
+      "openMenu": "開啟導覽選單",
+      "closeMenu": "關閉導覽選單",
+      "skipToContent": "跳到主要內容"
+    },
+    "users": "使用者",
+    "adminHistory": "投遞紀錄",
+    "auditLogs": "稽核日誌"
   },
   "login": {
+    "title": "登入 markpost",
+    "subtitle": "輸入你的憑證繼續",
     "username": "使用者名稱",
+    "usernamePlaceholder": "輸入使用者名稱",
     "password": "密碼",
+    "passwordPlaceholder": "輸入密碼",
     "loginButton": "登入",
     "signingIn": "登入中...",
     "or": "或",
-    "githubLogin": "使用 GitHub 登入",
-    "processingGitHubLogin": "正在處理 GitHub 登入，請稍候...",
-    "usernamePlaceholder": "輸入您的使用者名稱",
-    "passwordPlaceholder": "輸入您的密碼",
-    "cannotOpenAuthWindow": "無法開啟授權視窗，請檢查瀏覽器設定",
-    "loginFailed": "登入失敗",
-    "loginError": "登入異常，請稍後重試",
-    "unknownError": "未知錯誤"
+    "githubLogin": "使用 GitHub 繼續",
+    "processingGitHubLogin": "正在處理 GitHub 登入...",
+    "sessionExpired": "登入已過期，請重新登入",
+    "showPassword": "顯示密碼",
+    "hidePassword": "隱藏密碼",
+    "fieldRequired": {
+      "username": "請輸入使用者名稱",
+      "password": "請輸入密碼"
+    },
+    "formAlert": {
+      "invalid_credentials": "使用者名稱或密碼不正確",
+      "user_disabled": "帳號已停用，如需協助請聯絡管理員",
+      "internal": "登入服務暫時不可用，請稍後重試",
+      "network": "無法連線到伺服器，請檢查網路連線"
+    },
+    "oauthError": "無法發起 GitHub 登入，請稍後重試"
   },
   "loginCallback": {
-    "loading": "登入中...",
-    "authError": "登入異常",
-    "authFailed": "授權失敗",
-    "unknownError": "未知錯誤"
-  },
-  "dashboard": {
-    "postKey": {
-      "title": "Post Key",
-      "loadingKey": "正在載入您的 Post Key...",
-      "errorTitle": "載入 Post Key 失敗",
-      "errorLoadingKey": "載入您的 Post Key 失敗，請稍後重試。",
-      "showKey": "顯示 Post Key",
-      "hideKey": "隱藏 Post Key",
-      "copyKey": "複製 Post Key",
-      "createdAt": "建立於",
-      "copied": "已複製到剪貼簿！",
-      "copyFailed": "複製失敗",
-      "createTestPost": "建立測試內容",
-      "createTestPostTip": "快速建立一條 Markdown 範例",
-      "copyPostKey": "複製 Post 金鑰",
-      "copyPostUrl": "複製完整 Post 位址"
-    },
-    "recentPosts": {
-      "title": "最新 Posts",
-      "viewAll": "檢視全部",
-      "loading": "載入最新 Posts...",
-      "empty": "暫無內容",
-      "error": "載入失敗，請稍後重試"
-    },
-    "documentation": {
-      "title": "文件",
-      "content": "請參考",
-      "apiLink": "Markpost APIs",
-      "content2": "以取得完整的文件，了解如何將 Markpost 整合到您的應用程式中。",
-      "viewDocs": "檢視文件"
+    "loading": "正在完成登入...",
+    "errors": {
+      "missing_state": "GitHub 授權資訊缺失，請重新登入",
+      "missing_code": "GitHub 授權資訊缺失，請重新登入",
+      "invalid_state": "登入工作階段已過期，請重新嘗試",
+      "oauth_exchange_failed": "GitHub 授權失敗，請重試或聯絡管理員",
+      "github_user_fetch_failed": "無法取得 GitHub 帳號資訊，請稍後重試",
+      "timeout": "GitHub 登入逾時，請重試"
     }
   },
-  "createTestPost": {
-    "title": "建立測試內容",
-    "titleLabel": "標題（可選）",
-    "titlePlaceholder": "輸入標題，或留空",
-    "bodyLabel": "正文",
-    "bodyPlaceholder": "寫一點 Markdown 內容...",
-    "cancel": "取消",
-    "create": "建立",
-    "creating": "正在建立...",
-    "successHeader": "建立成功",
-    "successBody": "測試內容已成功建立。",
-    "errorServer": "建立失敗，請稍後重試",
-    "errorEmptyBody": "正文不能為空"
-  },
-  "posts": {
-    "title": "全部 Posts",
-    "loading": "載入中...",
-    "error": "載入失敗，請稍後重試",
-    "empty": "暫無內容",
-    "table": {
-      "title": "標題",
-      "createdAt": "建立時間"
+  "dashboard": {
+    "welcome": "歡迎，{name}",
+    "pipeline": {
+      "running": "管線執行中",
+      "partialFailure": "部分投遞異常",
+      "allFailed": "投遞失敗",
+      "idle": "暫無投遞",
+      "unconfigured": "未設定投遞管道"
     },
-    "pagination": {
-      "prev": "上一頁",
-      "next": "下一頁"
+    "todayDelivery": "今日投遞 {total} 次 · {success}✓ {failed}✗",
+    "activity": {
+      "title": "活動事件",
+      "viewAll": "查看全部活動",
+      "delivered": "{done}/{total} 已投遞 ✓",
+      "partialFail": "{done}/{total} 已投遞 ⚠",
+      "allFailed": "{done}/{total} 已投遞 ✗",
+      "pending": "投遞中...",
+      "viewDetail": "查看詳情",
+      "openPost": "開啟文章",
+      "showDetails": "展開投遞詳情",
+      "hideDetails": "收合投遞詳情"
+    },
+    "channelHealth": {
+      "title": "管道健康",
+      "normal": "正常",
+      "abnormal": "異常",
+      "noDelivery": "閒置"
+    },
+    "trend": {
+      "title": "投遞趨勢",
+      "days7": "7 天",
+      "days30": "30 天",
+      "success": "成功",
+      "failed": "失敗",
+      "empty": "暫無投遞資料"
+    },
+    "empty": {
+      "noChannel": {
+        "title": "還沒有投遞管道",
+        "desc": "建立一個管道，markpost 就能把你的文章自動投遞到飛書等目的地",
+        "cta": "建立第一個管道"
+      }
+    },
+    "onboarding": {
+      "title": "開始使用 markpost",
+      "progress": "完成進度：{done}/{total} 步",
+      "step1Title": "建立投遞管道",
+      "step1Desc": "把文章投遞到飛書等目的地",
+      "step1Cta": "建立管道",
+      "step2Title": "取得你的 Post Key",
+      "step2Desc": "用它接收文章",
+      "step2Cta": "查看 Post Key",
+      "step3Title": "傳送第一篇文章",
+      "step3Desc": "測試整個投遞鏈路",
+      "step3Cta": "傳送測試文章"
+    },
+    "recentPosts": {
+      "title": "最近文章",
+      "viewAll": "查看全部",
+      "empty": "還沒有文章"
+    }
+  },
+  "postKey": {
+    "title": "Post Key",
+    "explanation": "Post Key 是 markpost 接收文章的憑證。外部工具透過它向你的帳號傳送文章。",
+    "showKey": "顯示",
+    "hideKey": "隱藏",
+    "copyKey": "複製 Key",
+    "copyPostUrl": "複製投遞位址",
+    "createdAt": "建立於",
+    "copied": "已複製",
+    "copyFailed": "複製失敗",
+    "testPost": "產生測試文章",
+    "rotate": "輪換 Key",
+    "rotateConfirm": {
+      "title": "輪換 Post Key",
+      "desc": "輪換將產生一個全新的 Post Key。舊 Key 立即失效，已設定的外部工具需更新。歷史文章不受影響。"
+    },
+    "rotateSuccess": "Post Key 已輪換",
+    "howToSend": {
+      "title": "如何傳送文章",
+      "desc": "向下面的位址傳送 POST 請求即可建立文章",
+      "apiDocs": "查看完整 API 文件",
+      "copyCurl": "複製 curl 範例",
+      "curlCopied": "curl 範例已複製"
     }
   },
   "settings": {
     "title": "設定",
+    "preferences": "偏好",
+    "security": "安全性",
     "applicationSettings": "應用程式設定",
     "language": "語言",
-    "languageDescription": "選擇您偏好的語言",
-    "changePassword": "修改密碼",
-    "currentPassword": "目前密碼",
-    "currentPasswordPlaceholder": "輸入您的目前密碼",
-    "currentPasswordHelp": "如果您透過 GitHub 登入且從未設定過密碼，可留空目前密碼",
-    "newPassword": "新密碼",
-    "newPasswordPlaceholder": "至少 6 個字元",
-    "confirmPassword": "確認新密碼",
-    "confirmPasswordPlaceholder": "再次輸入新密碼",
-    "enterCurrentPassword": "請輸入目前密碼",
-    "enterNewPassword": "請輸入新密碼",
-    "confirmPasswordRequired": "請確認新密碼",
-    "passwordStrengthValid": "密碼強度符合要求",
-    "passwordMinLength": "密碼至少需要 6 個字元",
-    "passwordsMatch": "密碼相符",
-    "passwordsNotMatch": "兩次輸入的密碼不一致",
-    "passwordSameAsCurrent": "新密碼不能與目前密碼相同",
-    "changingPassword": "修改密碼中...",
-    "passwordChangeSuccess": "密碼修改成功！",
-    "passwordChangeFailed": "密碼修改失敗，請重試"
+    "languageDescription": "介面語言將立即生效",
+    "changePassword": "變更密碼",
+    "password": {
+      "current": "目前密碼",
+      "currentPlaceholder": "輸入目前密碼",
+      "currentHelp": "若透過 GitHub 登入且從未設定密碼，可留空",
+      "new": "新密碼",
+      "newPlaceholder": "輸入新密碼",
+      "confirm": "確認新密碼",
+      "confirmPlaceholder": "再次輸入新密碼",
+      "minLength": "至少 8 個字元",
+      "notMatch": "兩次輸入的密碼不一致",
+      "submit": "變更密碼",
+      "changing": "變更中...",
+      "success": "密碼變更成功",
+      "strength": {
+        "weak": "弱",
+        "fair": "中",
+        "strong": "強"
+      },
+      "show": "顯示密碼",
+      "hide": "隱藏密碼",
+      "maxLength": "密碼不能超過 72 個字元"
+    },
+    "sessions": {
+      "title": "我的工作階段",
+      "empty": "無作用中工作階段",
+      "issued": "頒發於",
+      "expires": "到期於",
+      "active": "作用中",
+      "revoked": "已撤銷",
+      "revoke": "撤銷",
+      "revokeTitle": "撤銷工作階段",
+      "revokeConfirm": "撤銷這個工作階段？該裝置將需要重新登入。",
+      "logoutAll": "全部登出",
+      "logoutAllConfirm": "登出其他所有工作階段？目前裝置保持登入。",
+      "revokedToast": "工作階段已撤銷",
+      "allSignedOut": "其他工作階段已全部登出"
+    },
+    "securityDescription": "管理你的密碼與活躍工作階段"
+  },
+  "posts": {
+    "title": "文章",
+    "searchPlaceholder": "搜尋標題...",
+    "loading": "載入中...",
+    "error": "載入失敗",
+    "empty": "還沒有文章",
+    "emptyHint": "透過 Post Key 傳送文章",
+    "time": "時間",
+    "pagination": {
+      "prev": "上一頁",
+      "next": "下一頁",
+      "total": "共 {n} 筆"
+    }
   },
   "delivery": {
     "channels": {
-      "title": "投遞頻道",
-      "add": "新增頻道",
+      "title": "投遞管道",
+      "add": "新增管道",
       "loading": "載入中...",
-      "loadFailed": "載入頻道失敗",
-      "empty": "尚無投遞頻道",
-      "unnamed": "未命名頻道",
+      "loadFailed": "載入失敗",
+      "empty": "還沒有投遞管道",
+      "emptyCta": "建立一個管道開始接收投遞",
+      "unnamed": "未命名",
       "colName": "名稱",
       "colType": "類型",
       "colEnabled": "啟用",
-      "colKeywords": "關鍵詞",
+      "colKeywords": "關鍵字",
       "colLatest": "最近投遞",
       "colActions": "操作",
       "edit": "編輯",
-      "enabledToast": "頻道已啟用",
-      "disabledToast": "頻道已停用"
+      "enabledToast": "管道已啟用",
+      "disabledToast": "管道已停用",
+      "latest": {
+        "never": "從未"
+      }
+    },
+    "dialog": {
+      "createTitle": "新增管道",
+      "editTitle": "編輯管道",
+      "name": "管道名稱",
+      "namePlaceholder": "例如：飛書工作群",
+      "webhookURL": "Webhook URL",
+      "webhookPlaceholder": "https://open.feishu.cn/...",
+      "cardLinkURL": "卡片連結",
+      "cardLinkURLPlaceholder": "選填，投遞卡片點擊跳轉位址",
+      "keywords": "關鍵字篩選",
+      "keywordsPlaceholder": "mark, post",
+      "keywordsHelp": "僅比對包含這些關鍵字的文章（留空=全部比對）",
+      "keywordsSyntax": "語法：逗號/豎線=或，&=且，!=非，\"\"=精確片語，()=分組",
+      "keywordsInvalid": "語法錯誤：{error}",
+      "create": "建立",
+      "save": "儲存",
+      "cancel": "取消",
+      "delete": "刪除",
+      "confirmDelete": "確認刪除",
+      "deleting": "刪除中...",
+      "test": "傳送測試投遞",
+      "testing": "傳送中...",
+      "testSent": "已傳送",
+      "testRetry": "失敗 重試",
+      "saving": "儲存中...",
+      "created": "管道已建立",
+      "updated": "管道已更新",
+      "deleted": "管道已刪除",
+      "testSuccess": "測試投遞已傳送，請檢查管道",
+      "testFailed": "測試投遞失敗",
+      "deleteConfirm": {
+        "title": "刪除管道",
+        "desc": "確定刪除\"{name}\"嗎？該管道的歷史投遞紀錄會保留，但不會再投遞新內容，關聯的待處理投遞會失敗。"
+      },
+      "nameRequired": "請輸入管道名稱",
+      "webhookRequired": "請輸入 Webhook URL",
+      "invalidUrl": "必須是有效的 URL",
+      "nameTooLong": "管道名稱不能超過 64 個字元"
+    },
+    "channelDetail": {
+      "back": "返回管道列表",
+      "enabled": "啟用",
+      "disabled": "停用",
+      "edit": "編輯",
+      "test": "測試",
+      "delete": "刪除",
+      "configTitle": "設定",
+      "webhookURL": "Webhook URL",
+      "cardLinkURL": "卡片連結",
+      "keywords": "關鍵字篩選",
+      "createdAt": "建立時間",
+      "historyTitle": "最近投遞",
+      "loading": "載入中...",
+      "empty": "暫無投遞紀錄",
+      "notFound": "找不到該管道"
     },
     "history": {
-      "title": "投遞歷史",
-      "loading": "載入中...",
-      "loadFailed": "載入歷史失敗",
-      "empty": "尚無投遞歷史",
+      "title": "投遞紀錄",
+      "filter": {
+        "channel": "管道",
+        "status": "狀態"
+      },
+      "status": {
+        "delivered": "已投遞",
+        "failed": "失敗",
+        "expired": "已過期",
+        "pending": "投遞中"
+      },
       "colPost": "文章",
-      "colChannel": "頻道",
+      "colChannel": "管道",
       "colStatus": "狀態",
       "colTime": "時間",
       "colError": "錯誤",
-      "postDeleted": "原文章已刪除",
-      "channelDeleted": "投遞頻道已刪除",
-      "status_delivered": "已投遞",
-      "status_failed": "失敗",
-      "status_expired": "已過期",
+      "postDeleted": "文章已刪除",
+      "channelDeleted": "管道已刪除",
+      "detail": "詳情",
+      "empty": "無投遞紀錄",
+      "emptyFiltered": "沒有符合的投遞紀錄",
+      "loading": "載入中...",
+      "loadFailed": "載入失敗",
       "prev": "上一頁",
-      "next": "下一頁"
-    },
-    "latest": {
-      "never": "從未"
-    },
-    "channelDetail": {
-      "loading": "載入頻道中...",
-      "notFound": "頻道不存在",
-      "back": "返回頻道列表",
-      "enabled": "已啟用",
-      "disabled": "已停用",
-      "edit": "編輯",
-      "configTitle": "設定",
-      "webhookURL": "Webhook 位址",
-      "cardLinkURL": "卡片連結",
-      "keywords": "關鍵詞",
-      "createdAt": "建立時間",
-      "historyTitle": "投遞歷史"
-    },
-    "dialog": {
-      "createTitle": "新增投遞頻道",
-      "editTitle": "編輯投遞頻道",
-      "name": "名稱",
-      "namePlaceholder": "選填名稱",
-      "webhookURL": "Webhook 位址",
-      "webhookPlaceholder": "飛書機器人 Webhook 位址",
-      "cardLinkURL": "卡片連結",
-      "cardLinkURLPlaceholder": "選填,支援 QID 範本變數",
-      "keywords": "關鍵詞",
-      "keywordsPlaceholder": "選填,如 技術 & (Go | Rust)",
-      "keywordsInvalid": "運算式無效:{error}",
-      "keywordsPreview": "符合:{preview}",
-      "cancel": "取消",
-      "save": "儲存",
-      "create": "建立",
-      "saving": "儲存中...",
-      "delete": "刪除",
-      "deleting": "刪除中...",
-      "confirmDelete": "確認刪除",
-      "test": "測試",
-      "testing": "傳送中...",
-      "created": "頻道已建立",
-      "updated": "頻道已更新",
-      "deleted": "頻道已刪除",
-      "testSuccess": "測試訊息已傳送",
-      "testFailed": "測試訊息傳送失敗"
+      "next": "下一頁",
+      "total": "共 {n} 筆",
+      "emptyHint": "文章投遞後這裡會顯示紀錄"
     }
+  },
+  "network": {
+    "offline": "無法連線到伺服器，請檢查網路連線",
+    "timeout": "請求逾時，請重試",
+    "parseError": "伺服器回應異常，請稍後重試",
+    "sessionExpired": "登入已過期，請重新登入",
+    "logoutPartial": "已登出（部分工作階段可能未完全關閉）"
   },
   "admin": {
     "id": "ID",
     "username": "使用者名稱",
+    "email": "電子郵件",
+    "githubId": "GitHub",
     "role": "角色",
     "roleAdmin": "管理員",
     "roleUser": "一般使用者",
-    "githubId": "GitHub ID",
-    "createdAt": "建立時間",
-    "updatedAt": "更新時間",
-    "loading": "載入中...",
-    "error": "載入使用者失敗",
-    "noUsers": "未找到使用者",
+    "status": {
+      "normal": "正常",
+      "disabled": "已停用"
+    },
+    "createdAt": "建立於",
+    "lastLoginAt": "最後登入",
     "previous": "上一頁",
     "next": "下一頁",
-    "page": "{current} / {total}",
-    "totalUsers": "總計：{count} 位使用者",
-    "nav": {
-      "title": "管理後台",
-      "users": "使用者",
-      "posts": "Posts",
-      "channels": "頻道",
-      "history": "投遞歷史",
-      "dashboard": "儀表盤"
+    "searchUserPlaceholder": "搜尋使用者名稱...",
+    "searchPlaceholder": "搜尋...",
+    "confirm": "確認",
+    "cancel": "取消",
+    "loading": "載入中...",
+    "error": "載入失敗",
+    "empty": "暫無資料",
+    "total": "共 {n} 筆",
+    "dashboard": {
+      "title": "管理概覽",
+      "systemOk": "系統正常",
+      "needsAttention": {
+        "title": "需要關注",
+        "allGood": "一切正常",
+        "noIssue": "沒有需要關注的異常項目",
+        "detectError": "異常偵測暫時無法使用",
+        "channelFailing": "{name} 投遞失敗 {n} 次",
+        "usersBanned": "{n} 個使用者被封鎖",
+        "viewChannel": "查看管道",
+        "viewUser": "查看使用者"
+      },
+      "recentActions": {
+        "title": "最近管理操作",
+        "viewAll": "查看全部"
+      },
+      "stats": {
+        "users": "使用者",
+        "posts": "文章",
+        "channels": "管道",
+        "history": "投遞",
+        "weekDelta": "本週 +{n}"
+      },
+      "trend": {
+        "title": "投遞趨勢",
+        "days7": "7 天",
+        "days30": "30 天",
+        "success": "成功",
+        "failed": "失敗",
+        "empty": "暫無投遞資料"
+      }
     },
-    "errors": {
-      "forbidden": "無權限存取",
-      "notFound": "資源不存在",
-      "deleteFailed": "刪除失敗",
-      "updateFailed": "更新失敗",
-      "createFailed": "建立使用者失敗",
-      "default": "發生錯誤"
+    "audit": {
+      "title": "稽核日誌",
+      "filter": {
+        "actor": "操作者",
+        "action": "動作",
+        "targetType": "物件類型",
+        "timeRange": "時間範圍",
+        "today": "今天",
+        "days7": "最近 7 天",
+        "days30": "最近 30 天"
+      },
+      "colTime": "時間",
+      "colActor": "操作者",
+      "colAction": "動作",
+      "colTarget": "物件",
+      "colIp": "IP",
+      "metadata": "中繼資料",
+      "copyJson": "複製 JSON",
+      "showFullIp": "顯示完整 IP",
+      "empty": "暫無稽核紀錄",
+      "emptyFiltered": "沒有符合的稽核紀錄",
+      "loadFailed": "稽核日誌載入失敗",
+      "action": {
+        "user": {
+          "create": "建立了使用者 {target}",
+          "set_role": "將 {target} 切換為 {role}",
+          "reset_password": "重設了 {target} 的密碼",
+          "disable": "封鎖了 {target}",
+          "enable": "解除封鎖了 {target}",
+          "delete": "刪除了使用者 {target}",
+          "revoke_sessions": "強制 {target} 登出"
+        },
+        "post": {
+          "delete": "刪除了文章 {target}"
+        },
+        "channel": {
+          "create": "建立了管道 {target}",
+          "enable": "啟用了管道 {target}",
+          "disable": "停用了管道 {target}",
+          "delete": "刪除了管道 {target}"
+        }
+      },
+      "meta": {
+        "transition": "從 {from} → {to}",
+        "reason": "原因：{value}",
+        "via": "來源：{value}"
+      }
     },
     "users": {
-      "title": "使用者管理",
-      "actions": "操作",
-      "changeRole": "變更角色",
-      "changeRoleFor": "修改 {username} 的角色",
-      "roleUpdated": "角色已更新",
+      "title": "使用者",
       "addUser": "新增使用者",
-      "addUserDescription": "建立新用戶帳戶",
-      "usernamePlaceholder": "請輸入用戶名",
-      "passwordPlaceholder": "至少 6 個字元",
-      "confirmPasswordPlaceholder": "再次輸入密碼",
-      "passwordsNotMatch": "兩次密碼不一致",
-      "passwordMinLength": "密碼至少需要 6 個字元",
-      "usernameRequired": "用戶名不能為空",
-      "userCreated": "用戶建立成功",
+      "viewDetail": "詳情",
+      "moreActions": "更多操作",
+      "changeRole": "切換角色",
       "resetPassword": "重設密碼",
-      "resetPasswordFor": "為 {username} 重設密碼",
-      "setPassword": "設定密碼",
-      "generateRandom": "隨機產生",
-      "generateRandomDescription": "產生安全的隨機密碼",
-      "generate": "產生",
-      "passwordResetSuccess": "密碼重設成功",
-      "passwordGenerated": "密碼已產生",
-      "passwordCopied": "密碼已複製到剪貼簿",
-      "delete": "刪除",
-      "deleteTitle": "刪除用戶",
-      "deleteConfirm": "刪除用戶 {username}？這將同時刪除其文章和渠道。",
-      "deleteConfirmEmpty": "確認刪除該使用者？該使用者的 Posts 和頻道也會被刪除。",
-      "deleted": "用戶已刪除",
-      "email": "郵箱",
-      "emailPlaceholder": "user@example.com",
-      "emailRequired": "郵箱不能為空",
-      "emailInvalid": "郵箱格式無效",
+      "enableUser": "啟用使用者",
+      "disableUser": "封鎖使用者",
+      "forceLogout": "強制登出",
+      "deleteTitle": "刪除使用者",
+      "detail": {
+        "back": "返回使用者列表",
+        "profile": "資料",
+        "actions": "操作",
+        "sessions": "作用中工作階段",
+        "sessionsEmpty": "無作用中工作階段",
+        "logoutAll": "全部登出",
+        "history": "操作紀錄",
+        "historyEmpty": "該使用者暫無管理操作紀錄",
+        "historyViewAll": "查看全部",
+        "fullName": "全名",
+        "emailUnbound": "未綁定",
+        "githubUnbound": "未綁定",
+        "githubLinked": "已綁定 #{id}",
+        "postKey": "Post Key",
+        "copyPostKey": "複製 Post Key",
+        "postKeyCopied": "Post Key 已複製",
+        "sessionsRevokedToast": "工作階段已撤銷",
+        "emailVerified": "已驗證",
+        "emailNotVerified": "未驗證"
+      },
+      "reset": {
+        "title": "重設 {name} 的密碼",
+        "desc": "系統將為 {name} 產生一個臨時密碼，且：· 所有工作階段立即失效（需用新密碼登入）· 該密碼僅顯示一次，請安全地轉交",
+        "confirm": "確認重設",
+        "success": "密碼已重設，使用者需重新登入",
+        "result": {
+          "title": "密碼已重設",
+          "warning": "⚠ 此密碼僅顯示一次，關閉後無法再次查看。請立即安全地轉交給 {name}。",
+          "copy": "複製",
+          "close": "我已轉交，關閉"
+        }
+      },
+      "role": {
+        "toUser": {
+          "title": "切換為一般使用者",
+          "desc": "{name} 將失去管理後台存取權限。此操作不影響其登入和發文能力。{name} 目前若有管理員工作階段，會立即失效。"
+        },
+        "toAdmin": {
+          "title": "切換為管理員",
+          "desc": "{name} 將獲得管理後台的完整存取權限，包括管理所有使用者、文章、管道和稽核。請謹慎授予。"
+        },
+        "selfDemote": "不能對自己執行此操作"
+      },
+      "disable": {
+        "title": "封鎖 {name}",
+        "desc": "封鎖後，{name} 將：· 無法登入 · 無法發文（Post Key 立即失效）· 所有現有工作階段立即失效。投遞管道設定仍保留（但不會再收到新投遞）。{name} 可由你或其他管理員解除封鎖。"
+      },
+      "enable": {
+        "title": "解除封鎖 {name}",
+        "desc": "{name} 將可以重新登入和發文。其 Post Key 保持不變（若已洩漏建議讓 {name} 輪換）。"
+      },
+      "logout": {
+        "title": "強制 {name} 所有裝置登出",
+        "desc": "{name} 的所有工作階段將立即失效，需重新登入。不影響封鎖狀態（{name} 仍可正常登入）。"
+      },
+      "delete": {
+        "title": "刪除 {name}",
+        "desc": "⚠ 此操作不可復原。永久刪除 {name} 將同時刪除：· 所有文章 · 所有投遞管道 · refresh tokens。投遞紀錄會保留（標記為匿名）。為防止誤操作，請輸入 {name} 的使用者名稱確認：",
+        "typePlaceholder": "輸入使用者名稱確認",
+        "permanent": "永久刪除",
+        "mismatch": "使用者名稱不符"
+      },
+      "toasts": {
+        "roleChanged": "角色已更新",
+        "disabled": "已封鎖 {name}",
+        "enabled": "已解除封鎖 {name}",
+        "signOut": "已強制 {name} 登出",
+        "deleted": "使用者已刪除"
+      },
+      "actions": "操作"
+    },
+    "userDialog": {
+      "title": "新增使用者",
+      "username": "使用者名稱",
+      "email": "電子郵件（選填）",
       "password": "密碼",
-      "passwordRequired": "密碼不能為空",
-      "cancel": "取消",
+      "passwordHelp": "至少 8 個字元",
       "create": "建立",
-      "creating": "建立中...",
-      "changeRoleConfirm": "將 {username} 的角色變更為 {role}？",
-      "enableUser": "啟用用戶",
-      "disableUser": "停用用戶",
-      "enableUserConfirm": "啟用用戶 {username}？",
-      "disableUserConfirm": "停用用戶 {username}？該用戶將無法登入。",
-      "roleChanged": "角色變更成功",
-      "activeChanged": "用戶狀態已更新",
-      "confirm": "確認"
+      "created": "使用者已建立",
+      "emailInvalid": "電子郵件格式不正確",
+      "usernameRequired": "請輸入使用者名稱",
+      "passwordRequired": "請輸入密碼",
+      "passwordMin": "密碼至少 8 個字元"
     },
     "posts": {
-      "title": "Posts 管理",
-      "id": "ID",
-      "titleCol": "標題",
-      "body": "正文",
-      "user": "使用者",
-      "createdAt": "建立時間",
-      "updatedAt": "更新時間",
-      "actions": "操作",
-      "searchPlaceholder": "按標題搜尋...",
-      "error": "載入 Posts 失敗",
-      "empty": "未找到 Posts",
-      "total": "總計：{count} 條 Posts",
-      "edit": "編輯",
-      "editTitle": "編輯 Post",
-      "updated": "Post 已更新",
+      "title": "文章",
+      "searchPlaceholder": "搜尋標題...",
+      "filterUser": "篩選使用者名稱...",
+      "deleteTitle": "刪除文章",
+      "deleteConfirm": "確定刪除\"{title}\"嗎？",
+      "deleteConfirmEmpty": "確定刪除這篇文章嗎？",
       "delete": "刪除",
-      "deleteTitle": "刪除 Post",
-      "deleteConfirm": "確認刪除 Post「{title}」？",
-      "deleteConfirmEmpty": "確認刪除該 Post？",
-      "deleted": "Post 已刪除"
+      "deleted": "已刪除",
+      "empty": "暫無文章",
+      "error": "載入失敗",
+      "time": "建立於",
+      "username": "使用者"
     },
     "channels": {
-      "title": "頻道管理",
-      "id": "ID",
-      "user": "使用者",
-      "kind": "類型",
-      "name": "名稱",
-      "enabled": "啟用",
-      "createdAt": "建立時間",
-      "updatedAt": "更新時間",
-      "actions": "操作",
-      "error": "載入頻道失敗",
-      "empty": "未找到頻道",
-      "edit": "編輯",
-      "editTitle": "編輯頻道",
-      "webhookUrl": "Webhook URL",
-      "keywords": "關鍵詞",
-      "keywordsPlaceholder": "keyword1, keyword2",
-      "enabledHelp": "開關投遞",
-      "updated": "頻道已更新",
+      "title": "管道",
+      "enableTitle": "啟用管道",
+      "disableTitle": "停用管道",
+      "enableConfirm": "啟用\"{name}\"？這將恢復該使用者（{user}）的投遞。",
+      "disableConfirm": "停用\"{name}\"？這將停止該使用者（{user}）的投遞。",
+      "deleteTitle": "刪除管道",
+      "deleteConfirm": "刪除\"{name}\"？",
       "delete": "刪除",
-      "deleteTitle": "刪除渠道",
-      "deleteConfirm": "刪除渠道 {name}？此操作不可撤銷。",
-      "deleteConfirmEmpty": "確認刪除該頻道？",
-      "deleted": "渠道已刪除",
-      "enableTitle": "啟用渠道",
-      "disableTitle": "停用渠道",
-      "enableConfirm": "啟用渠道 {name}？",
-      "disableConfirm": "停用渠道 {name}？新的投遞將暫停。",
-      "enabledChanged": "渠道狀態已更新",
-      "active": "活躍",
-      "inactive": "停用",
+      "cancel": "取消",
       "confirm": "確認",
-      "cancel": "取消"
+      "name": "名稱",
+      "kind": "類型",
+      "enabled": "狀態",
+      "active": "啟用",
+      "inactive": "停用",
+      "actions": "操作",
+      "user": "使用者名稱",
+      "empty": "暫無管道",
+      "error": "載入失敗",
+      "deleted": "管道已刪除",
+      "enabledToast": "管道已啟用",
+      "disabledToast": "管道已停用",
+      "searchPlaceholder": "搜尋名稱/使用者名稱...",
+      "createdAt": "建立於"
     },
     "history": {
-      "title": "投遞歷史",
-      "createdAt": "時間",
-      "post": "文章",
-      "channel": "頻道",
-      "user": "使用者",
-      "status": "狀態",
-      "error": "錯誤",
+      "title": "投遞紀錄",
+      "filter": {
+        "user": "使用者",
+        "channel": "管道",
+        "status": "狀態"
+      },
+      "status": {
+        "delivered": "已投遞",
+        "failed": "失敗",
+        "expired": "已過期"
+      },
+      "colPost": "文章",
+      "colChannel": "管道",
+      "colUser": "使用者",
+      "colStatus": "狀態",
+      "colTime": "時間",
+      "colError": "錯誤",
       "postDeleted": "文章已刪除",
-      "channelDeleted": "頻道已刪除",
-      "userDeleted": "使用者已註銷",
-      "status_delivered": "已投遞",
-      "status_failed": "失敗",
-      "status_expired": "已過期",
-      "empty": "暫無投遞歷史"
-    },
-    "dashboard": {
-      "title": "儀表盤",
-      "users": "用戶",
-      "posts": "文章",
-      "channels": "通道",
-      "history": "投遞歷史"
+      "channelDeleted": "管道已刪除",
+      "userDeleted": "使用者已刪除",
+      "detail": "詳情",
+      "empty": "暫無投遞紀錄",
+      "emptyFiltered": "沒有符合的投遞紀錄",
+      "error": "載入失敗",
+      "total": "共 {n} 筆"
+    }
+  },
+  "forbidden": {
+    "title": "無權存取",
+    "description": "你沒有權限檢視此頁面。",
+    "backToDashboard": "返回概覽"
+  },
+  "error": {
+    "title": "發生問題",
+    "description": "頁面載入時發生錯誤。你可以重試或返回。",
+    "retry": "重試",
+    "backHome": "返回首頁",
+    "global": {
+      "title": "應用程式錯誤",
+      "description": "發生嚴重的系統錯誤。請重新整理頁面。",
+      "reload": "重新整理頁面"
     }
   },
   "notFound": {
-    "title": "404",
-    "pageNotFound": "頁面不存在",
-    "pageNotFoundLoginRequired": "頁面不存在，請先登入",
-    "backToDashboard": "返回儀表板",
-    "goToLogin": "去登入"
+    "title": "頁面不存在",
+    "pageNotFound": "你存取的頁面不存在或已移動。",
+    "backToDashboard": "返回概覽",
+    "goToLogin": "前往登入"
+  },
+  "createTestPost": {
+    "title": "產生測試文章",
+    "titleLabel": "標題",
+    "titlePlaceholder": "輸入標題",
+    "bodyLabel": "內文",
+    "bodyPlaceholder": "輸入內文",
+    "cancel": "取消",
+    "create": "建立",
+    "creating": "建立中...",
+    "success": "測試文章已傳送",
+    "titleRequired": "請輸入標題",
+    "bodyRequired": "請輸入內文",
+    "titleTooLong": "標題不能超過 150 個字元",
+    "required": "此欄位為必填"
+  },
+  "passwordChange": {
+    "error": {
+      "invalid_password": "目前密碼不正確",
+      "rate_limited": "操作過於頻繁，請 {seconds} 秒後再試",
+      "internal": "變更密碼失敗，請稍後重試"
+    }
   }
 }

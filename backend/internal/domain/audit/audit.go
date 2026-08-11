@@ -21,6 +21,26 @@ type Log struct {
 
 func (Log) TableName() string { return "audit_logs" }
 
+// LogRow is the read projection of an audit log row joined to the actor's
+// username at read time (D4.1 — AdminAuditLogItem 补 actor_username).
+// TargetUsername is non-nil only when TargetType == "user" and the target user
+// still exists (DEV-1 — narratives prefer the username over the raw id).
+type LogRow struct {
+	Log
+	ActorUsername  string  `json:"actor_username" gorm:"column:actor_username"`
+	TargetUsername *string `json:"target_username" gorm:"column:target_username"`
+}
+
+// AuditFilter scopes an audit log read (D4.3). All fields optional.
+type AuditFilter struct {
+	ActorID    int
+	Action     string
+	TargetType string
+	TargetID   string
+	Since      *time.Time
+	Until      *time.Time
+}
+
 // Entry is the input for recording an audit log.
 type Entry struct {
 	ActorID    int
@@ -34,5 +54,10 @@ type Entry struct {
 // Repository defines the interface for audit log data access.
 type Repository interface {
 	Record(ctx context.Context, e Entry) error
-	List(ctx context.Context, offset, limit int) ([]Log, int64, error)
+	// List returns audit logs (newest first) matching the filter, with the
+	// actor username joined, plus the total count for pagination.
+	List(ctx context.Context, filter AuditFilter, offset, limit int) ([]LogRow, int64, error)
+	// ActionCounts returns the number of log rows per action under the filter
+	// (D4.3 筛选计数 facets).
+	ActionCounts(ctx context.Context, filter AuditFilter) (map[string]int64, error)
 }

@@ -486,6 +486,8 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	l2Write := middleware.NewLimiter(cfg.Ratelimit.L2.PerSecond, cfg.Ratelimit.L2.Burst)
 	l2Daily := middleware.NewLimiter(cfg.Ratelimit.L2.DailyPerSec, cfg.Ratelimit.L2.DailyBurst)
 	l3Write := middleware.NewLimiter(cfg.Ratelimit.L3.PerSecond, cfg.Ratelimit.L3.Burst)
+	// C2.1 层 A：登录端点专用 IP 限流（默认 5/min），不复用 L1/L3。
+	loginLimiter := middleware.NewLimiter(cfg.Ratelimit.Login.PerSecond, cfg.Ratelimit.Login.Burst)
 
 	if cfg.Debug {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/swagger/doc.json")))
@@ -497,12 +499,12 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	oauthGroup := apiV1.Group("/oauth")
 	{
 		oauthGroup.GET("/url", v1.GenerateGitHubOAuthURL(authSvc))
-		oauthGroup.POST("/login", v1.LoginGitHub(authSvc))
+		oauthGroup.POST("/login", middleware.RateLimitByIP(loginLimiter), v1.LoginGitHub(authSvc))
 	}
 
 	authGroup := apiV1.Group("/auth")
 	{
-		authGroup.POST("/login", v1.LoginWithUsername(authSvc))
+		authGroup.POST("/login", middleware.RateLimitByIP(loginLimiter), v1.LoginWithUsername(authSvc))
 		authGroup.POST("/refresh", v1.RefreshToken(authSvc))
 	}
 
@@ -521,7 +523,11 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			jwtWrite.POST("/auth/logout", v1.Logout(authSvc))
 			jwtWrite.POST("/auth/change-password", v1.ChangePassword(authSvc))
 			jwtWrite.DELETE("/posts/:id", v1.DeleteOwnPost(postSvc))
+			jwtWrite.POST("/post-key/rotate", v1.RotatePostKey(authSvc))
+			jwtWrite.DELETE("/auth/sessions", v1.RevokeAllSessions(authSvc))
+			jwtWrite.DELETE("/auth/sessions/:token_id", v1.RevokeSession(authSvc))
 		}
+		jwtAuth.GET("/auth/sessions", v1.ListSessions(authSvc))
 
 		deliveryGroup := jwtAuth.Group("/delivery/channels")
 		{
@@ -533,11 +539,14 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 		}
 		jwtAuth.GET("/delivery/history", v1.ListDeliveryHistory(deliverySvc))
 		jwtAuth.GET("/delivery/latest", v1.LatestDeliveryPerChannel(deliverySvc))
+		jwtAuth.GET("/delivery/stats", v1.DeliveryStats(deliverySvc))
+		jwtAuth.GET("/delivery/pending", v1.PendingDeliveryAttempts(deliverySvc))
 
 		adminGroup := jwtAuth.Group("/admin")
 		adminGroup.Use(middleware.RequireAdmin())
 		{
 			adminGroup.GET("/users", v1.AdminListUsers(adminSvc))
+			adminGroup.GET("/users/:id", v1.AdminGetUser(adminSvc))
 			adminGroup.POST("/users", middleware.RateLimitByUserID(l3Write), v1.AdminCreateUser(adminSvc))
 			adminGroup.PATCH("/users/:id/role", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserRole(adminSvc))
 			adminGroup.POST("/users/:id/password", middleware.RateLimitByUserID(l3Write), v1.AdminResetUserPassword(adminSvc))
@@ -551,9 +560,12 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.PATCH("/delivery/channels/:id/enabled", middleware.RateLimitByUserID(l3Write), v1.AdminSetChannelEnabled(adminSvc))
 			adminGroup.DELETE("/delivery/channels/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteChannel(adminSvc))
 			adminGroup.GET("/delivery/history", v1.AdminListDeliveryHistory(adminSvc))
+			adminGroup.GET("/delivery/stats", v1.AdminDeliveryStats(adminSvc))
 			adminGroup.GET("/audit-logs", v1.AdminListAuditLogs(adminSvc))
 			adminGroup.GET("/stats", v1.AdminGetStats(adminSvc))
-			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc))
+			adminGroup.GET("/locked-channels", v1.AdminLockedChannels(adminSvc))
+			adminGroup.DELETE("/sessions/:token_id", middleware.RateLimitByUserID(l3Write), v1.AdminRevokeSession(adminSvc))
+			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc, adminSvc))
 		}
 	}
 

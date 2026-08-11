@@ -4,8 +4,56 @@ import type { LoginResponse } from '@/types/auth'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NextIntlClientProvider } from 'next-intl'
 import en from '../i18n/locales/en.json'
+import { setClientMessages } from '@/i18n/messages'
+import { setCurrentLocale } from '@/i18n/current'
+import { setDefaultLocale } from '@/utils/time'
+import { LocaleContext } from '@/components/providers/LocaleProvider'
 
 type WrapperComponent = React.ComponentType<{ children: React.ReactNode }>
+
+setClientMessages(en)
+setCurrentLocale('en')
+setDefaultLocale('en')
+
+function MockLocaleProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <LocaleContext.Provider
+      value={{
+        locale: 'en',
+        setLocale: vi.fn(),
+        availableLocales: ['en', 'zh-Hans'],
+      }}
+    >
+      {children}
+    </LocaleContext.Provider>
+  )
+}
+
+// next/navigation mock：内存 searchParams（供 useUrlQueryState/守卫测试）。
+const navState = {
+  pathname: '/',
+  searchParams: new URLSearchParams(),
+  push: vi.fn(),
+  replace: vi.fn(),
+}
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: navState.push,
+    replace: navState.replace,
+    back: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => navState.pathname,
+  useSearchParams: () => navState.searchParams,
+}))
+
+export function mockNavigation() {
+  navState.searchParams = new URLSearchParams()
+  navState.push.mockReset()
+  navState.replace.mockReset()
+  return navState
+}
 
 export function renderWithProviders(
   ui: React.ReactElement,
@@ -18,7 +66,9 @@ export function renderWithProviders(
   return render(
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="en" messages={en}>
-        <Wrapper>{ui}</Wrapper>
+        <MockLocaleProvider>
+          <Wrapper>{ui}</Wrapper>
+        </MockLocaleProvider>
       </NextIntlClientProvider>
     </QueryClientProvider>,
   )

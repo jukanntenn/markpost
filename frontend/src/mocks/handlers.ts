@@ -73,7 +73,13 @@ export const handlers = [
       access_token: 'test_access_token',
       refresh_token: 'test_refresh_token',
       expires_in: 86400,
-      user: { id: 1, username: 'testuser', email: 'test@example.com' },
+      user: {
+        id: 1,
+        username: 'testuser',
+        email: 'test@example.com',
+        is_active: true,
+        is_email_verified: false,
+      },
     })
   }),
 
@@ -240,8 +246,98 @@ export const handlers = [
         posts: mockAdminPosts.length,
         channels: mockAdminChannels.length,
         history: 0,
+        banned_users: 0,
+        users_week_delta: 0,
+        posts_week_delta: 0,
+        history_week_delta: 0,
       },
     })
+  }),
+
+  // 新端点（B2/C2/D2/D3/D4）
+  http.get('/api/v1/delivery/stats', () => {
+    return HttpResponse.json({
+      today: { delivered: 2, failed: 1, pending: 0 },
+      trend: [
+        { day: '2026-08-09', delivered: 5, failed: 0, expired: 0 },
+        { day: '2026-08-10', delivered: 2, failed: 1, expired: 0 },
+      ],
+    })
+  }),
+
+  http.get('/api/v1/delivery/pending', () => {
+    return HttpResponse.json({ items: [] })
+  }),
+
+  http.get('/api/v1/auth/sessions', () => {
+    return HttpResponse.json({
+      sessions: [
+        {
+          id: 1,
+          user_id: 1,
+          token_hash: 'abc',
+          revoked: false,
+          expires_at: '2026-08-23T00:00:00Z',
+          created_at: '2026-08-09T00:00:00Z',
+        },
+      ],
+    })
+  }),
+
+  http.delete('/api/v1/auth/sessions/:tokenId', () => {
+    return HttpResponse.json({ revoked: true })
+  }),
+
+  http.post('/api/v1/post-key/rotate', () => {
+    return HttpResponse.json({ post_key: 'new_rotated_key_xyz' })
+  }),
+
+  http.get('/api/v1/admin/locked-channels', () => {
+    return HttpResponse.json({ items: [] })
+  }),
+
+  http.get('/api/v1/admin/delivery/stats', () => {
+    return HttpResponse.json({
+      today: { delivered: 0, failed: 0, pending: 0 },
+      trend: [{ day: '2026-08-10', delivered: 2, failed: 1, expired: 0 }],
+    })
+  }),
+
+  http.get('/api/v1/admin/audit-logs', ({ request }) => {
+    const url = new URL(request.url)
+    const targetId = url.searchParams.get('target_id')
+    const items = mockAuditLogs.filter((l) =>
+      targetId ? l.target_id === targetId : true,
+    )
+    return HttpResponse.json({
+      audit_logs: items,
+      total: items.length,
+      page: 1,
+      limit: 20,
+      total_pages: 1,
+      facets: { 'user.set_active': 1, 'user.create': 1 },
+    })
+  }),
+
+  http.get('/api/v1/admin/users/:id', ({ params }) => {
+    const id = Number(params.id)
+    const u = mockAdminUsers.find((x) => x.id === id)
+    if (!u) return HttpResponse.json({ message: 'not found' }, { status: 404 })
+    return HttpResponse.json({
+      ...u,
+      post_key: 'mpk-test',
+      last_login_at: '2026-08-09T00:00:00Z',
+      github_id: null,
+      name: '',
+    })
+  }),
+
+  http.get('/api/v1/admin/users/:id/sessions', () => {
+    return HttpResponse.json({ sessions: [] })
+  }),
+
+  http.post('/api/v1/admin/users/:id/password', () => {
+    return HttpResponse.json({ password: 'Xy7mP9kQ2nL' })
   }),
 ]
 
@@ -291,6 +387,21 @@ export const mockAdminPosts = [
     title: 'Second Post',
     created_at: '2024-01-02T00:00:00Z',
     username: 'user1',
+  },
+]
+
+export const mockAuditLogs = [
+  {
+    id: 1,
+    actor_id: 1,
+    actor_username: 'alice',
+    action: 'user.set_active',
+    target_type: 'user',
+    target_id: '2',
+    target_username: 'user1',
+    metadata: { active: false },
+    ip: '1.2.3.4',
+    created_at: '2026-08-10T00:00:00Z',
   },
 ]
 

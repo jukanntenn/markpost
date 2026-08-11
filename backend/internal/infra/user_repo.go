@@ -147,6 +147,44 @@ func (r *UserRepository) SetPassword(ctx context.Context, userID int, password s
 	return updateByID[user.User](ctx, r.db, userID, map[string]any{"password_hash": hashed}, "SetPassword")
 }
 
+// BumpTokenVersion increments a user's token_version — the single primitive
+// behind instant invalidation of all existing access/refresh tokens
+// (C2.6: 改密/强制下线/封禁).
+func (r *UserRepository) BumpTokenVersion(ctx context.Context, userID int) error {
+	return updateByID[user.User](ctx, r.db, userID,
+		map[string]any{"token_version": gorm.Expr("token_version + 1")}, "BumpTokenVersion")
+}
+
+// UpdatePostKey rotates a user's post key (C2.5). Returns domain.ErrNotFound
+// when the user does not exist.
+func (r *UserRepository) UpdatePostKey(ctx context.Context, userID int, postKey string) error {
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"post_key": postKey}, "UpdatePostKey")
+}
+
+// RotatePostKey generates a fresh unique post key and stores it on the user
+// (C2.5 user self-service rotation). The old key stops resolving immediately.
+func (r *UserRepository) RotatePostKey(ctx context.Context, userID int) (string, error) {
+	const maxRetries = 10
+	for range maxRetries {
+		key, err := utils.GeneratePostKey(r.postKeyLength)
+		if err != nil {
+			return "", err
+		}
+		exists, err := r.existsByPostKey(ctx, key)
+		if err != nil {
+			return "", err
+		}
+		if exists {
+			continue
+		}
+		if err := r.UpdatePostKey(ctx, userID, key); err != nil {
+			return "", err
+		}
+		return key, nil
+	}
+	return "", fmt.Errorf("RotatePostKey: failed to generate a unique post key after %d attempts", maxRetries)
+}
+
 // SetRole updates a user's role.
 func (r *UserRepository) SetRole(ctx context.Context, userID int, role user.Role) error {
 	return updateByID[user.User](ctx, r.db, userID, map[string]any{"role": role}, "SetRole")
@@ -167,9 +205,43 @@ func (r *UserRepository) GetAll(ctx context.Context, offset, limit int) ([]user.
 	return findMany[user.User](ctx, r.db.Order("id asc"), offset, limit, "GetAll")
 }
 
+// Search returns users whose username matches the LIKE pattern (admin user
+// list search, D3.1), ordered by id.
+func (r *UserRepository) Search(ctx context.Context, search string, offset, limit int) ([]user.User, error) {
+	q := r.db.Order("id asc")
+	if search != "" {
+		q = q.Where("username ILIKE ?", "%"+escapeLike(search)+"%")
+	}
+	return findMany[user.User](ctx, q, offset, limit, "Search")
+}
+
+// CountSearch returns the total users matching the search pattern.
+func (r *UserRepository) CountSearch(ctx context.Context, search string) (int64, error) {
+	q := r.db.Model(&user.User{})
+	if search != "" {
+		q = q.Where("username ILIKE ?", "%"+escapeLike(search)+"%")
+	}
+	return countQuery(ctx, q, "CountSearch")
+}
+
 // Count returns the total number of users.
 func (r *UserRepository) Count(ctx context.Context) (int64, error) {
 	return countQuery(ctx, r.db.Model(&user.User{}), "Count")
+}
+
+// CountByRole counts users with the given role (last-admin guard, K.7 D3-3).
+func (r *UserRepository) CountByRole(ctx context.Context, role user.Role) (int64, error) {
+	return countQuery(ctx, r.db.Model(&user.User{}).Where("role = ?", role), "CountByRole")
+}
+
+// CountBanned counts disabled users (admin 需要关注, D2.1).
+func (r *UserRepository) CountBanned(ctx context.Context) (int64, error) {
+	return countQuery(ctx, r.db.Model(&user.User{}).Where("is_active = ?", false), "CountBanned")
+}
+
+// CountSince counts users created at or after since (stats week delta, D2.4).
+func (r *UserRepository) CountSince(ctx context.Context, since time.Time) (int64, error) {
+	return countQuery(ctx, r.db.Model(&user.User{}).Where("created_at >= ?", since), "CountSince")
 }
 
 // UpdateLastLoginAt updates the last login timestamp for a user.

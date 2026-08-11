@@ -1,26 +1,5 @@
 basePath: /
 definitions:
-  internal_api_rest_v1.AdminAuditLogItem:
-    properties:
-      action:
-        type: string
-      actor_id:
-        type: integer
-      created_at:
-        type: string
-      id:
-        type: integer
-      ip:
-        type: string
-      metadata:
-        items:
-          type: integer
-        type: array
-      target_id:
-        type: string
-      target_type:
-        type: string
-    type: object
   internal_api_rest_v1.AdminChannelItem:
     properties:
       configuration:
@@ -65,7 +44,6 @@ definitions:
       email:
         type: string
       password:
-        minLength: 6
         type: string
       username:
         type: string
@@ -73,46 +51,17 @@ definitions:
     - password
     - username
     type: object
-  internal_api_rest_v1.AdminPostItem:
+  internal_api_rest_v1.AdminLockedChannelsResponse:
     properties:
-      created_at:
-        type: string
-      qid:
-        type: string
-      title:
-        type: string
-      user_id:
-        type: integer
-      username:
-        type: string
+      items:
+        items:
+          $ref: '#/definitions/markpost_internal_domain_delivery.LockedChannel'
+        type: array
     type: object
-  internal_api_rest_v1.AdminResetUserPasswordRequest:
+  internal_api_rest_v1.AdminResetPasswordResponse:
     properties:
       password:
-        minLength: 6
         type: string
-    required:
-    - password
-    type: object
-  internal_api_rest_v1.AdminSessionItem:
-    properties:
-      created_at:
-        type: string
-      expires_at:
-        type: string
-      id:
-        type: integer
-      revoked:
-        type: boolean
-      token_hash:
-        type: string
-    type: object
-  internal_api_rest_v1.AdminSessionsResponse:
-    properties:
-      sessions:
-        items:
-          $ref: '#/definitions/internal_api_rest_v1.AdminSessionItem'
-        type: array
     type: object
   internal_api_rest_v1.AdminSetChannelEnabledRequest:
     properties:
@@ -140,9 +89,15 @@ definitions:
         type: integer
       history:
         type: integer
+      history_week_delta:
+        type: integer
       posts:
         type: integer
+      posts_week_delta:
+        type: integer
       users:
+        type: integer
+      users_week_delta:
         type: integer
     type: object
   internal_api_rest_v1.AdminStatsResponse:
@@ -156,10 +111,20 @@ definitions:
         type: string
       email:
         type: string
+      github_id:
+        type: integer
       id:
         type: integer
       is_active:
         type: boolean
+      is_email_verified:
+        type: boolean
+      last_login_at:
+        type: string
+      name:
+        type: string
+      post_key:
+        type: string
       role:
         type: string
       username:
@@ -175,6 +140,15 @@ definitions:
         type: string
       user:
         $ref: '#/definitions/internal_api_rest_v1.UserResponse'
+    type: object
+  internal_api_rest_v1.ChangePasswordResponse:
+    properties:
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token:
+        type: string
     type: object
   internal_api_rest_v1.ChannelResponse:
     properties:
@@ -261,6 +235,15 @@ definitions:
           $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryItem'
         type: array
     type: object
+  internal_api_rest_v1.DeliveryStatsResponse:
+    properties:
+      today:
+        $ref: '#/definitions/markpost_internal_domain_delivery.TodayCounts'
+      trend:
+        items:
+          $ref: '#/definitions/markpost_internal_domain_delivery.DailyStat'
+        type: array
+    type: object
   internal_api_rest_v1.GitHubLoginRequest:
     properties:
       code:
@@ -288,41 +271,17 @@ definitions:
       url:
         type: string
     type: object
-  internal_api_rest_v1.PaginatedAuditLogs:
+  internal_api_rest_v1.PaginatedItemsResponse:
     properties:
-      audit_logs:
-        items:
-          $ref: '#/definitions/internal_api_rest_v1.AdminAuditLogItem'
-        type: array
-      pagination:
-        $ref: '#/definitions/internal_api_rest_v1.Pagination'
-    type: object
-  internal_api_rest_v1.PaginatedChannels:
-    properties:
-      channels:
-        items:
-          $ref: '#/definitions/internal_api_rest_v1.AdminChannelItem'
-        type: array
-      pagination:
-        $ref: '#/definitions/internal_api_rest_v1.Pagination'
-    type: object
-  internal_api_rest_v1.PaginatedPosts:
-    properties:
-      pagination:
-        $ref: '#/definitions/internal_api_rest_v1.Pagination'
-      posts:
-        items:
-          $ref: '#/definitions/internal_api_rest_v1.AdminPostItem'
-        type: array
-    type: object
-  internal_api_rest_v1.PaginatedUsers:
-    properties:
-      pagination:
-        $ref: '#/definitions/internal_api_rest_v1.Pagination'
-      users:
-        items:
-          $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
-        type: array
+      items: {}
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
     type: object
   internal_api_rest_v1.Pagination:
     properties:
@@ -340,10 +299,16 @@ definitions:
       current_password:
         type: string
       new_password:
-        minLength: 6
         type: string
     required:
     - new_password
+    type: object
+  internal_api_rest_v1.PendingAttemptsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/markpost_internal_domain_delivery.PendingAttemptRow'
+        type: array
     type: object
   internal_api_rest_v1.PostKeyResponse:
     properties:
@@ -404,6 +369,18 @@ definitions:
       token:
         type: string
     type: object
+  internal_api_rest_v1.RotatePostKeyResponse:
+    properties:
+      post_key:
+        type: string
+    type: object
+  internal_api_rest_v1.SessionsResponse:
+    properties:
+      sessions:
+        items:
+          $ref: '#/definitions/markpost_internal_domain_user.RefreshToken'
+        type: array
+    type: object
   internal_api_rest_v1.SingleChannelResponse:
     properties:
       channel:
@@ -432,6 +409,10 @@ definitions:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
+      is_email_verified:
+        type: boolean
       name:
         type: string
       role:
@@ -478,6 +459,76 @@ definitions:
     type: string
     x-enum-varnames:
     - ChannelKindFeishu
+  markpost_internal_domain_delivery.DailyStat:
+    properties:
+      day:
+        description: YYYY-MM-DD (UTC)
+        type: string
+      delivered:
+        type: integer
+      expired:
+        type: integer
+      failed:
+        type: integer
+    type: object
+  markpost_internal_domain_delivery.LockedChannel:
+    properties:
+      channel_id:
+        type: integer
+      channel_name:
+        type: string
+      fails:
+        type: integer
+      failure_rate:
+        type: number
+      last_at:
+        type: string
+      last_error:
+        type: string
+      total:
+        type: integer
+      username:
+        type: string
+    type: object
+  markpost_internal_domain_delivery.PendingAttemptRow:
+    properties:
+      channel_id:
+        type: integer
+      channel_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      post_id:
+        type: integer
+      post_qid:
+        type: string
+      post_title:
+        type: string
+    type: object
+  markpost_internal_domain_delivery.TodayCounts:
+    properties:
+      delivered:
+        type: integer
+      failed:
+        type: integer
+      pending:
+        type: integer
+    type: object
+  markpost_internal_domain_user.RefreshToken:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      revoked:
+        type: boolean
+      user_id:
+        type: integer
+    type: object
 host: localhost:7330
 info:
   contact: {}
@@ -548,6 +599,30 @@ paths:
   /api/v1/admin/audit-logs:
     get:
       parameters:
+      - description: Actor user ID filter
+        in: query
+        name: actor_id
+        type: integer
+      - description: Action filter
+        in: query
+        name: action
+        type: string
+      - description: Target type filter
+        in: query
+        name: target_type
+        type: string
+      - description: Target ID filter
+        in: query
+        name: target_id
+        type: string
+      - description: RFC3339 start time
+        in: query
+        name: since
+        type: string
+      - description: RFC3339 end time
+        in: query
+        name: until
+        type: string
       - default: 1
         description: Page number (min 1)
         in: query
@@ -564,7 +639,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedAuditLogs'
+            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -578,7 +653,7 @@ paths:
       summary: List audit logs (admin)
       tags:
       - admin
-  /api/v1/admin/channels:
+  /api/v1/admin/delivery/channels:
     get:
       parameters:
       - default: 1
@@ -597,7 +672,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedChannels'
+            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -611,40 +686,6 @@ paths:
       summary: List all delivery channels (admin)
       tags:
       - admin
-  /api/v1/admin/delivery-history:
-    get:
-      parameters:
-      - default: 1
-        description: Page number (min 1)
-        in: query
-        name: page
-        type: integer
-      - default: 20
-        description: Items per page (min 1)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: List all delivery history (admin)
-      tags:
-      - admin
-  /api/v1/admin/delivery/channels:
     post:
       consumes:
       - application/json
@@ -754,12 +795,20 @@ paths:
       summary: Enable or disable a delivery channel (admin)
       tags:
       - admin
-  /api/v1/admin/posts:
+  /api/v1/admin/delivery/history:
     get:
       parameters:
-      - description: Search keyword
+      - description: User ID filter
         in: query
-        name: search
+        name: user_id
+        type: integer
+      - description: Channel ID filter
+        in: query
+        name: channel_id
+        type: integer
+      - description: Status filter (delivered/failed/expired)
+        in: query
+        name: status
         type: string
       - default: 1
         description: Page number (min 1)
@@ -777,7 +826,97 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedPosts'
+            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all delivery history (admin)
+      tags:
+      - admin
+  /api/v1/admin/delivery/stats:
+    get:
+      parameters:
+      - description: Days to aggregate (default 7)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.DeliveryStatsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get site-wide delivery trend (admin, D2.5)
+      tags:
+      - admin
+  /api/v1/admin/locked-channels:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.AdminLockedChannelsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List channels with persistent delivery failures (admin, D2.1)
+      tags:
+      - admin
+  /api/v1/admin/posts:
+    get:
+      parameters:
+      - description: Search keyword
+        in: query
+        name: search
+        type: string
+      - description: Username filter (F.9)
+        in: query
+        name: username
+        type: string
+      - default: 1
+        description: Page number (min 1)
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page (min 1)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -819,6 +958,40 @@ paths:
       summary: Delete any post (admin)
       tags:
       - admin
+  /api/v1/admin/sessions/{token_id}:
+    delete:
+      parameters:
+      - description: Session (refresh token) ID
+        in: path
+        name: token_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke a single user session (admin, D3.2)
+      tags:
+      - admin
   /api/v1/admin/stats:
     get:
       produces:
@@ -838,12 +1011,16 @@ paths:
             $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get admin dashboard statistics
+      summary: Get admin dashboard statistics (D2.4, includes week deltas)
       tags:
       - admin
   /api/v1/admin/users:
     get:
       parameters:
+      - description: Username search (LIKE)
+        in: query
+        name: search
+        type: string
       - default: 1
         description: Page number (min 1)
         in: query
@@ -860,7 +1037,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedUsers'
+            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -943,6 +1120,37 @@ paths:
       summary: Delete a user (admin)
       tags:
       - admin
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a single user (admin) — detail profile data (D3.2)
+      tags:
+      - admin
   /api/v1/admin/users/{id}/active:
     patch:
       consumes:
@@ -989,27 +1197,19 @@ paths:
       - admin
   /api/v1/admin/users/{id}/password:
     post:
-      consumes:
-      - application/json
       parameters:
       - description: User ID
         in: path
         name: id
         required: true
         type: integer
-      - description: New password
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminResetUserPasswordRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+            $ref: '#/definitions/internal_api_rest_v1.AdminResetPasswordResponse'
         "400":
           description: Bad Request
           schema:
@@ -1028,7 +1228,7 @@ paths:
             $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Reset a user's password (admin)
+      summary: Reset a user's password (admin) — system generates a temporary
       tags:
       - admin
   /api/v1/admin/users/{id}/role:
@@ -1123,7 +1323,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminSessionsResponse'
+            $ref: '#/definitions/internal_api_rest_v1.SessionsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1158,7 +1358,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.MessageResponse'
+            $ref: '#/definitions/internal_api_rest_v1.ChangePasswordResponse'
         "400":
           description: Bad Request
           schema:
@@ -1242,6 +1442,73 @@ paths:
           schema:
             $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
       summary: Refresh authentication token
+      tags:
+      - auth
+  /api/v1/auth/sessions:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke all of the current user's sessions except the present one (I.12)
+      tags:
+      - auth
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.SessionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the current user's sessions (I.12)
+      tags:
+      - auth
+  /api/v1/auth/sessions/{token_id}:
+    delete:
+      parameters:
+      - description: Session (refresh token) ID
+        in: path
+        name: token_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke one of the current user's sessions (I.12)
       tags:
       - auth
   /api/v1/delivery/channels:
@@ -1398,6 +1665,10 @@ paths:
         in: query
         name: channel_id
         type: integer
+      - description: Filter by terminal status (delivered/failed/expired)
+        in: query
+        name: status
+        type: string
       - default: 1
         description: Page number (min 1)
         in: query
@@ -1440,6 +1711,47 @@ paths:
       security:
       - BearerAuth: []
       summary: List the most recent delivery per channel for the current user
+      tags:
+      - delivery
+  /api/v1/delivery/pending:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.PendingAttemptsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List the current user's in-flight delivery attempts (K.2)
+      tags:
+      - delivery
+  /api/v1/delivery/stats:
+    get:
+      parameters:
+      - description: Days to aggregate (default 7)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.DeliveryStatsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get the current user's delivery trend + today counters (B2.7/K.2)
       tags:
       - delivery
   /api/v1/health:
@@ -1495,6 +1807,24 @@ paths:
       summary: Get GitHub OAuth authorization URL
       tags:
       - oauth
+  /api/v1/post-key/rotate:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api_rest_v1.RotatePostKeyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Rotate the current user's post key (C2.5)
+      tags:
+      - auth
   /api/v1/post_key:
     get:
       produces:
@@ -1516,6 +1846,10 @@ paths:
   /api/v1/posts:
     get:
       parameters:
+      - description: Title/body search (B3.3)
+        in: query
+        name: search
+        type: string
       - default: 1
         description: Page number (min 1)
         in: query

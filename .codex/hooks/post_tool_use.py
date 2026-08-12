@@ -1,85 +1,42 @@
 #!/usr/bin/env python3
-
+# Codex PostToolUse (apply_patch): extract edited paths from the patch text,
+# then delegate formatting to prek — the single source of truth for the
+# file→formatter mapping (the fmt group in prek.toml). No formatter logic
+# lives here, so it can never drift from prek/CI.
 from __future__ import annotations
 
 import json
-from pathlib import PurePath
 import subprocess
 import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
 
 MOVE_TO_PREFIX = "*** Move to: "
-PATCH_FILE_PREFIXES = (
-    "*** Update File: ",
-    "*** Add File: ",
-)
+PATCH_FILE_PREFIXES = ("*** Update File: ", "*** Add File: ")
 
 
 def extract_edited_paths(command: str) -> list[str]:
     paths: list[str] = []
-    pending_update: str | None = None
+    pending: str | None = None
     for raw in command.splitlines():
         line = raw.strip()
-        if pending_update is not None and line.startswith(MOVE_TO_PREFIX):
+        if pending is not None and line.startswith(MOVE_TO_PREFIX):
             paths.append(line[len(MOVE_TO_PREFIX) :].strip())
-            pending_update = None
+            pending = None
             continue
-        if pending_update is not None:
-            paths.append(pending_update)
-            pending_update = None
+        if pending is not None:
+            paths.append(pending)
+            pending = None
         if line.startswith(MOVE_TO_PREFIX):
             continue
         for prefix in PATCH_FILE_PREFIXES:
             if line.startswith(prefix):
-                pending_update = line[len(prefix) :].strip()
+                pending = line[len(prefix) :].strip()
                 break
-    if pending_update is not None:
-        paths.append(pending_update)
+    if pending is not None:
+        paths.append(pending)
     return paths
-
-
-PRETTIER_EXTS = {
-    ".ts",
-    ".tsx",
-    ".js",
-    ".jsx",
-    ".json",
-    ".css",
-    ".md",
-    ".yaml",
-    ".yml",
-    ".html",
-}
-CADDYFILE_STAGES = {"dev", "staging", "local", "production"}
-
-
-def is_caddyfile(path: PurePath) -> bool:
-    if path.name == "Caddyfile":
-        return True
-    parts = path.name.split(".")
-    return parts[0] == "Caddyfile" and len(parts) == 2 and parts[1] in CADDYFILE_STAGES
-
-
-def commands_for(path: PurePath) -> list[list[str]]:
-    match path.suffix:
-        case ".py" | ".pyi":
-            return [
-                ["uv", "run", "ruff", "check", "--fix", str(path)],
-                ["uv", "run", "ruff", "format", str(path)],
-            ]
-        case ".go":
-            return [["gofmt", "-w", str(path)], ["goimports", "-w", str(path)]]
-        case s if s in PRETTIER_EXTS:
-            return [["prettier", "--write", str(path)]]
-        case ".toml":
-            return [["oxfmt", "--write", str(path)]]
-        case ".j2":
-            return [["djlint", "--reformat", "--profile=jinja", str(path)]]
-        case _:
-            return [["caddy", "fmt", str(path)]] if is_caddyfile(path) else []
-
-
-def tool_name(cmd: list[str]) -> str:
-    return cmd[2] if cmd[:2] == ["uv", "run"] else cmd[0]
 
 
 def main() -> None:
@@ -92,26 +49,27 @@ def main() -> None:
     if not isinstance(command, str):
         return
 
-    for raw_path in extract_edited_paths(command):
-        for cmd in commands_for(PurePath(raw_path)):
-            name = tool_name(cmd)
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True)
-            except FileNotFoundError:
-                print(
-                    f"[codex-post-tool-use] {name} not found on PATH; skipped",
-                    file=sys.stderr,
-                )
-                continue
-            if result.returncode != 0:
-                print(
-                    f"[codex-post-tool-use] {name} reported issues for {raw_path}:",
-                    file=sys.stderr,
-                )
-                if result.stdout:
-                    print(result.stdout, file=sys.stderr)
-                if result.stderr:
-                    print(result.stderr, file=sys.stderr)
+    paths = [
+        p
+        for p in extract_edited_paths(command)
+        if (ROOT / p).is_file() or Path(p).is_file()
+    ]
+    if not paths:
+        return
+
+    r = subprocess.run(
+        ["prek", "run", "--group", "fmt", "--files", *paths],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    # exit 0 = clean, 1 = files modified (expected for a formatter); only surface real errors.
+    if r.returncode not in (0, 1):
+        print(f"[codex-post-tool-use] prek fmt exited {r.returncode}:", file=sys.stderr)
+        if r.stdout:
+            print(r.stdout, file=sys.stderr)
+        if r.stderr:
+            print(r.stderr, file=sys.stderr)
 
 
 if __name__ == "__main__":

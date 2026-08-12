@@ -20,9 +20,7 @@ export class SettingsPage {
     });
     this.currentPasswordInput = page.getByPlaceholder("Enter current password");
     this.newPasswordInput = page.getByPlaceholder("Enter new password", { exact: true });
-    this.confirmPasswordInput = page.getByPlaceholder(
-      "Re-enter new password",
-    );
+    this.confirmPasswordInput = page.getByPlaceholder("Re-enter new password");
     this.changePasswordButton = page.getByRole("button", {
       name: "Change password",
     });

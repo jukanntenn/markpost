@@ -1,16 +1,18 @@
 # ZCode Hooks
 
-Project-local hook scripts for the ZCode agent (same multi-language pipeline as
-the Claude/Codex hooks — dispatch matches `prek.toml` and CI `lint.yml`).
+Project-local hook scripts for the ZCode agent. They are **thin adapters** that
+delegate all formatting/linting to prek — the single source of truth (the `fmt`
+and `lint` groups in the workspace prek configs). No formatter mapping lives in
+these scripts, so they cannot drift from prek/CI.
 
-- `hooks/post_tool_use.py` — PostToolUse (`Edit|Write`): formats the edited file
-  by extension — Go (`gofmt`+`goimports`), frontend/root (`prettier`), `.toml`
-  (`oxfmt`), `.j2` (`djlint`), `Caddyfile` (`caddy fmt`), `.py`/`.pyi`
-  (`ruff check --fix` + `ruff format`). Never blocks; missing tools are skipped.
-- `hooks/stop.py` — Stop: full-tree gate running `golangci-lint run` (backend) +
-  `pnpm lint` + `pnpm typecheck` (frontend); on error it prints
-  `{"decision":"block","reason":"..."}` (once per turn, guarded by the
-  `stopHookActive` flag). ZCode caps Stop continuations at 3 natively.
+- `hooks/post_tool_use.py` — PostToolUse (`Edit|Write`): runs
+  `prek run --group fmt --files <edited>`. prek routes the file to the right
+  project formatter (golangci-lint fmt / prettier / oxfmt / caddy fmt / builtin
+  fixers) at the correct cwd. Never blocks; real errors are surfaced to stderr.
+- `hooks/stop.py` — Stop: runs `prek run --group lint --all-files` (golangci-lint
+  run + eslint + tsc); on non-zero exit it prints
+  `{"decision":"block","reason":"..."}` once per turn (guarded by the
+  `stopHookActive` flag).
 
 ## Why there is no `.zcode/config.json` here
 

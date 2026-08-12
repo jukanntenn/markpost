@@ -38,17 +38,11 @@ export class AdminUsersPage {
   }
 
   async confirmDialog() {
-    await this.page
-      .getByRole("button", { name: "Confirm", exact: true })
-      .click();
+    await this.page.getByRole("button", { name: "Confirm", exact: true }).click();
   }
 
   async confirmDelete(username: string) {
-    await this.page
-      .getByPlaceholder("Type username to confirm")
-      .fill(username);
-    await this.page
-      .getByRole("button", { name: "Delete permanently" })
-      .click();
+    await this.page.getByPlaceholder("Type username to confirm").fill(username);
+    await this.page.getByRole("button", { name: "Delete permanently" }).click();
   }
 }

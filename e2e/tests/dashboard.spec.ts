@@ -1,5 +1,10 @@
 import { test, expect } from "../lib/fixtures";
-import { waitForBackend, apiLogin, deleteAllPosts, deleteAllDeliveryChannels } from "../lib/helpers";
+import {
+  waitForBackend,
+  apiLogin,
+  deleteAllPosts,
+  deleteAllDeliveryChannels,
+} from "../lib/helpers";
 
 test.beforeEach(async ({ page, request }) => {
   await waitForBackend(request);
@@ -15,18 +20,13 @@ test.beforeEach(async ({ page, request }) => {
 });
 
 // B2/I.9：新用户（无渠道无帖子）→ 三步 onboarding；创建渠道后进入正常态。
-test("new user sees the onboarding guide (I.9)", async ({
-  page,
-  loginPage,
-}) => {
+test("new user sees the onboarding guide (I.9)", async ({ page, loginPage }) => {
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
   await expect(page.getByText("Getting started with markpost")).toBeVisible({
     timeout: 15000,
   });
-  await expect(
-    page.getByText("Create a delivery channel", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Create a delivery channel", { exact: true })).toBeVisible();
 });
 
 test("dashboard renders pipeline status and post key block", async ({
@@ -40,11 +40,7 @@ test("dashboard renders pipeline status and post key block", async ({
   await expect(dashboardPage.postKeyHeading).toBeVisible();
 });
 
-test("logout returns to login (B1 场景E)", async ({
-  page,
-  loginPage,
-  dashboardPage,
-}) => {
+test("logout returns to login (B1 场景E)", async ({ page, loginPage, dashboardPage }) => {
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
   await dashboardPage.clickUserMenu("markpost");

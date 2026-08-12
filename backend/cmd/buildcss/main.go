@@ -1,6 +1,6 @@
 // Package main implements the CSS build helper.
 //
-// It extracts the inline <style> block from templates/post.html, minifies it
+// It reads templates/post.css, minifies it
 // with tdewolff/minify, content-addresses the result with xxhash64, writes the
 // fingerprinted asset to static/post.<hash>.css, and generates
 // internal/web/csshash.go (which go:embeds the asset and exposes CSSHash) so the
@@ -62,12 +62,17 @@ func main() {
 		die("write css asset: %v", err)
 	}
 
+	removed := removeStaleAssets(webDir, filepath.Base(cssFile))
+
 	if err := writeCSSHashGo(webDir, hash); err != nil {
 		die("write csshash.go: %v", err)
 	}
 
 	rel, _ := filepath.Rel(root, cssFile)
 	fmt.Printf("buildcss: wrote %s (%d bytes, hash %s)\n", filepath.ToSlash(rel), len(minified), hash)
+	if removed > 0 {
+		fmt.Printf("buildcss: removed %d stale css asset(s)\n", removed)
+	}
 }
 
 func minifyCSS(css string) ([]byte, error) {
@@ -78,6 +83,27 @@ func minifyCSS(css string) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+// removeStaleAssets deletes any post.*.css in webDir other than current, so
+// content-address renames don't leave orphaned old-hash files behind.
+func removeStaleAssets(webDir, current string) int {
+	entries, err := os.ReadDir(webDir)
+	if err != nil {
+		die("read web dir for stale cleanup: %v", err)
+	}
+	removed := 0
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasPrefix(name, "post.") || !strings.HasSuffix(name, ".css") || name == current {
+			continue
+		}
+		if err := os.Remove(filepath.Join(webDir, name)); err != nil {
+			die("remove stale asset %s: %v", name, err)
+		}
+		removed++
+	}
+	return removed
 }
 
 func findModuleRoot() (string, error) {

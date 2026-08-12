@@ -1,0 +1,65 @@
+# backend project — Go-specific hooks that must run with cwd=backend/ (where
+# go.mod lives). Workspace mode strips the backend/ prefix so golangci-lint
+# receives project-relative paths (foo.go, not backend/foo.go), enabling fast
+# per-file formatting via `prek run --group fmt --files <path>`.
+#
+# Not declared orphan: root builtins (trailing-whitespace, check-yaml, ...)
+# still cover backend files; golangci-lint skips generated *.go via its own
+# `generated: lax` setting, so they are exempt without an exclude here.
+
+[[repos]]
+repo = "local"
+
+# ---- fmt group: mutating formatters (AI post-edit + commit) ----
+[[repos.hooks]]
+id = "golangci-fmt"
+name = "golangci-lint fmt (backend)"
+language = "system"
+entry = "golangci-lint fmt"
+files = "\\.go$"
+pass_filenames = true
+groups = ["fmt"]
+stages = ["pre-commit"]
+
+# ---- lint group: read-only gate (AI Stop + commit + CI) ----
+[[repos.hooks]]
+id = "golangci-run"
+name = "golangci-lint run (backend)"
+language = "system"
+entry = "golangci-lint run"
+files = "\\.go$"
+pass_filenames = false
+groups = ["lint"]
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "golangci-config-verify"
+name = "golangci-lint config verify (backend)"
+language = "system"
+entry = "golangci-lint config verify"
+files = "^\\.golangci\\.yml$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# Generated-files drift gate. go generate ./... is the single source of
+# regeneration (swag via the go.mod tool directive + buildcss via the
+# //go:generate in internal/web/gen.go). Fails if committed output is stale.
+[[repos.hooks]]
+id = "backend-generate-check"
+name = "generated files up to date (backend)"
+language = "system"
+entry = "go generate ./... && git diff --exit-code -- docs internal/web/csshash.go 'internal/web/post.*.css'"
+shell = "bash"
+files = "\\.go$|^templates/post\\.css$|^cmd/buildcss/"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- pre-push: tests ----
+[[repos.hooks]]
+id = "backend-test"
+name = "go test (backend, pre-push)"
+language = "system"
+entry = "go test ./..."
+files = "\\.go$"
+pass_filenames = false
+stages = ["pre-push"]

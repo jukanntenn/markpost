@@ -50,15 +50,11 @@ export class DeliveryPage {
   }
 
   async submitCreate() {
-    await this.dialog
-      .getByRole("button", { name: "Create", exact: true })
-      .click();
+    await this.dialog.getByRole("button", { name: "Create", exact: true }).click();
   }
 
   async submitSave() {
-    await this.dialog
-      .getByRole("button", { name: "Save", exact: true })
-      .click();
+    await this.dialog.getByRole("button", { name: "Save", exact: true }).click();
   }
 
   async createChannel(name: string, webhookUrl: string, keywords?: string) {
@@ -80,9 +76,7 @@ export class DeliveryPage {
   }
 
   async clickTestInDialog() {
-    await this.dialog
-      .getByRole("button", { name: "Send test", exact: true })
-      .click();
+    await this.dialog.getByRole("button", { name: "Send test", exact: true }).click();
   }
 
   async clickDeleteInDialog() {
@@ -90,10 +84,7 @@ export class DeliveryPage {
   }
 
   async confirmDelete() {
-    await this.page
-      .getByRole("button", { name: "Delete", exact: true })
-      .last()
-      .click();
+    await this.page.getByRole("button", { name: "Delete", exact: true }).last().click();
   }
 
   getLatestCell(name: string): Locator {

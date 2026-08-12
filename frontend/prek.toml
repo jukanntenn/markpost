@@ -1,0 +1,48 @@
+# frontend project — JS/TS hooks that must run with cwd=frontend/ (where
+# package.json lives) and resolve local node_modules binaries via pnpm.
+# Workspace mode strips the frontend/ prefix for per-file formatting.
+
+[[repos]]
+repo = "local"
+
+# ---- fmt group: per-file formatter (AI post-edit + commit) ----
+[[repos.hooks]]
+id = "prettier"
+name = "prettier (frontend)"
+language = "system"
+entry = "pnpm exec prettier --write"
+files = "\\.(ts|tsx|js|jsx|json|css|md|ya?ml|html)$"
+pass_filenames = true
+groups = ["fmt"]
+stages = ["pre-commit"]
+
+# ---- lint group: read-only gate (AI Stop + commit + CI) ----
+[[repos.hooks]]
+id = "frontend-eslint"
+name = "eslint (frontend)"
+language = "system"
+entry = "pnpm lint"
+files = "\\.(ts|tsx|js|jsx)$"
+pass_filenames = false
+groups = ["lint"]
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "frontend-typecheck"
+name = "tsc --noEmit (frontend)"
+language = "system"
+entry = "pnpm typecheck"
+files = "\\.(ts|tsx)$"
+pass_filenames = false
+groups = ["lint"]
+stages = ["pre-commit"]
+
+# ---- pre-push: tests ----
+[[repos.hooks]]
+id = "frontend-test"
+name = "vitest (frontend, pre-push)"
+language = "system"
+entry = "pnpm test:run"
+files = ""
+pass_filenames = false
+stages = ["pre-push"]

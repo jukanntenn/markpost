@@ -1,9 +1,108 @@
 basePath: /
 definitions:
-  internal_api_rest_v1.AdminChannelItem:
+  apierr.ErrorResponse:
+    properties:
+      code:
+        type: string
+      errors:
+        items:
+          $ref: '#/definitions/apierr.FieldError'
+        type: array
+      message:
+        type: string
+    type: object
+  apierr.FieldError:
+    properties:
+      code:
+        type: string
+      field:
+        type: string
+      message:
+        type: string
+    type: object
+  delivery.ChannelConfiguration:
+    additionalProperties: {}
+    type: object
+  delivery.ChannelKind:
+    enum:
+    - feishu
+    type: string
+    x-enum-varnames:
+    - ChannelKindFeishu
+  delivery.DailyStat:
+    properties:
+      day:
+        description: YYYY-MM-DD (UTC)
+        type: string
+      delivered:
+        type: integer
+      expired:
+        type: integer
+      failed:
+        type: integer
+    type: object
+  delivery.LockedChannel:
+    properties:
+      channel_id:
+        type: integer
+      channel_name:
+        type: string
+      fails:
+        type: integer
+      failure_rate:
+        type: number
+      last_at:
+        type: string
+      last_error:
+        type: string
+      total:
+        type: integer
+      username:
+        type: string
+    type: object
+  delivery.PendingAttemptRow:
+    properties:
+      channel_id:
+        type: integer
+      channel_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      post_id:
+        type: integer
+      post_qid:
+        type: string
+      post_title:
+        type: string
+    type: object
+  delivery.TodayCounts:
+    properties:
+      delivered:
+        type: integer
+      failed:
+        type: integer
+      pending:
+        type: integer
+    type: object
+  user.RefreshToken:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      revoked:
+        type: boolean
+      user_id:
+        type: integer
+    type: object
+  v1.AdminChannelItem:
     properties:
       configuration:
-        $ref: '#/definitions/markpost_internal_domain_delivery.ChannelConfiguration'
+        $ref: '#/definitions/delivery.ChannelConfiguration'
       created_at:
         type: string
       enabled:
@@ -19,7 +118,7 @@ definitions:
       username:
         type: string
     type: object
-  internal_api_rest_v1.AdminCreateChannelRequest:
+  v1.AdminCreateChannelRequest:
     properties:
       configuration:
         items:
@@ -39,7 +138,7 @@ definitions:
     - name
     - user_id
     type: object
-  internal_api_rest_v1.AdminCreateUserRequest:
+  v1.AdminCreateUserRequest:
     properties:
       email:
         type: string
@@ -51,29 +150,29 @@ definitions:
     - password
     - username
     type: object
-  internal_api_rest_v1.AdminLockedChannelsResponse:
+  v1.AdminLockedChannelsResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/markpost_internal_domain_delivery.LockedChannel'
+          $ref: '#/definitions/delivery.LockedChannel'
         type: array
     type: object
-  internal_api_rest_v1.AdminResetPasswordResponse:
+  v1.AdminResetPasswordResponse:
     properties:
       password:
         type: string
     type: object
-  internal_api_rest_v1.AdminSetChannelEnabledRequest:
+  v1.AdminSetChannelEnabledRequest:
     properties:
       enabled:
         type: boolean
     type: object
-  internal_api_rest_v1.AdminSetUserActiveRequest:
+  v1.AdminSetUserActiveRequest:
     properties:
       active:
         type: boolean
     type: object
-  internal_api_rest_v1.AdminSetUserRoleRequest:
+  v1.AdminSetUserRoleRequest:
     properties:
       role:
         enum:
@@ -83,7 +182,7 @@ definitions:
     required:
     - role
     type: object
-  internal_api_rest_v1.AdminStatsCounts:
+  v1.AdminStatsCounts:
     properties:
       channels:
         type: integer
@@ -100,12 +199,12 @@ definitions:
       users_week_delta:
         type: integer
     type: object
-  internal_api_rest_v1.AdminStatsResponse:
+  v1.AdminStatsResponse:
     properties:
       counts:
-        $ref: '#/definitions/internal_api_rest_v1.AdminStatsCounts'
+        $ref: '#/definitions/v1.AdminStatsCounts'
     type: object
-  internal_api_rest_v1.AdminUserItem:
+  v1.AdminUserItem:
     properties:
       created_at:
         type: string
@@ -130,7 +229,7 @@ definitions:
       username:
         type: string
     type: object
-  internal_api_rest_v1.AuthResponse:
+  v1.AuthResponse:
     properties:
       expires_in:
         type: integer
@@ -139,9 +238,9 @@ definitions:
       token:
         type: string
       user:
-        $ref: '#/definitions/internal_api_rest_v1.UserResponse'
+        $ref: '#/definitions/v1.UserResponse'
     type: object
-  internal_api_rest_v1.ChangePasswordResponse:
+  v1.ChangePasswordResponse:
     properties:
       expires_in:
         type: integer
@@ -150,10 +249,10 @@ definitions:
       token:
         type: string
     type: object
-  internal_api_rest_v1.ChannelResponse:
+  v1.ChannelResponse:
     properties:
       configuration:
-        $ref: '#/definitions/markpost_internal_domain_delivery.ChannelConfiguration'
+        $ref: '#/definitions/delivery.ChannelConfiguration'
       created_at:
         type: string
       enabled:
@@ -163,20 +262,20 @@ definitions:
       keywords:
         type: string
       kind:
-        $ref: '#/definitions/markpost_internal_domain_delivery.ChannelKind'
+        $ref: '#/definitions/delivery.ChannelKind'
       name:
         type: string
       updated_at:
         type: string
     type: object
-  internal_api_rest_v1.ChannelsListResponse:
+  v1.ChannelsListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/internal_api_rest_v1.ChannelResponse'
+          $ref: '#/definitions/v1.ChannelResponse'
         type: array
     type: object
-  internal_api_rest_v1.CreateDeliveryChannelRequest:
+  v1.CreateDeliveryChannelRequest:
     properties:
       configuration:
         items:
@@ -193,12 +292,12 @@ definitions:
     - kind
     - name
     type: object
-  internal_api_rest_v1.CreatePostResponse:
+  v1.CreatePostResponse:
     properties:
       id:
         type: string
     type: object
-  internal_api_rest_v1.DeliveryHistoryItem:
+  v1.DeliveryHistoryItem:
     properties:
       channel_id:
         type: integer
@@ -219,32 +318,32 @@ definitions:
       username:
         type: string
     type: object
-  internal_api_rest_v1.DeliveryHistoryListResponse:
+  v1.DeliveryHistoryListResponse:
     properties:
       history:
         items:
-          $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryItem'
+          $ref: '#/definitions/v1.DeliveryHistoryItem'
         type: array
       pagination:
-        $ref: '#/definitions/internal_api_rest_v1.Pagination'
+        $ref: '#/definitions/v1.Pagination'
     type: object
-  internal_api_rest_v1.DeliveryLatestListResponse:
+  v1.DeliveryLatestListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryItem'
+          $ref: '#/definitions/v1.DeliveryHistoryItem'
         type: array
     type: object
-  internal_api_rest_v1.DeliveryStatsResponse:
+  v1.DeliveryStatsResponse:
     properties:
       today:
-        $ref: '#/definitions/markpost_internal_domain_delivery.TodayCounts'
+        $ref: '#/definitions/delivery.TodayCounts'
       trend:
         items:
-          $ref: '#/definitions/markpost_internal_domain_delivery.DailyStat'
+          $ref: '#/definitions/delivery.DailyStat'
         type: array
     type: object
-  internal_api_rest_v1.GitHubLoginRequest:
+  v1.GitHubLoginRequest:
     properties:
       code:
         type: string
@@ -254,24 +353,24 @@ definitions:
     - code
     - state
     type: object
-  internal_api_rest_v1.HealthResponse:
+  v1.HealthResponse:
     properties:
       status:
         type: string
     type: object
-  internal_api_rest_v1.MessageResponse:
+  v1.MessageResponse:
     properties:
       message:
         type: string
     type: object
-  internal_api_rest_v1.OAuthURLResponse:
+  v1.OAuthURLResponse:
     properties:
       state:
         type: string
       url:
         type: string
     type: object
-  internal_api_rest_v1.PaginatedItemsResponse:
+  v1.PaginatedItemsResponse:
     properties:
       items: {}
       limit:
@@ -283,7 +382,7 @@ definitions:
       total_pages:
         type: integer
     type: object
-  internal_api_rest_v1.Pagination:
+  v1.Pagination:
     properties:
       limit:
         type: integer
@@ -294,7 +393,7 @@ definitions:
       total_pages:
         type: integer
     type: object
-  internal_api_rest_v1.PasswordChangeRequest:
+  v1.PasswordChangeRequest:
     properties:
       current_password:
         type: string
@@ -303,21 +402,21 @@ definitions:
     required:
     - new_password
     type: object
-  internal_api_rest_v1.PendingAttemptsResponse:
+  v1.PendingAttemptsResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/markpost_internal_domain_delivery.PendingAttemptRow'
+          $ref: '#/definitions/delivery.PendingAttemptRow'
         type: array
     type: object
-  internal_api_rest_v1.PostKeyResponse:
+  v1.PostKeyResponse:
     properties:
       created_at:
         type: string
       post_key:
         type: string
     type: object
-  internal_api_rest_v1.PostListItem:
+  v1.PostListItem:
     properties:
       created_at:
         type: string
@@ -328,7 +427,7 @@ definitions:
       title:
         type: string
     type: object
-  internal_api_rest_v1.PostRequest:
+  v1.PostRequest:
     properties:
       body:
         type: string
@@ -338,11 +437,11 @@ definitions:
     - body
     - title
     type: object
-  internal_api_rest_v1.PostsListResponse:
+  v1.PostsListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/internal_api_rest_v1.PostListItem'
+          $ref: '#/definitions/v1.PostListItem'
         type: array
       limit:
         type: integer
@@ -353,14 +452,14 @@ definitions:
       total_pages:
         type: integer
     type: object
-  internal_api_rest_v1.RefreshTokenRequest:
+  v1.RefreshTokenRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  internal_api_rest_v1.RefreshTokenResponse:
+  v1.RefreshTokenResponse:
     properties:
       expires_in:
         type: integer
@@ -369,24 +468,24 @@ definitions:
       token:
         type: string
     type: object
-  internal_api_rest_v1.RotatePostKeyResponse:
+  v1.RotatePostKeyResponse:
     properties:
       post_key:
         type: string
     type: object
-  internal_api_rest_v1.SessionsResponse:
+  v1.SessionsResponse:
     properties:
       sessions:
         items:
-          $ref: '#/definitions/markpost_internal_domain_user.RefreshToken'
+          $ref: '#/definitions/user.RefreshToken'
         type: array
     type: object
-  internal_api_rest_v1.SingleChannelResponse:
+  v1.SingleChannelResponse:
     properties:
       channel:
-        $ref: '#/definitions/internal_api_rest_v1.ChannelResponse'
+        $ref: '#/definitions/v1.ChannelResponse'
     type: object
-  internal_api_rest_v1.UpdateDeliveryChannelRequest:
+  v1.UpdateDeliveryChannelRequest:
     properties:
       configuration:
         items:
@@ -401,7 +500,7 @@ definitions:
       name:
         type: string
     type: object
-  internal_api_rest_v1.UserResponse:
+  v1.UserResponse:
     properties:
       avatar_url:
         type: string
@@ -420,7 +519,7 @@ definitions:
       username:
         type: string
     type: object
-  internal_api_rest_v1.UsernameLoginRequest:
+  v1.UsernameLoginRequest:
     properties:
       password:
         type: string
@@ -429,105 +528,6 @@ definitions:
     required:
     - password
     - username
-    type: object
-  markpost_internal_apierr.ErrorResponse:
-    properties:
-      code:
-        type: string
-      errors:
-        items:
-          $ref: '#/definitions/markpost_internal_apierr.FieldError'
-        type: array
-      message:
-        type: string
-    type: object
-  markpost_internal_apierr.FieldError:
-    properties:
-      code:
-        type: string
-      field:
-        type: string
-      message:
-        type: string
-    type: object
-  markpost_internal_domain_delivery.ChannelConfiguration:
-    additionalProperties: {}
-    type: object
-  markpost_internal_domain_delivery.ChannelKind:
-    enum:
-    - feishu
-    type: string
-    x-enum-varnames:
-    - ChannelKindFeishu
-  markpost_internal_domain_delivery.DailyStat:
-    properties:
-      day:
-        description: YYYY-MM-DD (UTC)
-        type: string
-      delivered:
-        type: integer
-      expired:
-        type: integer
-      failed:
-        type: integer
-    type: object
-  markpost_internal_domain_delivery.LockedChannel:
-    properties:
-      channel_id:
-        type: integer
-      channel_name:
-        type: string
-      fails:
-        type: integer
-      failure_rate:
-        type: number
-      last_at:
-        type: string
-      last_error:
-        type: string
-      total:
-        type: integer
-      username:
-        type: string
-    type: object
-  markpost_internal_domain_delivery.PendingAttemptRow:
-    properties:
-      channel_id:
-        type: integer
-      channel_name:
-        type: string
-      created_at:
-        type: string
-      id:
-        type: integer
-      post_id:
-        type: integer
-      post_qid:
-        type: string
-      post_title:
-        type: string
-    type: object
-  markpost_internal_domain_delivery.TodayCounts:
-    properties:
-      delivered:
-        type: integer
-      failed:
-        type: integer
-      pending:
-        type: integer
-    type: object
-  markpost_internal_domain_user.RefreshToken:
-    properties:
-      created_at:
-        type: string
-      expires_at:
-        type: string
-      id:
-        type: integer
-      revoked:
-        type: boolean
-      user_id:
-        type: integer
     type: object
 host: localhost:7330
 info:
@@ -558,7 +558,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Render a post as HTML or raw markdown
       tags:
       - posts
@@ -577,22 +577,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.PostRequest'
+          $ref: '#/definitions/v1.PostRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.CreatePostResponse'
+            $ref: '#/definitions/v1.CreatePostResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Create a new post with a post key
       tags:
       - posts
@@ -639,15 +639,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
+            $ref: '#/definitions/v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List audit logs (admin)
@@ -672,15 +672,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
+            $ref: '#/definitions/v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List all delivery channels (admin)
@@ -695,26 +695,26 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminCreateChannelRequest'
+          $ref: '#/definitions/v1.AdminCreateChannelRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminChannelItem'
+            $ref: '#/definitions/v1.AdminChannelItem'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a delivery channel (admin)
@@ -741,15 +741,15 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a delivery channel (admin)
@@ -770,26 +770,26 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminSetChannelEnabledRequest'
+          $ref: '#/definitions/v1.AdminSetChannelEnabledRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.MessageResponse'
+            $ref: '#/definitions/v1.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Enable or disable a delivery channel (admin)
@@ -826,15 +826,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
+            $ref: '#/definitions/v1.DeliveryHistoryListResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List all delivery history (admin)
@@ -853,15 +853,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryStatsResponse'
+            $ref: '#/definitions/v1.DeliveryStatsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get site-wide delivery trend (admin, D2.5)
@@ -875,15 +875,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminLockedChannelsResponse'
+            $ref: '#/definitions/v1.AdminLockedChannelsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List channels with persistent delivery failures (admin, D2.1)
@@ -916,15 +916,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
+            $ref: '#/definitions/v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List all posts (admin)
@@ -948,11 +948,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete any post (admin)
@@ -978,15 +978,15 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Revoke a single user session (admin, D3.2)
@@ -1000,15 +1000,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminStatsResponse'
+            $ref: '#/definitions/v1.AdminStatsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get admin dashboard statistics (D2.4, includes week deltas)
@@ -1037,15 +1037,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PaginatedItemsResponse'
+            $ref: '#/definitions/v1.PaginatedItemsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List all users (admin)
@@ -1060,26 +1060,26 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminCreateUserRequest'
+          $ref: '#/definitions/v1.AdminCreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+            $ref: '#/definitions/v1.AdminUserItem'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a user (admin)
@@ -1106,15 +1106,15 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a user (admin)
@@ -1133,19 +1133,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+            $ref: '#/definitions/v1.AdminUserItem'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get a single user (admin) — detail profile data (D3.2)
@@ -1166,30 +1166,30 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminSetUserActiveRequest'
+          $ref: '#/definitions/v1.AdminSetUserActiveRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+            $ref: '#/definitions/v1.AdminUserItem'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Set a user's active status (admin)
@@ -1209,23 +1209,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminResetPasswordResponse'
+            $ref: '#/definitions/v1.AdminResetPasswordResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Reset a user's password (admin) — system generates a temporary
@@ -1246,30 +1246,30 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.AdminSetUserRoleRequest'
+          $ref: '#/definitions/v1.AdminSetUserRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AdminUserItem'
+            $ref: '#/definitions/v1.AdminUserItem'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Set a user's role (admin)
@@ -1296,15 +1296,15 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Revoke all user sessions (admin)
@@ -1323,19 +1323,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.SessionsResponse'
+            $ref: '#/definitions/v1.SessionsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List user sessions (admin)
@@ -1351,22 +1351,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.PasswordChangeRequest'
+          $ref: '#/definitions/v1.PasswordChangeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.ChangePasswordResponse'
+            $ref: '#/definitions/v1.ChangePasswordResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Change the current user's password
@@ -1382,22 +1382,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.UsernameLoginRequest'
+          $ref: '#/definitions/v1.UsernameLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AuthResponse'
+            $ref: '#/definitions/v1.AuthResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Login with username and password
       tags:
       - auth
@@ -1409,11 +1409,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.MessageResponse'
+            $ref: '#/definitions/v1.MessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Logout the current user
@@ -1429,18 +1429,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.RefreshTokenRequest'
+          $ref: '#/definitions/v1.RefreshTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.RefreshTokenResponse'
+            $ref: '#/definitions/v1.RefreshTokenResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Refresh authentication token
       tags:
       - auth
@@ -1458,7 +1458,7 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Revoke all of the current user's sessions except the present one (I.12)
@@ -1471,11 +1471,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.SessionsResponse'
+            $ref: '#/definitions/v1.SessionsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the current user's sessions (I.12)
@@ -1501,11 +1501,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Revoke one of the current user's sessions (I.12)
@@ -1519,11 +1519,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.ChannelsListResponse'
+            $ref: '#/definitions/v1.ChannelsListResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the current user's delivery channels
@@ -1538,22 +1538,22 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.CreateDeliveryChannelRequest'
+          $ref: '#/definitions/v1.CreateDeliveryChannelRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.SingleChannelResponse'
+            $ref: '#/definitions/v1.SingleChannelResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a delivery channel
@@ -1573,15 +1573,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.MessageResponse'
+            $ref: '#/definitions/v1.MessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a delivery channel
@@ -1601,26 +1601,26 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.UpdateDeliveryChannelRequest'
+          $ref: '#/definitions/v1.UpdateDeliveryChannelRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.SingleChannelResponse'
+            $ref: '#/definitions/v1.SingleChannelResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update a delivery channel
@@ -1640,19 +1640,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.MessageResponse'
+            $ref: '#/definitions/v1.MessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "502":
           description: Bad Gateway
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Send a test message to a delivery channel
@@ -1685,11 +1685,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse'
+            $ref: '#/definitions/v1.DeliveryHistoryListResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the current user's delivery history
@@ -1703,11 +1703,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryLatestListResponse'
+            $ref: '#/definitions/v1.DeliveryLatestListResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the most recent delivery per channel for the current user
@@ -1721,11 +1721,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PendingAttemptsResponse'
+            $ref: '#/definitions/v1.PendingAttemptsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the current user's in-flight delivery attempts (K.2)
@@ -1744,11 +1744,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.DeliveryStatsResponse'
+            $ref: '#/definitions/v1.DeliveryStatsResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get the current user's delivery trend + today counters (B2.7/K.2)
@@ -1762,7 +1762,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.HealthResponse'
+            $ref: '#/definitions/v1.HealthResponse'
       summary: Health check
       tags:
       - health
@@ -1776,18 +1776,18 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_api_rest_v1.GitHubLoginRequest'
+          $ref: '#/definitions/v1.GitHubLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.AuthResponse'
+            $ref: '#/definitions/v1.AuthResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Login with GitHub OAuth code
       tags:
       - oauth
@@ -1799,11 +1799,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.OAuthURLResponse'
+            $ref: '#/definitions/v1.OAuthURLResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       summary: Get GitHub OAuth authorization URL
       tags:
       - oauth
@@ -1815,11 +1815,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.RotatePostKeyResponse'
+            $ref: '#/definitions/v1.RotatePostKeyResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Rotate the current user's post key (C2.5)
@@ -1833,11 +1833,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PostKeyResponse'
+            $ref: '#/definitions/v1.PostKeyResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get the current user's post key
@@ -1866,11 +1866,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api_rest_v1.PostsListResponse'
+            $ref: '#/definitions/v1.PostsListResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List the current user's posts
@@ -1894,11 +1894,11 @@ paths:
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/markpost_internal_apierr.ErrorResponse'
+            $ref: '#/definitions/apierr.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Delete a post owned by the current user

@@ -1,54 +1,14 @@
 #!/usr/bin/env python3
-
+# Claude PostToolUse (Edit|Write): delegate formatting to prek (the fmt group,
+# single source of truth). No formatter logic here.
 from __future__ import annotations
 
 import json
-from pathlib import PurePath
 import subprocess
 import sys
+from pathlib import Path
 
-
-PRETTIER_EXTS = {
-    ".ts",
-    ".tsx",
-    ".js",
-    ".jsx",
-    ".json",
-    ".css",
-    ".md",
-    ".yaml",
-    ".yml",
-    ".html",
-}
-CADDYFILE_STAGES = {"dev", "staging", "local", "production"}
-
-
-def is_caddyfile(path: PurePath) -> bool:
-    if path.name == "Caddyfile":
-        return True
-    parts = path.name.split(".")
-    return parts[0] == "Caddyfile" and len(parts) == 2 and parts[1] in CADDYFILE_STAGES
-
-
-def commands_for(path: PurePath) -> list[list[str]]:
-    match path.suffix:
-        case ".py" | ".pyi":
-            return [
-                ["uv", "run", "ruff", "check", "--fix", str(path)],
-                ["uv", "run", "ruff", "format", str(path)],
-            ]
-        case ".go":
-            return [["gofmt", "-w", str(path)], ["goimports", "-w", str(path)]]
-        case s if s in PRETTIER_EXTS:
-            return [["prettier", "--write", str(path)]]
-        case ".toml":
-            return [["oxfmt", "--write", str(path)]]
-        case _:
-            return [["caddy", "fmt", str(path)]] if is_caddyfile(path) else []
-
-
-def tool_name(cmd: list[str]) -> str:
-    return cmd[2] if cmd[:2] == ["uv", "run"] else cmd[0]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> None:
@@ -58,25 +18,24 @@ def main() -> None:
         return
 
     file_path = (payload.get("tool_input") or {}).get("file_path")
-    if not isinstance(file_path, str):
+    if not isinstance(file_path, str) or not (
+        Path(file_path).is_file() or (ROOT / file_path).is_file()
+    ):
         return
 
-    for cmd in commands_for(PurePath(file_path)):
-        name = tool_name(cmd)
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-        except FileNotFoundError:
-            print(f"[post-tool-use] {name} not found on PATH; skipped", file=sys.stderr)
-            continue
-        if result.returncode != 0:
-            print(
-                f"[post-tool-use] {name} reported issues for {file_path}:",
-                file=sys.stderr,
-            )
-            if result.stdout:
-                print(result.stdout, file=sys.stderr)
-            if result.stderr:
-                print(result.stderr, file=sys.stderr)
+    r = subprocess.run(
+        ["prek", "run", "--group", "fmt", "--files", file_path],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
+    # exit 0 = clean, 1 = files modified (expected for a formatter); surface only real errors.
+    if r.returncode not in (0, 1):
+        print(f"[post-tool-use] prek fmt exited {r.returncode}:", file=sys.stderr)
+        if r.stdout:
+            print(r.stdout, file=sys.stderr)
+        if r.stderr:
+            print(r.stderr, file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -6,25 +6,20 @@ test.beforeEach(async ({ page, request }) => {
   await waitForBackend(request);
   const admin = await apiLogin(request);
   // 幂等：删除旧 pwuser 后用已知密码重建（避免密码状态污染）。
-  const list = await request.get(
-    `https://localhost:2053/api/v1/admin/users`,
-    { headers: { Authorization: `Bearer ${admin.token}` } },
-  );
+  const list = await request.get(`https://localhost:2053/api/v1/admin/users`, {
+    headers: { Authorization: `Bearer ${admin.token}` },
+  });
   const users = (await list.json()).items ?? [];
   const existing = users.find((u: { username: string }) => u.username === "pwuser");
   if (existing) {
-    await request.delete(
-      `https://localhost:2053/api/v1/admin/users/${existing.id}`,
-      { headers: { Authorization: `Bearer ${admin.token}` } },
-    );
-  }
-  const created = await request.post(
-    `https://localhost:2053/api/v1/admin/users`,
-    {
+    await request.delete(`https://localhost:2053/api/v1/admin/users/${existing.id}`, {
       headers: { Authorization: `Bearer ${admin.token}` },
-      data: { username: "pwuser", password: "password123" },
-    },
-  );
+    });
+  }
+  const created = await request.post(`https://localhost:2053/api/v1/admin/users`, {
+    headers: { Authorization: `Bearer ${admin.token}` },
+    data: { username: "pwuser", password: "password123" },
+  });
   if (!created.ok()) {
     throw new Error(`create pwuser failed: ${created.status()} ${await created.text()}`);
   }
@@ -63,11 +58,7 @@ test("changes password with valid input and can re-login", async ({
   await page.waitForURL("**/dashboard", { timeout: 30000 });
 });
 
-test("rejects short new password with inline error", async ({
-  page,
-  loginPage,
-  settingsPage,
-}) => {
+test("rejects short new password with inline error", async ({ page, loginPage, settingsPage }) => {
   await loginPage.login("pwuser", "password123");
   await page.waitForURL("**/dashboard", { timeout: 30000 });
   await settingsPage.goto();

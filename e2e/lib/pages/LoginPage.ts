@@ -16,9 +16,7 @@ export class LoginPage {
     this.passwordInput = page.locator('input[name="password"]');
     this.submitButton = page.getByRole("button", { name: "Sign in" });
     this.formAlert = page.getByRole("alert").filter({ hasText: /./ });
-    this.sessionExpiredBanner = page.getByText(
-      "Your session has expired. Please sign in again.",
-    );
+    this.sessionExpiredBanner = page.getByText("Your session has expired. Please sign in again.");
   }
 
   async goto() {

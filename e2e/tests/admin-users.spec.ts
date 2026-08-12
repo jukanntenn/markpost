@@ -25,20 +25,14 @@ test("admin sees the user list with role badges (D3.1)", async ({
   await expect(page.getByText("Admin", { exact: true }).first()).toBeVisible();
 });
 
-test("self-demote is hidden for own account (I.4)", async ({
-  page,
-  loginPage,
-  adminUsersPage,
-}) => {
+test("self-demote is hidden for own account (I.4)", async ({ page, loginPage, adminUsersPage }) => {
   await loginPage.goto();
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
   await adminUsersPage.goto();
   await adminUsersPage.openUserMenu("markpost");
   // 菜单中不出现对自身的角色切换（防自降级前端隐藏）。
-  await expect(
-    page.getByRole("menuitem", { name: /Change role/ }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: /Change role/ })).toHaveCount(0);
 });
 
 test("user detail page shows profile and sessions (D3.2)", async ({

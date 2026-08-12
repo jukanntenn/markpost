@@ -12,6 +12,11 @@ RUN go mod download
 
 COPY backend/ .
 
+# Regenerate embedded assets (Swagger docs, minified CSS) so the image never
+# ships stale generated output even if committed files drifted. swag runs via
+# the go.mod tool directive (go tool swag), buildcss via go run — both offline.
+RUN go generate ./...
+
 RUN CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=${VERSION}" -o markpost ./cmd/server
 
 

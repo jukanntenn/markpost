@@ -23,11 +23,7 @@ export class DashboardPage {
   }
 
   async clickUserMenu(username: string) {
-    await this.page
-      .getByRole("button")
-      .filter({ hasText: username })
-      .first()
-      .click();
+    await this.page.getByRole("button").filter({ hasText: username }).first().click();
   }
 
   async clickLogout() {

@@ -17,54 +17,30 @@ on:
       - "LICENSE"
   workflow_dispatch:
 
+# Single source of truth: every check CI runs is declared in prek
+# (prek.toml + backend/prek.toml + frontend/prek.toml). CI just installs the
+# toolchains prek's hooks call (golangci-lint, pnpm, swag via go tool) and runs
+# `prek run --all-files`. No parallel lint/format definition exists in CI.
 jobs:
-  changes:
+  lint:
     runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.f.outputs.backend }}
-      frontend: ${{ steps.f.outputs.frontend }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - id: f
-        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-              - 'backend/go.mod'
-              - 'backend/go.sum'
-              - 'backend/.golangci.yml'
-              - '.github/workflows/lint.yml'
-            frontend:
-              - 'frontend/**'
-              - '.github/workflows/lint.yml'
 
-  lint-backend:
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26"
           cache: true
           cache-dependency-path: backend/go.sum
+
+      # Install golangci-lint (prek's backend hooks call it directly).
       - uses: golangci/golangci-lint-action@d583c34f0599d37dbac4a198b9c83201be380893 # v9.3.0
         with:
           version: v2.12.2
-          working-directory: backend
-          args: --timeout 5m
-      - name: Verify golangci-lint config
-        working-directory: backend
-        run: golangci-lint config verify
+          install-only: true
 
-  lint-frontend:
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
         with:
           version: 11
@@ -74,23 +50,15 @@ jobs:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - name: Install dependencies
+
+      - name: Install frontend dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile
-      - name: ESLint
-        working-directory: frontend
-        run: pnpm lint
-      - name: Typecheck
-        working-directory: frontend
-        run: pnpm typecheck
-      - name: Prettier check
-        working-directory: frontend
-        run: pnpm format:check
 
-  validate-prek-config:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-      - name: Validate prek.toml
+      - name: Validate prek config
         run: uvx prek validate-config prek.toml
+
+      - name: prek run --all-files (fmt + lint + generate-check gate)
+        # Formatters mutate; prek exits non-zero if any file needed formatting
+        # or any lint/gate failed — the comprehensive single-source gate.
+        run: uvx prek run --all-files

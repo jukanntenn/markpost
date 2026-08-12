@@ -13,11 +13,7 @@ test.beforeEach(async ({ page, request }) => {
   });
 });
 
-test("creates a delivery channel (D5)", async ({
-  page,
-  loginPage,
-  deliveryPage,
-}) => {
+test("creates a delivery channel (D5)", async ({ page, loginPage, deliveryPage }) => {
   await loginPage.goto();
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
@@ -55,28 +51,18 @@ test("edit mode exposes test + delete actions (D5.3)", async ({
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
   await deliveryPage.goto();
-  await deliveryPage.createChannel(
-    "EditMe",
-    "https://open.feishu.cn/open-apis/bot/v2/hook/ok",
-  );
+  await deliveryPage.createChannel("EditMe", "https://open.feishu.cn/open-apis/bot/v2/hook/ok");
   await deliveryPage.editChannel("EditMe");
   await expect(deliveryPage.dialog.getByRole("button", { name: "Send test" })).toBeVisible();
   await expect(deliveryPage.dialog.getByRole("button", { name: "Delete" })).toBeVisible();
 });
 
-test("deletes a channel with confirmation (D5.5)", async ({
-  page,
-  loginPage,
-  deliveryPage,
-}) => {
+test("deletes a channel with confirmation (D5.5)", async ({ page, loginPage, deliveryPage }) => {
   await loginPage.goto();
   await loginPage.login("markpost", "markpost");
   await page.waitForURL("**/dashboard");
   await deliveryPage.goto();
-  await deliveryPage.createChannel(
-    "Doomed",
-    "https://open.feishu.cn/open-apis/bot/v2/hook/ok",
-  );
+  await deliveryPage.createChannel("Doomed", "https://open.feishu.cn/open-apis/bot/v2/hook/ok");
   await deliveryPage.editChannel("Doomed");
   await deliveryPage.clickDeleteInDialog();
   await deliveryPage.confirmDelete();

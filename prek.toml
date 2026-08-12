@@ -1,32 +1,48 @@
-# prek configuration — see https://prek.j178.dev
+# prek configuration — workspace root. See:
+#   - backend/prek.toml   (Go hooks, cwd=backend)
+#   - frontend/prek.toml  (JS/TS hooks, cwd=frontend)
+#
+# Single source of truth for the whole pipeline: AI post-edit hooks run
+# `prek run --group fmt --files <edited>`, AI Stop runs `prek run --group lint
+# --all-files`, CI runs `prek run --all-files`. No parallel formatter/lint
+# definition exists outside prek.
+#
 # Install: prek install
 
 default_install_hook_types = ["pre-commit", "pre-push", "commit-msg"]
 
-# ---- Generic checks (prek builtin: zero network, zero Python) ----
+# Mutating/fixer builtins share one generated-file exemption (the generator
+# owns those bytes; a fixer diverging from raw output would trip the
+# generate-check gate in backend/prek.toml). The regex is inlined per hook
+# because prek does not support config-level variable interpolation.
+
+# ---- Read-only builtin checks (commit + CI; cover the whole tree) ----
 [[repos]]
 repo = "builtin"
 hooks = [
-  { id = "trailing-whitespace" },
   { id = "check-yaml" },
   { id = "check-toml" },
   { id = "check-json" },
   { id = "check-merge-conflict" },
   { id = "check-added-large-files" },
   { id = "detect-private-key" },
-  { id = "mixed-line-ending", args = [
-    "--fix=lf",
-  ] },
 ]
 
-# end-of-file-fixer runs in its own builtin repo so generated Swagger docs can
-# be excluded: swag emits swagger.json without a trailing newline (it owns the
-# bytes, like the buildcss asset), so eof-fixing it would diverge from the
-# committed output and break the "generated files up to date" gate in CI.
+# ---- fmt group: mutating fixers (AI post-edit + commit) ----
 [[repos]]
 repo = "builtin"
 hooks = [
-  { id = "end-of-file-fixer", exclude = "^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$" },
+  { id = "trailing-whitespace", exclude = "backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|backend/internal/web/(csshash\\.go|post\\.[0-9a-f]+\\.css)$", groups = [
+    "fmt",
+  ] },
+  { id = "mixed-line-ending", args = [
+    "--fix=lf",
+  ], exclude = "backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|backend/internal/web/(csshash\\.go|post\\.[0-9a-f]+\\.css)$", groups = [
+    "fmt",
+  ] },
+  { id = "end-of-file-fixer", exclude = "backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|backend/internal/web/(csshash\\.go|post\\.[0-9a-f]+\\.css)$", groups = [
+    "fmt",
+  ] },
 ]
 
 # ---- GitHub Actions: actionlint (auto-installed via go install) ----
@@ -35,112 +51,59 @@ repo = "https://github.com/rhysd/actionlint"
 rev = "v1.7.12"
 hooks = [{ id = "actionlint" }]
 
-# ---- Go: golangci-lint (format via `fmt`, lint via `run`) ----
 [[repos]]
 repo = "local"
 
-[[repos.hooks]]
-id = "golangci-config-verify"
-name = "golangci-lint config verify (backend)"
-language = "system"
-entry = "cd backend && golangci-lint config verify"
-shell = "bash"
-files = "^backend/\\.golangci\\.yml$"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "golangci-fmt"
-name = "golangci-lint fmt (backend)"
-language = "system"
-entry = "cd backend && golangci-lint fmt"
-shell = "bash"
-files = "^backend/.*\\.go$"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "golangci-run"
-name = "golangci-lint run (backend)"
-language = "system"
-entry = "cd backend && golangci-lint run"
-shell = "bash"
-files = "^backend/.*\\.go$"
-pass_filenames = false
-stages = ["pre-commit"]
-
+# AI tool configs in sync (AGENTS.md == CLAUDE.md, skills mirrored).
 [[repos.hooks]]
 id = "agents-sync"
 name = "AI tool configs in sync"
 language = "system"
-entry = "scripts/check-agents-sync.sh"
+entry = "scripts/check_agents.py"
 files = "^(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
 pass_filenames = false
 stages = ["pre-commit"]
 
-# ---- Frontend: prettier ----
-[[repos.hooks]]
-id = "prettier"
-name = "prettier (frontend)"
-language = "system"
-entry = "cd frontend && pnpm format"
-shell = "bash"
-files = "^frontend/.*\\.(ts|tsx|js|jsx|json|css|md)$"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "frontend-eslint"
-name = "eslint (frontend)"
-language = "system"
-entry = "cd frontend && pnpm lint"
-shell = "bash"
-files = "^frontend/.*\\.(ts|tsx|js|jsx)$"
-pass_filenames = false
-stages = ["pre-commit"]
-
-[[repos.hooks]]
-id = "frontend-typecheck"
-name = "tsc --noEmit (frontend)"
-language = "system"
-entry = "cd frontend && pnpm typecheck"
-shell = "bash"
-files = "^frontend/.*\\.(ts|tsx)$"
-pass_filenames = false
-stages = ["pre-commit"]
-
-# ---- 全仓库格式化 (每次扫全文件;工具缺失则优雅降级) ----
-
-# prettier 管 non-frontend 的 md/yaml/html/json/css (全局 prettier)
+# ---- fmt group: root-level formatters (non-frontend, non-agent-dir) ----
 [[repos.hooks]]
 id = "prettier-root"
 name = "prettier (root, non-frontend)"
 language = "system"
-entry = "prettier --write \"$@\""
-shell = "bash"
-files = ".*\\.(md|ya?ml|html|json|css)$"
-exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/internal/web/post\\.[0-9a-f]+\\.css$|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$"
+entry = "prettier --write"
+files = "\\.(md|ya?ml|html|json|css)$"
+exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
 pass_filenames = true
+groups = ["fmt"]
 stages = ["pre-commit"]
 
-# oxfmt 管 toml (缺则跳过)
+# oxfmt for toml (skipped gracefully if not installed).
 [[repos.hooks]]
 id = "oxfmt"
 name = "oxfmt (toml)"
 language = "system"
-entry = "command -v oxfmt >/dev/null || { echo 'oxfmt not installed, skipping'; exit 0; } && oxfmt --write \"$@\""
+entry = "command -v oxfmt >/dev/null || { echo 'oxfmt not installed, skipping'; exit 0; }; oxfmt --write \"$@\""
 shell = "bash"
-files = ".*\\.toml$"
+files = "\\.toml$"
 pass_filenames = true
+groups = ["fmt"]
 stages = ["pre-commit"]
 
-# Ansible Jinja2 模板: 渲染后校验可解析 (缺 jinja2 则跳过)
-#
-# 这里刻意不做格式化。djlint (--profile=jinja) 是 HTML beautifier,会把行首独占
-# 一行的 {% if %} / {% endif %} 折叠进相邻行,并抹掉缩进和空行。而 Ansible 的
-# template 模块默认 trim_blocks=True —— 块标签独占一行才会被正确裁掉换行,一旦
-# 被折叠就会渲染出 `{% if %}key = "v"` 这类同行内容,产出无效 TOML/YAML。
-# 所以对这三个模板,能验证的只有"渲染结果解析得通",而不是"长得好看"。
+# caddy fmt for Caddyfile (skipped gracefully if not installed; .j2 templates
+# are intentionally NOT formatted — djlint collapses Ansible {% %} block tags
+# and breaks trim_blocks rendering. See devops/ansible note in README.)
+[[repos.hooks]]
+id = "caddy-fmt"
+name = "caddy fmt (Caddyfile)"
+language = "system"
+entry = "command -v caddy >/dev/null || { echo 'caddy not installed, skipping'; exit 0; }; for f in \"$@\"; do caddy fmt --overwrite \"$f\"; done"
+shell = "bash"
+files = "(^|/)Caddyfile(\\.(dev|staging|local|production))?$"
+pass_filenames = true
+groups = ["fmt"]
+stages = ["pre-commit"]
+
+# Ansible Jinja2 templates: validate they render to parseable output (no
+# formatting — see caddy-fmt note on why djlint is not used).
 [[repos.hooks]]
 id = "ansible-templates"
 name = "ansible templates render+parse (j2)"
@@ -150,57 +113,11 @@ files = "^devops/ansible/templates/.*\\.j2$"
 pass_filenames = false
 stages = ["pre-commit"]
 
-# caddy fmt 管 Caddyfile (缺则跳过;.j2 模板不做格式化,见上)
-[[repos.hooks]]
-id = "caddy-fmt"
-name = "caddy fmt (Caddyfile)"
-language = "system"
-entry = "command -v caddy >/dev/null || { echo 'caddy not installed, skipping'; exit 0; } && for f in \"$@\"; do caddy fmt --overwrite \"$f\"; done"
-shell = "bash"
-files = "(^|/)Caddyfile(\\.(dev|staging|local|production))?$"
-pass_filenames = true
-stages = ["pre-commit"]
-
-# ---- pre-push: run tests ----
-[[repos.hooks]]
-id = "backend-generate-check"
-name = "generated files up to date (backend)"
-language = "system"
-entry = "cd backend && swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal && go generate ./internal/web && git diff --exit-code -- docs internal/web"
-# swag owns the generated bytes exactly as it emits them (swagger.json has no
-# trailing newline; docs.go and swagger.yaml do). The committed output must be
-# byte-identical to a raw `swag init` so CI's generate-check agrees — this
-# matches the buildcss contract where the generator is the sole authority.
-shell = "bash"
-files = "^backend/"
-pass_filenames = false
-stages = ["pre-push"]
-
-[[repos.hooks]]
-id = "backend-test"
-name = "go test (backend, pre-push)"
-language = "system"
-entry = "cd backend && go test ./..."
-shell = "bash"
-files = "^backend/.*\\.go$"
-pass_filenames = false
-stages = ["pre-push"]
-
-[[repos.hooks]]
-id = "frontend-test"
-name = "vitest (frontend, pre-push)"
-language = "system"
-entry = "cd frontend && pnpm test:run"
-shell = "bash"
-files = "^frontend/"
-pass_filenames = false
-stages = ["pre-push"]
-
 # ---- commit-msg: Conventional Commits ----
 [[repos.hooks]]
 id = "conventional-commits"
 name = "commit message format"
 language = "system"
-entry = "scripts/check-commit-msg.sh"
+entry = "scripts/check_commit_msg.py"
 pass_filenames = true
 stages = ["commit-msg"]

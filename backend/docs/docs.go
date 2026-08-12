@@ -17,11 +17,6 @@ const docTemplate = `{
     "paths": {
         "/api/v1/admin/audit-logs": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -85,31 +80,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
+                            "$ref": "#/definitions/v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/channels": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/delivery/channels": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -137,29 +132,29 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
+                            "$ref": "#/definitions/v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -177,7 +172,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminCreateChannelRequest"
+                            "$ref": "#/definitions/v1.AdminCreateChannelRequest"
                         }
                     }
                 ],
@@ -185,37 +180,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminChannelItem"
+                            "$ref": "#/definitions/v1.AdminChannelItem"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/channels/{id}": {
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/delivery/channels/{id}": {
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -246,31 +241,31 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/channels/{id}/enabled": {
-            "patch": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/delivery/channels/{id}/enabled": {
+            "patch": {
                 "consumes": [
                     "application/json"
                 ],
@@ -295,7 +290,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminSetChannelEnabledRequest"
+                            "$ref": "#/definitions/v1.AdminSetChannelEnabledRequest"
                         }
                     }
                 ],
@@ -303,37 +298,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.MessageResponse"
+                            "$ref": "#/definitions/v1.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/history": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/delivery/history": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -379,31 +374,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse"
+                            "$ref": "#/definitions/v1.DeliveryHistoryListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/delivery/stats": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/delivery/stats": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -423,31 +418,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryStatsResponse"
+                            "$ref": "#/definitions/v1.DeliveryStatsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/locked-channels": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/locked-channels": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -459,31 +454,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminLockedChannelsResponse"
+                            "$ref": "#/definitions/v1.AdminLockedChannelsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/posts": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/posts": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -523,31 +518,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
+                            "$ref": "#/definitions/v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/posts/{id}": {
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/posts/{id}": {
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -574,25 +569,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/sessions/{token_id}": {
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/sessions/{token_id}": {
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -622,31 +617,31 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/stats": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/stats": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -658,31 +653,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminStatsResponse"
+                            "$ref": "#/definitions/v1.AdminStatsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -716,29 +711,29 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PaginatedItemsResponse"
+                            "$ref": "#/definitions/v1.PaginatedItemsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -756,7 +751,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminCreateUserRequest"
+                            "$ref": "#/definitions/v1.AdminCreateUserRequest"
                         }
                     }
                 ],
@@ -764,37 +759,37 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                            "$ref": "#/definitions/v1.AdminUserItem"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users/{id}": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -815,35 +810,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                            "$ref": "#/definitions/v1.AdminUserItem"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -874,31 +869,31 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users/{id}/active": {
-            "patch": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}/active": {
+            "patch": {
                 "consumes": [
                     "application/json"
                 ],
@@ -923,7 +918,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminSetUserActiveRequest"
+                            "$ref": "#/definitions/v1.AdminSetUserActiveRequest"
                         }
                     }
                 ],
@@ -931,43 +926,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                            "$ref": "#/definitions/v1.AdminUserItem"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users/{id}/password": {
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}/password": {
+            "post": {
                 "produces": [
                     "application/json"
                 ],
@@ -988,43 +983,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminResetPasswordResponse"
+                            "$ref": "#/definitions/v1.AdminResetPasswordResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users/{id}/role": {
-            "patch": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}/role": {
+            "patch": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1049,7 +1044,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminSetUserRoleRequest"
+                            "$ref": "#/definitions/v1.AdminSetUserRoleRequest"
                         }
                     }
                 ],
@@ -1057,43 +1052,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AdminUserItem"
+                            "$ref": "#/definitions/v1.AdminUserItem"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/admin/users/{id}/sessions": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}/sessions": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1114,35 +1109,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.SessionsResponse"
+                            "$ref": "#/definitions/v1.SessionsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -1173,31 +1168,31 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/auth/change-password": {
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/auth/change-password": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1215,7 +1210,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PasswordChangeRequest"
+                            "$ref": "#/definitions/v1.PasswordChangeRequest"
                         }
                     }
                 ],
@@ -1223,22 +1218,27 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.ChangePasswordResponse"
+                            "$ref": "#/definitions/v1.ChangePasswordResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
             }
         },
         "/api/v1/auth/login": {
@@ -1260,7 +1260,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.UsernameLoginRequest"
+                            "$ref": "#/definitions/v1.UsernameLoginRequest"
                         }
                     }
                 ],
@@ -1268,19 +1268,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AuthResponse"
+                            "$ref": "#/definitions/v1.AuthResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -1288,11 +1288,6 @@ const docTemplate = `{
         },
         "/api/v1/auth/logout": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1304,16 +1299,21 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.MessageResponse"
+                            "$ref": "#/definitions/v1.MessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
             }
         },
         "/api/v1/auth/refresh": {
@@ -1335,7 +1335,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.RefreshTokenRequest"
+                            "$ref": "#/definitions/v1.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -1343,13 +1343,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.RefreshTokenResponse"
+                            "$ref": "#/definitions/v1.RefreshTokenResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -1357,11 +1357,6 @@ const docTemplate = `{
         },
         "/api/v1/auth/sessions": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1373,23 +1368,23 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.SessionsResponse"
+                            "$ref": "#/definitions/v1.SessionsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -1410,19 +1405,19 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/auth/sessions/{token_id}": {
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/auth/sessions/{token_id}": {
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -1452,25 +1447,25 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/channels": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/channels": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1482,23 +1477,23 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.ChannelsListResponse"
+                            "$ref": "#/definitions/v1.ChannelsListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1516,7 +1511,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.CreateDeliveryChannelRequest"
+                            "$ref": "#/definitions/v1.CreateDeliveryChannelRequest"
                         }
                     }
                 ],
@@ -1524,31 +1519,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.SingleChannelResponse"
+                            "$ref": "#/definitions/v1.SingleChannelResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/channels/{id}": {
-            "put": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/channels/{id}": {
+            "put": {
                 "consumes": [
                     "application/json"
                 ],
@@ -1573,7 +1568,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.UpdateDeliveryChannelRequest"
+                            "$ref": "#/definitions/v1.UpdateDeliveryChannelRequest"
                         }
                     }
                 ],
@@ -1581,35 +1576,35 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.SingleChannelResponse"
+                            "$ref": "#/definitions/v1.SingleChannelResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            },
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            },
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -1630,31 +1625,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.MessageResponse"
+                            "$ref": "#/definitions/v1.MessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/channels/{id}/test": {
-            "post": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/channels/{id}/test": {
+            "post": {
                 "produces": [
                     "application/json"
                 ],
@@ -1675,37 +1670,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.MessageResponse"
+                            "$ref": "#/definitions/v1.MessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "502": {
                         "description": "Bad Gateway",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/history": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/history": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1745,25 +1740,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryListResponse"
+                            "$ref": "#/definitions/v1.DeliveryHistoryListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/latest": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/latest": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1775,25 +1770,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryLatestListResponse"
+                            "$ref": "#/definitions/v1.DeliveryLatestListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/pending": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/pending": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1805,25 +1800,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PendingAttemptsResponse"
+                            "$ref": "#/definitions/v1.PendingAttemptsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/delivery/stats": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/delivery/stats": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1843,16 +1838,21 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.DeliveryStatsResponse"
+                            "$ref": "#/definitions/v1.DeliveryStatsResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
             }
         },
         "/api/v1/health": {
@@ -1868,7 +1868,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.HealthResponse"
+                            "$ref": "#/definitions/v1.HealthResponse"
                         }
                     }
                 }
@@ -1893,7 +1893,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.GitHubLoginRequest"
+                            "$ref": "#/definitions/v1.GitHubLoginRequest"
                         }
                     }
                 ],
@@ -1901,13 +1901,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.AuthResponse"
+                            "$ref": "#/definitions/v1.AuthResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -1926,13 +1926,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.OAuthURLResponse"
+                            "$ref": "#/definitions/v1.OAuthURLResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -1940,11 +1940,6 @@ const docTemplate = `{
         },
         "/api/v1/post-key/rotate": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1956,25 +1951,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.RotatePostKeyResponse"
+                            "$ref": "#/definitions/v1.RotatePostKeyResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/post_key": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/post_key": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -1986,25 +1981,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PostKeyResponse"
+                            "$ref": "#/definitions/v1.PostKeyResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/posts": {
-            "get": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/posts": {
+            "get": {
                 "produces": [
                     "application/json"
                 ],
@@ -2038,25 +2033,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PostsListResponse"
+                            "$ref": "#/definitions/v1.PostsListResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
-            }
-        },
-        "/api/v1/posts/{id}": {
-            "delete": {
+                },
                 "security": [
                     {
                         "BearerAuth": []
                     }
-                ],
+                ]
+            }
+        },
+        "/api/v1/posts/{id}": {
+            "delete": {
                 "produces": [
                     "application/json"
                 ],
@@ -2083,16 +2078,21 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
-                }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
             }
         },
         "/{id}": {
@@ -2129,7 +2129,7 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -2161,7 +2161,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.PostRequest"
+                            "$ref": "#/definitions/v1.PostRequest"
                         }
                     }
                 ],
@@ -2169,19 +2169,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_api_rest_v1.CreatePostResponse"
+                            "$ref": "#/definitions/v1.CreatePostResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/markpost_internal_apierr.ErrorResponse"
+                            "$ref": "#/definitions/apierr.ErrorResponse"
                         }
                     }
                 }
@@ -2189,11 +2189,162 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "internal_api_rest_v1.AdminChannelItem": {
+        "apierr.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/apierr.FieldError"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "apierr.FieldError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.ChannelConfiguration": {
+            "type": "object",
+            "additionalProperties": {}
+        },
+        "delivery.ChannelKind": {
+            "type": "string",
+            "enum": [
+                "feishu"
+            ],
+            "x-enum-varnames": [
+                "ChannelKindFeishu"
+            ]
+        },
+        "delivery.DailyStat": {
+            "type": "object",
+            "properties": {
+                "day": {
+                    "description": "YYYY-MM-DD (UTC)",
+                    "type": "string"
+                },
+                "delivered": {
+                    "type": "integer"
+                },
+                "expired": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                }
+            }
+        },
+        "delivery.LockedChannel": {
+            "type": "object",
+            "properties": {
+                "channel_id": {
+                    "type": "integer"
+                },
+                "channel_name": {
+                    "type": "string"
+                },
+                "fails": {
+                    "type": "integer"
+                },
+                "failure_rate": {
+                    "type": "number"
+                },
+                "last_at": {
+                    "type": "string"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.PendingAttemptRow": {
+            "type": "object",
+            "properties": {
+                "channel_id": {
+                    "type": "integer"
+                },
+                "channel_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "post_id": {
+                    "type": "integer"
+                },
+                "post_qid": {
+                    "type": "string"
+                },
+                "post_title": {
+                    "type": "string"
+                }
+            }
+        },
+        "delivery.TodayCounts": {
+            "type": "object",
+            "properties": {
+                "delivered": {
+                    "type": "integer"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "pending": {
+                    "type": "integer"
+                }
+            }
+        },
+        "user.RefreshToken": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "revoked": {
+                    "type": "boolean"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.AdminChannelItem": {
             "type": "object",
             "properties": {
                 "configuration": {
-                    "$ref": "#/definitions/markpost_internal_domain_delivery.ChannelConfiguration"
+                    "$ref": "#/definitions/delivery.ChannelConfiguration"
                 },
                 "created_at": {
                     "type": "string"
@@ -2218,7 +2369,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminCreateChannelRequest": {
+        "v1.AdminCreateChannelRequest": {
             "type": "object",
             "required": [
                 "configuration",
@@ -2247,7 +2398,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminCreateUserRequest": {
+        "v1.AdminCreateUserRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -2265,18 +2416,18 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminLockedChannelsResponse": {
+        "v1.AdminLockedChannelsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/markpost_internal_domain_delivery.LockedChannel"
+                        "$ref": "#/definitions/delivery.LockedChannel"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.AdminResetPasswordResponse": {
+        "v1.AdminResetPasswordResponse": {
             "type": "object",
             "properties": {
                 "password": {
@@ -2284,7 +2435,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminSetChannelEnabledRequest": {
+        "v1.AdminSetChannelEnabledRequest": {
             "type": "object",
             "properties": {
                 "enabled": {
@@ -2292,7 +2443,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminSetUserActiveRequest": {
+        "v1.AdminSetUserActiveRequest": {
             "type": "object",
             "properties": {
                 "active": {
@@ -2300,7 +2451,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminSetUserRoleRequest": {
+        "v1.AdminSetUserRoleRequest": {
             "type": "object",
             "required": [
                 "role"
@@ -2315,7 +2466,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminStatsCounts": {
+        "v1.AdminStatsCounts": {
             "type": "object",
             "properties": {
                 "channels": {
@@ -2341,15 +2492,15 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AdminStatsResponse": {
+        "v1.AdminStatsResponse": {
             "type": "object",
             "properties": {
                 "counts": {
-                    "$ref": "#/definitions/internal_api_rest_v1.AdminStatsCounts"
+                    "$ref": "#/definitions/v1.AdminStatsCounts"
                 }
             }
         },
-        "internal_api_rest_v1.AdminUserItem": {
+        "v1.AdminUserItem": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -2387,7 +2538,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.AuthResponse": {
+        "v1.AuthResponse": {
             "type": "object",
             "properties": {
                 "expires_in": {
@@ -2400,11 +2551,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/internal_api_rest_v1.UserResponse"
+                    "$ref": "#/definitions/v1.UserResponse"
                 }
             }
         },
-        "internal_api_rest_v1.ChangePasswordResponse": {
+        "v1.ChangePasswordResponse": {
             "type": "object",
             "properties": {
                 "expires_in": {
@@ -2418,11 +2569,11 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.ChannelResponse": {
+        "v1.ChannelResponse": {
             "type": "object",
             "properties": {
                 "configuration": {
-                    "$ref": "#/definitions/markpost_internal_domain_delivery.ChannelConfiguration"
+                    "$ref": "#/definitions/delivery.ChannelConfiguration"
                 },
                 "created_at": {
                     "type": "string"
@@ -2437,7 +2588,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
-                    "$ref": "#/definitions/markpost_internal_domain_delivery.ChannelKind"
+                    "$ref": "#/definitions/delivery.ChannelKind"
                 },
                 "name": {
                     "type": "string"
@@ -2447,18 +2598,18 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.ChannelsListResponse": {
+        "v1.ChannelsListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.ChannelResponse"
+                        "$ref": "#/definitions/v1.ChannelResponse"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.CreateDeliveryChannelRequest": {
+        "v1.CreateDeliveryChannelRequest": {
             "type": "object",
             "required": [
                 "configuration",
@@ -2483,7 +2634,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.CreatePostResponse": {
+        "v1.CreatePostResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -2491,7 +2642,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.DeliveryHistoryItem": {
+        "v1.DeliveryHistoryItem": {
             "type": "object",
             "properties": {
                 "channel_id": {
@@ -2523,46 +2674,46 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.DeliveryHistoryListResponse": {
+        "v1.DeliveryHistoryListResponse": {
             "type": "object",
             "properties": {
                 "history": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryItem"
+                        "$ref": "#/definitions/v1.DeliveryHistoryItem"
                     }
                 },
                 "pagination": {
-                    "$ref": "#/definitions/internal_api_rest_v1.Pagination"
+                    "$ref": "#/definitions/v1.Pagination"
                 }
             }
         },
-        "internal_api_rest_v1.DeliveryLatestListResponse": {
+        "v1.DeliveryLatestListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.DeliveryHistoryItem"
+                        "$ref": "#/definitions/v1.DeliveryHistoryItem"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.DeliveryStatsResponse": {
+        "v1.DeliveryStatsResponse": {
             "type": "object",
             "properties": {
                 "today": {
-                    "$ref": "#/definitions/markpost_internal_domain_delivery.TodayCounts"
+                    "$ref": "#/definitions/delivery.TodayCounts"
                 },
                 "trend": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/markpost_internal_domain_delivery.DailyStat"
+                        "$ref": "#/definitions/delivery.DailyStat"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.GitHubLoginRequest": {
+        "v1.GitHubLoginRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -2577,7 +2728,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.HealthResponse": {
+        "v1.HealthResponse": {
             "type": "object",
             "properties": {
                 "status": {
@@ -2585,7 +2736,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.MessageResponse": {
+        "v1.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -2593,7 +2744,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.OAuthURLResponse": {
+        "v1.OAuthURLResponse": {
             "type": "object",
             "properties": {
                 "state": {
@@ -2604,7 +2755,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PaginatedItemsResponse": {
+        "v1.PaginatedItemsResponse": {
             "type": "object",
             "properties": {
                 "items": {},
@@ -2622,7 +2773,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.Pagination": {
+        "v1.Pagination": {
             "type": "object",
             "properties": {
                 "limit": {
@@ -2639,7 +2790,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PasswordChangeRequest": {
+        "v1.PasswordChangeRequest": {
             "type": "object",
             "required": [
                 "new_password"
@@ -2653,18 +2804,18 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PendingAttemptsResponse": {
+        "v1.PendingAttemptsResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/markpost_internal_domain_delivery.PendingAttemptRow"
+                        "$ref": "#/definitions/delivery.PendingAttemptRow"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.PostKeyResponse": {
+        "v1.PostKeyResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -2675,7 +2826,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PostListItem": {
+        "v1.PostListItem": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -2692,7 +2843,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PostRequest": {
+        "v1.PostRequest": {
             "type": "object",
             "required": [
                 "body",
@@ -2707,13 +2858,13 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.PostsListResponse": {
+        "v1.PostsListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_api_rest_v1.PostListItem"
+                        "$ref": "#/definitions/v1.PostListItem"
                     }
                 },
                 "limit": {
@@ -2730,7 +2881,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.RefreshTokenRequest": {
+        "v1.RefreshTokenRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -2741,7 +2892,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.RefreshTokenResponse": {
+        "v1.RefreshTokenResponse": {
             "type": "object",
             "properties": {
                 "expires_in": {
@@ -2755,7 +2906,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.RotatePostKeyResponse": {
+        "v1.RotatePostKeyResponse": {
             "type": "object",
             "properties": {
                 "post_key": {
@@ -2763,26 +2914,26 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.SessionsResponse": {
+        "v1.SessionsResponse": {
             "type": "object",
             "properties": {
                 "sessions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/markpost_internal_domain_user.RefreshToken"
+                        "$ref": "#/definitions/user.RefreshToken"
                     }
                 }
             }
         },
-        "internal_api_rest_v1.SingleChannelResponse": {
+        "v1.SingleChannelResponse": {
             "type": "object",
             "properties": {
                 "channel": {
-                    "$ref": "#/definitions/internal_api_rest_v1.ChannelResponse"
+                    "$ref": "#/definitions/v1.ChannelResponse"
                 }
             }
         },
-        "internal_api_rest_v1.UpdateDeliveryChannelRequest": {
+        "v1.UpdateDeliveryChannelRequest": {
             "type": "object",
             "properties": {
                 "configuration": {
@@ -2805,7 +2956,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.UserResponse": {
+        "v1.UserResponse": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -2834,7 +2985,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_api_rest_v1.UsernameLoginRequest": {
+        "v1.UsernameLoginRequest": {
             "type": "object",
             "required": [
                 "password",
@@ -2846,157 +2997,6 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "markpost_internal_apierr.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "errors": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/markpost_internal_apierr.FieldError"
-                    }
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "markpost_internal_apierr.FieldError": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "field": {
-                    "type": "string"
-                },
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "markpost_internal_domain_delivery.ChannelConfiguration": {
-            "type": "object",
-            "additionalProperties": {}
-        },
-        "markpost_internal_domain_delivery.ChannelKind": {
-            "type": "string",
-            "enum": [
-                "feishu"
-            ],
-            "x-enum-varnames": [
-                "ChannelKindFeishu"
-            ]
-        },
-        "markpost_internal_domain_delivery.DailyStat": {
-            "type": "object",
-            "properties": {
-                "day": {
-                    "description": "YYYY-MM-DD (UTC)",
-                    "type": "string"
-                },
-                "delivered": {
-                    "type": "integer"
-                },
-                "expired": {
-                    "type": "integer"
-                },
-                "failed": {
-                    "type": "integer"
-                }
-            }
-        },
-        "markpost_internal_domain_delivery.LockedChannel": {
-            "type": "object",
-            "properties": {
-                "channel_id": {
-                    "type": "integer"
-                },
-                "channel_name": {
-                    "type": "string"
-                },
-                "fails": {
-                    "type": "integer"
-                },
-                "failure_rate": {
-                    "type": "number"
-                },
-                "last_at": {
-                    "type": "string"
-                },
-                "last_error": {
-                    "type": "string"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "markpost_internal_domain_delivery.PendingAttemptRow": {
-            "type": "object",
-            "properties": {
-                "channel_id": {
-                    "type": "integer"
-                },
-                "channel_name": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "post_id": {
-                    "type": "integer"
-                },
-                "post_qid": {
-                    "type": "string"
-                },
-                "post_title": {
-                    "type": "string"
-                }
-            }
-        },
-        "markpost_internal_domain_delivery.TodayCounts": {
-            "type": "object",
-            "properties": {
-                "delivered": {
-                    "type": "integer"
-                },
-                "failed": {
-                    "type": "integer"
-                },
-                "pending": {
-                    "type": "integer"
-                }
-            }
-        },
-        "markpost_internal_domain_user.RefreshToken": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "expires_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "revoked": {
-                    "type": "boolean"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         }

@@ -20,7 +20,7 @@ All commands assume the working directory noted in each section. Prefer running 
 - `golangci-lint fmt` — format all Go files (gofmt + goimports)
 - `golangci-lint config verify` — validate `.golangci.yml` against the embedded JSON schema
 - `go run ./cmd/server migrate up` — apply database migrations (run before serve on deploys)
-- `swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal` — regenerate Swagger docs
+- `go generate ./...` — regenerate Swagger docs (`go tool swag`, pinned in go.mod) + embedded CSS (`cmd/buildcss`); the single source of regeneration
 
 **Frontend** (`frontend/`):
 

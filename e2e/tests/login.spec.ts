@@ -9,9 +9,7 @@ test.beforeEach(async ({ page, request }) => {
 });
 
 // B1.7 登录：成功跳转 /dashboard；失败 FormAlert；会话过期横幅。
-test("renders login page with username and password fields", async ({
-  loginPage,
-}) => {
+test("renders login page with username and password fields", async ({ loginPage }) => {
   await expect(loginPage.usernameInput).toBeVisible();
   await expect(loginPage.passwordInput).toBeVisible();
   await expect(loginPage.submitButton).toBeVisible();
@@ -33,16 +31,10 @@ test("shows error on invalid credentials", async ({ page, loginPage }) => {
   await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   await loginPage.login("markpost", "wrongpassword");
-  await expect(loginPage.formAlert).toContainText(
-    "Incorrect username or password",
-  );
+  await expect(loginPage.formAlert).toContainText("Incorrect username or password");
 });
 
-test("account locks after 5 failed attempts (C2.1)", async ({
-  page,
-  loginPage,
-  request,
-}) => {
+test("account locks after 5 failed attempts (C2.1)", async ({ page, loginPage, request }) => {
   await page.evaluate(() => localStorage.setItem("locale", "en"));
 
   // 用独立账号锁定，避免把 markpost 锁死 15 分钟污染后续测试。
@@ -61,10 +53,7 @@ test("account locks after 5 failed attempts (C2.1)", async ({
   await expect(loginPage.formAlert).toContainText(/Too many attempts/);
 });
 
-test("keeps next= target after login (K.3)", async ({
-  page,
-  loginPage,
-}) => {
+test("keeps next= target after login (K.3)", async ({ page, loginPage }) => {
   await page.evaluate(() => localStorage.setItem("locale", "en"));
   await page.goto("/posts");
   await page.waitForURL("**/login?next=**");

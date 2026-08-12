@@ -49,15 +49,6 @@ jobs:
           go-version: "1.26"
           cache: true
           cache-dependency-path: backend/go.sum
-      - name: Verify generated files up to date
-        working-directory: backend
-        # Regenerate Swagger docs and embedded CSS, then fail if anything
-        # differs from what's committed — catches "forgot to regen".
-        run: |
-          go install github.com/swaggo/swag/cmd/swag@v1.16.6
-          swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
-          go generate ./internal/web
-          git diff --exit-code -- docs internal/web
       - name: Build
         working-directory: backend
         # CGO disabled: markpost has no C dependencies (sqlite was removed),

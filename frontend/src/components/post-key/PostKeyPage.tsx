@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useSyncExternalStore, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authApi, postKeyKeys } from '@/lib/api'
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
+import { Menu } from '@/components/ui/menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,10 +32,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
   EyeIcon,
   EyeOffIcon,
   KeyRoundIcon,
-  CopyIcon,
+  LinkIcon,
   TerminalIcon,
 } from 'lucide-react'
 import { formatToLocalTime } from '@/utils/time'
@@ -49,14 +53,25 @@ export function PostKeyPage() {
   const queryClient = useQueryClient()
 
   const query = usePostKey()
-  const { copied, copy } = useCopyToClipboard(2000)
+  const { copied: copiedField, copy: copyField } = useCopyToClipboard(1500)
+  const { copied: copiedCurl, copy: copyCurl } = useCopyToClipboard(1500)
 
   const [showKey, setShowKey] = useState(false)
   const [confirmRotate, setConfirmRotate] = useState(false)
   const [showTestModal, setShowTestModal] = useState(false)
+  // window.location.origin is client-only; useSyncExternalStore returns '' on
+  // the server snapshot to avoid hydration mismatch, and the live value on the
+  // client — without a setState-in-effect.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => '',
+  )
 
   const postKey = query.data?.post_key ?? ''
   const createdAt = query.data?.created_at ?? ''
+  const postUrl = buildFullPostUrl(postKey)
+  const maskedKey = '•'.repeat(Math.min(postKey.length, 16))
 
   // C2.5 轮换：rotating ref 防双击（token_version 无涉，但防重复轮换）。
   const rotateMutation = useMutation({
@@ -72,18 +87,20 @@ export function PostKeyPage() {
     },
   })
 
-  const onCopyKey = () => {
-    copy(postKey).then(() =>
-      toastManager.add({ type: 'success', title: t('copied') }),
-    )
+  const copyWithFeedback = (text: string) => {
+    if (!text) return
+    copyField(text).then((ok) => {
+      if (!ok) toastManager.add({ type: 'error', title: t('copyFailed') })
+    })
   }
+  const onCopyUrl = () => copyWithFeedback(postUrl)
+  const onCopyKey = () => copyWithFeedback(postKey)
 
   const onCopyCurl = () => {
-    const url = buildFullPostUrl(postKey)
-    const curl = `curl -X POST ${url} \\\n  -H 'Content-Type: application/json' \\\n  -d '{"title":"Hello","body":"**World**"}'`
-    copy(curl).then(() =>
-      toastManager.add({ type: 'success', title: t('howToSend.curlCopied') }),
-    )
+    const curl = `curl -X POST ${postUrl} \\\n  -H 'Content-Type: application/json' \\\n  -d '{"title":"Hello","body":"**World**"}'`
+    copyCurl(curl).then((ok) => {
+      if (!ok) toastManager.add({ type: 'error', title: t('copyFailed') })
+    })
   }
 
   return (
@@ -112,8 +129,13 @@ export function PostKeyPage() {
             onRetry={() => query.refetch()}
           >
             <div className="flex items-center gap-2">
-              <code className="flex-1 rounded-md border bg-muted px-3 py-2 font-mono text-sm">
-                {showKey ? postKey : '•'.repeat(Math.min(postKey.length, 20))}
+              <code className="flex min-w-0 flex-1 items-center rounded-md border bg-muted px-3 py-2 font-mono text-sm">
+                <span
+                  className="truncate"
+                  title={showKey ? postUrl : undefined}
+                >
+                  {origin}/{showKey ? postKey : maskedKey}
+                </span>
               </code>
               <Button
                 type="button"
@@ -128,19 +150,48 @@ export function PostKeyPage() {
                   <EyeIcon className="size-4" />
                 )}
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label={t('copyKey')}
-                onClick={onCopyKey}
-              >
-                {copied ? (
-                  <span className="text-xs">{t('copied')}</span>
-                ) : (
-                  <CopyIcon className="size-4" />
-                )}
-              </Button>
+              <div className="flex">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="rounded-r-none"
+                  aria-label={t('copyPostUrl')}
+                  onClick={onCopyUrl}
+                  disabled={!postUrl}
+                >
+                  {copiedField ? (
+                    <CheckIcon className="size-4 text-success" />
+                  ) : (
+                    <CopyIcon className="size-4" />
+                  )}
+                </Button>
+                <Menu>
+                  <Menu.Trigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="-ml-px rounded-l-none"
+                        aria-label={t('copyOptions')}
+                      />
+                    }
+                  >
+                    <ChevronDownIcon className="size-4" />
+                  </Menu.Trigger>
+                  <Menu.Popup>
+                    <Menu.Item onClick={onCopyUrl}>
+                      <LinkIcon className="size-4" />
+                      {t('copyPostUrl')}
+                    </Menu.Item>
+                    <Menu.Item onClick={onCopyKey}>
+                      <KeyRoundIcon className="size-4" />
+                      {t('copyKey')}
+                    </Menu.Item>
+                  </Menu.Popup>
+                </Menu>
+              </div>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               {t('createdAt')}:{' '}
@@ -188,7 +239,11 @@ export function PostKeyPage() {
                 size="sm"
                 onClick={onCopyCurl}
               >
-                <CopyIcon className="size-4" />
+                {copiedCurl ? (
+                  <CheckIcon className="size-4 text-success" />
+                ) : (
+                  <CopyIcon className="size-4" />
+                )}
                 {t('howToSend.copyCurl')}
               </Button>
             </div>

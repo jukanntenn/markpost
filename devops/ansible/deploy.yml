@@ -2,31 +2,38 @@
 # markpost unified deployment playbook.
 #
 # A single playbook serves dev / staging / production. The target environment
-# is selected with --limit (mandatory), and per-environment differences live in
-# group_vars/<env>.yml. Run from devops/ansible/:
+# is selected with -e target=<env> (default: dev), and per-environment
+# differences live in group_vars/<env>/ (vars.yml + vault.yml, auto-loaded).
+# Run from the repo root — ansible.cfg there supplies the inventory and the
+# avpm vault identities:
 #
-#   cd devops/ansible
-#   ansible-playbook -i hosts.yml deploy.yml -l dev --vault-password-file ~/.ansible-vault/markpost-dev.pwd
-#   ansible-playbook -i hosts.yml deploy.yml -l staging --vault-password-file ~/.ansible-vault/markpost-staging.pwd
-#   ansible-playbook -i hosts.yml deploy.yml -l production --vault-password-file ~/.ansible-vault/markpost-production.pwd
+#   ansible-playbook devops/ansible/deploy.yml                  # dev (fn)
+#   ansible-playbook devops/ansible/deploy.yml -e target=staging
+#   ansible-playbook devops/ansible/deploy.yml -e target=production
+
+- name: Validate target environment
+  # Runs before the deploy play so a misspelled target fails loudly — a bare
+  # hosts pattern that matches nothing would otherwise exit 0 without
+  # deploying anywhere.
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    tgt: "{{ target | default('dev') }}"
+  tasks:
+    - name: Require target to be a non-empty known environment
+      ansible.builtin.assert:
+        that: tgt in ['dev', 'staging', 'production'] and groups.get(tgt, []) | length > 0
+        fail_msg: >-
+          Unknown or empty target '{{ tgt }}'. Use dev (the default),
+          staging or production.
 
 - name: Deploy markpost
-  hosts: all
+  hosts: "{{ target | default('dev') }}"
   user: "{{ user }}"
   gather_facts: false
 
   tasks:
-    - name: Load environment vault
-      ansible.builtin.include_vars:
-        file: "vars/{{ env }}/vault.yml"
-
-    - name: Require --limit so a single environment is targeted
-      ansible.builtin.assert:
-        that: ansible_limit is defined
-        fail_msg: >-
-          Refusing to run without --limit. Specify the environment explicitly,
-          e.g. -l production, to avoid deploying to every host at once.
-
     - name: Ensure application directories exist
       ansible.builtin.file:
         path: "{{ item }}"
@@ -99,3 +106,38 @@
         remove_orphans: true
         wait: true
         wait_timeout: 120
+
+    # Post-deploy verification from the controller, through the URL real
+    # visitors use (LAN IP / tunnel / Cloudflare). Compose's wait only proves
+    # the container healthcheck passes inside the container; this also catches
+    # a broken published port, Caddy config, or edge path — and the version
+    # check catches a healthy container still running the previous image.
+    - name: Record expected version from the deploying checkout (dev)
+      ansible.builtin.command: git describe --tags --always --dirty
+      args:
+        chdir: "{{ playbook_dir }}/../.."
+      delegate_to: localhost
+      run_once: true
+      register: controller_version
+      changed_when: false
+      when: env == 'dev'
+
+    - name: Expected version is the pinned git tag (staging/production)
+      ansible.builtin.set_fact:
+        deploy_expected_version: "{{ expected_version }}"
+      when: env != 'dev'
+
+    - name: Expected version is the deploying checkout (dev)
+      ansible.builtin.set_fact:
+        deploy_expected_version: "{{ controller_version.stdout }}"
+      when: env == 'dev'
+
+    - name: Verify deployment health and version
+      ansible.builtin.command:
+        cmd: >
+          python3 {{ playbook_dir }}/../../scripts/check_deploy.py
+          --base-url {{ public_url }}
+          --version {{ deploy_expected_version }}
+      delegate_to: localhost
+      run_once: true
+      changed_when: false

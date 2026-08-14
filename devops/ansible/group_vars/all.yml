@@ -1,6 +1,9 @@
 ---
 # Shared variables for every markpost environment. Per-environment overrides
-# live in group_vars/<env>.yml; per-host facts (user, home) in host_vars/.
+# live in group_vars/<env>/ (vars.yml + vault.yml); per-host facts (user, home)
+# in host_vars/. Note: a group_vars/<env>/ directory shadows a sibling
+# group_vars/<env>.yml in ansible-core >= 2.20, so the two layouts must not be
+# mixed.
 
 app_name: markpost
 apps_path: "{{ home }}/docker"

@@ -8,9 +8,17 @@
 env: staging
 
 # Bump this to deploy a new release; override for a one-off with
-#   ansible-playbook ... -l staging -e markpost_version=vX.Y.Z
+#   ansible-playbook devops/ansible/deploy.yml -e target=staging -e markpost_version=0.2.1
+# Format: the Docker Hub tag. Releases after the tag-format switch drop the
+# leading "v" (v0.2.1 -> 0.2.1, v0.2.1-rc.1 -> 0.2.1-rc.1); v0.2.0-rc.3 below
+# predates the switch.
 markpost_version: "v0.2.0-rc.3"
 image: "jukanntenn/markpost:{{ markpost_version }}"
+
+# Version the binary reports at /api/v1/version (VERSION build-arg = the git
+# tag at build time, v-prefixed). The deploy fails if it does not match.
+# For releases built after the tag-format switch this is "v" + markpost_version.
+expected_version: "v0.2.0-rc.3"
 
 public_url: "https://markpost.bytehome.fun"
 trusted_proxies: '["127.0.0.1", "::1"]'

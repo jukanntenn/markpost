@@ -91,9 +91,16 @@ data (489 posts, 1 user, 1 channel) is preserved in the named `pgdata` volume.
 ### Deploy / update
 
 ```bash
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l dev --vault-password-file ~/.ansible-vault/markpost-dev.pwd
+# Build & push the rolling main tag from the current workspace (default
+# tag, default registry), then deploy:
+python3 docker/build.py --push
+ansible-playbook devops/ansible/deploy.yml          # dev (fn) is the default target
 ```
+
+The playbook ends with a post-deploy verification (see §5): it polls
+`/api/v1/health` through the public URL and checks `/api/v1/version` against
+the deploying checkout's `git describe` — a mismatch means the container is
+still running the old image.
 
 ### Schema self-healing
 
@@ -118,15 +125,17 @@ staging's topology matches production.
    subcommand):
 
    ```bash
-   python3 docker/build.py --push --tags dev
+   python3 docker/build.py --push
    ```
 
-2. The staging vault (`vars/staging/vault.yml`) must define `db_password` for the
-   new Postgres user. Edit it:
+2. The staging vault (`group_vars/staging/vault.yml`) must define `db_password`
+   for the new Postgres user. Add it as a single encrypted variable (plaintext
+   via stdin, so it never lands in shell history):
+
    ```bash
-   ansible-vault edit devops/ansible/vars/staging/vault.yml \
-       --vault-password-file ~/.ansible-vault/markpost-staging.pwd
-   # Add: db_password: <a-strong-password>
+   printf '%s' '<a-strong-password>' | ansible-vault encrypt_string \
+       --vault-id markpost-staging@~/.local/bin/avpm-client \
+       --stdin-name db_password >> devops/ansible/group_vars/staging/vault.yml
    ```
 
 ### Migration procedure
@@ -148,8 +157,7 @@ EOF
 `driver = "postgresql"`):**
 
 ```bash
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l staging --vault-password-file ~/.ansible-vault/markpost-staging.pwd
+ansible-playbook devops/ansible/deploy.yml -e target=staging
 ```
 
 This renders the new `docker-compose.yml` (with the Postgres service) and the new
@@ -269,40 +277,40 @@ for ip in $(curl -s https://www.cloudflare.com/ips-v6); do ufw allow from "$ip" 
 ufw enable
 ```
 
-Also sync the Cloudflare CIDRs into `group_vars/production.yml`'s
+Also sync the Cloudflare CIDRs into `group_vars/production/vars.yml`'s
 `cloudflare_cidrs` variable (space-separated) so Caddy's `trusted_proxies` only
 trusts Cloudflare.
 
-### 4.3 Production vault
+### 4.3 Production secrets
 
-The production vault (`vars/production/vault.yml`) is currently plaintext with
-`CHANGE_ME` placeholders. Encrypt it and fill in real values:
+Secrets are per-variable `!vault` blocks in `group_vars/production/vault.yml`,
+each encrypted with the avpm keyring identity `markpost-prod` (declared in the
+root `ansible.cfg`). Add or rotate a value with (plaintext via stdin):
 
 ```bash
-ansible-vault encrypt devops/ansible/vars/production/vault.yml \
-    --vault-password-file ~/.ansible-vault/markpost-production.pwd
-ansible-vault edit devops/ansible/vars/production/vault.yml \
-    --vault-password-file ~/.ansible-vault/markpost-production.pwd
+printf '%s' '<the-secret>' | ansible-vault encrypt_string \
+    --vault-id markpost-prod@~/.local/bin/avpm-client \
+    --stdin-name <name> >> devops/ansible/group_vars/production/vault.yml
 ```
 
 Required keys: `jwt_access_signing_key`, `jwt_refresh_signing_key`,
 `admin_password`, `db_password`. Optional: `github_client_id`,
-`github_client_secret`, `cloudflare_api_token`, `cloudflare_zone_id`.
+`github_client_secret`, `cloudflare_api_token`.
 
 ### 4.4 Deploy to production
 
-```bash
-# Build and push the production image (tag: latest):
-python3 docker/build.py --push --tags latest
+Production runs a **pinned Docker Hub release** published by the
+`docker-publish.yml` workflow on `v*` git tags (see §7), not a locally built
+image. Bump `markpost_version` in `group_vars/production/vars.yml` after staging has
+validated the same version, then:
 
-# Deploy:
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l production --vault-password-file ~/.ansible-vault/markpost-production.pwd
+```bash
+ansible-playbook devops/ansible/deploy.yml -e target=production
 ```
 
-The playbook asserts that `--limit` is provided (preventing accidental
-multi-env deploys), creates the directory structure, renders the three config
-files, and pulls + recreates the containers.
+The playbook creates the directory structure, renders the three config files,
+pulls + recreates the containers (postgres → migrate → app), and verifies the
+deployment through Cloudflare (health + version).
 
 ### 4.5 Verify production
 
@@ -319,18 +327,26 @@ curl -f --resolve markpost.cc:2053:43.133.160.29 \
 
 ## 5. Ansible playbook reference
 
+Run from the repo root — the root `ansible.cfg` supplies the inventory and the
+avpm vault identities, so no `-i` / `--vault-password-file` flags are needed.
+The environment is chosen with `-e target=<env>`; **dev is the default**, so
+the bare command deploys fn (the crashable dogfood environment).
+
 ### Directory layout (unified)
 
 ```
+ansible.cfg                     # root: inventory + avpm vault_identity_list
 devops/ansible/
-  ansible.cfg
   hosts.yml                    # dev/staging/production groups
-  deploy.yml                   # single playbook (replaces dev/staging/production.yml)
+  deploy.yml                   # single playbook (default target: dev)
   group_vars/
     all.yml                    # shared: app_name, ports, paths
-    dev.yml                    # dev: image_tag=dev, tls_profile=http, host_port=8089
-    staging.yml                # staging: image_tag=dev, tls_profile=http, host_port=8089
-    production.yml             # production: image_tag=latest, tls_profile=origin, host_port=2053
+    dev.yml                    # dev: rolling internal-registry main tag
+    dev/vault.yml              # dev secrets (per-variable !vault, avpm markpost-dev)
+    staging.yml                # staging: pinned Docker Hub release
+    staging/vault.yml          # staging secrets (avpm markpost-staging)
+    production.yml             # production: pinned release, origin TLS, CF CIDRs
+    production/vault.yml       # production secrets (avpm markpost-prod)
   host_vars/
     fn.yml / oect.yml / ttyo.yml
   templates/
@@ -339,42 +355,48 @@ devops/ansible/
     Caddyfile.dev              # static HTTP Caddyfile (dev)
     Caddyfile.staging          # static HTTP Caddyfile (staging)
     Caddyfile.production.j2    # Origin CA + cloudflare_cidrs (production)
-  vars/
-    dev/vault.yml
-    staging/vault.yml
-    production/vault.yml
 ```
 
 ### Commands
 
 ```bash
-# Dev:
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l dev --vault-password-file ~/.ansible-vault/markpost-dev.pwd
-
-# Staging:
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l staging --vault-password-file ~/.ansible-vault/markpost-staging.pwd
-
-# Production:
-ansible-playbook -i devops/ansible/hosts.yml devops/ansible/deploy.yml \
-    -l production --vault-password-file ~/.ansible-vault/markpost-production.pwd
+ansible-playbook devops/ansible/deploy.yml                    # dev (fn)
+ansible-playbook devops/ansible/deploy.yml -e target=staging
+ansible-playbook devops/ansible/deploy.yml -e target=production
 ```
-
-The `--limit` flag is mandatory. The playbook asserts `ansible_limit is defined`
-and fails otherwise, so a bare invocation never deploys to every host at once.
 
 ### Environment variable matrix
 
-| Variable           | dev                              | staging                          | production                   |
-| ------------------ | -------------------------------- | -------------------------------- | ---------------------------- |
-| `image_tag`        | `dev`                            | `dev`                            | `latest`                     |
-| `image`            | `192.168.5.50:5000/markpost:dev` | `192.168.5.50:5000/markpost:dev` | `jukanntenn/markpost:latest` |
-| `host_port`        | `8089`                           | `8089`                           | `2053`                       |
-| `tls_profile`      | `http`                           | `http`                           | `origin`                     |
-| `public_url`       | _(unset)_                        | `https://markpost.bytehome.fun`  | `https://markpost.cc`        |
-| `debug`            | `true`                           | `false`                          | `false`                      |
-| `cloudflare_cidrs` | _(unset)_                        | _(unset)_                        | CF CIDR list                 |
+| Variable           | dev                                      | staging                          | production                     |
+| ------------------ | ---------------------------------------- | -------------------------------- | ------------------------------ |
+| `image`            | `192.168.5.50:5000/markpost:main`        | `jukanntenn/markpost:<pinned>`   | `jukanntenn/markpost:<pinned>` |
+| `expected_version` | `git describe` of the deploying checkout | `<pinned git tag>`               | `<pinned git tag>`             |
+| `host_port`        | `8089`                                   | `8089`                           | `2053`                         |
+| `tls_profile`      | `http`                                   | `http` (tunnel terminates HTTPS) | `origin` (CF Full strict)      |
+| `public_url`       | `http://192.168.5.200:8089`              | `https://markpost.bytehome.fun`  | `https://markpost.cc`          |
+| `debug`            | `true`                                   | `false`                          | `false`                        |
+| `cloudflare_cidrs` | _(unset)_                                | _(unset)_                        | CF CIDR list                   |
+
+staging and production pin the same version (`markpost_version` in their
+group_vars): staging is the promotion gate, so the artifact validated there
+must be byte-identical to what production runs.
+
+### Post-deploy health check
+
+The playbook's final task runs `scripts/check_deploy.py` from the controller:
+
+1. Polls `{public_url}/api/v1/health` until `{"status": "ok"}` (5s interval,
+   120s timeout) — through the path real visitors use (LAN for dev, tunnel for
+   staging, Cloudflare edge for production), so a broken port/Caddy/edge path
+   fails the deploy even though the container itself is healthy.
+2. Compares `{public_url}/api/v1/version` against the expected version: the
+   deploying checkout's `git describe` for dev (`main`-tag deploys), or the
+   pinned git tag for staging/production. This catches a container that is up
+   but still running the previous image.
+
+On failure, check `docker compose logs markpost` on the host. There is no
+automatic rollback — migrations have usually already run by the time the app
+is up, so the recovery path is fix-forward and redeploy.
 
 ---
 
@@ -407,7 +429,7 @@ docker compose exec markpost markpost -c /app/config.toml \
 When Cloudflare updates their IP ranges, update two places:
 
 1. The VPS firewall (re-run the ufw loop above).
-2. `devops/ansible/group_vars/production.yml` → `cloudflare_cidrs` (space-separated),
+2. `devops/ansible/group_vars/production/vars.yml` → `cloudflare_cidrs` (space-separated),
    then redeploy production.
 
 ### View logs
@@ -415,3 +437,29 @@ When Cloudflare updates their IP ranges, update two places:
 ```bash
 docker compose logs -f markpost    # Caddy + Go (s6 merges both to stdout)
 ```
+
+---
+
+## 7. Image tag semantics
+
+| Tag          | Registry            | Points at                                              | Moved by                               |
+| ------------ | ------------------- | ------------------------------------------------------ | -------------------------------------- |
+| `main`       | `192.168.5.50:5000` | whatever `docker/build.py` last built from a workspace | local `python3 docker/build.py --push` |
+| `X.Y.Z`      | Docker Hub          | git tag `vX.Y.Z` (stable release)                      | `docker-publish.yml` on tag push       |
+| `X.Y.Z-rc.N` | Docker Hub          | git tag `vX.Y.Z-rc.N` (prerelease)                     | `docker-publish.yml` on tag push       |
+| `latest`     | Docker Hub          | the newest **stable** release (never a prerelease)     | `docker-publish.yml`, stable only      |
+
+- Git tags follow SemVer 2.0.0: `v0.1.3` stable, `v0.1.3-rc.1` prerelease
+  (the hyphen is required — `v0.1.3rc1` is invalid semver and breaks every
+  semver-aware tool). Docker tags strip the leading `v`.
+- A release is stable iff the git tag matches `^v\d+\.\d+\.\d+$` exactly —
+  one rule, shared verbatim by `docker-publish.yml` (latest gating) and
+  `release.yml` (prerelease / make_latest flags).
+- Docker Hub tags published before the format switch (`v0.1.0` …
+  `v0.2.0-rc.3`, with the `v`) remain as-is; new releases use the no-`v` form.
+- `main` never leaves the internal registry, and CI never builds it — it is
+  purely the local-build rolling tag that dev (fn) tracks.
+- Local multi-arch builds (`docker/build.py --push --all-platforms`) go through
+  buildx + QEMU; the release workflow instead builds each platform natively
+  (amd64 on x86 runners, arm64 on the GitHub arm runner) and merges manifests —
+  no emulation, no registry cache.

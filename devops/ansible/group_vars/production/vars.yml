@@ -7,10 +7,18 @@
 env: production
 
 # Pinned rather than `latest`: the docker-publish workflow deliberately does not
-# move `latest` for -rc tags, so `latest` would silently resolve to an older
-# release. Bump on promotion, after staging has validated the same version.
+# move `latest` for prerelease tags, so `latest` would silently resolve to an
+# older release. Bump on promotion, after staging has validated the same version.
+# Format: the Docker Hub tag — releases after the tag-format switch drop the
+# leading "v" (v0.2.1 -> 0.2.1, v0.2.1-rc.1 -> 0.2.1-rc.1); v0.2.0-rc.3 below
+# predates the switch.
 markpost_version: "v0.2.0-rc.3"
 image: "jukanntenn/markpost:{{ markpost_version }}"
+
+# Version the binary reports at /api/v1/version (VERSION build-arg = the git
+# tag at build time, v-prefixed). The deploy fails if it does not match.
+# For releases built after the tag-format switch this is "v" + markpost_version.
+expected_version: "v0.2.0-rc.3"
 
 public_url: "https://markpost.cc"
 trusted_proxies: '["127.0.0.1", "::1"]'

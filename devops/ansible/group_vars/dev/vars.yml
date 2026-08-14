@@ -4,7 +4,10 @@
 # without HTTPS. Caddy serves plain HTTP. Crashing it is acceptable.
 
 env: dev
-image_tag: dev
+
+# Rolling tag that tracks whatever docker/build.py last pushed from a local
+# checkout (the default tag of build.py — not tied to the git main branch).
+image_tag: main
 registry: "192.168.5.50:5000"
 image: "{{ registry }}/markpost:{{ image_tag }}"
 

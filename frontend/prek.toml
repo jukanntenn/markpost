@@ -46,3 +46,15 @@ entry = "pnpm test:run"
 files = ""
 pass_filenames = false
 stages = ["pre-push"]
+
+# Mirrors CI build.yml: `next build` (static export) fails on errors tsc and
+# vitest cannot see (e.g. export-time route constraints), so without this the
+# push gate can stay green while CI's build job fails.
+[[repos.hooks]]
+id = "frontend-build"
+name = "next build (frontend, pre-push)"
+language = "system"
+entry = "pnpm build"
+files = ""
+pass_filenames = false
+stages = ["pre-push"]

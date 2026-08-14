@@ -48,10 +48,10 @@ Fail → report which check failed (lint/test) + the specific violations, STOP.
    ```
 2. **Determine version number:**
    - If the user provided a version number → **validate it:**
-     1. Semver format: `X.Y.Z` where X/Y/Z are non-negative integers
-     2. Higher than current version (no downgrades)
+     1. Semver format: `X.Y.Z` (stable) or `X.Y.Z-rc.N` (prerelease) where X/Y/Z are non-negative integers. The hyphen before the prerelease segment is REQUIRED — `X.Y.Zrc1` is invalid semver and breaks every semver-aware tool (docker/metadata-action, npm, Go modules).
+     2. Higher than current version per semver precedence (no downgrades; a prerelease of the next version sorts below that version)
      3. No skipped intermediate versions (e.g. 0.1.1 → 0.3.0 skips 0.2.0 → soft warning, NOT a blocker)
-     4. Tag does not already exist (`git tag -l "vX.Y.Z"` must be empty)
+     4. Tag does not already exist (`git tag -l "vX.Y.Z[-rc.N]"` must be empty)
      - Present validation results as **non-binding suggestions** — the user may override any warning.
    - If the user did NOT provide a version → recommend one based on semver principles (patch=fixes, minor=features, major=breaking), using your best judgment. **Show your reasoning** (e.g. "3 feat + 2 fix commits since v0.1.1 → recommending minor bump to 0.2.0").
 3. **PAUSE — confirm version number.** Present the chosen version + reasoning/validation results and wait for explicit user confirmation. Do NOT proceed until the user gives a clear affirmative response (e.g. ok / 确认 / yes / 行 / 好的 / LGTM / 没问题 / 可以 / proceed / confirm).
@@ -145,12 +145,15 @@ cat .github/workflows/docker-publish.yml
 - Trigger on `v*` tags
 - CHANGELOG extraction step (awk to extract version-specific notes)
 - `softprops/action-gh-release` with `body_path` pointing to extracted notes
+- Prerelease/make_latest decided by the exact-match regex `^v[0-9]+\.[0-9]+\.[0-9]+$` (stable iff it matches)
 
 **docker-publish.yml** MUST have:
 
 - Trigger on `v*` tags
-- Multi-arch Docker build (amd64 + arm64)
-- Push to Docker Hub (`jukanntenn/markpost`)
+- Native multi-arch Docker build (amd64 + arm64, one runner per arch, no QEMU)
+- Push to Docker Hub (`jukanntenn/markpost`) with the SAME stable regex;
+  Docker tags strip the leading `v` (`v0.1.3` → `0.1.3`, `v0.1.3-rc.1` →
+  `0.1.3-rc.1`); `latest` moves only on stable releases
 
 If either file is missing or incomplete → report, explain what's expected, and ask user to confirm before continuing.
 
@@ -167,7 +170,8 @@ Hook failure → report output, STOP. Never `--no-verify`.
 ### Step 7: Tag
 
 ```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git tag -a vX.Y.Z -m "Release vX.Y.Z"            # stable
+git tag -a vX.Y.Z-rc.N -m "Release vX.Y.Z-rc.N"  # prerelease (hyphen required)
 ```
 
 Verify: `git tag -l "vX.Y.Z"` returns exactly the tag. If tag already exists → report, STOP.
@@ -198,7 +202,8 @@ Provide user with:
 2. **GitHub Actions**: verify both workflows succeeded
    → Release: `https://github.com/jukanntenn/markpost/actions/workflows/release.yml`
    → Docker: `https://github.com/jukanntenn/markpost/actions/workflows/docker-publish.yml`
-3. **Docker Hub**: verify new tag + latest images are published
+3. **Docker Hub**: verify the new tag is published (`X.Y.Z` or `X.Y.Z-rc.N`,
+   no `v` prefix); `latest` must also have moved, but ONLY for stable releases
    → `https://hub.docker.com/r/jukanntenn/markpost/tags`
 4. **Version checklist**: confirm `frontend/package.json` shows X.Y.Z
 5. **Rollback options**:

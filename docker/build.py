@@ -5,7 +5,12 @@ Builds a single unified image containing Go backend, Next.js frontend,
 Caddy reverse proxy, and s6-overlay process manager.
 
 Supports load (local, single platform) and push (multi-platform to registry) modes.
-Always applies a 'dev' tag; additional tags can be specified via --tags.
+Always applies a 'main' tag (the rolling tag that tracks the current workspace);
+additional tags can be specified via --tags and are deduplicated against it.
+
+Registry cache is deliberately not used: builds against the internal registry
+gain nothing from cross-machine cache layers and the cache blobs would just
+consume registry disk. The local buildx builder cache still applies.
 
 Environment requirements (not auto-resolved):
   - Docker daemon running
@@ -29,6 +34,7 @@ import sys
 
 IMAGE_NAME = "markpost"
 DEFAULT_REGISTRY = "192.168.5.50:5000"
+DEFAULT_TAG = "main"
 ALL_PLATFORMS = ("linux/amd64", "linux/arm64")
 
 PLATFORM_ALIASES = {
@@ -42,9 +48,10 @@ BUILD_CONTEXT = "."
 # Map a target platform to (install_arg, binfmt_misc_name).
 # - install_arg: the arch name passed to `tonistiigi/binfmt --install <arg>`
 # - binfmt_misc_name: the registered emulator file under /proc/sys/fs/binfmt_misc/
-# These differ for arm64: `--install arm64` registers as `qemu-aarch64`
-# (confirmed by tonistiigi/binfmt README emulator list).
+# The install arg and the registered name differ per arch (e.g. `--install
+# arm64` registers as `qemu-aarch64`; confirmed by tonistiigi/binfmt README).
 QEMU_ARCH_MAP = {
+    "linux/amd64": ("amd64", "x86_64"),
     "linux/arm64": ("arm64", "aarch64"),
 }
 
@@ -84,13 +91,19 @@ def parse_args():
         nargs="+",
         action="extend",
         default=[],
-        help="Additional image tags (dev tag is always applied)",
+        help=f'Additional image tags (default: "{DEFAULT_TAG}"). "{DEFAULT_TAG}" is always included, duplicates removed.',
     )
     parser.add_argument(
         "--platform",
         action="append",
         default=[],
-        help="Target platform (amd64 or arm64). Repeatable. Defaults to all platforms.",
+        help="Target platform (amd64 or arm64). Repeatable. Defaults to the host platform.",
+    )
+    parser.add_argument(
+        "--all-platforms",
+        action="store_true",
+        default=False,
+        help="Build all target platforms (amd64+arm64).",
     )
     parser.add_argument(
         "--no-cache",
@@ -115,20 +128,29 @@ def env_error(msg, hint=None):
     sys.exit(2)
 
 
-def resolve_platforms(platform_args):
-    resolved = []
-    for p in platform_args:
-        if p in PLATFORM_ALIASES:
-            resolved.append(PLATFORM_ALIASES[p])
-        elif p in ALL_PLATFORMS:
-            resolved.append(p)
-        else:
-            env_error(
-                f"Unknown platform: {p}",
-                f"Supported platforms: {', '.join(PLATFORM_ALIASES.keys())}",
-            )
-    resolved = list(dict.fromkeys(resolved))
-    return resolved if resolved else list(ALL_PLATFORMS)
+def resolve_platforms(args):
+    if getattr(args, "all_platforms", False):
+        return list(ALL_PLATFORMS)
+    if args.platform:
+        resolved = []
+        for p in args.platform:
+            if p in PLATFORM_ALIASES:
+                resolved.append(PLATFORM_ALIASES[p])
+            elif p in ALL_PLATFORMS:
+                resolved.append(p)
+            else:
+                env_error(
+                    f"Unknown platform: {p}",
+                    f"Supported platforms: {', '.join(PLATFORM_ALIASES.keys())}",
+                )
+        return list(dict.fromkeys(resolved))
+    return [detect_host_platform()]
+
+
+def resolve_tags(args):
+    """Default tag + user tags, deduplicated, main always first."""
+    tags = [DEFAULT_TAG, *getattr(args, "tags", [])]
+    return list(dict.fromkeys(tags))
 
 
 def detect_host_platform():
@@ -263,7 +285,7 @@ def main():
     args = parse_args()
     setup_logging(verbose=args.verbose)
 
-    target_platforms = resolve_platforms(args.platform)
+    target_platforms = resolve_platforms(args)
 
     if args.push:
         platforms_to_build = target_platforms
@@ -301,7 +323,7 @@ def main():
     except (subprocess.CalledProcessError, FileNotFoundError):
         pass
 
-    all_tags = ["dev"] + args.tags
+    all_tags = resolve_tags(args)
     full_image_names = []
     cmd = ["docker", "buildx", "build"]
     for tag in all_tags:
@@ -317,10 +339,6 @@ def main():
 
     if args.push:
         cmd.append("--push")
-        cache_tag = f"{args.registry}/{IMAGE_NAME}:cache"
-        if not args.no_cache:
-            cmd.extend(["--cache-from", f"type=registry,ref={cache_tag}"])
-            cmd.extend(["--cache-to", f"type=registry,ref={cache_tag},mode=max"])
     else:
         cmd.append("--load")
 

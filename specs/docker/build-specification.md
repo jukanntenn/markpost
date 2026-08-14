@@ -17,7 +17,7 @@ All base images are pinned to specific Alpine versions (`alpine:3.21`, `alpine3.
 Key features used:
 
 - Multi-platform builds via QEMU emulation (`docker-container` driver)
-- Registry-based build cache (`--cache-to`/`--cache-from`)
+- Local builder cache (registry-based cache is deliberately unused — see Build Cache below)
 - Multi-stage Dockerfile builds
 
 See [buildx reference](../../wiki/buildx-reference.md) for detailed buildx knowledge.
@@ -87,11 +87,14 @@ Each build context has a `.dockerignore` that excludes non-essential files:
 - **Backend**: test files, generated docs, dev tools, config files, IDE files
 - **Frontend**: `.env.local`
 
-### Registry-Based Build Cache
+### Build Cache
 
-When pushing images (`--push`), build cache is stored in the same registry using `--cache-to`/`--cache-from` with `mode=max`. Cache is scoped per-platform to avoid cross-contamination between architecture-specific build outputs.
-
-Cache reference pattern: `<registry>/<image>:cache` (e.g., `192.168.5.50:5000/markpost:cache`).
+Registry-based build cache (`--cache-to`/`--cache-from`) is deliberately NOT
+used: builds against the internal registry gain nothing from cross-machine
+cache layers (single builder machine) and the `mode=max` cache blobs would
+just consume registry disk. Only the local buildx builder cache applies;
+`--no-cache` disables it. CI release builds use GitHub Actions cache
+(`type=gha`) instead — see `.github/workflows/docker-publish.yml`.
 
 ## Build Script (`docker/build.py`)
 
@@ -117,16 +120,15 @@ The following checks run before any build starts:
 
 ### CLI Flags
 
-| Flag              | Description                                       | Default                        |
-| ----------------- | ------------------------------------------------- | ------------------------------ |
-| `--push`          | Push to registry (multi-platform)                 | Load locally (single platform) |
-| `--registry`      | Container registry address                        | `192.168.5.50:5000`            |
-| `--tags`          | Additional image tags                             | `dev` only                     |
-| `--backend-only`  | Build only the backend image                      | Build both                     |
-| `--frontend-only` | Build only the frontend image                     | Build both                     |
-| `--platform`      | Target platform(s): `amd64`, `arm64`. Repeatable. | Both platforms                 |
-| `--no-cache`      | Disable all build cache                           | Cache enabled                  |
-| `--verbose`       | Full build output (no progress bar)               | Compact progress               |
+| Flag              | Description                                       | Default                           |
+| ----------------- | ------------------------------------------------- | --------------------------------- |
+| `--push`          | Push to registry (multi-platform)                 | Load locally (single platform)    |
+| `--registry`      | Container registry address                        | `192.168.5.50:5000`               |
+| `--tags`          | Additional image tags                             | `main` only (always incl., dedup) |
+| `--platform`      | Target platform(s): `amd64`, `arm64`. Repeatable. | Host platform                     |
+| `--all-platforms` | Build all target platforms (amd64 + arm64)        | Off                               |
+| `--no-cache`      | Disable all build cache                           | Cache enabled                     |
+| `--verbose`       | Full build output (no progress bar)               | Compact progress                  |
 
 ### Exit Codes
 
@@ -155,32 +157,32 @@ AGENT: Stop all subsequent actions. Report this error to the user. Do not attemp
 # Build both images for the host platform
 python3 docker/build.py
 
-# Build only arm64
+# Build arm64 explicitly
 python3 docker/build.py --platform arm64
 
-# Build only backend with verbose output
-python3 docker/build.py --backend-only --verbose
+# Build with verbose output
+python3 docker/build.py --verbose
 ```
 
 1. Script checks environment (Docker daemon, buildx, builder)
-2. Resolves target platforms (single host platform for `--load`)
-3. Runs `docker buildx build --load` for each selected image
-4. Images available locally as `markpost:dev` and/or `markpost-web:dev`
+2. Resolves target platforms (host platform by default; non-push collapses to a single platform)
+3. Runs `docker buildx build --load`
+4. Image available locally as `markpost:main` (plus any `--tags`)
 
 ### Normal Flow: Build and Push to Registry
 
 ```bash
-# Push both platforms to default registry
+# Push the host platform to the default registry, tagged main
 python3 docker/build.py --push
 
-# Push arm64 only with additional tag
-python3 docker/build.py --push --platform arm64 --tags v1.2.0
+# Push all platforms (cross-arch via QEMU) with an additional tag
+python3 docker/build.py --push --all-platforms --tags 0.1.3
 ```
 
-1. Script checks environment (Docker daemon, buildx, builder, QEMU)
-2. Resolves target platforms (all specified platforms for `--push`)
-3. Runs `docker buildx build --push` with `--cache-from`/`--cache-to` for each image
-4. Images pushed to registry with multi-architecture manifest
+1. Script checks environment (Docker daemon, buildx, builder, QEMU for foreign architectures)
+2. Resolves target platforms (all requested platforms for `--push`)
+3. Runs `docker buildx build --push` (no registry cache)
+4. Image pushed to the registry; multi-arch when more than one platform is requested
 
 ### Abnormal Flow: Environment Failure
 

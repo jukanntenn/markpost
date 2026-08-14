@@ -54,12 +54,16 @@ files = "\\.go$|^templates/post\\.css$|^cmd/buildcss/"
 pass_filenames = false
 stages = ["pre-commit"]
 
-# ---- pre-push: tests ----
+# ---- pre-push: tests (mirrors CI test.yml exactly) ----
+# `go build ./...` first because `go test` skips compile-only failures in
+# packages without test files (cmd/buildcss, tools/), which CI's build job
+# would then catch. -race matches `go test -race -covermode=atomic` in CI —
+# omitting it locally lets data races through with a green push.
 [[repos.hooks]]
-id = "backend-test"
-name = "go test (backend, pre-push)"
+id = "backend-build-and-test"
+name = "go build + go test -race (backend, pre-push)"
 language = "system"
-entry = "go test ./..."
+entry = "go build ./... && go test -race ./..."
 files = "\\.go$"
 pass_filenames = false
 stages = ["pre-push"]

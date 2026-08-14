@@ -103,75 +103,82 @@ function CreateTestPostModal({
 
   return (
     <Dialog open={show} onOpenChange={(open) => !open && onHide()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="flex max-h-[calc(100svh-2rem)] flex-col overflow-hidden sm:max-w-2xl">
         <Form
           onSubmit={handleSubmit((v) => mutate(v))}
-          className="space-y-4"
+          className="flex min-h-0 flex-1 flex-col gap-4"
           aria-label={t('title')}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0">
             <DialogTitle>{t('title')}</DialogTitle>
           </DialogHeader>
 
-          <Controller
-            name="title"
-            control={control}
-            render={({
-              field: { ref, name, value, onChange, onBlur },
-              fieldState: { invalid, isTouched, isDirty, error },
-            }) => (
-              <Field.Root
-                name={name}
-                invalid={invalid}
-                touched={isTouched}
-                dirty={isDirty}
-              >
-                <Field.Label>{t('titleLabel')}</Field.Label>
-                <Field.Control
-                  ref={ref}
-                  value={value}
-                  onValueChange={onChange}
-                  onBlur={onBlur}
-                  render={<Input autoComplete="off" autoFocus />}
-                  placeholder={t('titlePlaceholder')}
-                />
-                <Field.Error match={!!error}>
-                  {fieldMessage(error?.message, 'title')}
-                </Field.Error>
-              </Field.Root>
-            )}
-          />
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+            <Controller
+              name="title"
+              control={control}
+              render={({
+                field: { ref, name, value, onChange, onBlur },
+                fieldState: { invalid, isTouched, isDirty, error },
+              }) => (
+                <Field.Root
+                  name={name}
+                  invalid={invalid}
+                  touched={isTouched}
+                  dirty={isDirty}
+                >
+                  <Field.Label>{t('titleLabel')}</Field.Label>
+                  <Field.Control
+                    ref={ref}
+                    value={value}
+                    onValueChange={onChange}
+                    onBlur={onBlur}
+                    render={<Input autoComplete="off" autoFocus />}
+                    placeholder={t('titlePlaceholder')}
+                  />
+                  <Field.Error match={!!error}>
+                    {fieldMessage(error?.message, 'title')}
+                  </Field.Error>
+                </Field.Root>
+              )}
+            />
 
-          <Controller
-            name="body"
-            control={control}
-            render={({
-              field: { ref, name, value, onChange, onBlur },
-              fieldState: { invalid, isTouched, isDirty, error },
-            }) => (
-              <Field.Root
-                name={name}
-                invalid={invalid}
-                touched={isTouched}
-                dirty={isDirty}
-              >
-                <Field.Label>{t('bodyLabel')}</Field.Label>
-                <Field.Control
-                  ref={ref}
-                  value={value}
-                  onValueChange={onChange}
-                  onBlur={onBlur}
-                  render={<Textarea rows={8} />}
-                  placeholder={t('bodyPlaceholder')}
-                />
-                <Field.Error match={!!error}>
-                  {fieldMessage(error?.message, 'body')}
-                </Field.Error>
-              </Field.Root>
-            )}
-          />
+            <Controller
+              name="body"
+              control={control}
+              render={({
+                field: { ref, name, value, onChange, onBlur },
+                fieldState: { invalid, isTouched, isDirty, error },
+              }) => (
+                <Field.Root
+                  name={name}
+                  invalid={invalid}
+                  touched={isTouched}
+                  dirty={isDirty}
+                >
+                  <Field.Label>{t('bodyLabel')}</Field.Label>
+                  <Field.Control
+                    ref={ref}
+                    value={value}
+                    onValueChange={onChange}
+                    onBlur={onBlur}
+                    render={
+                      <Textarea
+                        rows={10}
+                        className="field-sizing-fixed min-h-48 md:min-h-56"
+                      />
+                    }
+                    placeholder={t('bodyPlaceholder')}
+                  />
+                  <Field.Error match={!!error}>
+                    {fieldMessage(error?.message, 'body')}
+                  </Field.Error>
+                </Field.Root>
+              )}
+            />
+          </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button
               type="button"
               variant="outline"

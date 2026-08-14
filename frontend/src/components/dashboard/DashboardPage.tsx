@@ -214,9 +214,9 @@ export function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+          <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             {/* 主区：活动叙事 */}
-            <section aria-label={t('activity.title')}>
+            <section className="min-w-0" aria-label={t('activity.title')}>
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="font-display text-section font-bold">
                   {t('activity.title')}
@@ -251,7 +251,7 @@ export function DashboardPage() {
             </section>
 
             {/* 副区：度量（xl 起 sticky 常驻，B2.3） */}
-            <aside className="space-y-6 xl:sticky xl:top-[calc(var(--header-height)+1rem)] xl:self-start">
+            <aside className="min-w-0 space-y-6 xl:sticky xl:top-[calc(var(--header-height)+1rem)] xl:self-start">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">
@@ -344,7 +344,7 @@ function DashboardSkeleton() {
     <div className="space-y-6">
       <Skeleton className="h-10 w-64" />
       <Skeleton className="h-20 w-full" />
-      <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-28 w-full" />

@@ -167,6 +167,7 @@ func AdminListChannels(adminSvc AdminService) gin.HandlerFunc {
 // @Param user_id query int false "User ID filter"
 // @Param channel_id query int false "Channel ID filter"
 // @Param status query string false "Status filter (delivered/failed/expired)"
+// @Param error_category query string false "Error category filter (card_rejected/upstream_client_error/upstream_server_error/upstream_business_error/network/internal)"
 // @Param page query int false "Page number (min 1)" default(1)
 // @Param limit query int false "Items per page (min 1)" default(20)
 // @Success 200 {object} v1.DeliveryHistoryListResponse
@@ -187,7 +188,11 @@ func AdminListDeliveryHistory(adminSvc AdminService) gin.HandlerFunc {
 		if !ok {
 			return
 		}
-		filter := delivery.HistoryFilter{OwnerID: q.UserID, ChannelID: q.ChannelID, Status: status}
+		category, ok := parseHistoryErrorCategory(c, q.ErrorCategory)
+		if !ok {
+			return
+		}
+		filter := delivery.HistoryFilter{OwnerID: q.UserID, ChannelID: q.ChannelID, Status: status, ErrorCategory: category}
 		items, total, err := adminSvc.ListAllDeliveryHistory(c.Request.Context(), filter, q.Offset, q.Limit)
 		if err != nil {
 			respondError(c, err)
@@ -212,6 +217,31 @@ func parseHistoryStatus(c *gin.Context, s string) (delivery.Status, bool) {
 	}
 	respondError(c, service.New(service.ErrInvalidRequest, "status must be one of: delivered, failed, expired"))
 	return 0, false
+}
+
+// validDeliveryErrorCategories is the closed set of classified send-failure
+// categories accepted by the admin delivery history error_category filter.
+var validDeliveryErrorCategories = map[string]bool{
+	"card_rejected":           true,
+	"upstream_client_error":   true,
+	"upstream_server_error":   true,
+	"upstream_business_error": true,
+	"network":                 true,
+	"internal":                true,
+}
+
+// parseHistoryErrorCategory validates the error_category query string, returning
+// the category (or "" for no filter) and responding 422 on unknown values.
+func parseHistoryErrorCategory(c *gin.Context, s string) (string, bool) {
+	switch s {
+	case "", "all":
+		return "", true
+	}
+	if validDeliveryErrorCategories[s] {
+		return s, true
+	}
+	respondError(c, service.New(service.ErrInvalidRequest, "error_category must be one of: card_rejected, upstream_client_error, upstream_server_error, upstream_business_error, network, internal"))
+	return "", false
 }
 
 // AdminListAuditLogs godoc

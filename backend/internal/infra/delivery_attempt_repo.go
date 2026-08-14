@@ -121,15 +121,17 @@ func (r *AttemptRepository) MarkExpired(ctx context.Context, wallBeforeMs int64,
 
 // ArchiveAndDelete writes a History row for the attempt's terminal state and
 // deletes the attempt row in a single transaction, so the archive and the
-// queue removal are atomic.
-func (r *AttemptRepository) ArchiveAndDelete(ctx context.Context, attempt *delivery.Attempt, status delivery.Status, lastError string) error {
+// queue removal are atomic. errorCategory is the classified send-failure
+// category (empty for delivered/expired).
+func (r *AttemptRepository) ArchiveAndDelete(ctx context.Context, attempt *delivery.Attempt, status delivery.Status, lastError string, errorCategory string) error {
 	history := &delivery.History{
-		UserID:    &attempt.UserID,
-		PostID:    &attempt.PostID,
-		ChannelID: &attempt.ChannelID,
-		Status:    status,
-		LastError: lastError,
-		CreatedAt: attempt.CreatedAt,
+		UserID:        &attempt.UserID,
+		PostID:        &attempt.PostID,
+		ChannelID:     &attempt.ChannelID,
+		Status:        status,
+		LastError:     lastError,
+		ErrorCategory: errorCategory,
+		CreatedAt:     attempt.CreatedAt,
 	}
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -202,7 +204,7 @@ func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Dur
 // result (see delivery.HistoryFilter).
 func (r *AttemptRepository) ListHistory(ctx context.Context, filter delivery.HistoryFilter, offset, limit int) ([]*delivery.HistoryRow, error) {
 	q := r.db.WithContext(ctx).Table("delivery_history AS h").
-		Select(`h.id, h.status, h.last_error, h.created_at, h.channel_id,
+		Select(`h.id, h.status, h.last_error, h.error_category, h.created_at, h.channel_id,
 		        p.title AS post_title, p.qid AS post_qid,
 		        c.name AS channel_name,
 		        u.username AS username`).
@@ -218,6 +220,9 @@ func (r *AttemptRepository) ListHistory(ctx context.Context, filter delivery.His
 	}
 	if filter.Status > 0 {
 		q = q.Where("h.status = ?", filter.Status)
+	}
+	if filter.ErrorCategory != "" {
+		q = q.Where("h.error_category = ?", filter.ErrorCategory)
 	}
 	var rows []*delivery.HistoryRow
 	if err := q.Offset(offset).Limit(limit).Scan(&rows).Error; err != nil {
@@ -238,6 +243,9 @@ func (r *AttemptRepository) CountHistory(ctx context.Context, filter delivery.Hi
 	}
 	if filter.Status > 0 {
 		q = q.Where("status = ?", filter.Status)
+	}
+	if filter.ErrorCategory != "" {
+		q = q.Where("error_category = ?", filter.ErrorCategory)
 	}
 	var count int64
 	if err := q.Count(&count).Error; err != nil {

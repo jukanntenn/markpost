@@ -195,6 +195,7 @@
     "hideKey": "隐藏",
     "copyKey": "复制 Key",
     "copyPostUrl": "复制投递地址",
+    "copyOptions": "复制选项",
     "createdAt": "创建于",
     "copied": "已复制",
     "copyFailed": "复制失败",
@@ -635,12 +636,21 @@
       "filter": {
         "user": "用户",
         "channel": "渠道",
-        "status": "状态"
+        "status": "状态",
+        "errorCategory": "错误类型"
       },
       "status": {
         "delivered": "已投递",
         "failed": "失败",
         "expired": "已过期"
+      },
+      "errorCategory": {
+        "card_rejected": "卡片被拒",
+        "upstream_client_error": "Webhook 错误",
+        "upstream_server_error": "上游服务异常",
+        "upstream_business_error": "上游 API 异常",
+        "network": "网络异常",
+        "internal": "内部错误"
       },
       "colPost": "文章",
       "colChannel": "渠道",

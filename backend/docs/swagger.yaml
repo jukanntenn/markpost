@@ -305,6 +305,8 @@ definitions:
         type: string
       created_at:
         type: string
+      error_category:
+        type: string
       id:
         type: integer
       last_error:
@@ -528,6 +530,11 @@ definitions:
     required:
     - password
     - username
+    type: object
+  v1.VersionResponse:
+    properties:
+      version:
+        type: string
     type: object
 host: localhost:7330
 info:
@@ -809,6 +816,10 @@ paths:
       - description: Status filter (delivered/failed/expired)
         in: query
         name: status
+        type: string
+      - description: Error category filter (card_rejected/upstream_client_error/upstream_server_error/upstream_business_error/network/internal)
+        in: query
+        name: error_category
         type: string
       - default: 1
         description: Page number (min 1)
@@ -1904,6 +1915,20 @@ paths:
       summary: Delete a post owned by the current user
       tags:
       - posts
+  /api/v1/version:
+    get:
+      description: 'Reports the build version (VERSION build-arg: git tag for release
+        images, git describe for local builds).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.VersionResponse'
+      summary: Server version
+      tags:
+      - health
 securityDefinitions:
   BearerAuth:
     description: '"Bearer <access_token>"'

@@ -375,7 +375,7 @@ func TestDispatcher_ClaimExecuteArchive(t *testing.T) {
 	}
 
 	// Archive as delivered: attempt row gone, history row written.
-	if err := attemptRepo.ArchiveAndDelete(ctx, claimed[0], delivery.StatusDelivered, ""); err != nil {
+	if err := attemptRepo.ArchiveAndDelete(ctx, claimed[0], delivery.StatusDelivered, "", ""); err != nil {
 		t.Fatalf("ArchiveAndDelete: %v", err)
 	}
 

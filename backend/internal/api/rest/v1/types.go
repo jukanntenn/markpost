@@ -233,28 +233,30 @@ func (r UpdateDeliveryChannelRequest) toParams() delivery_svc.UpdateChannelParam
 // nullable pointers reflect ON DELETE SET NULL: a nil field means the referenced
 // post/channel/user was deleted.
 type DeliveryHistoryItem struct {
-	ID          int64     `json:"id"`
-	Status      string    `json:"status"`
-	LastError   string    `json:"last_error"`
-	CreatedAt   time.Time `json:"created_at"`
-	ChannelID   *int      `json:"channel_id"`
-	PostTitle   *string   `json:"post_title"`
-	PostQID     *string   `json:"post_qid"`
-	ChannelName *string   `json:"channel_name"`
-	Username    *string   `json:"username"`
+	ID            int64     `json:"id"`
+	Status        string    `json:"status"`
+	LastError     string    `json:"last_error"`
+	ErrorCategory string    `json:"error_category"`
+	CreatedAt     time.Time `json:"created_at"`
+	ChannelID     *int      `json:"channel_id"`
+	PostTitle     *string   `json:"post_title"`
+	PostQID       *string   `json:"post_qid"`
+	ChannelName   *string   `json:"channel_name"`
+	Username      *string   `json:"username"`
 }
 
 func newDeliveryHistoryItem(h *delivery.HistoryRow) DeliveryHistoryItem {
 	return DeliveryHistoryItem{
-		ID:          h.ID,
-		Status:      deliveryStatusName(h.Status),
-		LastError:   h.LastError,
-		CreatedAt:   h.CreatedAt,
-		ChannelID:   h.ChannelID,
-		PostTitle:   h.PostTitle,
-		PostQID:     h.PostQID,
-		ChannelName: h.ChannelName,
-		Username:    h.Username,
+		ID:            h.ID,
+		Status:        deliveryStatusName(h.Status),
+		LastError:     h.LastError,
+		ErrorCategory: h.ErrorCategory,
+		CreatedAt:     h.CreatedAt,
+		ChannelID:     h.ChannelID,
+		PostTitle:     h.PostTitle,
+		PostQID:       h.PostQID,
+		ChannelName:   h.ChannelName,
+		Username:      h.Username,
 	}
 }
 
@@ -399,12 +401,13 @@ type DeliveryHistoryQuery struct {
 }
 
 // AdminDeliveryHistoryQuery binds the query parameters for the admin delivery
-// history listing: user_id / channel_id / status filters (F.8, I.10).
+// history listing: user_id / channel_id / status / error_category filters.
 type AdminDeliveryHistoryQuery struct {
 	PaginationQuery
-	UserID    int    `form:"user_id"`
-	ChannelID int    `form:"channel_id"`
-	Status    string `form:"status"`
+	UserID        int    `form:"user_id"`
+	ChannelID     int    `form:"channel_id"`
+	Status        string `form:"status"`
+	ErrorCategory string `form:"error_category"`
 }
 
 // DeliveryStatsResponse is the user delivery stats body (B2.7/K.2):
@@ -446,6 +449,14 @@ type PaginatedItemsResponse struct {
 // HealthResponse represents the health check response.
 type HealthResponse struct {
 	Status string `json:"status"`
+}
+
+// VersionResponse reports the build version of the running binary. The value
+// is the VERSION build-arg (git describe / git tag), injected at route
+// registration; post-deploy verification compares it against the expected
+// version to catch a container that is up but still running the old image.
+type VersionResponse struct {
+	Version string `json:"version"`
 }
 
 // --- Audit types ---

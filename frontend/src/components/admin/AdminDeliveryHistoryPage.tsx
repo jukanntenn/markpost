@@ -40,7 +40,8 @@ export function AdminDeliveryHistoryPage() {
     user: string
     channel: string
     status: string
-  }>({ page: '1', user: '', channel: '', status: '' })
+    category: string
+  }>({ page: '1', user: '', channel: '', status: '', category: '' })
 
   const page = Math.max(1, Number.parseInt(state.page, 10) || 1)
   const userId = state.user ? Number.parseInt(state.user, 10) : undefined
@@ -48,6 +49,7 @@ export function AdminDeliveryHistoryPage() {
     ? Number.parseInt(state.channel, 10)
     : undefined
   const status = state.status || 'all'
+  const category = state.category || 'all'
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const toggle = (id: number) =>
@@ -68,6 +70,7 @@ export function AdminDeliveryHistoryPage() {
     ...(userId ? { user_id: userId } : {}),
     ...(channelId ? { channel_id: channelId } : {}),
     ...(status !== 'all' ? { status } : {}),
+    ...(category !== 'all' ? { error_category: category } : {}),
   }
   const query = useQuery({
     queryKey: adminKeys.history.list(page, filter),
@@ -79,7 +82,10 @@ export function AdminDeliveryHistoryPage() {
   const total = query.data?.total ?? 0
   const totalPages = query.data?.total_pages ?? 0
   const hasFilters =
-    state.user !== '' || state.channel !== '' || status !== 'all'
+    state.user !== '' ||
+    state.channel !== '' ||
+    status !== 'all' ||
+    category !== 'all'
 
   return (
     <div className="space-y-6">
@@ -118,12 +124,37 @@ export function AdminDeliveryHistoryPage() {
           ]}
           onValueChange={(v) => setState({ status: v })}
         />
+        <FilterSelect
+          label={t('filter.errorCategory')}
+          value={category}
+          options={[
+            { value: 'all', label: tCommon('all') },
+            { value: 'card_rejected', label: t('errorCategory.card_rejected') },
+            {
+              value: 'upstream_client_error',
+              label: t('errorCategory.upstream_client_error'),
+            },
+            {
+              value: 'upstream_server_error',
+              label: t('errorCategory.upstream_server_error'),
+            },
+            {
+              value: 'upstream_business_error',
+              label: t('errorCategory.upstream_business_error'),
+            },
+            { value: 'network', label: t('errorCategory.network') },
+            { value: 'internal', label: t('errorCategory.internal') },
+          ]}
+          onValueChange={(v) => setState({ category: v })}
+        />
         {hasFilters && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setState({ user: '', channel: '', status: '' })}
+            onClick={() =>
+              setState({ user: '', channel: '', status: '', category: '' })
+            }
           >
             {tCommon('clear')}
           </Button>
@@ -145,7 +176,12 @@ export function AdminDeliveryHistoryPage() {
                   type="button"
                   variant="outline"
                   onClick={() =>
-                    setState({ user: '', channel: '', status: '' })
+                    setState({
+                      user: '',
+                      channel: '',
+                      status: '',
+                      category: '',
+                    })
                   }
                 >
                   {tCommon('clear')}
@@ -194,7 +230,10 @@ export function AdminDeliveryHistoryPage() {
                     </TableCell>
                     <TableCell>{row.username ?? t('userDeleted')}</TableCell>
                     <TableCell>
-                      <StatusBadge status={row.status} />
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusBadge status={row.status} />
+                        <CategoryTag category={row.error_category} />
+                      </div>
                     </TableCell>
                     <TableCell
                       className="text-muted-foreground"
@@ -243,6 +282,7 @@ export function AdminDeliveryHistoryPage() {
                   </div>
                   <StatusBadge status={row.status} />
                 </div>
+                <CategoryTag category={row.error_category} />
                 {failed && (
                   <>
                     <Button
@@ -276,6 +316,16 @@ export function AdminDeliveryHistoryPage() {
         />
       </ListState>
     </div>
+  )
+}
+
+function CategoryTag({ category }: { category: string }) {
+  const t = useTranslations('admin.history')
+  if (!category) return null
+  return (
+    <span className="rounded border border-input bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+      {t(`errorCategory.${category}`)}
+    </span>
   )
 }
 

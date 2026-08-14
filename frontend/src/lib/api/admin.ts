@@ -89,10 +89,15 @@ export const adminApi = {
       method: 'DELETE',
     }),
 
-  // F.8: user/channel/status filters.
+  // F.8: user/channel/status/error_category filters.
   listDeliveryHistory: (
     page?: number,
-    filter?: { user_id?: number; channel_id?: number; status?: string },
+    filter?: {
+      user_id?: number
+      channel_id?: number
+      status?: string
+      error_category?: string
+    },
     limit?: number,
   ) =>
     request<DeliveryHistoryResponse>('/api/v1/admin/delivery/history', {
@@ -101,6 +106,9 @@ export const adminApi = {
         ...(filter?.channel_id ? { channel_id: filter.channel_id } : {}),
         ...(filter?.status && filter.status !== 'all'
           ? { status: filter.status }
+          : {}),
+        ...(filter?.error_category && filter.error_category !== 'all'
+          ? { error_category: filter.error_category }
           : {}),
         ...paginationParams(page, limit),
       },

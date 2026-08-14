@@ -3,6 +3,7 @@ package delivery
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -28,7 +29,7 @@ type AttemptRepo interface {
 	ClaimDue(ctx context.Context, now, reserveUntilMs int64, limit int) ([]*delivery.Attempt, error)
 	MarkRetry(ctx context.Context, id int64, attempts int, lastError string, nextAtMs int64) error
 	MarkExpired(ctx context.Context, wallBeforeMs int64, batchSize int) ([]*delivery.Attempt, error)
-	ArchiveAndDelete(ctx context.Context, attempt *delivery.Attempt, status delivery.Status, lastError string) error
+	ArchiveAndDelete(ctx context.Context, attempt *delivery.Attempt, status delivery.Status, lastError string, errorCategory string) error
 }
 
 // ChannelRepo fetches delivery channels (for enqueue-time filtering) and
@@ -57,14 +58,14 @@ type Sender interface {
 type Metrics interface {
 	AddDeliveryPending(ctx context.Context, delta int64)
 	IncDeliveryDispatched(ctx context.Context)
-	IncDeliveryFailed(ctx context.Context)
+	IncDeliveryFailed(ctx context.Context, category string)
 }
 
 type noopMetrics struct{}
 
 func (noopMetrics) AddDeliveryPending(context.Context, int64) {}
 func (noopMetrics) IncDeliveryDispatched(context.Context)     {}
-func (noopMetrics) IncDeliveryFailed(context.Context)         {}
+func (noopMetrics) IncDeliveryFailed(context.Context, string) {}
 
 // Dispatcher implements domainpost.DeliveryEnqueuer on top of the persistent
 // best-effort delivery queue: a PostgreSQL-backed attempt table,
@@ -236,7 +237,7 @@ func (d *Dispatcher) sweepExpiry(ctx context.Context) {
 			return
 		}
 		for _, a := range expired {
-			if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusExpired, a.LastError); err != nil {
+			if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusExpired, a.LastError, ""); err != nil {
 				log.Printf("delivery sweep: archive expired attempt_id=%d err=%v", a.ID, err)
 			}
 		}
@@ -285,27 +286,38 @@ func (d *Dispatcher) execute(ctx context.Context, a *delivery.Attempt) {
 		return
 	}
 
-	if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusDelivered, ""); err != nil {
+	if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusDelivered, "", ""); err != nil {
 		log.Printf("delivery execute: archive delivered attempt_id=%d err=%v", a.ID, err)
 	}
 	d.metrics.AddDeliveryPending(ctx, -1)
 	d.metrics.IncDeliveryDispatched(ctx)
 }
 
-// handleSendError applies the backoff policy to a failed attempt: if the
-// sequence is exhausted the attempt is archived as failed, otherwise the
-// attempt count is bumped and next_at is advanced by the next backoff step.
+// handleSendError applies the backoff policy to a failed attempt. The error is
+// classified: a non-retryable category (card content rejected, client 4xx) or
+// an exhausted backoff sequence archives the attempt as failed immediately;
+// otherwise the attempt count is bumped and next_at advances to the next
+// backoff step. The category is recorded on the history row and emitted as a
+// metric label.
 func (d *Dispatcher) handleSendError(ctx context.Context, a *delivery.Attempt, sendErr error) {
 	nextAttempts := a.Attempts + 1
 	lastError := truncateError(sendErr.Error())
 
+	category := CategoryInternal
+	retryable := true
+	var derr *DeliveryError
+	if errors.As(sendErr, &derr) {
+		category = derr.Category
+		retryable = derr.Retryable
+	}
+
 	backoff, ok := NextBackoff(nextAttempts - 1)
-	if !ok {
-		if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusFailed, lastError); err != nil {
+	if !ok || !retryable {
+		if err := d.attemptRepo.ArchiveAndDelete(ctx, a, delivery.StatusFailed, lastError, string(category)); err != nil {
 			log.Printf("delivery execute: archive failed attempt_id=%d err=%v", a.ID, err)
 		}
 		d.metrics.AddDeliveryPending(ctx, -1)
-		d.metrics.IncDeliveryFailed(ctx)
+		d.metrics.IncDeliveryFailed(ctx, string(category))
 		return
 	}
 

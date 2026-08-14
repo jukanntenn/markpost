@@ -45,6 +45,7 @@ export interface DeliveryHistoryItem {
   id: number
   status: DeliveryStatus
   last_error: string
+  error_category: string
   created_at: string
   channel_id: number | null
   post_title: string | null

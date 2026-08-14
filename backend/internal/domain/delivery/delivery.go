@@ -86,13 +86,14 @@ func (History) TableName() string { return "delivery_history" }
 // the history row (which could lock a large row set) — the reference is
 // nulled and the row is preserved as an anonymous record.
 type History struct {
-	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserID    *int      `json:"user_id" gorm:"column:user_id;index"`       // nullable; ON DELETE SET NULL
-	PostID    *int      `json:"post_id" gorm:"column:post_id;index"`       // nullable; ON DELETE SET NULL
-	ChannelID *int      `json:"channel_id" gorm:"column:channel_id;index"` // nullable; ON DELETE SET NULL
-	Status    Status    `json:"status" gorm:"not null"`                    // delivered | failed | expired
-	LastError string    `json:"last_error" gorm:"not null;type:text;default:''"`
-	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	ID            int64     `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID        *int      `json:"user_id" gorm:"column:user_id;index"`       // nullable; ON DELETE SET NULL
+	PostID        *int      `json:"post_id" gorm:"column:post_id;index"`       // nullable; ON DELETE SET NULL
+	ChannelID     *int      `json:"channel_id" gorm:"column:channel_id;index"` // nullable; ON DELETE SET NULL
+	Status        Status    `json:"status" gorm:"not null"`                    // delivered | failed | expired
+	LastError     string    `json:"last_error" gorm:"not null;type:text;default:''"`
+	ErrorCategory string    `json:"error_category" gorm:"not null;type:text;default:''"` // classified send-failure category (empty for delivered/expired/legacy)
+	CreatedAt     time.Time `json:"created_at" gorm:"autoCreateTime"`
 
 	User    *user.User `json:"-" gorm:"foreignKey:UserID;constraint:OnDelete:SET NULL"`
 	Post    *post.Post `json:"-" gorm:"foreignKey:PostID;constraint:OnDelete:SET NULL"`
@@ -104,15 +105,16 @@ type History struct {
 // names are JOINed, not snapshotted). The nullable pointers reflect
 // ON DELETE SET NULL: a nil field means the referenced row was deleted.
 type HistoryRow struct {
-	ID          int64     `json:"id" gorm:"column:id"`
-	Status      Status    `json:"status" gorm:"column:status"`
-	LastError   string    `json:"last_error" gorm:"column:last_error"`
-	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
-	ChannelID   *int      `json:"channel_id" gorm:"column:channel_id"`
-	PostTitle   *string   `json:"post_title" gorm:"column:post_title"`
-	PostQID     *string   `json:"post_qid" gorm:"column:post_qid"`
-	ChannelName *string   `json:"channel_name" gorm:"column:channel_name"`
-	Username    *string   `json:"username" gorm:"column:username"`
+	ID            int64     `json:"id" gorm:"column:id"`
+	Status        Status    `json:"status" gorm:"column:status"`
+	LastError     string    `json:"last_error" gorm:"column:last_error"`
+	ErrorCategory string    `json:"error_category" gorm:"column:error_category"`
+	CreatedAt     time.Time `json:"created_at" gorm:"column:created_at"`
+	ChannelID     *int      `json:"channel_id" gorm:"column:channel_id"`
+	PostTitle     *string   `json:"post_title" gorm:"column:post_title"`
+	PostQID       *string   `json:"post_qid" gorm:"column:post_qid"`
+	ChannelName   *string   `json:"channel_name" gorm:"column:channel_name"`
+	Username      *string   `json:"username" gorm:"column:username"`
 }
 
 // FeishuConfiguration holds the configuration for a Feishu delivery channel.

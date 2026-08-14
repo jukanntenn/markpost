@@ -195,6 +195,7 @@
     "hideKey": "Hide",
     "copyKey": "Copy key",
     "copyPostUrl": "Copy post URL",
+    "copyOptions": "Copy options",
     "createdAt": "Created",
     "copied": "Copied",
     "copyFailed": "Copy failed",
@@ -635,12 +636,21 @@
       "filter": {
         "user": "User",
         "channel": "Channel",
-        "status": "Status"
+        "status": "Status",
+        "errorCategory": "Error"
       },
       "status": {
         "delivered": "Delivered",
         "failed": "Failed",
         "expired": "Expired"
+      },
+      "errorCategory": {
+        "card_rejected": "Card rejected",
+        "upstream_client_error": "Webhook error",
+        "upstream_server_error": "Upstream server",
+        "upstream_business_error": "Upstream API",
+        "network": "Network",
+        "internal": "Internal"
       },
       "colPost": "Post",
       "colChannel": "Channel",

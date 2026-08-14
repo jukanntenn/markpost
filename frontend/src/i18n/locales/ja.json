@@ -195,6 +195,7 @@
     "hideKey": "非表示",
     "copyKey": "キーをコピー",
     "copyPostUrl": "投稿 URL をコピー",
+    "copyOptions": "コピーのオプション",
     "createdAt": "作成日",
     "copied": "コピーしました",
     "copyFailed": "コピーに失敗しました",
@@ -635,12 +636,21 @@
       "filter": {
         "user": "ユーザー",
         "channel": "チャンネル",
-        "status": "ステータス"
+        "status": "ステータス",
+        "errorCategory": "エラー種別"
       },
       "status": {
         "delivered": "配信済み",
         "failed": "失敗",
         "expired": "期限切れ"
+      },
+      "errorCategory": {
+        "card_rejected": "カード拒否",
+        "upstream_client_error": "Webhook エラー",
+        "upstream_server_error": "アップストリームサーバー",
+        "upstream_business_error": "アップストリーム API",
+        "network": "ネットワーク",
+        "internal": "内部エラー"
       },
       "colPost": "投稿",
       "colChannel": "チャンネル",

@@ -160,29 +160,30 @@ func resolveCardLinkURL(params CardDeliveryParams) string {
 func (c *FeishuClient) sendRequest(ctx context.Context, webhookURL string, payload any) error {
 	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("feishu marshal payload: %w", err)
+		return newDeliveryError(CategoryInternal, false, fmt.Errorf("feishu marshal payload: %w", err))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webhookURL, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return fmt.Errorf("feishu create request: %w", err)
+		return newDeliveryError(CategoryInternal, false, fmt.Errorf("feishu create request: %w", err))
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("feishu request failed: %w", err)
+		return newDeliveryError(CategoryNetwork, true, fmt.Errorf("feishu request failed: %w", err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return fmt.Errorf("feishu webhook status=%d body=%s", resp.StatusCode, string(b))
+		cat, retry := classifyHTTPStatus(resp.StatusCode)
+		return newDeliveryError(cat, retry, fmt.Errorf("feishu webhook status=%d body=%s", resp.StatusCode, string(b)))
 	}
 
 	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if err != nil {
-		return fmt.Errorf("feishu read response: %w", err)
+		return newDeliveryError(CategoryNetwork, true, fmt.Errorf("feishu read response: %w", err))
 	}
 
 	var result struct {
@@ -190,7 +191,8 @@ func (c *FeishuClient) sendRequest(ctx context.Context, webhookURL string, paylo
 		Msg  string `json:"msg"`
 	}
 	if json.Unmarshal(respBody, &result) == nil && result.Code != 0 {
-		return fmt.Errorf("feishu api code=%d msg=%s", result.Code, result.Msg)
+		cat, retry := classifyFeishuCode(result.Code)
+		return newDeliveryError(cat, retry, fmt.Errorf("feishu api code=%d msg=%s", result.Code, result.Msg))
 	}
 
 	return nil

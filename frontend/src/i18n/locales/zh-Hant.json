@@ -195,6 +195,7 @@
     "hideKey": "隱藏",
     "copyKey": "複製 Key",
     "copyPostUrl": "複製投遞位址",
+    "copyOptions": "複製選項",
     "createdAt": "建立於",
     "copied": "已複製",
     "copyFailed": "複製失敗",
@@ -635,12 +636,21 @@
       "filter": {
         "user": "使用者",
         "channel": "管道",
-        "status": "狀態"
+        "status": "狀態",
+        "errorCategory": "錯誤類型"
       },
       "status": {
         "delivered": "已投遞",
         "failed": "失敗",
         "expired": "已過期"
+      },
+      "errorCategory": {
+        "card_rejected": "卡片被拒",
+        "upstream_client_error": "Webhook 錯誤",
+        "upstream_server_error": "上游服務異常",
+        "upstream_business_error": "上游 API 異常",
+        "network": "網路異常",
+        "internal": "內部錯誤"
       },
       "colPost": "文章",
       "colChannel": "管道",

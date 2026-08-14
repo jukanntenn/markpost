@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
 	"markpost/internal/observability"
 )
 
@@ -17,8 +20,8 @@ func (d *dispatcherMetrics) AddDeliveryPending(ctx context.Context, delta int64)
 func (d *dispatcherMetrics) IncDeliveryDispatched(ctx context.Context) {
 	d.m.DeliveryDispatched.Add(ctx, 1)
 }
-func (d *dispatcherMetrics) IncDeliveryFailed(ctx context.Context) {
-	d.m.DeliveryFailed.Add(ctx, 1)
+func (d *dispatcherMetrics) IncDeliveryFailed(ctx context.Context, category string) {
+	d.m.DeliveryFailed.Add(ctx, 1, metric.WithAttributes(attribute.String("error_category", category)))
 }
 
 // postMetrics adapts *observability.Metrics to the post service's Metrics

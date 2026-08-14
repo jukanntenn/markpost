@@ -356,6 +356,12 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "string",
+                        "description": "Error category filter (card_rejected/upstream_client_error/upstream_server_error/upstream_business_error/network/internal)",
+                        "name": "error_category",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 1,
                         "description": "Page number (min 1)",
@@ -2095,6 +2101,26 @@ const docTemplate = `{
                 ]
             }
         },
+        "/api/v1/version": {
+            "get": {
+                "description": "Reports the build version (VERSION build-arg: git tag for release images, git describe for local builds).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Server version",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.VersionResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/{id}": {
             "get": {
                 "produces": [
@@ -2654,6 +2680,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "error_category": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
@@ -2996,6 +3025,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.VersionResponse": {
+            "type": "object",
+            "properties": {
+                "version": {
                     "type": "string"
                 }
             }

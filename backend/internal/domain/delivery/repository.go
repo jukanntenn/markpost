@@ -38,8 +38,9 @@ type AttemptRepository interface {
 	// archival. It is called repeatedly by the scheduler until it returns none.
 	MarkExpired(ctx context.Context, wallBeforeMs int64, batchSize int) ([]*Attempt, error)
 	// ArchiveAndDelete writes a History row for the attempt's terminal state
-	// and deletes the attempt row in a single transaction.
-	ArchiveAndDelete(ctx context.Context, attempt *Attempt, status Status, lastError string) error
+	// and deletes the attempt row in a single transaction. errorCategory is the
+	// classified send-failure category (empty for delivered/expired).
+	ArchiveAndDelete(ctx context.Context, attempt *Attempt, status Status, lastError string, errorCategory string) error
 	// CountByStatus returns the count of attempts in each status, for
 	// observability.
 	CountByStatus(ctx context.Context) (map[Status]int64, error)
@@ -87,11 +88,13 @@ type AttemptRepository interface {
 // HistoryFilter scopes a delivery_history read. A zero value selects every row
 // (the admin all-rows view). OwnerID > 0 limits to one user; ChannelID > 0
 // limits to one channel (always within the OwnerID scope when set); Status sets
-// a terminal status filter (0 = no filter).
+// a terminal status filter (0 = no filter); ErrorCategory limits to one
+// classified failure category ("" = no filter).
 type HistoryFilter struct {
-	OwnerID   int
-	ChannelID int
-	Status    Status
+	OwnerID       int
+	ChannelID     int
+	Status        Status
+	ErrorCategory string
 }
 
 // DailyStat is one day's terminal delivery outcome counts.

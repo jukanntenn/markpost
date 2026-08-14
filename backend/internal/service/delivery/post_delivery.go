@@ -78,9 +78,9 @@ type errUnsupportedChannelKind struct{ kind string }
 func (e errUnsupportedChannelKind) Error() string { return "unsupported channel kind: " + e.kind }
 
 func buildBodyPreview(body string, maxChars int) string {
-	preview := strings.TrimSpace(body)
-	preview = truncateRunes(preview, maxChars)
-	if preview != "" && preview != strings.TrimSpace(body) {
+	full := stripImages(strings.TrimSpace(body))
+	preview := truncateRunes(full, maxChars)
+	if preview != "" && preview != full {
 		preview += "…"
 	}
 	return preview

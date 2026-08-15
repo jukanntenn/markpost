@@ -299,6 +299,74 @@ func TestService_RenderPostHTML_UnclosedScriptKeepsContent(t *testing.T) {
 	}
 }
 
+func TestService_RenderPostHTML_ImageNoReferrer(t *testing.T) {
+	svc, repo, db := setupPostService(t)
+	ctx := context.Background()
+	uid := createTestUser(t, db)
+
+	body := "![alt](https://forum.example/x.png)\n\n" +
+		"<img src=\"https://forum.example/y.png\">\n\n" +
+		"<img src=\"https://forum.example/z.png\" referrerpolicy=\"origin\">\n"
+
+	created, err := repo.Create(ctx, "T", body, uid)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	_, html, _, _, err := svc.RenderPostHTML(ctx, created.QID)
+	if err != nil {
+		t.Fatalf("render post: %v", err)
+	}
+
+	if got := strings.Count(html, "referrerpolicy"); got != 3 {
+		t.Errorf("expected exactly 3 referrerpolicy attributes (one per image, no duplicates), got %d\nhtml: %s", got, html)
+	}
+	for _, want := range []string{
+		"src=https://forum.example/x.png",
+		"src=https://forum.example/y.png",
+		"src=https://forum.example/z.png",
+		"referrerpolicy=no-referrer",
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("expected %q in rendered HTML\nhtml: %s", want, html)
+		}
+	}
+	if strings.Contains(html, "referrerpolicy=origin") {
+		t.Errorf("source-supplied referrerpolicy value must not survive\nhtml: %s", html)
+	}
+}
+
+func TestAddNoReferrerToImages(t *testing.T) {
+	cases := []struct{ name, in, want string }{
+		{"empty input", "", ""},
+		{
+			"img with attributes",
+			`<img src="https://forum.example/x.png" alt="alt">`,
+			`<img referrerpolicy="no-referrer" src="https://forum.example/x.png" alt="alt">`,
+		},
+		{"bare img", "<img>", `<img referrerpolicy="no-referrer">`},
+		{
+			"uppercase tag is stamped and normalized to lowercase",
+			`<IMG SRC="x">`,
+			`<img referrerpolicy="no-referrer" SRC="x">`,
+		},
+		{"similar tag names untouched", "<image src=x><imgfoo>", "<image src=x><imgfoo>"},
+		{
+			"every img in a document",
+			`<p>a</p><img src="a"><p>b</p><img src="b">`,
+			`<p>a</p><img referrerpolicy="no-referrer" src="a"><p>b</p><img referrerpolicy="no-referrer" src="b">`,
+		},
+		{"no img leaves content identical", "<p>hello</p>", "<p>hello</p>"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := addNoReferrerToImages(tc.in); got != tc.want {
+				t.Errorf("addNoReferrerToImages(%q)\n got: %q\nwant: %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestService_GetUserPosts(t *testing.T) {
 	svc, repo, db := setupPostService(t)
 	ctx := context.Background()

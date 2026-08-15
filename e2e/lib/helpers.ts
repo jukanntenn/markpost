@@ -70,7 +70,7 @@ export async function createPost(
   postKey: string,
   title: string,
   body: string,
-): Promise<{ id: string; qid: string }> {
+): Promise<{ id: string }> {
   const resp = await request.post(`${BACKEND_URL}/${postKey}`, {
     headers: { Authorization: `Bearer ${token}` },
     data: { title, body },

@@ -251,6 +251,44 @@ func TestRenderPost_HTMLIsSanitized(t *testing.T) {
 	}
 }
 
+func TestRenderPost_ImageReferrerPolicy(t *testing.T) {
+	db := infra.SetupTestDB(t)
+	userRepo := infra.NewUserRepository(db, 16)
+	u, _ := userRepo.Create(context.Background(), "user1@example.com", "user1", "password")
+	repo := infra.NewPostRepository(db)
+	svc := postsvc.NewService(repo, nil)
+
+	body := "![pic](https://forum.example/x.png)\n\n" +
+		"<img src=\"https://forum.example/raw.png\" referrerpolicy=\"origin\">\n"
+	qid, err := svc.CreatePost(context.Background(), "Images", body, u.ID)
+	if err != nil {
+		t.Fatalf("create post: %v", err)
+	}
+
+	router := newTestEngine()
+	router.LoadHTMLGlob("../../../../templates/*")
+	router.GET("/posts/:id", RenderPost(svc))
+
+	req := httptest.NewRequest(http.MethodGet, "/posts/"+qid, nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d; body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	html := w.Body.String()
+	if got := strings.Count(html, "referrerpolicy"); got != 2 {
+		t.Errorf("expected exactly 2 referrerpolicy attributes, got %d\nbody: %s", got, html)
+	}
+	if !strings.Contains(html, "referrerpolicy=no-referrer") {
+		t.Errorf("expected referrerpolicy=no-referrer in served HTML\nbody: %s", html)
+	}
+	if strings.Contains(html, "referrerpolicy=origin") {
+		t.Errorf("source-supplied referrerpolicy value must not survive\nbody: %s", html)
+	}
+}
+
 func TestRenderPost_NotFound(t *testing.T) {
 	mockSvc := newMockPostService()
 	router := newTestEngine(withValidators(postValidators...))

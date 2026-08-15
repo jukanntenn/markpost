@@ -169,6 +169,22 @@ func neutralizeRawHTMLElements(htmlContent string) string {
 	return rawHTMLElementRe.ReplaceAllString(htmlContent, "&lt;$1$2$3")
 }
 
+// imgTagRe matches every <img> open tag in sanitized output (bluemonday
+// re-serializes tag names in lowercase, so the case-insensitive flag is a
+// no-cost guard).
+var imgTagRe = regexp.MustCompile(`(?i)<img\b`)
+
+// addNoReferrerToImages stamps referrerpolicy="no-referrer" onto every rendered
+// <img>. Image hosts commonly run Referer allow-lists (anti-hotlinking) that
+// 403 cross-site referrals, so post-embedded images from such hosts only load
+// when no Referer is sent. External <a> links are already covered by the
+// sanitizer's RequireNoReferrerOnFullyQualifiedLinks. Applied after
+// sanitization: the policy strips any source-supplied referrerpolicy (not on
+// the allowlist), so injection can never produce a duplicate attribute.
+func addNoReferrerToImages(htmlContent string) string {
+	return imgTagRe.ReplaceAllString(htmlContent, `<img referrerpolicy="no-referrer"`)
+}
+
 // logger returns the service logger, defaulting to slog.Default() when the
 // field is nil (e.g. tests that build a Service struct literal directly).
 func (s *Service) logger() *slog.Logger {
@@ -245,7 +261,7 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 			return nil, service.Wrap(service.ErrInternal, "render post failed", err)
 		}
 		sanitized := s.sanitizer.Sanitize(neutralizeRawHTMLElements(buf.String()))
-		minified, mErr := s.minifyHTML(sanitized)
+		minified, mErr := s.minifyHTML(addNoReferrerToImages(sanitized))
 		if mErr != nil {
 			return nil, service.Wrap(service.ErrInternal, "render post failed", mErr)
 		}

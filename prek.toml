@@ -105,6 +105,39 @@ pass_filenames = true
 groups = ["fmt"]
 stages = ["pre-commit"]
 
+# docker compose config: validates all three compose files the way the
+# engine parses them — YAML anchor/merge-key resolution (docker/docker-compose.yml
+# uses x-image/x-app-env + <<:), ${VAR:-default} interpolation, and the compose
+# schema. None of that is covered by the builtin check-yaml. Client-side only:
+# no daemon interaction, and runners/dev machines running this repo already
+# ship the compose plugin. Skips (with a notice) where docker is absent.
+[[repos.hooks]]
+id = "compose-config"
+name = "docker compose config (devops + docker)"
+language = "system"
+entry = "docker compose version >/dev/null 2>&1 || { echo 'docker compose unavailable, skipping'; exit 0; }; docker compose -f devops/docker-compose.yml config --quiet && docker compose -f docker/docker-compose.yml config --quiet && docker compose -f docker/docker-compose.local.yml config --quiet"
+shell = "bash"
+files = "^(devops|docker)/docker-compose[^/]*\\.yml$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ansible-playbook --syntax-check: deploy.yml is the deploy entrypoint; a
+# YAML/task-structure error should fail at commit time, not at deploy time.
+# Needs no vault password. Prefers a local ansible-playbook, falls back to
+# uvx with the full ansible meta-package — bare ansible-core lacks the
+# community.docker collection deploy.yml resolves at syntax-check time, and
+# CI runners have uv but no ansible. Skips only when neither exists, the same
+# graceful-skip contract as oxfmt/caddy-fmt above.
+[[repos.hooks]]
+id = "ansible-syntax"
+name = "ansible-playbook --syntax-check (deploy.yml)"
+language = "system"
+entry = "if command -v ansible-playbook >/dev/null 2>&1; then exec ansible-playbook --syntax-check devops/ansible/deploy.yml; elif command -v uvx >/dev/null 2>&1; then exec uvx --from 'ansible>=11,<12' ansible-playbook --syntax-check devops/ansible/deploy.yml; else echo 'ansible-playbook and uvx not installed, skipping'; exit 0; fi"
+shell = "bash"
+files = "^devops/ansible/|^ansible\\.cfg$"
+pass_filenames = false
+stages = ["pre-commit"]
+
 # Ansible Jinja2 templates: validate they render to parseable output (no
 # formatting — see caddy-fmt note on why djlint is not used).
 [[repos.hooks]]

@@ -71,3 +71,22 @@ backend/config.example.toml
 
 # Logs directory
 backend/logs/
+
+# Nested local artifacts. The wildcard patterns above (*.db, .env.*, *.log)
+# are root-only in .dockerignore semantics — they do NOT match nested paths.
+# These cover git-ignored dev artifacts that would otherwise ride the build
+# context (and, under backend/, the go-build stage) on every image build:
+# loadtest output/k6 binaries (~544MB), fake seed data (50MB), local sqlite
+# DBs, local acceptance configs, coverage and tool caches.
+**/*.local.toml
+**/*.db*
+**/*.sqlite3*
+**/.ruff_cache/
+**/.playwright/
+**/.playwright-cli/
+**/coverage/
+**/*.tsbuildinfo
+backend/fake.json
+backend/internal/infra/data/
+scripts/
+.mcp.json

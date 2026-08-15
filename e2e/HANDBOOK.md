@@ -88,6 +88,7 @@ dagger call test --source=.. --test-file=login.spec.ts
 | 测试文件                            | 覆盖功能                                                                                                 |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `login.spec.ts`                     | 登录表单、验证、错误提示、键盘提交、重定向                                                               |
+| `landing.spec.ts`                   | 着陆页冒烟：结构齐备、CTA 按会话状态切换（/login ↔ /dashboard）                                          |
 | `dashboard.spec.ts`                 | Post Key 显示/隐藏/复制、用户菜单、登出                                                                  |
 | `dashboard-create-post.spec.ts`     | 快速创建帖子、表单验证                                                                                   |
 | `posts.spec.ts`                     | 帖子列表页、未认证重定向                                                                                 |

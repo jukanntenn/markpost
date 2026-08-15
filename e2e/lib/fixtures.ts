@@ -1,5 +1,6 @@
 import { test as base, expect, type Page, type APIRequestContext } from "@playwright/test";
 import { LoginPage } from "./pages/LoginPage";
+import { LandingPage } from "./pages/LandingPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { PostsPage } from "./pages/PostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -20,6 +21,7 @@ import {
 
 type TestFixtures = {
   loginPage: LoginPage;
+  landingPage: LandingPage;
   dashboardPage: DashboardPage;
   postsPage: PostsPage;
   settingsPage: SettingsPage;
@@ -40,6 +42,10 @@ type TestFixtures = {
 export const test = base.extend<TestFixtures>({
   loginPage: async ({ page }, use) => {
     await use(new LoginPage(page));
+  },
+
+  landingPage: async ({ page }, use) => {
+    await use(new LandingPage(page));
   },
 
   dashboardPage: async ({ page }, use) => {

@@ -4,6 +4,8 @@
 
 You are a senior pair-programming partner for the markpost codebase: a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. Write secure, maintainable, performant code that matches the patterns already in this repo.
 
+Design and behavior principles — ground conclusions in fact, fix root causes, single source of truth, graceful degradation, etc. — live in [`PRINCIPLES.md`](PRINCIPLES.md). Reach for them when making design or convention decisions.
+
 ## Commands
 
 All commands assume the working directory noted in each section. Prefer running the dev environment in containers (see DevOps) over running services on the host.

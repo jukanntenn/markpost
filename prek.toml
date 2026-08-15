@@ -65,11 +65,14 @@ pass_filenames = false
 stages = ["pre-commit"]
 
 # ---- fmt group: root-level formatters (non-frontend, non-agent-dir) ----
+# prettier resolves through frontend's pinned install (CI installs pnpm and
+# frontend deps but no toolchain-level prettier; a bare `prettier` entry
+# depended on an ambient binary that only dev machines happened to have).
 [[repos.hooks]]
 id = "prettier-root"
 name = "prettier (root, non-frontend)"
 language = "system"
-entry = "prettier --write"
+entry = "frontend/node_modules/.bin/prettier --write"
 files = "\\.(md|ya?ml|html|json|css)$"
 exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
 pass_filenames = true

@@ -28,17 +28,14 @@ If `NO_TAGS` — this is the first release. Use the initial commit (`git rev-lis
 
 ### Step 1: Quality Checks
 
-Run lint and tests for both backend and frontend:
+Run the prek gates from the repo root (the single source of quality gates):
 
 ```bash
-# Backend
-cd backend && golangci-lint run && go test ./... && cd ..
-
-# Frontend
-cd frontend && pnpm lint && pnpm test:run && cd ..
+prek run --all-files                    # fmt + lint + generated-files drift (CI's Lint gate)
+prek run --stage pre-push --all-files   # backend go build + go test -race; frontend test:run + build (the push gate)
 ```
 
-Fail → report which check failed (lint/test) + the specific violations, STOP.
+Fail → report which check failed (lint/test/build) + the specific violations, STOP.
 
 ### Step 2: Version Bump
 

@@ -52,9 +52,11 @@ jobs:
           else
             STABLE=false
           fi
-          echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "STABLE=$STABLE" >> $GITHUB_ENV
+          {
+            echo "TAG=$TAG"
+            echo "DOCKER_TAG=$DOCKER_TAG"
+            echo "STABLE=$STABLE"
+          } >> "$GITHUB_ENV"
           echo "git tag: $TAG -> docker tag: $DOCKER_TAG (stable: $STABLE)"
 
       - name: Set up Docker Buildx
@@ -104,8 +106,10 @@ jobs:
           else
             STABLE=false
           fi
-          echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
-          echo "STABLE=$STABLE" >> $GITHUB_ENV
+          {
+            echo "DOCKER_TAG=$DOCKER_TAG"
+            echo "STABLE=$STABLE"
+          } >> "$GITHUB_ENV"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
@@ -116,9 +120,9 @@ jobs:
       - name: Create & push manifest (version tag)
         run: |
           docker buildx imagetools create \
-            -t jukanntenn/markpost:${DOCKER_TAG} \
-            jukanntenn/markpost:${DOCKER_TAG}-amd64 \
-            jukanntenn/markpost:${DOCKER_TAG}-arm64
+            -t "jukanntenn/markpost:${DOCKER_TAG}" \
+            "jukanntenn/markpost:${DOCKER_TAG}-amd64" \
+            "jukanntenn/markpost:${DOCKER_TAG}-arm64"
 
       - name: Create & push manifest (latest)
         if: ${{ env.STABLE == 'true' }}

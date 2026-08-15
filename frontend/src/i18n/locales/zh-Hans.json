@@ -711,5 +711,119 @@
       "rate_limited": "操作过于频繁，请 {seconds} 秒后再试",
       "internal": "修改密码失败，请稍后重试"
     }
+  },
+  "landing": {
+    "meta": {
+      "title": "Markpost — 自托管 Markdown 发布服务"
+    },
+    "nav": {
+      "docs": "文档",
+      "github": "GitHub",
+      "language": "切换语言",
+      "signIn": "登录",
+      "openConsole": "打开控制台"
+    },
+    "hero": {
+      "kicker": "开源 · 可自托管 · Markdown 发布服务",
+      "title1": "一条请求，",
+      "title2": "一篇排好版的文章。",
+      "subtitle": "markpost 帮你的脚本、定时任务和 AI agent 发布文章：把 Markdown POST 到你的专属地址，即刻得到渲染好的公开页面，并可按关键词自动投递到飞书。",
+      "getStarted": "开始使用",
+      "viewGithub": "查看源码",
+      "inputCaption": "输入 · 专属地址固定不变",
+      "outputCaption": "输出 · 每篇一个新地址",
+      "requestBody": "\"body\": \"# {heading} …\""
+    },
+    "workflow": {
+      "overline": "How it works",
+      "heading": "三道工序，一条流水线",
+      "subheading": "收下即排，排完即送，中间不需要任何人操作。",
+      "step1": {
+        "name": "收稿",
+        "desc": "任何能发 POST 的东西都是作者：脚本、cron、AI agent、curl。收件地址固定不变，唯一要保管的是那把 Post Key。",
+        "hint": "POST /mpk-••••"
+      },
+      "step2": {
+        "name": "排版",
+        "desc": "渲染、消毒、缓存一气呵成，文章即刻获得公开地址；加 ?format=raw 随时取回原文。",
+        "hint": "/p-Vq2mXk"
+      },
+      "step3": {
+        "name": "投递",
+        "desc": "命中关键词过滤的文章自动送进飞书群；失败自动重试，每一次投递都有记录可查。",
+        "hint": "feishu ✓ 1.8s"
+      }
+    },
+    "page": {
+      "overline": "The page",
+      "heading": "分享一个地址，而不是一个附件",
+      "subheading": "收件人打开的是排好版的页面：标题、正文、代码块，该有的都有。",
+      "note1": {
+        "kicker": "消毒过的 HTML",
+        "text": "白名单净化，脚本和危险标签进不来。"
+      },
+      "note2": {
+        "kicker": "渲染即缓存",
+        "text": "结果缓存加 ETag/304，重复打开几乎零成本。"
+      },
+      "note3": {
+        "kicker": "原文随时可取",
+        "text": "地址后加 ?format=raw，拿到未渲染的原文。"
+      },
+      "note4": {
+        "kicker": "到期自动回收",
+        "text": "默认保留 7 天，过期即清，不留旧文。"
+      }
+    },
+    "delivery": {
+      "overline": "Delivery",
+      "heading": "文章一落地，该知道的人就知道",
+      "subheading": "每次发布自动触发：命中过滤词的文章即刻投递到飞书群。",
+      "cardCaption": "飞书互动卡片",
+      "openPost": "打开文章",
+      "grammarHeading": "关键词过滤，一门小小语法",
+      "expr1": "周报,report",
+      "expr2": "ai & !draft",
+      "expr3": "(\"事故\",\"告警\")",
+      "or": "逗号，命中任意一个",
+      "and": "& 与 !，同时满足与排除",
+      "group": "括号分组，引号短语",
+      "empty": "留空 = 每篇都投",
+      "reliability1": "失败自动重试，指数退避",
+      "reliability2": "每次投递都有历史可查"
+    },
+    "oss": {
+      "overline": "Open source",
+      "heading": "这不是黑箱",
+      "subheading": "整套服务以 MIT 协议开源：一个容器加一个 PostgreSQL。你的数据随时可以整份搬走——所以可以放心留下来。",
+      "quickstart": "自托管快速开始",
+      "composeCaption": "docker-compose.yml",
+      "license": "许可证",
+      "licenseValue": "MIT",
+      "stack": "组成",
+      "stackValue": "单容器 + PostgreSQL",
+      "retention": "保留期",
+      "retentionValue": "默认 7 天，可配置",
+      "rateLimit": "限速",
+      "rateLimitValue": "三级 L1/L2/L3"
+    },
+    "colophon": {
+      "heading": "把你的 Markdown 印成页面",
+      "subheading": "一个请求之后的事，交给 markpost。",
+      "getStarted": "开始使用",
+      "docs": "文档",
+      "dockerHub": "Docker Hub",
+      "typeset": "本页排印：Playfair Display · Source Sans 3 · Fira Code · Ember Studio 色板",
+      "copyright": "© {year} markpost · MIT License"
+    },
+    "sample": {
+      "postTitle": "每周进展 #7",
+      "postTime": "3 秒前",
+      "sectionHeading": "本周进展",
+      "paragraph": "把投递链路重构成三段式：收稿、排版、投递。失败自动重试，结果全程留痕。",
+      "bullet1": "渲染缓存命中率 99.2%",
+      "bullet2": "飞书卡片打开率 +18%",
+      "preview": "把投递链路重构成三段式：收稿、排版、投递……"
+    }
   }
 }

@@ -711,5 +711,119 @@
       "rate_limited": "Too many requests. Please try again in {seconds} seconds.",
       "internal": "Could not change password. Please try again later."
     }
+  },
+  "landing": {
+    "meta": {
+      "title": "Markpost — Self-hosted Markdown publishing"
+    },
+    "nav": {
+      "docs": "Docs",
+      "github": "GitHub",
+      "language": "Change language",
+      "signIn": "Sign in",
+      "openConsole": "Open console"
+    },
+    "hero": {
+      "kicker": "Open source · Self-hostable · Markdown publishing",
+      "title1": "One request,",
+      "title2": "one typeset page.",
+      "subtitle": "markpost publishes for your scripts, cron jobs, and AI agents: POST your Markdown to a personal address and get a rendered public page instantly — with optional keyword-filtered delivery to Feishu.",
+      "getStarted": "Get started",
+      "viewGithub": "View source",
+      "inputCaption": "Input · one fixed, personal address",
+      "outputCaption": "Output · a fresh URL per post",
+      "requestBody": "\"body\": \"# {heading} …\""
+    },
+    "workflow": {
+      "overline": "How it works",
+      "heading": "Three stations, one pipeline",
+      "subheading": "Received, typeset, delivered — no human in the loop.",
+      "step1": {
+        "name": "Receive",
+        "desc": "Anything that can POST is an author: scripts, cron, AI agents, curl. Your address never changes; the only secret to keep is your Post Key.",
+        "hint": "POST /mpk-••••"
+      },
+      "step2": {
+        "name": "Typeset",
+        "desc": "Rendered, sanitized, and cached in one pass. Every post gets its public URL immediately; append ?format=raw for the original Markdown.",
+        "hint": "/p-Vq2mXk"
+      },
+      "step3": {
+        "name": "Deliver",
+        "desc": "Posts matching your keyword filter land in your Feishu group automatically; failures retry with backoff, and every attempt is on record.",
+        "hint": "feishu ✓ 1.8s"
+      }
+    },
+    "page": {
+      "overline": "The page",
+      "heading": "Share a URL, not an attachment",
+      "subheading": "What arrives is a typeset page: title, prose, code blocks — all present.",
+      "note1": {
+        "kicker": "Sanitized HTML",
+        "text": "Whitelist-based sanitization; scripts and dangerous tags never get in."
+      },
+      "note2": {
+        "kicker": "Rendered once, cached",
+        "text": "Cached output with ETag/304 — repeat visits cost almost nothing."
+      },
+      "note3": {
+        "kicker": "Raw on demand",
+        "text": "Append ?format=raw to fetch the unrendered original."
+      },
+      "note4": {
+        "kicker": "Auto-expiring",
+        "text": "Posts are kept for 7 days by default, then pruned. No stale pages."
+      }
+    },
+    "delivery": {
+      "overline": "Delivery",
+      "heading": "Published once, seen where it matters",
+      "subheading": "Every publish fans out automatically: posts matching your filter land in your Feishu group.",
+      "cardCaption": "Feishu interactive card",
+      "openPost": "Open post",
+      "grammarHeading": "Keyword filters, a small grammar",
+      "expr1": "weekly,report",
+      "expr2": "ai & !draft",
+      "expr3": "(\"urgent\",\"alert\")",
+      "or": "comma — match any",
+      "and": "& and ! — require and exclude",
+      "group": "parentheses group, quotes phrase",
+      "empty": "empty — deliver everything",
+      "reliability1": "Automatic retries with exponential backoff",
+      "reliability2": "Every attempt is in the delivery history"
+    },
+    "oss": {
+      "overline": "Open source",
+      "heading": "No black box",
+      "subheading": "The whole service is MIT-licensed open source: one container plus PostgreSQL. Your data can leave in full at any time — which is exactly why you can stay.",
+      "quickstart": "Self-host quickstart",
+      "composeCaption": "docker-compose.yml",
+      "license": "License",
+      "licenseValue": "MIT",
+      "stack": "Stack",
+      "stackValue": "Single container + PostgreSQL",
+      "retention": "Retention",
+      "retentionValue": "7 days by default, configurable",
+      "rateLimit": "Rate limits",
+      "rateLimitValue": "Three tiers, L1/L2/L3"
+    },
+    "colophon": {
+      "heading": "Put your Markdown into print",
+      "subheading": "Everything after the request is markpost's job.",
+      "getStarted": "Get started",
+      "docs": "Docs",
+      "dockerHub": "Docker Hub",
+      "typeset": "Typeset in Playfair Display · Source Sans 3 · Fira Code · Ember Studio palette",
+      "copyright": "© {year} markpost · MIT License"
+    },
+    "sample": {
+      "postTitle": "Weekly Notes #7",
+      "postTime": "3s ago",
+      "sectionHeading": "This week",
+      "paragraph": "Rebuilt the delivery pipeline into three stages: receive, typeset, deliver. Failures retry automatically and every attempt is recorded.",
+      "bullet1": "Render cache hit rate 99.2%",
+      "bullet2": "Feishu card open rate +18%",
+      "preview": "Rebuilt the delivery pipeline into three stages: receive, typeset…"
+    }
   }
 }

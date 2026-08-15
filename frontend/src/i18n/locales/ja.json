@@ -711,5 +711,119 @@
       "rate_limited": "操作が多すぎます。{seconds} 秒後にもう一度お試しください。",
       "internal": "パスワードを変更できませんでした。しばらくしてから再試行してください。"
     }
+  },
+  "landing": {
+    "meta": {
+      "title": "Markpost — セルフホストの Markdown 公開サービス"
+    },
+    "nav": {
+      "docs": "ドキュメント",
+      "github": "GitHub",
+      "language": "言語を変更",
+      "signIn": "ログイン",
+      "openConsole": "コンソールを開く"
+    },
+    "hero": {
+      "kicker": "オープンソース · セルフホスト可能 · Markdown 公開サービス",
+      "title1": "ひとつのリクエスト、",
+      "title2": "ひとつの組版ページ。",
+      "subtitle": "markpost はスクリプト・cron・AI エージェントの代わりに記事を公開します。Markdown を専用アドレスに POST するだけで、レンダリング済みの公開ページが即座に手に入り、キーワードフィルタで Feishu に自動配信することもできます。",
+      "getStarted": "はじめる",
+      "viewGithub": "ソースを見る",
+      "inputCaption": "入力 · 専用アドレスは固定",
+      "outputCaption": "出力 · 記事ごとに新しい URL",
+      "requestBody": "\"body\": \"# {heading} …\""
+    },
+    "workflow": {
+      "overline": "How it works",
+      "heading": "3 つの工程、1 本のパイプライン",
+      "subheading": "受け取り、組版し、届ける。人の手は不要です。",
+      "step1": {
+        "name": "受け取り",
+        "desc": "POST できるものなら何でも著者です：スクリプト、cron、AI エージェント、curl。受信アドレスは変わらず、守るべき秘密は Post Key だけ。",
+        "hint": "POST /mpk-••••"
+      },
+      "step2": {
+        "name": "組版",
+        "desc": "レンダリング・サニタイズ・キャッシュを一息に。記事はすぐに公開 URL を持ち、?format=raw で原文も取得できます。",
+        "hint": "/p-Vq2mXk"
+      },
+      "step3": {
+        "name": "配信",
+        "desc": "キーワードフィルタに一致した記事を Feishu グループへ自動配信。失敗は自動リトライし、すべての配信が記録に残ります。",
+        "hint": "feishu ✓ 1.8s"
+      }
+    },
+    "page": {
+      "overline": "The page",
+      "heading": "添付ではなく URL を共有する",
+      "subheading": "受け手が開くのは組版済みのページ：タイトル、本文、コードブロック、必要なものが揃っています。",
+      "note1": {
+        "kicker": "サニタイズ済み HTML",
+        "text": "ホワイトリスト方式。スクリプトや危険なタグは入りません。"
+      },
+      "note2": {
+        "kicker": "レンダリングは 1 回だけ",
+        "text": "結果をキャッシュし ETag/304。再訪はほぼゼロコスト。"
+      },
+      "note3": {
+        "kicker": "原文もいつでも",
+        "text": "URL に ?format=raw を付けると未レンダリングの原文を取得。"
+      },
+      "note4": {
+        "kicker": "自動的に期限切れ",
+        "text": "既定で 7 日保持、期限後は削除。古いページは残しません。"
+      }
+    },
+    "delivery": {
+      "overline": "Delivery",
+      "heading": "公開したら、知るべき人に届く",
+      "subheading": "毎回の公開が自動トリガー：フィルタに一致した記事を Feishu グループへ即座に配信します。",
+      "cardCaption": "Feishu インタラクティブカード",
+      "openPost": "記事を開く",
+      "grammarHeading": "キーワードフィルタ、小さな文法",
+      "expr1": "週報,report",
+      "expr2": "ai & !draft",
+      "expr3": "(\"障害\",\"アラート\")",
+      "or": "カンマ — いずれかに一致",
+      "and": "& と ! — 必須と除外",
+      "group": "括弧でグループ、引用符でフレーズ",
+      "empty": "空欄 — すべて配信",
+      "reliability1": "失敗は指数バックオフで自動リトライ",
+      "reliability2": "すべての配信が履歴に残る"
+    },
+    "oss": {
+      "overline": "Open source",
+      "heading": "ブラックボックスではありません",
+      "subheading": "サービス全体が MIT ライセンスで公開されています：コンテナ 1 つと PostgreSQL だけ。データはいつでも丸ごと持ち出せる——だからこそ、安心して使い続けられます。",
+      "quickstart": "セルフホストのクイックスタート",
+      "composeCaption": "docker-compose.yml",
+      "license": "ライセンス",
+      "licenseValue": "MIT",
+      "stack": "構成",
+      "stackValue": "シングルコンテナ + PostgreSQL",
+      "retention": "保持期間",
+      "retentionValue": "既定 7 日、設定可能",
+      "rateLimit": "レート制限",
+      "rateLimitValue": "3 階層 L1/L2/L3"
+    },
+    "colophon": {
+      "heading": "Markdown をページに刷る",
+      "subheading": "リクエストの先は markpost におまかせ。",
+      "getStarted": "はじめる",
+      "docs": "ドキュメント",
+      "dockerHub": "Docker Hub",
+      "typeset": "このページの組版：Playfair Display · Source Sans 3 · Fira Code · Ember Studio パレット",
+      "copyright": "© {year} markpost · MIT License"
+    },
+    "sample": {
+      "postTitle": "週報 #7",
+      "postTime": "3 秒前",
+      "sectionHeading": "今週の進捗",
+      "paragraph": "配信パイプラインを 3 段階に再構築：受け取り・組版・配信。失敗は自動リトライし、すべて記録に残る。",
+      "bullet1": "レンダリングキャッシュヒット率 99.2%",
+      "bullet2": "Feishu カード開封率 +18%",
+      "preview": "配信パイプラインを 3 段階に再構築：受け取り・組版・配信……"
+    }
   }
 }

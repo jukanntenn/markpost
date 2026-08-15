@@ -6,7 +6,7 @@
 
 | Path                       | 路由组            | Guard          | 不满足条件时                               | 页面                         |
 | -------------------------- | ----------------- | -------------- | ------------------------------------------ | ---------------------------- |
-| `/`                        | —                 | —              | → `/dashboard`                             | 着陆页（重定向）             |
+| `/`                        | —                 | —              | —                                          | 着陆页（Landing，见下）      |
 | `/login`                   | (auth)            | PublicRoute    | 已认证 → `/dashboard`                      | 登录页（密码 + GitHub 按钮） |
 | `/auth/callback`           | (auth)            | PublicRoute    | 已认证 → `/dashboard`                      | OAuth 回调页                 |
 | `/dashboard`               | (dashboard)       | ProtectedRoute | 未认证 → `/login`                          | 仪表盘                       |
@@ -20,10 +20,22 @@
 
 ### 路由变更说明
 
-| 变更             | 现状                                      | 目标                     | 原因                                                                              |
-| ---------------- | ----------------------------------------- | ------------------------ | --------------------------------------------------------------------------------- |
-| OAuth callback   | `/auth/github/callback` + `/auth`（两个） | `/auth/callback`（一个） | OAuth 改同页重定向，单一 callback，不带 provider（见 [auth.md](../auth.md) §3.6） |
-| health API route | `/health/route.ts`                        | 移除                     | 纯静态导出不支持 API Route（见 [build.md](./build.md) §3）                        |
+| 变更             | 现状                                      | 目标                     | 原因                                                                                   |
+| ---------------- | ----------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------- |
+| `/` 着陆页       | redirect `/dashboard`                     | 渲染 Landing 页          | SaaS 宣传入口；登录用户不强制跳转，导航/CTA 按会话状态变为「打开控制台」（客户端检测） |
+| OAuth callback   | `/auth/github/callback` + `/auth`（两个） | `/auth/callback`（一个） | OAuth 改同页重定向，单一 callback，不带 provider（见 [auth.md](../auth.md) §3.6）      |
+| health API route | `/health/route.ts`                        | 移除                     | 纯静态导出不支持 API Route（见 [build.md](./build.md) §3）                             |
+
+---
+
+## Landing Page (`/`)
+
+Landing 是纯静态营销页（`components/landing/`），无守卫、无数据请求。行为约定：
+
+- 未登录：Masthead 右上为描边样式的「登录」，Hero 与 Colophon 的主 CTA 为「开始使用」→ `/login`。
+- 已登录（`useAuthReady` 水合后判定，不强制跳转、无闪烁重定向）：按钮文案变为「打开控制台」→ `/dashboard`。
+- 页面结构：Masthead（§00）→ Hero 对开页（§01）→ 原理（§02）→ 产物（§03）→ 投递（§04）→ 开源（§05）→ Colophon 页脚（§06）。每节 = 一个主张 + 一件物证 + 可验证的事实；§03 的文章页物证复刻 `backend/templates/post.html` 的冷色 slate 样式，与 Ember 暖色纸面刻意保持材质差异。
+- 文案全部走 `landing.*` 命名空间（en / zh-Hans / zh-Hant / ja），物证中的示例文章（`landing.sample.*`）在 hero、§03、§04 之间共享同一篇，保持叙事连贯。
 
 ---
 

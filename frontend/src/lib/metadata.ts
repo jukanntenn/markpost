@@ -6,6 +6,7 @@ import type { Metadata } from 'next'
 // document.title per-locale via useTranslations + useEffect where localized
 // titles matter (e.g. LoginPage).
 const PAGE_TITLES: Record<string, string> = {
+  landing: 'Markpost — Self-hosted Markdown Publishing',
   login: 'Login | Markpost',
   dashboard: 'Dashboard | Markpost',
   settings: 'Settings | Markpost',

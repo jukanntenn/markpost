@@ -123,16 +123,21 @@ stages = ["pre-commit"]
 
 # ansible-playbook --syntax-check: deploy.yml is the deploy entrypoint; a
 # YAML/task-structure error should fail at commit time, not at deploy time.
-# Needs no vault password. Prefers a local ansible-playbook, falls back to
-# uvx with the full ansible meta-package — bare ansible-core lacks the
-# community.docker collection deploy.yml resolves at syntax-check time, and
-# CI runners have uv but no ansible. Skips only when neither exists, the same
-# graceful-skip contract as oxfmt/caddy-fmt above.
+# ANSIBLE_VAULT_IDENTITY_LIST is overridden with a synthetic identity backed by
+# a temp file: ansible hard-errors at startup when a listed vault password file
+# is missing or empty, and ansible.cfg points at ~/.local/bin/avpm-client,
+# which only exists on machines with avpm installed. The syntax check never
+# actually decrypts anything, so any non-empty password file satisfies it.
+# Prefers a local ansible-playbook, falls back to uvx with the full ansible
+# meta-package — bare ansible-core lacks the community.docker collection
+# deploy.yml resolves at syntax-check time, and CI runners have uv but no
+# ansible. Skips only when neither exists, the same graceful-skip contract as
+# oxfmt/caddy-fmt above.
 [[repos.hooks]]
 id = "ansible-syntax"
 name = "ansible-playbook --syntax-check (deploy.yml)"
 language = "system"
-entry = "if command -v ansible-playbook >/dev/null 2>&1; then exec ansible-playbook --syntax-check devops/ansible/deploy.yml; elif command -v uvx >/dev/null 2>&1; then exec uvx --from 'ansible>=11,<12' ansible-playbook --syntax-check devops/ansible/deploy.yml; else echo 'ansible-playbook and uvx not installed, skipping'; exit 0; fi"
+entry = "tmp=$(mktemp) && printf 'syntax-check\\n' > \"$tmp\" && { if command -v ansible-playbook >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" ansible-playbook --syntax-check devops/ansible/deploy.yml; elif command -v uvx >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" uvx --from 'ansible>=11,<12' ansible-playbook --syntax-check devops/ansible/deploy.yml; else echo 'ansible-playbook and uvx not installed, skipping'; fi; }; rc=$?; rm -f \"$tmp\"; exit $rc"
 shell = "bash"
 files = "^devops/ansible/|^ansible\\.cfg$"
 pass_filenames = false

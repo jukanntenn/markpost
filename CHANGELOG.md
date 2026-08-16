@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.0-rc.4] - 2026-08-16
+
+### Added
+
+- A marketing landing page greets visitors at the root URL
+- An admin dashboard with delivery trends, channel health, and pipeline status
+- Audit logs can be filtered by actor, action, target, and time range
+- Users can review and revoke their own login sessions from settings
+- Delivery failures are classified by cause, and admins can filter history by error category
+- A password strength meter helps you choose stronger passwords
+- Password changes and session revokes take effect immediately everywhere
+
+### Changed
+
+- The post key page shows the full URL with a copy options menu
+- Refined typography scale, brand icon, and dashboard layouts
+
+### Fixed
+
+- External links in rendered posts no longer leak the referring page
+- Feishu card previews no longer lose inline images
+
 ## [0.2.0-rc.3] - 2026-08-08
 
 ### Added

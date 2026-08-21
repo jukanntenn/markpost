@@ -1,4 +1,5 @@
 import { authApi } from './auth'
+import { withRefreshLock } from '@/lib/auth/refresh-lock'
 import { useAuthStore } from '@/stores/auth'
 import { getCurrentLocale } from '@/i18n/current'
 import { tClient } from '@/i18n/messages'
@@ -38,26 +39,40 @@ interface RequestOptions extends Omit<RequestInit, 'headers'> {
 let refreshPromise: Promise<boolean> | null = null
 
 async function refreshAccessToken(): Promise<boolean> {
-  const { refreshToken, setTokens, logout, markSessionExpired } =
-    useAuthStore.getState()
+  // The token that just failed. If another tab rotates while we are queued on
+  // the lock, the store's token will differ from it and we skip the call.
+  const staleToken = useAuthStore.getState().token
 
-  if (!refreshToken) {
-    markSessionExpired()
-    logout()
-    return false
-  }
+  return withRefreshLock(async () => {
+    // Re-read the authoritative localStorage copy inside the critical
+    // section: a rotation done by another tab (or an earlier run in this tab)
+    // lands here instead of being missed, and replaying a consumed refresh
+    // token would make the backend revoke every session for the user.
+    await useAuthStore.persist.rehydrate()
 
-  try {
-    const data = await authApi.refreshToken(refreshToken)
-    setTokens(data.token, data.refresh_token)
-    return true
-  } catch {
-    // B1.8 场景 D：refresh 失败 → 会话过期标记 + 本地登出，守卫跳
-    // /login?reason=session_expired（登录页展示友好提示）。
-    markSessionExpired()
-    logout()
-    return false
-  }
+    const { token, refreshToken, setTokens, logout, markSessionExpired } =
+      useAuthStore.getState()
+    if (token && token !== staleToken) {
+      return true
+    }
+    if (!refreshToken) {
+      markSessionExpired()
+      logout()
+      return false
+    }
+
+    try {
+      const data = await authApi.refreshToken(refreshToken)
+      setTokens(data.token, data.refresh_token)
+      return true
+    } catch {
+      // B1.8 场景 D：refresh 失败 → 会话过期标记 + 本地登出，守卫跳
+      // /login?reason=session_expired（登录页展示友好提示）。
+      markSessionExpired()
+      logout()
+      return false
+    }
+  })
 }
 
 async function handleTokenRefresh(): Promise<boolean> {

@@ -494,6 +494,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	}
 
 	apiV1 := r.Group("/api/v1")
+	apiV1.Use(middleware.NoStore())
 	apiV1.GET("/health", v1.Health())
 	apiV1.GET("/version", v1.Version(effectiveVersion()))
 

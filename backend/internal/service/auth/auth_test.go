@@ -168,6 +168,40 @@ func TestService_RefreshToken(t *testing.T) {
 		}
 	})
 
+	t.Run("reuse of a rotated token revokes every session", func(t *testing.T) {
+		svc, userRepo, _ := setupAuthService(t)
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		_, pair1, _ := svc.LoginWithEmail(ctx, "testuser", "password")
+
+		// A second client (e.g. another browser tab holding a stale copy)
+		// replaying the already-consumed token is treated as theft.
+		_, pair2, err := svc.RefreshToken(ctx, pair1.RefreshToken)
+		if err != nil {
+			t.Fatalf("first refresh should rotate: %v", err)
+		}
+
+		_, _, err = svc.RefreshToken(ctx, pair1.RefreshToken)
+		if err == nil {
+			t.Fatal("expected reuse to be rejected")
+		}
+		se, ok := service.AsError(err)
+		if !ok {
+			t.Fatal("expected service error")
+		}
+		if se.Code != ErrInvalidToken {
+			t.Errorf("expected code %q, got %q", ErrInvalidToken.Value, se.Code.Value)
+		}
+
+		// Reuse detection revokes the whole family: the fresh pair from the
+		// legitimate rotation dies with it.
+		_, _, err = svc.RefreshToken(ctx, pair2.RefreshToken)
+		if err == nil {
+			t.Fatal("expected family revocation to kill the successor pair")
+		}
+	})
+
 	t.Run("returns error for expired refresh token", func(t *testing.T) {
 		db := infra.SetupTestDB(t)
 		userRepo := infra.NewUserRepository(db, 16)

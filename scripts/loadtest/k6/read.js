@@ -31,6 +31,7 @@ import {
   baseURL,
   tlsOptions,
   summaryTrendStats,
+  acceptEncodingHeaders,
 } from "./lib.js";
 
 const BASE_URL = baseURL();
@@ -109,6 +110,7 @@ export default function () {
     const first = http.get(`${BASE_URL}/${qid}`, {
       responseType: "text",
       tags: { name: "read" },
+      headers: { ...acceptEncodingHeaders },
     });
     const etag = first.headers && first.headers.Etag ? first.headers.Etag : "";
     if (etag) {

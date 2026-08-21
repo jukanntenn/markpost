@@ -66,6 +66,13 @@
 		@immutable path /_next/static/*
 		header @immutable Cache-Control "public, max-age=31536000, immutable"
 
+		# Static HTML pages (/, /login, /dashboard, ...) leave the origin
+		# cacheable so the CDN edge can absorb repeat navigations; without a
+		# Cache-Control the export's HTML is uncached by default and every
+		# page view re-originate. 5 minutes bounds brand-shell staleness.
+		@pageHtml not path /_next/static/*
+		header @pageHtml Cache-Control "public, max-age=300"
+
 		@noExt {
 			not file
 			path_regexp ^/([^.]+)$

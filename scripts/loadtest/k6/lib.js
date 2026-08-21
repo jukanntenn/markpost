@@ -97,21 +97,34 @@ export function normalBodySize(mean = 18000, stddev = 4000) {
 
 // ── Read helpers ──────────────────────────────────────────────────────────
 
+// acceptEncodingHeaders must ride every request: k6 does not add
+// Accept-Encoding by default, and without it Caddy's `encode zstd gzip` never
+// fires — transfer measurements would be 3-5x overstated and compression CPU
+// unmeasured. This mirrors the CDN's origin pull (Cloudflare sends
+// Accept-Encoding when fetching from origins).
+export const acceptEncodingHeaders = { "Accept-Encoding": "zstd, gzip" };
+
 // originGet issues a GET for a QID, optionally simulating a CDN revalidation
 // (If-None-Match). It records the 304/200 split and per-request bytes so the
-// report can distinguish cold-miss cost from cheap revalidation.
-export function originGet(baseUrl, qid, etag) {
-  const params = { tags: { name: "read" }, responseType: "text" };
+// report can distinguish cold-miss cost from cheap revalidation. extraTags
+// (e.g. {stage:"r15"}) propagate to the built-in http_req_* sub-metrics and
+// the custom counters, so staircase runs get per-stage breakdowns.
+export function originGet(baseUrl, qid, etag, extraTags) {
+  const params = {
+    tags: extraTags ? { name: "read", ...extraTags } : { name: "read" },
+    responseType: "text",
+    headers: { ...acceptEncodingHeaders },
+  };
   if (etag) {
-    params.headers = { "If-None-Match": etag };
+    params.headers["If-None-Match"] = etag;
   }
   const res = http.get(`${baseUrl}/${qid}`, params);
   const received = (res.body && res.body.length) || 0;
-  bytesPerReq.add(received);
+  bytesPerReq.add(received, extraTags);
   if (res.status === 304) {
-    revalidate304.add(1);
+    revalidate304.add(1, extraTags);
   } else if (res.status === 200) {
-    coldMiss200.add(1);
+    coldMiss200.add(1, extraTags);
   }
   return res;
 }

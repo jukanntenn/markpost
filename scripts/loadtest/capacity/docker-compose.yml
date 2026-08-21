@@ -1,0 +1,145 @@
+# Capacity / sweet-spot load-test stack.
+#
+# A standalone, production-faithful copy of the e2e compose with the target
+# hardware envelope enforced via container resource limits, per the capacity
+# test plan (2 vCPU / 2 GB / 3 Mbps VPS behind Cloudflare free):
+#
+#   CPU     app + postgres share cpuset "0,1" — a real 2-core box: the two
+#           containers contend for the same two cores with no quota, exactly
+#           like the VPS. Mocks and the migrate one-shot are pinned AWAY from
+#           the SUT cores (2-11) so test harness noise cannot pollute the
+#           measurement. k6 itself is expected to be run under
+#           `taskset -c 2-11` by capacity.sh/preflight.sh.
+#   Memory  mem_limit approximates the 2 GB budget split (app 1280m +
+#           postgres 768m). Failure-mode note: a container exceeding its cap
+#           is OOM-killed and restarted by Docker, whereas the real VPS would
+#           hit the kernel OOM killer — recorded as a documented deviation.
+#   DB      Postgres over the shared Unix-socket volume (like production),
+#           with the production GUC set (-c shared_buffers=256MB etc.).
+#   Egress  3 Mbps + 30ms netem shaping is applied by shape.sh (tc in the
+#           app container's netns) — it shapes ALL app egress (HTTP responses
+#           AND the delivery webhook fan-out), which mirrors the VPS where
+#           everything shares one 3 Mbps uplink.
+#
+# Rate limits are raised (read L1 10000/s) so the staircase measures the
+# ORIGIN ceiling, not the per-IP limiter; limiter behavior itself was covered
+# by the e2e suite. See config.toml next to this file.
+#
+# Usage (see capacity/README.md):
+#   docker compose -f scripts/loadtest/capacity/docker-compose.yml up -d --build
+name: markpost-capacity
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    # Production GUC set (mirrors docker-compose.yml.j2): sized for the 2c/2g
+    # envelope rather than the image defaults the e2e stack uses.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=50
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - synchronous_commit=off
+    environment:
+      - POSTGRES_DB=markpost_cap
+      - POSTGRES_USER=markpost
+      - POSTGRES_PASSWORD=markpost
+    volumes:
+      - postgres-socket:/var/run/postgresql
+      - pgdata:/var/lib/postgresql/data
+    cpuset: "0,1"
+    mem_limit: 768m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h /var/run/postgresql -U markpost -d markpost_cap",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  oauth-mock:
+    build:
+      context: ../../../e2e/mock-services/oauth-mock
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3001
+      - MOCK_USER_ID=12345
+      - MOCK_USERNAME=testuser
+      - MOCK_EMAIL=test@example.com
+    cpuset: "2-11"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  webhook-mock:
+    build:
+      context: ../../../e2e/mock-services/webhook-mock
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3002
+    cpuset: "2-11"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: capacity-app:latest
+    build:
+      context: ../../..
+      dockerfile: docker/Dockerfile
+    entrypoint: ["markpost", "migrate", "up"]
+    volumes:
+      - postgres-socket:/var/run/postgresql
+      - ./config.toml:/app/config.toml:ro
+    cpuset: "2-11"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: capacity-app:latest
+    build:
+      context: ../../..
+      dockerfile: docker/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      oauth-mock:
+        condition: service_healthy
+      webhook-mock:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - postgres-socket:/var/run/postgresql
+      - ./config.toml:/app/config.toml:ro
+      # Observability JSONL → host, for post-run heap/goroutine analysis.
+      - ./data/logs:/app/data/logs
+      - ../../../docker/Caddyfile.local:/etc/caddy/Caddyfile:ro
+    cpuset: "0,1"
+    mem_limit: 1280m
+    ports:
+      - "2053:2053"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:2053/api/v1/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+volumes:
+  postgres-socket:
+  pgdata:

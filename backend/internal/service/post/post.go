@@ -102,10 +102,13 @@ func newGoldmark() goldmark.Markdown {
 		goldmark.WithExtensions(extension.GFM),
 		goldmark.WithParserOptions(
 			// Replace the default emphasis parser with a CJK-aware one so that
-			// ** adjacent to CJK fullwidth punctuation (e.g. ）） closes
-			// normally instead of mis-pairing. Priority 600 > default 500.
+			// ** adjacent to CJK fullwidth punctuation (e.g. （注）**后) closes
+			// normally instead of mis-pairing. goldmark (v1.7.13) sorts inline
+			// parsers by priority ASCENDING and consults them first-match-wins,
+			// so the replacement must sit BELOW the default emphasis parser's
+			// 500 to shadow it — at any higher value it would never run.
 			parser.WithInlineParsers(
-				util.Prioritized(&cjkEmphasisParser{}, 600),
+				util.Prioritized(&cjkEmphasisParser{}, 400),
 			),
 		),
 		goldmark.WithRendererOptions(
@@ -247,7 +250,13 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 		if cached, ok := s.cache.Get(key); ok {
 			return cached, nil
 		}
-		p, err := s.getPostByQID(ctx, qid)
+		// Every follower of this singleflight result inherits the first
+		// caller's ctx: if that one request disconnects mid-fetch, the DB read
+		// would fail for all waiters at once. Detach from the request's
+		// cancellation while keeping its values (trace ids) — the same pattern
+		// as the CDN purge path in DeletePostByQID.
+		fetchCtx := context.WithoutCancel(ctx)
+		p, err := s.getPostByQID(fetchCtx, qid)
 		if err != nil {
 			return nil, err
 		}
@@ -301,7 +310,10 @@ func (s *Service) GetPostMarkdown(ctx context.Context, qid string) (title, body,
 		if cached, ok := s.cache.Get(key); ok {
 			return cached, nil
 		}
-		p, err := s.getPostByQID(ctx, qid)
+		// See RenderPostHTML: the shared fetch must not follow the first
+		// caller's request lifecycle.
+		fetchCtx := context.WithoutCancel(ctx)
+		p, err := s.getPostByQID(fetchCtx, qid)
 		if err != nil {
 			return nil, err
 		}

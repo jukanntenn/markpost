@@ -37,6 +37,7 @@ import {
   baseURL,
   tlsOptions,
   summaryTrendStats,
+  acceptEncodingHeaders,
 } from "./lib.js";
 
 const BASE_URL = baseURL();
@@ -107,6 +108,7 @@ export default function () {
       const first = http.get(`${BASE_URL}/${qid}`, {
         responseType: "text",
         tags: { name: "read" },
+        headers: { ...acceptEncodingHeaders },
       });
       const etag = first.headers && first.headers.Etag ? first.headers.Etag : "";
       if (etag) originGet(BASE_URL, qid, etag);
@@ -118,7 +120,9 @@ export default function () {
   // write
   const key = keys[it % keys.length];
   const body = JSON.stringify({
-    title: `Soak post ${it}`,
+    // "Load" must appear in the title: seeded delivery channels filter on the
+    // keyword, so without it the delivery fan-out path is silently skipped.
+    title: `Load soak post ${it}`,
     body: tileBody(normalBodySize()),
   });
   const res = http.post(`${BASE_URL}/${key}`, body, {

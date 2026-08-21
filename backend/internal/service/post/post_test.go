@@ -494,3 +494,27 @@ func TestService_CountExpired(t *testing.T) {
 		}
 	})
 }
+
+// The singleflight render is shared by every concurrent waiter for a QID, and
+// its fetch runs under the first caller's context. A cancelled caller (closed
+// tab, aborted navigation) must not fail the render for everyone behind it.
+func TestService_RenderDetachedFromCallerContext(t *testing.T) {
+	svc, _, db := setupPostService(t)
+	ctx := context.Background()
+	uid := createTestUser(t, db)
+
+	qid, err := svc.CreatePost(ctx, "Title", "Body", uid)
+	if err != nil {
+		t.Fatalf("CreatePost: %v", err)
+	}
+
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, _, _, _, err := svc.RenderPostHTML(cancelled, qid); err != nil {
+		t.Errorf("RenderPostHTML with cancelled ctx: %v", err)
+	}
+	if _, _, _, _, err := svc.GetPostMarkdown(cancelled, qid); err != nil {
+		t.Errorf("GetPostMarkdown with cancelled ctx: %v", err)
+	}
+}

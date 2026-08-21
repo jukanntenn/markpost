@@ -10,6 +10,7 @@ import (
 	"markpost/internal/domain/audit"
 	"markpost/internal/domain/post"
 	"markpost/internal/domain/user"
+	"markpost/internal/service"
 	"markpost/internal/web"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,22 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 	}
 }
 
+// postPageCSP is the second defense layer for the server-rendered post page:
+// the shell loads a single self-hosted stylesheet and renders sanitized,
+// script-free HTML (bluemonday allowlist is the first layer), so everything
+// else is denied. Post bodies embed external images, hence img-src.
+const postPageCSP = "default-src 'none'; style-src 'self'; img-src https:; base-uri 'none'; form-action 'none'"
+
+// setNotFoundCacheHeader makes a post lookup's 404 edge-cacheable for 60s
+// (performance-optimization.md decision 29): QID-enumeration probes are then
+// absorbed by the CDN instead of re-originating on every request. Only the
+// not-found case is marked — other errors stay uncacheable.
+func setNotFoundCacheHeader(c *gin.Context, err error) {
+	if se, ok := service.AsError(err); ok && se.Code == service.ErrNotFound {
+		c.Header("Cache-Control", "public, max-age=60, s-maxage=60")
+	}
+}
+
 // RenderPost godoc
 // @Summary Render a post as HTML or raw markdown
 // @Tags posts
@@ -81,6 +98,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 		if isRaw {
 			title, body, etag, createdAt, err := postSvc.GetPostMarkdown(c.Request.Context(), id)
 			if err != nil {
+				setNotFoundCacheHeader(c, err)
 				apierr.RespondError(c, err)
 				return
 			}
@@ -95,6 +113,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 
 		title, htmlContent, etag, createdAt, err := postSvc.RenderPostHTML(c.Request.Context(), id)
 		if err != nil {
+			setNotFoundCacheHeader(c, err)
 			apierr.RespondError(c, err)
 			return
 		}
@@ -103,6 +122,7 @@ func RenderPost(postSvc PostService) gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusNotModified)
 			return
 		}
+		c.Header("Content-Security-Policy", postPageCSP)
 		c.HTML(http.StatusOK, "post.html", gin.H{
 			"Title":   title,
 			"Body":    template.HTML(htmlContent),

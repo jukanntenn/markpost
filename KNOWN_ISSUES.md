@@ -105,7 +105,7 @@ rg -rn '/app/markpost.toml' .
 
 ## Markdown: CJK fullwidth punctuation breaks emphasis closing
 
-**Status:** Resolved (2026-07-27).
+**Status:** Resolved (2026-08-20 — the 2026-07-27 registration was inert; see Fix).
 
 ### Symptom
 
@@ -135,8 +135,12 @@ Register a custom emphasis `InlineParser` (`internal/service/post/cjk_emphasis.g
 that scans delimiters with a CJK-aware punctuation predicate, treating CJK
 fullwidth punctuation as neutral (neither punctuation nor whitespace) so `**`
 closes normally. Uses only exported goldmark APIs (InlineParser interface +
-ScanDelimiter); no fork. The default emphasis parser is shadowed by registering
-the custom one at priority 600 (> default 500).
+ScanDelimiter); no fork. goldmark (v1.7.13) sorts inline parsers by priority
+ASCENDING and consults them first-match-wins, so the custom parser must be
+registered BELOW the default emphasis parser's 500 to shadow it. The original
+registration used 600 (assuming higher wins) and never executed — the fix is
+registered at 400, and the regression suite now includes the discriminating
+shape (fullwidth punctuation immediately left of a closing `**`).
 
 ### References
 

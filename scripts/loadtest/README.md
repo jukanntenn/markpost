@@ -1,6 +1,9 @@
 # Load Testing (k6)
 
-End-to-end HTTP load tests for markpost. The design targets the real
+End-to-end HTTP load tests for markpost. For the 2c/2g/3Mbps capacity study
+(sweet spot / hard limits) see [CAPACITY_REPORT.md](CAPACITY_REPORT.md) and
+[`capacity/`](capacity/README.md); the scenarios below are the per-mechanism
+regression suite. The design targets the real
 production architecture from
 [`specs/backend/performance-optimization.md`](../../specs/backend/performance-optimization.md):
 the origin sits behind a **Cloudflare CDN**, so it almost never sees a plain

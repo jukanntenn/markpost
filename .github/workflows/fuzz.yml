@@ -18,18 +18,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Bare package paths (no ./ prefix): the corpus upload path is built as
+        # backend/<package>/testdata/fuzz, and upload-artifact rejects paths
+        # containing "./" segments.
         include:
-          - package: ./internal/service/delivery/filter
+          - package: internal/service/delivery/filter
             target: FuzzCompile_NeverPanics
-          - package: ./internal/middleware
+          - package: internal/middleware
             target: FuzzUserIDFromContext
-          - package: ./internal/api/rest/v1
+          - package: internal/api/rest/v1
             target: FuzzEtagMatch
-          - package: ./internal/service/post
+          - package: internal/service/post
             target: FuzzCacheKey
-          - package: ./internal/service/post
+          - package: internal/service/post
             target: FuzzSanitizeCacheTag
-          - package: ./internal/service/post
+          - package: internal/service/post
             target: FuzzAddNoReferrerToImages
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,7 +44,7 @@ jobs:
       # Fuzz targets here do not use testcontainers, so no Docker is needed.
       - name: Fuzz ${{ matrix.target }}
         working-directory: backend
-        run: go test -fuzz=^${{ matrix.target }}$ -fuzztime=120s -run='^$' ${{ matrix.package }}
+        run: go test -fuzz=^${{ matrix.target }}$ -fuzztime=120s -run='^$' ./${{ matrix.package }}
       # On a crash, Go writes the failing seed to testdata/fuzz/<target>/.
       # Upload it so the regression corpus can be recovered and committed.
       - name: Upload failing seed corpus

@@ -44,6 +44,26 @@ func TestRenderPostHTML_CJKEmpasisAdjacentToFullwidthPunct(t *testing.T) {
 			body: "**a**，**b**，**c**",
 			want: "<strong>a</strong>",
 		},
+		// The cases above also pass without the CJK parser (the punctuation
+		// sits on the opener's left or the closer's right, which CommonMark
+		// already handles). The cases below are the actual failure shape —
+		// fullwidth punctuation immediately LEFT of a closing delimiter — and
+		// discriminate the fix from default goldmark.
+		{
+			name: "fullwidth paren left of closer (production shape)",
+			body: "**加粗（注）**后续文字",
+			want: "<strong>加粗（注）</strong>",
+		},
+		{
+			name: "mid-line closer preceded by fullwidth paren",
+			body: "前文**（注）**后续",
+			want: "<strong>（注）</strong>",
+		},
+		{
+			name: "comma-separated item closing after fullwidth paren",
+			body: "列表，**项目（一）**结束",
+			want: "<strong>项目（一）</strong>",
+		},
 	}
 
 	for _, tc := range cases {

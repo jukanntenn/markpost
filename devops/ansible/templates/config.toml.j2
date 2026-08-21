@@ -45,7 +45,12 @@ initial_password = "{{ admin_password }}"
 
 [post]
 title_max_length = 500
-body_max_bytes = 1048576
+# 256 KiB: covers real paste use cases (a few thousand log lines / long
+# articles) while keeping the worst-case single-post origin cost absorbable
+# on the 2c/2g/3Mbps reference instance — a 1 MiB body would render ~30x the
+# 32 KiB baseline and hold the 3 Mbps link for ~1s alone (see
+# specs/backend/performance-optimization.md and the capacity test report).
+body_max_bytes = 262144
 retention_days = {{ retention_days | default(7) }}
 
 [cors]

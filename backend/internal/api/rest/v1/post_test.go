@@ -209,6 +209,28 @@ func TestRenderPost_CacheHeadersAnd304(t *testing.T) {
 			t.Errorf("expected 304 on wildcard, got %d", w.Code)
 		}
 	})
+
+	t.Run("html page carries a deny-by-default CSP", func(t *testing.T) {
+		mockSvc := newMockPostService()
+		router := newTestEngine()
+		router.LoadHTMLGlob("../../../../templates/*")
+		_, _ = mockSvc.CreatePost(context.Background(), "Title", "Body", 1)
+		router.GET("/posts/:id", RenderPost(mockSvc))
+
+		req := httptest.NewRequest(http.MethodGet, "/posts/test-qid", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d", w.Code)
+		}
+		want := "default-src 'none'; style-src 'self'; img-src https:; base-uri 'none'; form-action 'none'"
+		if got := w.Header().Get("Content-Security-Policy"); got != want {
+			t.Errorf("Content-Security-Policy = %q, want %q", got, want)
+		}
+		if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "text/html") {
+			t.Errorf("Content-Type = %q, want text/html", ct)
+		}
+	})
 }
 
 func TestRenderPost_HTMLIsSanitized(t *testing.T) {
@@ -303,6 +325,11 @@ func TestRenderPost_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+	// Decision 29 (performance-optimization.md): the 404 is edge-cacheable
+	// for 60s so QID-enumeration probes are absorbed at the CDN.
+	if cc := w.Header().Get("Cache-Control"); cc != "public, max-age=60, s-maxage=60" {
+		t.Errorf("expected short edge-cacheable Cache-Control on 404, got %q", cc)
 	}
 }
 

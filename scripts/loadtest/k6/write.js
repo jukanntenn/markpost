@@ -27,6 +27,7 @@ import {
   baseURL,
   tlsOptions,
   summaryTrendStats,
+  acceptEncodingHeaders,
 } from "./lib.js";
 
 const BASE_URL = baseURL();
@@ -62,7 +63,7 @@ export const options = {
   noConnectionReuse: false,
 };
 
-const headers = { "Content-Type": "application/json" };
+const headers = { "Content-Type": "application/json", ...acceptEncodingHeaders };
 
 export default function () {
   const i = exec.scenario.iterationInTest || 0;

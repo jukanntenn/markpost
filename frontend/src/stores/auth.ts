@@ -62,3 +62,17 @@ export const useAuthStore = create<AuthState>()(
     },
   ),
 )
+
+// Cross-tab propagation. zustand's persist reads storage once at hydration
+// and does not sync tabs: without this listener every tab keeps a stale
+// in-memory token pair after another tab rotates, and replaying it trips the
+// backend's reuse detection (which revokes ALL sessions). Storage events fire
+// only in the *other* tabs on every persist write, so this also propagates
+// logout. Guarded for SSR/static prerender.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === null || event.key === AUTH_STORAGE_KEY) {
+      void useAuthStore.persist.rehydrate()
+    }
+  })
+}

@@ -161,8 +161,7 @@ git add frontend/package.json CHANGELOG.md
 git commit -m "chore: release vX.Y.Z"
 ```
 
-Verify: `git log --oneline -1` shows the commit, `git status` is clean.
-Hook failure → report output, STOP. Never `--no-verify`.
+Verify: `git log --oneline -1` shows the commit, `git status` is clean. Hook failure → report output, STOP. Never `--no-verify`.
 
 ### Step 7: Tag
 

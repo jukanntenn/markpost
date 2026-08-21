@@ -49,7 +49,7 @@ post-by-email 风格的外部接口保留在根级，给 curl / Telegram bot 等
 
 > **PATCH 而非 PUT**：现状 delivery 渠道更新用 PUT 做部分更新。对齐 GitHub 改为 PATCH。PUT 的规范语义是"整体替换"，部分更新用 PATCH 更准确。
 
-> **204 无 body**：DELETE 成功返回 204 No Content（对齐 GitHub）。不再返回 `{ message: "..." }`。
+> **204 无 body**：DELETE 成功返回 204 No Content（对齐 GitHub），响应体为空。
 
 ---
 

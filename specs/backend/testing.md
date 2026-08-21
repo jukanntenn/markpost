@@ -13,19 +13,16 @@ internal/api/rest/v1/auth_test.go
 
 ## Test Database
 
-The `infra` package provides `NewTestDatabase()` which creates an in-memory SQLite database with all migrations applied: <!-- MySQL/SQLite 已移除 -->
+The `infra` package provides `SetupTestDB(t)`, which starts (or reuses) a real PostgreSQL testcontainer, applies all embedded migrations, and returns a connected `*gorm.DB` whose cleanup truncates all data between tests (`internal/infra/testdb.go`):
 
 ```go
 func TestSomething(t *testing.T) {
-    db, err := infra.NewTestDatabase()
-    if err != nil {
-        t.Fatalf("failed to create test database: %v", err)
-    }
-    // Use db.DB() to get the *gorm.DB instance
+    db := infra.SetupTestDB(t)
+    // db is a *gorm.DB against the shared postgres container
 }
 ```
 
-The test database enables WAL mode and foreign keys to match production behavior.
+Any package calling `infra.SetupTestDB` routes its `TestMain` through `infra.RunTestMain` (see `internal/infra/main_test.go`): the shared container outlives individual tests, and the package terminates it itself. A running Docker daemon is required; set `TESTCONTAINERS_SKIP=1` to skip container-backed tests where none exists.
 
 ## Mock Repositories
 

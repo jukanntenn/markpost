@@ -20,7 +20,7 @@ Key features used:
 - Local builder cache (registry-based cache is deliberately unused — see Build Cache below)
 - Multi-stage Dockerfile builds
 
-See [buildx reference](../../wiki/buildx-reference.md) for detailed buildx knowledge.
+See the [buildx documentation](https://docs.docker.com/build/buildx/) for reference.
 
 ## Directory Structure
 
@@ -28,20 +28,22 @@ See [buildx reference](../../wiki/buildx-reference.md) for detailed buildx knowl
 markpost/
 ├── docker/                          # Production image building
 │   ├── build.py                     # Build script (environment check + buildx invocation)
-│   ├── backend.Dockerfile           # Backend multi-stage production image
-│   └── frontend.Dockerfile          # Frontend multi-stage production image
+│   ├── Dockerfile                   # Single multi-stage production image (backend + frontend + s6 runtime)
+│   ├── Caddyfile / Caddyfile.local  # Caddy configs baked into / referenced by the image
+│   ├── docker-compose.yml           # Acceptance compose (production topology, local source)
+│   ├── docker-compose.local.yml     # Local run compose
+│   └── s6/                          # s6-overlay service definitions (Caddy + Go backend)
 ├── devops/                          # Development environment
-│   ├── dev.py                       # Dev environment manager
-│   ├── docker-compose.yml           # Dev services (backend, postgres)
+│   ├── dev.py                       # Dev environment manager (all services in Docker)
+│   ├── docker-compose.yml           # Dev services (backend, frontend, postgres)
 │   ├── backend.Dockerfile           # Backend dev image (with hot-reload)
-│   └── ansible/                     # Provisioning playbooks
+│   ├── frontend.Dockerfile          # Frontend dev image
+│   └── ansible/                     # Deployment playbooks and templates
 ├── backend/
 │   └── .dockerignore                # Excludes tests, docs, tools from build context
-├── frontend/
-│   ├── .dockerignore                # Excludes .env.local from build context
-│   └── package.json                 # Contains "packageManager" field for corepack
-└── wiki/
-    └── buildx-reference.md          # Buildx knowledge base
+└── frontend/
+    ├── .dockerignore                # Excludes .env.local from build context
+    └── package.json                 # Contains "packageManager" field for corepack
 ```
 
 ## Optimization Mechanisms
@@ -50,31 +52,24 @@ markpost/
 
 Dependencies are installed before source code is copied. This ensures that code changes don't invalidate the expensive dependency installation layer.
 
-**Backend** (`backend.Dockerfile`):
+**Backend** (`go-build` stage of `docker/Dockerfile`):
 
 1. `COPY go.mod go.sum` → `RUN go mod download` — cached unless dependencies change
-2. `COPY . .` — invalidated by source changes
-3. `RUN CGO_ENABLED=1 CGO_LDFLAGS="-static" go build` — only re-runs after source changes
+2. `COPY . .` → `RUN go generate ./...` → `RUN CGO_ENABLED=0 go build` — only re-runs after source changes
 
-**Frontend** (`frontend.Dockerfile`):
+**Frontend** (`node-build` stage):
 
 1. `COPY package.json pnpm-lock.yaml pnpm-workspace.yaml` → `RUN pnpm install --frozen-lockfile` — cached unless dependencies change
 2. `COPY . .` — invalidated by source changes
 3. `RUN pnpm build` — only re-runs after source changes
 
-### Static Linking (Backend)
+### Static Build (Backend)
 
-The backend binary is statically linked with `CGO_LDFLAGS="-static"`. This embeds sqlite3 and musl libc into the binary, eliminating runtime shared library dependencies. The runtime image only needs `ca-certificates` and `tzdata`. <!-- MySQL/SQLite 已移除 -->
+The backend builds with `CGO_ENABLED=0`: a pure-Go, statically linked binary with no C dependencies and no libc linkage concerns. The runtime image only needs `ca-certificates` and `tzdata` (plus Caddy and s6-overlay for the composite image).
 
-### Standalone Output (Frontend)
+### Static Export (Frontend)
 
-Next.js is configured with `output: "standalone"` which produces a minimal server bundle. The runtime image copies only:
-
-- `.next/standalone/` — the server and its dependencies
-- `.next/static/` — static assets
-- `public/` — public assets
-
-No `node_modules` in the runtime stage.
+Next.js is configured with `output: "export"`, which produces a plain static site under `out/`. The runtime image copies `out/` to `/app/frontend`, and Caddy serves it directly and reverse-proxies API paths to the Go backend — there is no Node process in the runtime image.
 
 ### Corepack (Frontend)
 
@@ -89,12 +84,7 @@ Each build context has a `.dockerignore` that excludes non-essential files:
 
 ### Build Cache
 
-Registry-based build cache (`--cache-to`/`--cache-from`) is deliberately NOT
-used: builds against the internal registry gain nothing from cross-machine
-cache layers (single builder machine) and the `mode=max` cache blobs would
-just consume registry disk. Only the local buildx builder cache applies;
-`--no-cache` disables it. CI release builds use GitHub Actions cache
-(`type=gha`) instead — see `.github/workflows/docker-publish.yml`.
+Registry-based build cache (`--cache-to`/`--cache-from`) is deliberately NOT used: builds against the internal registry gain nothing from cross-machine cache layers (single builder machine) and the `mode=max` cache blobs would just consume registry disk. Only the local buildx builder cache applies; `--no-cache` disables it. CI release builds use GitHub Actions cache (`type=gha`) instead — see `.github/workflows/docker-publish.yml`.
 
 ## Build Script (`docker/build.py`)
 

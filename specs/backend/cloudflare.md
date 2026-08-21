@@ -165,7 +165,7 @@ If post pages consistently show `DYNAMIC`, the cache headers are not taking effe
 markpost issues a best-effort **cache-tag purge** on post deletion. The correct invocation, verified against the Cloudflare API:
 
 - **Endpoint:** `POST https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache` (`cache/how-to/purge-cache/purge-zone-versions.mdx`).
-- **Authentication:** `Authorization: Bearer <api_token>`, using an **API Token** (not the legacy Global API Key). The token needs the **Zone → Cache Purge** permission (`fundamentals/api/reference/template.mdx`: "Zone Cache Purge | Cache Purge | Zone").
+- **Authentication:** `Authorization: Bearer <api_token>`, using an **API Token** (scoped per zone; not the account-wide Global API Key). The token needs the **Zone → Cache Purge** permission (`fundamentals/api/reference/template.mdx`: "Zone Cache Purge | Cache Purge | Zone").
 - **Body (purge by cache-tag):** `{"tags":["post-<qid>"]}`. This is the "purge cached content by tag, host, or prefix" form of the `purge_cache` endpoint.
 - **Best-effort, no retry.** A dropped or rate-limited request falls back to natural `s-maxage=3600` TTL expiry — never worse than the self-healing the design already relies on.
 

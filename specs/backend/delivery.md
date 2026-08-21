@@ -2,9 +2,9 @@
 
 This document specifies the message-delivery subsystem: how posts are pushed to configured channels (Feishu today, extensible tomorrow) with persistence, bounded retry, and crash recovery. It is the authoritative reference for the data model, retry strategy, concurrency model, and the rejected alternatives recorded with their rationale.
 
-> **Sources.** Technical claims are verified against the source repos at `~/Workspace/contexts/`, checked out at the versions markpost uses: GORM `v1.31.1` (`schema/field.go`, `migrator/migrator.go`), SQLite `3.50.4` (trunk `3.54.0`; grammar/semantics identical — `src/parse.y`, `doc/`), Postgres `REL_17_STABLE` (`doc/src/sgml/`), MySQL `mysql-8.0.46` (`mysql-server` 8.0 — the production line; 8.0 is LTS, 9.x is innovation-track and not used in production — `sql/sql_yacc.yy`, `storage/innobase/`, `sql/field.cc`), `pond v2` (`github.com/alitto/pond/v2`), `ants v2` (`github.com/panjf2000/ants/v2`). The existing markpost code is cited as `backend/...` with line numbers. <!-- MySQL/SQLite 已移除 -->
+> **Sources.** Technical claims are verified against the source repos under `.local/contexts/`, checked out at the versions markpost uses: GORM `v1.31.1` (`schema/field.go`, `migrator/migrator.go`), Postgres `REL_17_STABLE` (`doc/src/sgml/`), `pond v2` (`github.com/alitto/pond/v2`), `ants v2` (`github.com/panjf2000/ants/v2`). The markpost code is cited as `backend/...`.
 
-The delivery feature was previously an in-process fire-and-forget mechanism (a buffered channel drained by a single goroutine). This spec closes that gap by upgrading it to a **persistent best-effort** delivery model: a delivery attempt that survives process restarts, retries with backoff, and reaches a terminal state within a bounded time wall.
+The delivery subsystem is a **persistent best-effort** model: a delivery attempt survives process restarts, retries with backoff, and reaches a terminal state within a bounded time wall.
 
 ## Scope and Product Semantics
 
@@ -23,7 +23,7 @@ The hardware envelope is a 2-core / 2 GB / 3 Mbps VPS (`performance-optimization
 Two conclusions drove the design:
 
 1. **CPU is not the bottleneck.** Delivery is I/O-bound (goroutines blocked on Feishu HTTP responses consume near-zero CPU). At 116 jobs/s the entire delivery subsystem (filter + DB writes + HTTP fan-out) costs under 7% of two cores. The existing filter benchmarks (`internal/service/delivery/filter/filter_bench_test.go`) show compile+match at ~1.6 µs/op for a 256-byte title; even with 10 channels per post this is sub-percent CPU.
-2. **The single-goroutine fire-and-forget model cannot carry the load.** The previous dispatcher drained its queue with **one** goroutine issuing synchronous HTTP calls (default 5 s timeout). At a 300 ms Feishu response its throughput was ~3 jobs/s — two orders of magnitude below the 116 jobs/s ceiling. A 256-deep buffer fills in under a second, after which 97% of deliveries are silently dropped. This is why concurrency, not persistence, was the first problem to solve.
+2. **A single-goroutine dispatcher cannot carry the load.** One goroutine issuing synchronous HTTP calls (default 5 s timeout) tops out at ~3 jobs/s at a 300 ms Feishu response — two orders of magnitude below the 116 jobs/s ceiling. A 256-deep buffer fills in under a second, after which deliveries are silently dropped (Decision 1).
 
 ## Architecture: Three Layers, Three Responsibilities
 
@@ -36,7 +36,7 @@ CreatePost (synchronous, in the post-create transaction)
 Scheduler (one goroutine, 1 s ticker)
    ├─ expire wall: pending past the wall → expired + archive (batched per tick)
    └─ claim due:   atomic UPDATE...WHERE id IN (SELECT...) RETURNING ─► pond ── Layer 2: Scheduling (Go ticker)
-                   (PG/MySQL: + FOR UPDATE SKIP LOCKED; SQLite: none, MaxOpenConns(1) serializes) <!-- MySQL/SQLite 已移除 -->
+                   (+ FOR UPDATE SKIP LOCKED — concurrent claimers pick disjoint rows)
 
 pond worker pool (32 workers) ────────────────────────────────── Layer 3: Concurrency (pond v2)
    └─ GET post by id (PK lookup, post always alive)
@@ -48,11 +48,11 @@ pond worker pool (32 workers) ────────────────�
 
 Each layer uses the right tool:
 
-| Layer          | Responsibility                                                       | Mechanism                                                                                                                 | Why                                                                                                                              |
-| -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Persistence | survive process restart; do not lose pending work                    | `delivery_attempts` table (Postgres / MySQL / SQLite)                                                                     | A worker-pool library is an in-memory concurrency primitive; persistence is the database's job, not the pool's.                  | <!-- MySQL/SQLite 已移除 --> |
-| 2. Scheduling  | scan due tasks; claim without double-delivery; apply the expiry wall | Go `time.Ticker` (1 s) + atomic claim (`FOR UPDATE SKIP LOCKED` on Postgres/MySQL; single-writer serialization on SQLite) | A simple polling scheduler is easy to reason about and needs no external broker.                                                 | <!-- MySQL/SQLite 已移除 --> |
-| 3. Concurrency | issue up to N Feishu HTTP calls in parallel, bounded                 | pond v2 worker pool                                                                                                       | Bounded concurrency controls outbound rate (Feishu QPS limits) and bandwidth (3 Mbps cap); unbounded goroutines would risk both. |
+| Layer          | Responsibility                                                       | Mechanism                                                        | Why                                                                                                                              |
+| -------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Persistence | survive process restart; do not lose pending work                    | `delivery_attempts` table (PostgreSQL)                           | A worker-pool library is an in-memory concurrency primitive; persistence is the database's job, not the pool's.                  |
+| 2. Scheduling  | scan due tasks; claim without double-delivery; apply the expiry wall | Go `time.Ticker` (1 s) + atomic claim (`FOR UPDATE SKIP LOCKED`) | A simple polling scheduler is easy to reason about and needs no external broker.                                                 |
+| 3. Concurrency | issue up to N Feishu HTTP calls in parallel, bounded                 | pond v2 worker pool                                              | Bounded concurrency controls outbound rate (Feishu QPS limits) and bandwidth (3 Mbps cap); unbounded goroutines would risk both. |
 
 ### Why pond v2 for the concurrency layer
 
@@ -133,13 +133,10 @@ const (
 )
 ```
 
-**Integer enum, not a string enum.** A `type Status int8` (rather than the `type Role string` pattern used by `user.User`) is chosen deliberately to satisfy the "most compact, no strings, portable across 3 dialects" requirement:
+**Integer enum, not a string enum.** A `type Status int8` (rather than the `type Role string` pattern used by `user.User`) keeps the status column compact with no column-type tag:
 
-- **Most compact.** GORM resolves the column type from the Go `reflect.Kind` and, for integer kinds, from the auto-computed `Size` (`schema/field.go:233-341`). `int8` → `Size=8`. Each driver then maps by size (`schema/field.go:330-341` is where the size is set; the driver's `DataTypeOf` consumes it):
-  - **MySQL** → `tinyint` (1 byte) — the only dialect where `int8` actually saves space vs wider ints. <!-- MySQL/SQLite 已移除 -->
-  - **Postgres** → `smallint` (2 bytes) — `int8` and `int16` map to the _same_ `smallint` because Postgres has no 1-byte integer type; 2 bytes is its floor.
-  - **SQLite** → `integer` (value-width: a small value occupies 1–2 bytes regardless of the declared width). <!-- MySQL/SQLite 已移除 -->
-- **Portable with no `type:` tag.** This is the critical point. GORM emits a `type:` tag value **verbatim on every dialect** (`schema/field.go:320-328`, the `default` branch stores the value as-is, not lowercased) and each driver's `DataTypeOf` `default` arm returns it literally. So `type:tinyint` would be sent to Postgres (which has no such type → DDL error) and `type:int2` to MySQL (no such type → DDL error). The bare `int8` form avoids this entirely: it relies on the size-based driver logic that all three drivers implement. <!-- MySQL/SQLite 已移除 -->
+- **Most compact available form.** GORM resolves the column type from the Go `reflect.Kind` and, for integer kinds, from the auto-computed `Size` (`schema/field.go:233-341`). `int8` → `Size=8`; the Postgres driver maps every integer ≤16 bits to `smallint` (2 bytes) — Postgres has no 1-byte integer type, so 2 bytes is its floor.
+- **No `type:` tag needed.** GORM emits a `type:` tag value **verbatim** (`schema/field.go:320-328`, the `default` branch stores the value as-is), so a hand-written column type would own the DDL outright; the bare `int8` form instead relies on the size-based driver mapping and cannot drift from the driver's own choice.
 - **`StatusPending = 0`** so the database default (`default:0`) lands on the pending state; no literal is needed in the column default.
 - **Tradeoffs (accepted):** values are stored as `0/1/2/3`, not human-readable strings — DB inspection shows numbers, and the mapping lives in code. The `iota` order must be **append-only forever**: inserting a state in the middle would renumber every later state and silently corrupt existing rows. Terminal states are never re-added, so appending (e.g. a future `StatusCanceled = 4`) is always safe.
 
@@ -167,7 +164,7 @@ type Attempt struct {
 }
 ```
 
-The struct follows the existing codebase conventions exactly: value-receiver `TableName()` (as `delivery.Channel` does at `delivery.go:26`), `int64` PK with `autoIncrement` (the `BIGSERIAL`/`BIGINT AUTO_INCREMENT` intent), `gorm:"not null;column:..."` FK columns, and explicit `foreignKey` + `constraint:OnDelete:CASCADE` associations (the same shape `post.Post` and `delivery.Channel` use). No `type:` tag appears on any column except `last_error` (which is `text` on all three dialects — verified portable).
+The struct follows the existing codebase conventions exactly: value-receiver `TableName()` (as `delivery.Channel` does at `delivery.go:26`), `int64` PK with `autoIncrement` (the `BIGSERIAL` intent), `gorm:"not null;column:..."` FK columns, and explicit `foreignKey` + `constraint:OnDelete:CASCADE` associations (the same shape `post.Post` and `delivery.Channel` use). No `type:` tag appears on any column except `last_error` (`text`).
 
 **Lifecycle.** A row lives only while delivery is in progress — at most `wall` (40 min default). On any terminal state the row is **archived to `delivery_history` and deleted in the same transaction**. Steady-state row count is therefore bounded by the wall window (~28 万 rows at 116/s × 2400s ≈ 22 MB).
 
@@ -198,7 +195,7 @@ type History struct {
 }
 ```
 
-**`user_id` is `ON DELETE SET NULL`, not CASCADE (Review #5).** A user's 7-day history can be large (millions of rows under the worst-case load). `ON DELETE CASCADE` would delete all of them inside the `DELETE FROM users` transaction — holding locks on a huge row set (MySQL/InnoDB) or producing a massive dead-tuple burst that stalls the table (Postgres). `SET NULL` instead preserves each history row with a null `user_id`; the UI renders "用户已注销" when `user_id` is null, exactly as it already renders "原 post 已删除" / "投递渠道已删除" for the null `post_id`/`channel_id`. This makes `user_id` nullable (`*int`), consistent with the already-nullable `post_id`/`channel_id`. <!-- MySQL/SQLite 已移除 -->
+**`user_id` is `ON DELETE SET NULL`, not CASCADE (Review #5).** A user's 7-day history can be large (millions of rows under the worst-case load). `ON DELETE CASCADE` would delete all of them inside the `DELETE FROM users` transaction, producing a massive dead-tuple burst that stalls the table. `SET NULL` instead preserves each history row with a null `user_id`; the UI renders "用户已注销" when `user_id` is null, exactly as it already renders "原 post 已删除" / "投递渠道已删除" for the null `post_id`/`channel_id`. This makes `user_id` nullable (`*int`), consistent with the already-nullable `post_id`/`channel_id`.
 
 **CASCADE on attempts vs SET NULL on history — why the difference.** An attempt row lives ≤40 min, so the cascade from deleting a user (or post/channel) touches at most the user's currently-in-flight attempts — a small, bounded set. A history row lives 7 days, so the same cascade would touch the user's entire delivery record — unbounded and large. The two tables therefore take different FK actions for the _same logical column_: bounded lifetime → CASCADE (cheap, semantically clean); unbounded lifetime → SET NULL (no lock storm, preserves audit). See Decision 6.
 
@@ -226,21 +223,11 @@ LIMIT 20 OFFSET $3;
 
 **Storage.** ~7000 万 rows over 7 days at ~60 bytes/row ≈ **4.2 GB**, well within the 40 GB disk alongside posts' ~11 GB.
 
-### Per-dialect index design
+### Index design
 
-The claim query is `WHERE status = <pending> AND next_at <= ? ORDER BY next_at`. The _optimal_ index for it differs by dialect, and GORM cannot express a partial index or a per-dialect index in a struct tag — so these are created in a gated post-migrate step in `internal/infra/db.go` (mirroring the existing `migratePostBodyCompressionLZ4` pattern at `db.go:126-130`), branched on `cfg.DB.Driver`. Status is the `int8` enum, so `pending = 0`.
+The claim query is `WHERE status = <pending> AND next_at <= ? ORDER BY next_at`. GORM cannot express a partial index in a struct tag, so the indexes are declared in the versioned migration SQL (`internal/infra/migrations/000001_init.up.sql`). Status is the `int8` enum, so `pending = 0`.
 
-**Postgres** — partial index (protects HOT updates):
-
-```sql
-CREATE INDEX IF NOT EXISTS idx_da_pending
-    ON delivery_attempts (next_at)
-    WHERE status = 0;
-```
-
-_Rationale._ The hot table's workload is `status`-transition UPDATEs (`pending` → terminal). A partial index on only the `pending` rows keeps the index tiny and, crucially, cooperates with Postgres HOT (Heap-Only Tuple) updates. Per the Postgres docs: "in heavily updated tables smaller fillfactors are appropriate" (`doc/src/sgml/ref/create_table.sgml`), and the "unbilled orders" example notes that a partial index "does not need to be updated in all cases" (`doc/src/sgml/indices.sgml`) — once a row leaves `pending`, its index entry is dropped and later UPDATEs never touch this index. HOT itself requires that the update "does not modify any columns referenced by the table's indexes" (`doc/src/sgml/storage.sgml`); the index key is only `next_at`, and while a status-transition UPDATE does modify `next_at` (the reservation bump on claim), the row _leaves the partial index's predicate_ (`status=0`) at the same transition, so it is removed from the index rather than re-indexed in place. This is the same design principle the prior Postgres-only spec relied on; the change here is only that the literal is `0` (the enum value), not the string `'pending'`.
-
-**SQLite** — same partial index (size optimization): <!-- MySQL/SQLite 已移除 -->
+**`delivery_attempts`** — partial index (protects HOT updates):
 
 ```sql
 CREATE INDEX IF NOT EXISTS idx_da_pending
@@ -248,20 +235,11 @@ CREATE INDEX IF NOT EXISTS idx_da_pending
     WHERE status = 0;
 ```
 
-_Rationale._ SQLite supports partial indexes since 3.8.0 (verified: the grammar production at `~/Workspace/contexts/sqlite/src/parse.y:1622-1630` includes the trailing `where_opt`, and `doc/partialindex.html` documents it). The driver in use is `mattn/go-sqlite3 v1.14.32` (SQLite 3.50.4 ≫ 3.8.0). SQLite has no HOT analog, so the only benefit here is keeping the index small (only `pending` rows indexed) — which still matters, since under `MaxOpenConns(1)` every claim scans this index serially. <!-- MySQL/SQLite 已移除 -->
+_Rationale._ The hot table's workload is `status`-transition UPDATEs (`pending` → terminal). A partial index on only the `pending` rows keeps the index tiny and, crucially, cooperates with Postgres HOT (Heap-Only Tuple) updates. Per the Postgres docs: "in heavily updated tables smaller fillfactors are appropriate" (`doc/src/sgml/ref/create_table.sgml`), and the "unbilled orders" example notes that a partial index "does not need to be updated in all cases" (`doc/src/sgml/indices.sgml`) — once a row leaves `pending`, its index entry is dropped and later UPDATEs never touch this index. HOT itself requires that the update "does not modify any columns referenced by the table's indexes" (`doc/src/sgml/storage.sgml`); the index key is only `next_at`, and while a status-transition UPDATE does modify `next_at` (the reservation bump on claim), the row _leaves the partial index's predicate_ (`status=0`) at the same transition, so it is removed from the index rather than re-indexed in place.
 
-**MySQL** — composite index (partial indexes are unsupported): <!-- MySQL/SQLite 已移除 -->
+**History indexes:**
 
-```sql
-CREATE INDEX idx_da_status_next
-    ON delivery_attempts (status, next_at);
-```
-
-_Rationale._ MySQL/InnoDB **does not support partial indexes** — `CREATE INDEX` has no `WHERE` grammar (verified against `mysql-8.0.46`: the `create_index_stmt` production at `mysql-server/sql/sql_yacc.yy:3637-3663` and the `index_option`/`common_index_option` enumeration at `:7957-7981` admit only `KEY_BLOCK_SIZE`/`COMMENT`/`visibility`/engine-attribute options, never a predicate). The portable substitute is a composite index with `status` as the leading column, which covers the claim query's `WHERE status=0 AND next_at <= ? ORDER BY next_at` exactly. This index is **load-bearing** on MySQL in a way the partial index is not on Postgres: a locking read sets a next-key lock on _every index record the cursor scans_ (`storage/innobase/row/row0sel.cc:5240-5243`, the `sel_set_rec_lock` call site inside `row_search_mvcc`), and without a usable index the optimizer falls back to a full clustered-index scan (`ha_innodb.cc:10815-10831` `rnd_init` forces the primary key via `change_active_index`), so the claim would take an exclusive next-key lock on every row + gap in the table. The composite index confines the scan — and thus the lock footprint — to the `status=0` range actually being claimed. <!-- MySQL/SQLite 已移除 -->
-
-**History indexes (all dialects, identical):**
-
-The history read path has two shapes that one index cannot serve together, so the history table carries two indexes, both created in the post-migrate step:
+The history read path has two shapes that one index cannot serve together, so the history table carries two indexes, both declared in the same migration:
 
 ```sql
 CREATE INDEX idx_dh_user_channel_created ON delivery_history (user_id, channel_id, created_at DESC);
@@ -271,11 +249,9 @@ CREATE INDEX idx_dh_created              ON delivery_history (created_at DESC);
 - `idx_dh_user_channel_created` — the three-column composite covers both the user-scoped history query (`WHERE user_id = ?`) and the per-channel query (`WHERE user_id = ? AND channel_id = ?`) via the leftmost-prefix rule. `user_id` leads because it is the always-present equality predicate; `channel_id` follows as the optional equality predicate; `created_at DESC` trails to support the `ORDER BY`. A bare `(user_id, created_at)` predecessor (`idx_dh_user_created`) is fully covered by the leftmost prefix of this composite and is dropped as redundant.
 - `idx_dh_created` — serves the admin "all history" view (`ORDER BY created_at DESC` with **no** `user_id` predicate). The `user_id`-leading composite cannot serve this query (no leftmost equality), so without this index the admin page would degrade to a full-table scan + sort on the ~7000 万-row cold table. A plain single-column index on the sort key is the fix.
 
-### Per-dialect table tuning
+### Table tuning
 
-The Postgres storage options cannot go in the GORM struct (they are Postgres-only `WITH (...)` reloptions) and have **no direct equivalent on MySQL or SQLite**. They are applied dialect-specifically: <!-- MySQL/SQLite 已移除 -->
-
-**Postgres** (post-migrate `ALTER TABLE ... SET (...)`, gated on `driver == "postgresql"`):
+The storage options are Postgres-only `WITH (...)` reloptions and cannot go in the GORM struct, so they are declared in the same migration SQL (applied at migrate time):
 
 ```sql
 ALTER TABLE delivery_attempts SET (
@@ -291,15 +267,6 @@ ALTER TABLE delivery_history SET (fillfactor = 100);
 - `fillfactor = 90` on the hot table reserves page space so status-transition UPDATEs land updated tuples on the same page → HOT likely (`doc/src/sgml/ref/create_table.sgml`).
 - `fillfactor = 100` on the append-only history table (no updates) → full packing, minimal storage.
 - Aggressive autovacuum on the high-UPDATE attempts table reclaims dead tuples promptly.
-
-**MySQL/InnoDB** — _no per-table fillfactor, no autovacuum analog_ (verified against `mysql-8.0.46`): <!-- MySQL/SQLite 已移除 -->
-
-- `innodb_fill_factor` is a **global** system variable (declared `MYSQL_SYSVAR_LONG(fill_factor, ddl::fill_factor, PLUGIN_VAR_RQCMDARG, ...)` at `storage/innobase/handler/ha_innodb.cc:22469-22471`; scope is GLOBAL-only because the flag lacks `PLUGIN_VAR_THDLOCAL`; backing var `ddl::fill_factor` defined `btr0load.cc:44`) and applies only at sorted/bulk index-build time (it is read solely in `storage/innobase/btr/btr0load.cc:398-402,579`, never in the row-insert/page-split path). It is not a per-table reloption and not a `fillfactor` substitute. <!-- MySQL/SQLite 已移除 -->
-- `KEY_BLOCK_SIZE` controls **compressed page size** and forces `ROW_FORMAT=COMPRESSED` (`ha_innodb.cc:6268-6280` `get_zip_shift_size`, plus `:6302` in `get_real_row_type`), not fill — not a `fillfactor` substitute either.
-- There is no autovacuum: a grep for `autovacuum` across `storage/innobase/` returns zero hits. The closest analog is the **purge coordinator thread** (`storage/innobase/srv/srv0srv.cc:3077`), which reclaims **undo-log** history for committed transactions — not per-table dead-tuple vacuum the way Postgres autovacuum works. InnoDB's B-trees are maintained online, so there is nothing table-level to "vacuum."
-- The MySQL "tuning" for the hot table is therefore the **composite index** (above) plus the **bounded 40-min row lifetime** (the wall keeps the table small) — not a storage option. Default `ROW_FORMAT=DYNAMIC` is used for both tables. <!-- MySQL/SQLite 已移除 -->
-
-**SQLite** — no per-table tuning knobs. Under the existing production setup (`PRAGMA journal_mode=WAL` + `SetMaxOpenConns(1)`, `db.go:86,227`) all writes serialize through one connection, so there is no lock contention to tune away on this table. An optional operator step documented for self-hosters: `PRAGMA synchronous=NORMAL`, which is safe under WAL and speeds commits (the WAL guarantees integrity across crashes; `synchronous=FULL` is only needed to protect the WAL itself, and `NORMAL` is the documented WAL-appropriate setting per the SQLite docs `doc/pragma.html`). <!-- MySQL/SQLite 已移除 -->
 
 ## Delivery Flow
 
@@ -321,7 +288,7 @@ The keyword filter runs **before** persistence, so only channels that actually m
 
 ### 2. Scheduler (one goroutine, 1 s `time.Ticker`)
 
-Two duties per tick. Both the expire sweep and the claim are **batched** (bounded batch size per tick) and use the **dialect-safe subquery-`LIMIT` form**, not bare `DELETE/UPDATE ... LIMIT`, because Postgres does not support `LIMIT` on UPDATE/DELETE while the `WHERE id IN (SELECT ... LIMIT N)` form is valid on all three dialects (verified: Postgres subquery semantics; MySQL subquery support; SQLite `parse.y` LIMIT-in-subselect). On MySQL/SQLite bare `... LIMIT N` would also work, but the subquery form is the one portable across the trio. <!-- MySQL/SQLite 已移除 -->
+Two duties per tick. Both the expire sweep and the claim are **batched** (bounded batch size per tick) and use the **subquery-`LIMIT` form** (`WHERE id IN (SELECT ... LIMIT N)`), not bare `DELETE/UPDATE ... LIMIT`, because PostgreSQL does not support `LIMIT` on UPDATE/DELETE.
 
 **Expire wall sweep** — transition pending rows past the wall to `expired`, batched, looped until a tick drains them:
 
@@ -339,11 +306,9 @@ RETURNING *;
 -- each returned row → archiveAndDelete(status=<expired>)
 ```
 
-**Why batched, not one unbounded sweep.** A single unbounded `UPDATE ... RETURNING *` would, under a large `pending` backlog (e.g. a Feishu outage accumulating tens of thousands of stalled rows), lock that whole row range in one statement — a long-held lock on MySQL/InnoDB (a locking read takes a next-key lock on every scanned record at `storage/innobase/row/row0sel.cc:5240-5243`, and at the default REPEATABLE READ a DELETE/UPDATE does not release locks on non-matching scanned rows — `ha_innodb.cc` documents `unlock_row` as a no-op at higher isolation) and a large dead-tuple burst under the 1 s scheduler tick on Postgres. Batching to N=64 per statement bounds both the lock scope and the dead-tuple volume per statement, and the within-tick loop still drains the backlog promptly (the wall is minutes-scale; sub-second drain is not required). This is the direct fix for Review #7 — "if the scheduler archives every expired record every tick and there are many, does it destroy performance?" Answer: no, because the sweep is bounded per statement and only the expire predicate (`status=<pending> AND created_at < wall`) is matched, not the entire table. <!-- MySQL/SQLite 已移除 -->
+**Why batched, not one unbounded sweep.** A single unbounded `UPDATE ... RETURNING *` would, under a large `pending` backlog (e.g. a Feishu outage accumulating tens of thousands of stalled rows), lock that whole row range in one statement and produce a large dead-tuple burst under the 1 s scheduler tick. Batching to N=64 per statement bounds both the lock scope and the dead-tuple volume per statement, and the within-tick loop still drains the backlog promptly (the wall is minutes-scale; sub-second drain is not required). Only the expire predicate (`status=<pending> AND created_at < wall`) is matched, never the entire table.
 
-**Claim due tasks** — atomically claim and reserve, dialect-conditional:
-
-_Postgres / MySQL (row-locking dialects):_ <!-- MySQL/SQLite 已移除 -->
+**Claim due tasks** — atomically claim and reserve:
 
 ```sql
 UPDATE delivery_attempts SET next_at = $now + 35000   -- reserve past the request timeout
@@ -358,22 +323,7 @@ RETURNING *;
 -- each returned row → pool.Go(execute)
 ```
 
-_SQLite (no row-level locking):_ <!-- MySQL/SQLite 已移除 -->
-
-```sql
-UPDATE delivery_attempts SET next_at = $now + 35000
- WHERE id IN (
-     SELECT id FROM delivery_attempts
-      WHERE status = <pending> AND next_at <= $now
-      ORDER BY next_at
-      LIMIT 64
- )
-RETURNING *;
-```
-
-**Why the claim differs by dialect.** `SELECT ... FOR UPDATE SKIP LOCKED` is supported on Postgres (the docs describe it as the queue-like use case — "multiple consumers accessing a queue-like table," `doc/src/sgml/ref/select.sgml`) and on MySQL (verified against `mysql-8.0.46`: the `locked_row_action` production `SKIP_SYM LOCKED_SYM → Locked_row_action::SKIP` at `mysql-server/sql/sql_yacc.yy:10158-10161`, mapping to the `select_mode` `SELECT_SKIP_LOCKED` at `storage/innobase/include/lock0types.h`; the skip-instead-of-wait branch is `lock_rec_lock_slow` returning `DB_SKIP_LOCKED` at `storage/innobase/lock/lock0lock.cc:1826-1827`, acted on by `row_search_mvcc` with `goto next_rec` at `storage/innobase/row/row0sel.cc:5261-5264`). It is **not supported on SQLite at all**: the grammar at `~/Workspace/contexts/sqlite/src/parse.y:651-665` terminates a SELECT after `limit_opt` with no `for_update` production, and a grep for `FOR UPDATE` / `SKIP LOCKED` / `TK_FOR` across the SQLite `src/` tree returns zero matches — issuing it is a parse-time _syntax error_, not a runtime no-op. (The current spec's claim that "on SQLite the clause is a no-op" was therefore incorrect and is corrected here.) <!-- MySQL/SQLite 已移除 -->
-
-The SQLite path drops the clause. This is safe _only because_ the production SQLite pool runs with `SetMaxOpenConns(1)` (`db.go:86`), so every write — including the scheduler's claim — serializes through one connection: two claim operations cannot run concurrently in-process, so there is no double-claim to prevent. See _SQLite-mode concurrency_ below for the full argument. The claim body itself (atomic `UPDATE ... WHERE id IN (SELECT ... LIMIT) RETURNING *`) is identical across all three dialects; only the locking clause is conditional. <!-- MySQL/SQLite 已移除 -->
+**Why `FOR UPDATE SKIP LOCKED`.** PostgreSQL documents it as the queue-like use case ("multiple consumers accessing a queue-like table", `doc/src/sgml/ref/select.sgml`): concurrent claimers — or overlapping scheduler ticks — take disjoint row sets instead of blocking, so claim throughput scales with worker count rather than serializing.
 
 The claim advances `next_at` to `now + request_timeout + buffer` so the next 1-second tick does not re-select these rows while they are being delivered. This is the concurrency-correctness fix for the double-claim hazard: without it, a row whose delivery takes longer than 1 s would be re-claimed and re-delivered.
 
@@ -417,7 +367,7 @@ The terminal-state archive + delete is one transaction so the history record and
 
 There is **no centralized batch DELETE** that sweeps terminal attempts. Each attempt row is deleted by its own delivery operation at the moment it reaches a terminal state (`archiveAndDelete`, called from the worker on `delivered`/`failed`, and from the scheduler on `expired`). Cleanup is therefore naturally distributed across all in-flight delivery operations and never produces a large dead-tuple burst. This is why the `delivery_attempts` table stays small and why its autovacuum load stays light.
 
-> `delivery_history` retention (7 days) is swept by a periodic lightweight batched DELETE, run from a cron-invoked command in the style of `cmd/prune_expired_posts.go`. It uses the **dialect-safe subquery-`LIMIT` form**, not bare `DELETE ... LIMIT`:
+> `delivery_history` retention (7 days) is swept by a periodic lightweight batched DELETE, run from a cron-invoked command in the style of `cmd/prune_expired_posts.go`. It uses the subquery-`LIMIT` form, not bare `DELETE ... LIMIT` (a PostgreSQL syntax error):
 >
 > ```sql
 > DELETE FROM delivery_history
@@ -430,7 +380,7 @@ There is **no centralized batch DELETE** that sweeps terminal attempts. Each att
 > -- looped until RowsAffected == 0
 > ```
 >
-> Bare `DELETE ... LIMIT N` is valid on MySQL (the single-table `delete_stmt` production accepts `opt_simple_limit` at `mysql-server/sql/sql_yacc.yy:13490` within the `:13480-13493` single-table alternative; multi-table DELETE at `:13494-13514` deliberately omits it) and on SQLite (the `mattn/go-sqlite3 v1.14.32` driver compiles with `-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT`, verified at `sqlite3.go:22`), but is a **syntax error on Postgres** (no `LIMIT` on DELETE). The subquery form is portable across all three. History rows are append-only, so this DELETE does not contend with updates. <!-- MySQL/SQLite 已移除 -->
+> History rows are append-only, so this DELETE never contends with updates.
 
 ## Concurrency and Crash Recovery
 
@@ -439,16 +389,6 @@ There is **no centralized batch DELETE** that sweeps terminal attempts. Each att
 **Crash recovery.** All pending state lives in `delivery_attempts`, not in process memory. A process restart re-runs the scheduler, which re-claims every `pending` row whose `next_at <= now`. The only delivery work lost on crash is an in-flight HTTP call that had not yet returned — and that row is re-claimed on the next tick.
 
 **Double-claim prevention.** The claim query advances `next_at` past the request timeout, so a row being delivered is invisible to the next scheduler tick. If the worker dies mid-delivery, the reserved `next_at` elapses and the row becomes re-claimable — the retry resumes naturally.
-
-**SQLite-mode concurrency.** SQLite deployments (homelab mode, and the dev/test path) need a separate concurrency argument, because SQLite's concurrency model is nothing like Postgres/MySQL's: <!-- MySQL/SQLite 已移除 -->
-
-- WAL mode allows _many concurrent readers plus exactly one writer_ (verified: SQLite docs `doc/wal.html`, "There can only be a single writer"; the exclusive WRITER lock is acquired in `src/wal.c`). A second writer that cannot acquire the WRITER lock gets `SQLITE_BUSY` (not silent serialization) — unless a busy handler / `PRAGMA busy_timeout` is set, in which case it polls until the timeout then still returns `SQLITE_BUSY`. <!-- MySQL/SQLite 已移除 -->
-- **But markpost's production SQLite pool pins `SetMaxOpenConns(1)`** (`db.go:86`). That routes every read _and_ write through a single `*sql` connection, so Go's `database/sql` pool hands the connection to one goroutine at a time and the rest block on the free-conn channel. In-process DB access is therefore **fully serialized**, regardless of WAL's reader/writer concurrency. This is stronger than WAL alone: even reads serialize. (The in-memory test DB at `db.go:145-148` sets WAL + FK but does _not_ pin `MaxOpenConns(1)`, so the test path is not the serialized configuration — tests rely on the pond pool's bounded workers plus the claim reservation, not on connection-level serialization.) <!-- MySQL/SQLite 已移除 -->
-- **Implication for double-claim: there is none in-process on SQLite.** Two scheduler ticks or two workers cannot run a claim concurrently because they share the one connection; the second blocks until the first's transaction returns. This is exactly why the SQLite claim query (above) can omit `FOR UPDATE SKIP LOCKED`: there is no concurrent claimer to exclude. <!-- MySQL/SQLite 已移除 -->
-- **What the pond pool still buys on SQLite.** The 32 workers do not parallelize DB writes (those serialize at the connection), but they _do_ parallelize the **outbound Feishu HTTP calls** — which is the actual I/O bottleneck the pool exists to address. A worker blocked on a 300 ms Feishu response holds no DB lock (it has already committed its claim UPDATE and returned the connection to the pool), so 32 workers can have 32 Feishu calls in flight while DB writes trickle through the single connection one at a time. The pool's value is preserved; only the DB-write fan-out is serial. <!-- MySQL/SQLite 已移除 -->
-- WAL's reader/writer non-blocking property is effectively nullified by the single-connection pool, but this is acceptable: delivery write volume is tiny relative to the read path (which SQLite handles fine under WAL with `MaxOpenConns(1)` because reads still don't block the writer at the SQLite level, even if they queue at the connection level). <!-- MySQL/SQLite 已移除 -->
-
-The design consequence: the claim/expire/archive SQL is written to be **dialect-correct everywhere**, but the _correctness argument_ for SQLite rests on `MaxOpenConns(1)` serialization, while for Postgres/MySQL it rests on `FOR UPDATE SKIP LOCKED` + the partial/composite index. <!-- MySQL/SQLite 已移除 -->
 
 ## Configuration
 
@@ -477,7 +417,7 @@ Each decision is recorded with the rationale and the alternatives that were cons
 
 ### 1. Persistent best-effort over fire-and-forget
 
-The previous design was an in-process buffered channel drained by a single goroutine: fire-and-forget, no persistence, no retry. _Adopted:_ a persisted attempt table (Postgres / MySQL / SQLite) with bounded retry. _Rejected:_ keep fire-and-forget — it drops ~97% of deliveries at the 116 jobs/s ceiling (single-goroutine throughput ~3/s) and loses all pending work on restart. The product now requires "try hard within a bounded window," which fire-and-forget cannot meet. <!-- MySQL/SQLite 已移除 -->
+The previous design was an in-process buffered channel drained by a single goroutine: fire-and-forget, no persistence, no retry. _Adopted:_ a persisted attempt table (PostgreSQL) with bounded retry. _Rejected:_ keep fire-and-forget — it drops ~97% of deliveries at the 116 jobs/s ceiling (single-goroutine throughput ~3/s) and loses all pending work on restart. The product now requires "try hard within a bounded window," which fire-and-forget cannot meet.
 
 ### 2. Three-layer separation (DB / scheduler / pond)
 
@@ -497,7 +437,7 @@ Delivery is at-least-once: a crash between send-success and archive-commit can p
 
 ### 6. Strict normalization; history uses FK + ON DELETE SET NULL on _all_ FKs including `user_id`
 
-`delivery_history` carries no snapshot columns; titles and channel names are JOINed at read time. All three foreign keys (`user_id`, `post_id`, `channel_id`) are nullable with `ON DELETE SET NULL`. _Rejected:_ snapshot columns (`post_title`, `channel_name`) — violates the project's normalization rule, and the read-time JOIN on a 20-row paginated history page is sub-millisecond, so there is no performance justification. _Rejected:_ `user_id ... ON DELETE CASCADE` on history — deleting a user would cascade-delete their entire 7-day history (potentially millions of rows) inside the `DELETE FROM users` transaction, holding a large lock set on MySQL/InnoDB and producing a massive dead-tuple burst on Postgres; `SET NULL` preserves each history row as an anonymous record instead (Review #5). _Note:_ `delivery_attempts.user_id` (and `post_id`/`channel_id`) keep `ON DELETE CASCADE` — an attempt row lives ≤40 min, so the cascade from a user/post/channel delete touches at most the user's currently-in-flight attempts, a small bounded set. The two tables take different FK actions for the _same logical column_ deliberately: bounded lifetime (attempts) → CASCADE (cheap, clean); unbounded lifetime (history) → SET NULL (no lock storm, preserves audit). <!-- MySQL/SQLite 已移除 -->
+`delivery_history` carries no snapshot columns; titles and channel names are JOINed at read time. All three foreign keys (`user_id`, `post_id`, `channel_id`) are nullable with `ON DELETE SET NULL`. _Rejected:_ snapshot columns (`post_title`, `channel_name`) — violates the project's normalization rule, and the read-time JOIN on a 20-row paginated history page is sub-millisecond, so there is no performance justification. _Rejected:_ `user_id ... ON DELETE CASCADE` on history — deleting a user would cascade-delete their entire 7-day history (potentially millions of rows) inside the `DELETE FROM users` transaction, producing a massive dead-tuple burst on Postgres; `SET NULL` preserves each history row as an anonymous record instead. _Note:_ `delivery_attempts.user_id` (and `post_id`/`channel_id`) keep `ON DELETE CASCADE` — an attempt row lives ≤40 min, so the cascade from a user/post/channel delete touches at most the user's currently-in-flight attempts, a small bounded set. The two tables take different FK actions for the _same logical column_ deliberately: bounded lifetime (attempts) → CASCADE (cheap, clean); unbounded lifetime (history) → SET NULL (no lock storm, preserves audit).
 
 ### 7. No external message broker (Cloudflare Queues / Redis / RabbitMQ)
 
@@ -505,7 +445,7 @@ The delivery queue is the Postgres `delivery_attempts` table, scheduled by a Go 
 
 ### 8. Distributed cleanup of `delivery_attempts`; batched cleanup of `delivery_history` and of the expire sweep
 
-Terminal attempts are archived-and-deleted by their own delivery operation (in `archiveAndDelete`), not by a centralized sweep. _Rejected:_ a periodic batch DELETE over terminal attempts — produces a large dead-tuple burst and vacuum pressure; distributing the delete across in-flight operations keeps each delete small. The scheduler's **expire-wall sweep is batched per tick** (`MarkExpired` runs `UPDATE ... WHERE id IN (SELECT ... LIMIT 64) RETURNING *`, looped within the tick until no rows match), not one unbounded `UPDATE ... RETURNING *` — a large `pending` backlog (a Feishu outage accumulating tens of thousands of stalled rows) would otherwise lock the whole matched range in one statement (MySQL/InnoDB record locks on every scanned index record) or burst dead tuples under the 1 s tick (Postgres); batching bounds both (Review #7). `delivery_history` retention (7 days) uses a lightweight batched DELETE from a cron command, in the portable subquery-`LIMIT` form (bare `DELETE ... LIMIT` is a Postgres syntax error), because history rows are append-only and never contend with updates. <!-- MySQL/SQLite 已移除 -->
+Terminal attempts are archived-and-deleted by their own delivery operation (in `archiveAndDelete`), not by a centralized sweep. _Rejected:_ a periodic batch DELETE over terminal attempts — produces a large dead-tuple burst and vacuum pressure; distributing the delete across in-flight operations keeps each delete small. The scheduler's **expire-wall sweep is batched per tick** (`MarkExpired` runs `UPDATE ... WHERE id IN (SELECT ... LIMIT 64) RETURNING *`, looped within the tick until no rows match), not one unbounded `UPDATE ... RETURNING *` — a large `pending` backlog (a Feishu outage accumulating tens of thousands of stalled rows) would otherwise lock the whole matched range in one statement or burst dead tuples under the 1 s tick; batching bounds both. `delivery_history` retention (7 days) uses a lightweight batched DELETE from a cron command, in the subquery-`LIMIT` form (bare `DELETE ... LIMIT` is a PostgreSQL syntax error), because history rows are append-only and never contend with updates.
 
 ### 9. No `status='running'` intermediate state
 
@@ -551,7 +491,7 @@ The existing files referenced above (verified current state): `internal/domain/d
 
 3. **Add indexes + Postgres storage options in the versioned migration** (`internal/infra/migrations/NNNNNN_description.up.sql`): declare the indexes (partial on postgres) and the `ALTER TABLE ... SET (fillfactor=..., autovacuum=...)` reloptions directly in the SQL. Migrations are idempotent via `CREATE INDEX IF NOT EXISTS`.
 
-4. **Add `AttemptRepository`** (`internal/domain/delivery/repository.go` interface + `internal/infra/delivery_attempt_repo.go` impl): `Create(ctx, []*Attempt)`, `ClaimDue(ctx, now, limit) []*Attempt` (`FOR UPDATE SKIP LOCKED` on PostgreSQL; subquery-`LIMIT` form), `MarkExpired(ctx, wall, batchSize) []*Attempt` (batched, looped by the caller), `MarkFailed(ctx, id, attempts, err, nextAt)`, `ArchiveAndDelete(ctx, attempt, status, lastError)` (single-tx INSERT history + DELETE attempt). _Verification:_ unit + integration - create attempts, claim them (assert no double-claim across two concurrent claim calls on PostgreSQL), mark failed with backoff (assert `next_at` advances by `backoff[attempts-1]`), mark expired (assert rows past the wall transition, in batches), archive (assert history row written and attempt row gone in the same tx).
+4. **Add `AttemptRepository`** (`internal/domain/delivery/repository.go` interface + `internal/infra/delivery_attempt_repo.go` impl): `Create(ctx, []*Attempt)`, `ClaimDue(ctx, now, limit) []*Attempt` (`FOR UPDATE SKIP LOCKED`; subquery-`LIMIT` form), `MarkExpired(ctx, wall, batchSize) []*Attempt` (batched, looped by the caller), `MarkFailed(ctx, id, attempts, err, nextAt)`, `ArchiveAndDelete(ctx, attempt, status, lastError)` (single-tx INSERT history + DELETE attempt). _Verification:_ unit + integration - create attempts, claim them (assert no double-claim across two concurrent claim calls on PostgreSQL), mark failed with backoff (assert `next_at` advances by `backoff[attempts-1]`), mark expired (assert rows past the wall transition, in batches), archive (assert history row written and attempt row gone in the same tx).
 
 ### P0 — Scheduler + pool
 
@@ -567,7 +507,7 @@ The existing files referenced above (verified current state): `internal/domain/d
 
 ### P1 — History retention
 
-9. **Add history prune command** (`cmd/prune_delivery_history.go`) in the style of `cmd/prune_expired_posts.go`: batched `DELETE FROM delivery_history WHERE id IN (SELECT id ... WHERE created_at < now - retention ORDER BY created_at LIMIT N)` (the portable subquery-`LIMIT` form, not bare `DELETE ... LIMIT`), looped until none remain. Invoked by external cron. _Verification:_ integration — insert old history rows, run the command, assert they are gone; recent rows untouched; the statement parses on all three dialects (a Postgres run confirms bare-`LIMIT` was correctly avoided).
+9. **Add history prune command** (`cmd/prune_delivery_history.go`) in the style of `cmd/prune_expired_posts.go`: batched `DELETE FROM delivery_history WHERE id IN (SELECT id ... WHERE created_at < now - retention ORDER BY created_at LIMIT N)` (the subquery-`LIMIT` form, not bare `DELETE ... LIMIT`), looped until none remain. Invoked by external cron. _Verification:_ integration — insert old history rows, run the command, assert they are gone; recent rows untouched; the statement parses on PostgreSQL (bare `DELETE ... LIMIT` would not).
 
 ### P2 — Observability (optional, not blocking)
 
@@ -575,13 +515,13 @@ The existing files referenced above (verified current state): `internal/domain/d
 
 ### Testing strategy
 
-| Category    | Coverage                                                                                                                                                               | Approach                                                     |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Unit        | enqueue→pending, claim→no-double-claim, backoff advance, batched wall expiry, terminal archive+delete, `computeExpiryWall`, FK SET NULL on user/post/channel delete    | `go test`; in-memory SQLite for repo; fake Feishu client     | <!-- MySQL/SQLite 已移除 --> |
-| Integration | `FOR UPDATE SKIP LOCKED` concurrency (Postgres/MySQL), dialect-specific index shape, history JOIN query, `SKIP LOCKED` _absence_ + single-conn serialization on SQLite | `go test` against real Postgres + MySQL + SQLite (CI matrix) | <!-- MySQL/SQLite 已移除 --> |
-| Race        | concurrent enqueue + scheduler + workers                                                                                                                               | `go test -race`                                              |
-| Fuzz        | QID/title/key strings in enqueue path                                                                                                                                  | `go test -fuzz`                                              |
-| Manual      | end-to-end Feishu delivery, prune command, per-dialect `\d`/`SHOW INDEX`                                                                                               | operator-run                                                 |
+| Category    | Coverage                                                                                                                                                            | Approach                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Unit        | enqueue→pending, claim→no-double-claim, backoff advance, batched wall expiry, terminal archive+delete, `computeExpiryWall`, FK SET NULL on user/post/channel delete | `go test`; real-PostgreSQL testcontainer for repo; fake Feishu client |
+| Integration | `FOR UPDATE SKIP LOCKED` concurrency, partial-index shape, history JOIN query                                                                                       | `go test` against a real PostgreSQL testcontainer                     |
+| Race        | concurrent enqueue + scheduler + workers                                                                                                                            | `go test -race`                                                       |
+| Fuzz        | QID/title/key strings in enqueue path                                                                                                                               | `go test -fuzz`                                                       |
+| Manual      | end-to-end Feishu delivery, prune command, `\d` index inspection                                                                                                    | operator-run                                                          |
 
 ## What This Spec Explicitly Does Not Do
 
@@ -595,5 +535,5 @@ A consolidated list of rejections, each cross-referencing the Decision Record:
 - **No centralized batch cleanup of `delivery_attempts`** — Decision 8. Distributed across delivery operations; the expire sweep is batched per tick.
 - **No per-delivery goroutine (unbounded)** — Decision 3. Bounded pond pool.
 - **No configurable backoff sequence / expiry wall** — Decision 4. Hardcoded constants; one channel kind today, so no per-channel tuning consumer.
-- **No MySQL native `ENUM` column** — the `Status` column is `int8` (→ `tinyint`/`smallint`/`integer`), not MySQL `ENUM(...)`. A native ENUM would be equally compact for ≤255 members (`sql/field.h:285-287` in `mysql-8.0.46`: `get_enum_pack_length` returns 1 byte `< 256`, 2 otherwise), but it is rejected for two source-verified reasons: GORM has no first-class ENUM tag (a plain Go `string` field becomes `varchar`/`longtext`, not `ENUM`), and even a hand-written `type:enum(...)` column is operationally fragile — `Field_enum::is_equal` (`mysql-server/sql/field.cc:8487-8531`) returns `IS_EQUAL_YES` (a pure-DD, INSTANT change) **only** for a value appended at the end that does not cross the 255→256 byte boundary (the `pack_length` check at `:8529`); any insert-in-middle, reorder, rename, or removal maps to `IS_EQUAL_NO` (`:8504-8518`), forcing a full table rebuild. The int8 form is portable across all three dialects and a new status is just a new constant — no schema change, no rewrite risk. <!-- MySQL/SQLite 已移除 -->
-- **No bare `DELETE/UPDATE ... LIMIT N`** — the portable subquery-`LIMIT` form (`WHERE id IN (SELECT ... LIMIT N)`) is used everywhere batching appears, because bare `... LIMIT` on UPDATE/DELETE is a Postgres syntax error (and only conditionally compiled into SQLite, though the mattn driver enables it). <!-- MySQL/SQLite 已移除 -->
+- **No native ENUM column** — the `Status` column is `int8` (→ Postgres `smallint`), not a native enum type. A new status is just a new constant — no schema change, no rewrite risk; the `iota` order stays append-only (see Data Model).
+- **No bare `DELETE/UPDATE ... LIMIT N`** — the subquery-`LIMIT` form (`WHERE id IN (SELECT ... LIMIT N)`) is used everywhere batching appears, because bare `... LIMIT` on UPDATE/DELETE is a PostgreSQL syntax error.

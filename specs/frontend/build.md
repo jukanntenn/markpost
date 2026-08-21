@@ -41,7 +41,7 @@ markpost 的所有业务逻辑在后端 Go，前端不需要 API Routes / SSR �
 
 Next.js 16 起，**Turbopack 已稳定且默认启用**，`next dev` 和 `next build` 都默认用它。无需 `--turbopack` flag。
 
-> 依据（Next.js v16 源码文档 `version-16.mdx:92`）："Starting with Next.js 16, Turbopack is stable and used by default with `next dev` and `next build`. Previously you had to enable Turbopack using `--turbopack`. This is no longer necessary."
+> 依据（Next.js v16 源码文档 `version-16.mdx:92`）："Starting with Next.js 16, Turbopack is stable and used by default with `next dev` and `next build`."
 
 ### 2.2 配置规则
 
@@ -56,17 +56,15 @@ Turbopack 与 `output: "export"` 完全兼容。Turbopack 文档未将静态导�
 
 ---
 
-## 三、移除的服务端依赖
+## 三、服务端能力边界
 
-纯静态导出不能用任何服务端运行时能力。以下文件移除：
+纯静态导出不含任何服务端运行时，以下 Next.js 服务端能力一律不可用（构建期报错或产物缺失）：
 
-| 文件                      | 移除原因                                                                               | 源码依据                   |
-| ------------------------- | -------------------------------------------------------------------------------------- | -------------------------- |
-| `src/proxy.ts`            | middleware（`NextResponse.rewrite` 转发 `/api/*` 到后端），纯静态导出不支持 middleware | `export/index.ts` 构建报错 |
-| `src/app/health/route.ts` | API Route（Route Handler），纯静态导出不支持                                           | `export/index.ts:304-317`  |
-| `src/i18n/request.ts`     | `getRequestConfig` + `cookies()` 是服务端 API，纯静态导出不用                          | next-intl 服务端装配       |
-
-i18n 改为纯客户端装配（`NextIntlClientProvider` 直接传 locale + messages），详见 [i18n.md](./i18n.md)。
+| 能力                                                       | 不可用原因                   | 替代方案                                                                                     |
+| ---------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------- |
+| middleware / proxy（`NextResponse.rewrite` 转发 `/api/*`） | 静态导出不支持 middleware    | 开发环境 `next.config.ts` rewrites；生产环境 Caddy 反代                                      |
+| API Routes（Route Handler，如 health route）               | 静态导出不产出 route handler | 后端 `/api/v1/health` 端点                                                                   |
+| 服务端 i18n 装配（`getRequestConfig` + `cookies()`）       | 属服务端 API，静态导出不执行 | 纯客户端装配（`NextIntlClientProvider` 直接传 locale + messages），详见 [i18n.md](./i18n.md) |
 
 ---
 
@@ -145,8 +143,8 @@ Next.js 官方文档明确（`environment-variables.mdx:152`）：`NEXT_PUBLIC_`
 | 客户端路由（`next/link`、`router`） | ✅   | SPA 式导航                      |
 | 客户端数据获取（fetch）             | ✅   | 直连后端 API（相对路径 + 反代） |
 | Turbopack 打包                      | ✅   | 默认 bundler                    |
-| middleware / Proxy                  | ❌   | 已移除（纯静态不支持）          |
-| API Routes（Route Handler）         | ❌   | 已移除                          |
+| middleware / Proxy                  | ❌   | 不支持（纯静态导出）            |
+| API Routes（Route Handler）         | ❌   | 不支持                          |
 | Server Actions                      | ❌   | 不使用                          |
 | Server Components（数据获取）       | ❌   | 仅静态渲染，无运行时            |
 | ISR（增量静态再生成）               | ❌   | 全静态                          |

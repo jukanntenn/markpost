@@ -38,7 +38,7 @@ src/app/
 
 路由组 `(auth)` 和 `(dashboard)` 各有独立 layout，不共享。
 
-> **已移除**：`src/app/health/route.ts`（API Route，纯静态不支持）；`src/proxy.ts`（SSR 代理，纯静态不支持）。详见 [build.md](./build.md) §3。
+> 纯静态导出不含 API Route 与 SSR 代理（无 `route.ts` / `proxy.ts` 文件）；健康检查由后端 `/api/v1/health` 提供，`/api/*` 反代由 Caddy（开发环境为 `next.config.ts` rewrites）完成。详见 [build.md](./build.md) §3。
 
 ## Component Organization
 
@@ -107,7 +107,7 @@ API client 在 `src/lib/api/base.ts`，提供泛型 `request<T>()` 函数：
 6. refresh 成功 → 用新 token 重试原请求
 7. refresh 失败 → logout → 重定向登录
 
-> **直连后端**（不再有 SSR 代理）：前端发相对路径，部署时由 Nginx/Caddy 反代到 Go 后端。详见 [build.md](./build.md) §4。
+> **直连后端**（无 SSR 代理）：前端发相对路径，部署时由 Nginx/Caddy 反代到 Go 后端。详见 [build.md](./build.md) §4。
 
 自动刷新机制详见 [auth.md](../auth.md) §6.3。
 

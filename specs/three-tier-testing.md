@@ -4,7 +4,7 @@
 
 ### Backend
 
-- Real SQLite in-memory database for all tests <!-- MySQL/SQLite 已移除 -->
+- Real PostgreSQL testcontainer (testcontainers-go) for all tests
 - Interface-level mocks only for hard-to-control scenarios (e.g., injecting DB errors)
 - `net/http/httptest` for external HTTP services (email, cloud APIs)
 - Rewrite all existing mock-repo service tests to real DB, batched by domain
@@ -19,7 +19,7 @@
 
 ## Tier 2: Integration Tests
 
-- Go test binary orchestrates: real backend (SQLite) + `httptest.Server` (external services) + Playwright <!-- MySQL/SQLite 已移除 -->
+- Go test binary orchestrates: real backend (PostgreSQL) + `httptest.Server` (external services) + Playwright
 - Frontend dev server started as subprocess
 - Migrate existing E2E tests from mocked API routes to real backend
 - Run on PR, merge gate

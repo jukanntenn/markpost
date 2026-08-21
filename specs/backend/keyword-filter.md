@@ -168,7 +168,7 @@ All logic lives in `internal/service/delivery/filter/` (~250 lines, zero new dep
 | `evaluator.go` | `normalizeMatch` (NFC + ToLower) and `containsSubstr`                                                                      |
 | `filter.go`    | Public API: `Compile(expr) (*Matcher, error)`, `MustCompile(expr) *Matcher`, `(*Matcher).Match(title) bool`, `*ParseError` |
 
-The matcher is invoked from `internal/service/delivery/post_delivery.go`. The check is hoisted **above** the `switch channel.Kind`, so all channel kinds share the same filter (previously it was wired only into the Feishu branch).
+The matcher is invoked from `internal/service/delivery/post_delivery.go`. The check is hoisted **above** the `switch channel.Kind`, so all channel kinds share the same filter.
 
 ### Frontend
 

@@ -1,7 +1,6 @@
 # Configuration Specification
 
-This document defines the rules and conventions for the Markpost configuration
-system. It is intended as a reference for developers and operators.
+This document defines the rules and conventions for the Markpost configuration system. It is intended as a reference for developers and operators.
 
 ## 1. File Format and Path
 
@@ -20,8 +19,7 @@ The server searches for the configuration file in the following order:
 1. Path specified via `--config` / `-c` CLI flag (takes precedence).
 2. `./config.toml` — same directory as the server binary.
 
-If no file is found, the application starts using built-in defaults and
-environment variables only.
+If no file is found, the application starts using built-in defaults and environment variables only.
 
 ### 1.4 CLI Flag
 
@@ -30,20 +28,17 @@ environment variables only.
 ./server --config ./my-config.toml
 ```
 
-If the specified file does not exist, the server fails to start with a clear
-error message.
+If the specified file does not exist, the server fails to start with a clear error message.
 
 ## 2. Loading Mechanism
 
-Configuration is loaded once at startup using a singleton pattern (`sync.Once`).
-The loading order is:
+Configuration is loaded once at startup using a singleton pattern (`sync.Once`). The loading order is:
 
 1. **Built-in defaults** — hardcoded in `setDefaults()`.
 2. **TOML file** — overrides defaults for any keys present.
 3. **Environment variables** — override both defaults and TOML values.
 
-The application fails to start if any field fails validation after all three
-layers are merged.
+The application fails to start if any field fails validation after all three layers are merged.
 
 ## 3. Value Override Rules
 
@@ -53,8 +48,7 @@ Priority (highest to lowest):
 Environment variable  >  TOML file  >  Built-in default
 ```
 
-A value set via environment variable always wins, even if the same key is
-present in the TOML file.
+A value set via environment variable always wins, even if the same key is present in the TOML file.
 
 Example:
 
@@ -88,16 +82,13 @@ Double underscore `__` separates nested keys.
 
 ### 4.3 Key Transformation
 
-TOML keys use `snake_case`. Environment variables use `UPPER_SNAKE_CASE` with
-the prefix and nesting separators applied.
+TOML keys use `snake_case`. Environment variables use `UPPER_SNAKE_CASE` with the prefix and nesting separators applied.
 
-TOML key `post_key_length` becomes environment variable
-`MARKPOST_POST_KEY_LENGTH`.
+TOML key `post_key_length` becomes environment variable `MARKPOST_POST_KEY_LENGTH`.
 
 ### 4.4 Array Values
 
-For array fields (e.g. `trusted_proxies`, `allow_origins`), environment variable
-override is generally impractical. Configure these via TOML file.
+For array fields (e.g. `trusted_proxies`, `allow_origins`), environment variable override is generally impractical. Configure these via TOML file.
 
 ### 4.5 Duration Values
 
@@ -118,8 +109,7 @@ MARKPOST_DELIVERY__REQUEST_TIMEOUT="10s"
 
 ## 5. Example File Conventions
 
-The example configuration file (`config.example.toml`) serves as the primary
-user-facing documentation. It must follow these rules:
+The example configuration file (`config.example.toml`) serves as the primary user-facing documentation. It must follow these rules:
 
 ### 5.1 Required Fields
 
@@ -140,8 +130,7 @@ Optional fields are:
 
 ### 5.3 Section Headers
 
-Each configuration section begins with a separator comment and a brief
-description of the section's purpose.
+Each configuration section begins with a separator comment and a brief description of the section's purpose.
 
 ### 5.4 Inline Documentation
 
@@ -166,5 +155,4 @@ Field validation uses `go-playground/validator` tags on the config structs.
 | `omitempty` | Skip further validation if empty       |
 | `url`       | Must be a valid URL                    |
 
-Validation runs after all override layers are merged. A validation error causes
-the server to exit with a descriptive message.
+Validation runs after all override layers are merged. A validation error causes the server to exit with a descriptive message.

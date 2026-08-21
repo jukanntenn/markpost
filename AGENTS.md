@@ -48,7 +48,7 @@ All commands assume the working directory noted in each section. Prefer running 
 
 - **Frontend**: Next.js 16 (`output: "export"` static export), React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react, Prettier
 - **Backend**: Go 1.26, Gin, GORM, JWT, Swagger (swag), Viper, OpenTelemetry
-- **Database**: PostgreSQL 17 (the only supported driver; sqlite/mysql were removed)
+- **Database**: PostgreSQL 17 (the only supported database)
 - **Testing**: Vitest (frontend unit), testcontainers-go + postgres (backend), Playwright chromium (e2e)
 - **Tooling**: golangci-lint v2 (lint+format), prek (pre-commit), air (Go hot reload)
 
@@ -76,6 +76,8 @@ frontend/
 e2e/                 Playwright workspace (separate package.json, chromium only)
 devops/              dev.py, docker-compose.yml, *.Dockerfile, ansible/
 docker/              production Dockerfile (s6 multi-process), build.py
+docs/                operation guides + the documentation rules (AGENTS.md)
+mrfc/                decision records: {proposed,implemented,rejected}/ (README.md)
 .github/workflows/   CI (lint/test/build/e2e with path filters)
 ```
 
@@ -100,7 +102,17 @@ Schema changes go through `golang-migrate` with versioned SQL files in `backend/
 - **Conventional Commits** (match existing history): `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `style:`. Optional scope: `fix(test): ...`.
 - Examples from this repo: `fix(test): relax singleflight burst assertion`, `chore(devops): fix ansible warnings`.
 - Commits are signed off by the author; do not commit on behalf of others.
-- `prek` runs on pre-commit (format + lint + AGENTS sync) and pre-push (tests); a `commit-msg` hook checks the Conventional Commits format.
+- `prek` runs on pre-commit (format + lint + AGENTS sync + doc gates) and pre-push (tests); a `commit-msg` hook checks the Conventional Commits format.
+
+## Documentation
+
+- Documentation follows [docs/AGENTS.md](docs/AGENTS.md): tier map, current-state prose, one physical line per paragraph, machine-checkable links.
+- `python3 scripts/doc_sync.py` runs all documentation gates (prek runs it on staged Markdown in `doc-check`; CI runs it in full).
+- New spec file ⇒ a row in `specs/index.md` in the same change. Placement decisions: use the `doc-standards` skill.
+
+## Decision Records
+
+- Every non-trivial change adds or updates an MRFC in the same PR ([mrfc/README.md](mrfc/README.md)) — grep `mrfc/` for the topic first; only mechanical/local edits are exempt. The `writing-mrfcs` skill owns the workflow.
 
 ## Testing
 

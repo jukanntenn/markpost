@@ -1,28 +1,36 @@
 # Development Guide
 
+How to set up and run markpost locally. The documentation rules live in [AGENTS.md](AGENTS.md); deployment is covered by [deployment.md](deployment.md).
+
 ## Prerequisites
 
-| Tool                    | Version     | Description                           | Install                                                                 |
-| ----------------------- | ----------- | ------------------------------------- | ----------------------------------------------------------------------- |
-| Go                      | 1.26+       | Backend language                      | [go.dev/dl](https://go.dev/dl/)                                         |
-| Node.js                 | 24+         | Frontend runtime                      | [nodejs.org](https://nodejs.org/)                                       |
-| pnpm                    | 11+         | Frontend package manager              | [pnpm.io/installation](https://pnpm.io/installation)                    |
-| Docker & Docker Compose | Compose v2+ | Dev environment services (PostgreSQL) | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/)       |
-| Python 3                | 3.12+       | Dev environment orchestration script  | [python.org](https://www.python.org/downloads/)                         |
-| golangci-lint           | latest      | Go linter                             | [golangci-lint.run/install](https://golangci-lint.run/welcome/install/) |
-| air                     | latest      | Go hot-reload during development      | [github.com/cosmtrek/air](https://github.com/cosmtrek/air#installation) |
-| swag                    | latest      | Swagger doc generator for Go          | [github.com/swaggo/swag](https://github.com/swaggo/swag#installation)   |
+| Tool                    | Version     | Description                          | Install                                                                 |
+| ----------------------- | ----------- | ------------------------------------ | ----------------------------------------------------------------------- |
+| Go                      | 1.26+       | Backend language                     | [go.dev/dl](https://go.dev/dl/)                                         |
+| Node.js                 | 24+         | Frontend runtime                     | [nodejs.org](https://nodejs.org/)                                       |
+| pnpm                    | 11+         | Frontend package manager             | [pnpm.io/installation](https://pnpm.io/installation)                    |
+| Docker & Docker Compose | Compose v2+ | Dev environment services             | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/)       |
+| Python 3                | 3.12+       | Dev environment orchestration script | [python.org](https://www.python.org/downloads/)                         |
+| golangci-lint           | latest      | Go linter                            | [golangci-lint.run/install](https://golangci-lint.run/welcome/install/) |
+| air                     | latest      | Go hot-reload during development     | [github.com/cosmtrek/air](https://github.com/cosmtrek/air#installation) |
+
+Swagger generation uses `swag` pinned in `backend/go.mod` via `go tool` — no standalone install. PostgreSQL runs as a container; no local database install is needed.
 
 ## Quick Start
 
 ### Option 1 — `dev.py` (recommended)
 
-Starts PostgreSQL and the backend in Docker, plus the frontend dev server locally:
+Starts PostgreSQL, the backend, and the frontend, all in Docker Compose:
 
 ```bash
 python3 devops/dev.py start   # start all services
 python3 devops/dev.py stop    # stop all services
+python3 devops/dev.py logs [backend|frontend|postgres]
 ```
+
+- Frontend: <http://localhost:3034>
+- Backend: <http://localhost:7330>
+- Database: `docker exec markpost-postgres psql -U markpost` — the dev compose intentionally publishes no Postgres port; use `docker exec`.
 
 ### Option 2 — VS Code / Cursor / Trae / compatible IDEs
 
@@ -32,8 +40,7 @@ The project ships `.vscode/tasks.json` with three tasks:
 - **Start Backend** — launches `air` in `backend/` with dev JWT keys
 - **Start Frontend** — launches `pnpm dev` in `frontend/`
 
-Open the Command Palette (`Ctrl+Shift+P`) → **Tasks: Run Task** → pick a task.
-To bind a shortcut (e.g. `Alt+R` → "Start All"), open keyboard shortcuts JSON (`Ctrl+Shift+P` → **Preferences: Open Keyboard Shortcuts (JSON)**) and add:
+Open the Command Palette (`Ctrl+Shift+P`) → **Tasks: Run Task** → pick a task. To bind a shortcut (e.g. `Alt+R` → "Start All"), open keyboard shortcuts JSON (`Ctrl+Shift+P` → **Preferences: Open Keyboard Shortcuts (JSON)**) and add:
 
 ```json
 {
@@ -47,16 +54,17 @@ Note: make sure `air` and `pnpm` are in your PATH.
 
 ### Option 3 — Manual
 
+Running services on the host requires your own PostgreSQL 17 reachable at the configured DSN (the dev compose does not publish 5432).
+
 **Backend** (air hot-reload):
 
 ```bash
 cd backend
-cp config.example.toml config.toml
+cp config.example.toml config.toml   # edit [db] dsn to point at your Postgres
 air
 ```
 
-The dev server starts at [http://localhost:7330](http://localhost:7330), defaulting to SQLite (`data/markpost.db`).
-Set `debug = true` in `config.toml` to enable debug mode.
+The dev server starts at <http://localhost:7330>. Set `debug = true` in `config.toml` to enable debug mode.
 
 **Frontend:**
 
@@ -65,7 +73,7 @@ cd frontend
 pnpm dev
 ```
 
-The dev server starts at [http://localhost:3034](http://localhost:3034).
+The dev server starts at <http://localhost:3034>.
 
 ## Install Dependencies
 
@@ -87,29 +95,26 @@ pnpm install
 
 ## Lint
 
-**Backend:**
+prek owns every format/lint invocation (see `prek.toml` at the root, `backend/prek.toml`, `frontend/prek.toml`). After `prek install`, `git commit` runs the checks; on demand:
 
 ```bash
-cd backend
-golangci-lint run
+prek run --all-files          # everything CI's Lint job runs
+prek run --group fmt --files <path>   # just the fixers, for specific files
 ```
 
-**Frontend:**
-
-```bash
-cd frontend
-pnpm lint
-```
+The per-tree commands remain: `golangci-lint run` in `backend/`, `pnpm lint` in `frontend/`.
 
 ## Run Tests
 
-**Backend:**
+**Backend** (requires a running Docker daemon — tests start a real PostgreSQL container via testcontainers-go):
 
 ```bash
 cd backend
 go test ./...                        # all tests
 go test ./internal/service/post/...  # specific package
 ```
+
+Set `TESTCONTAINERS_SKIP=1` to skip container-backed tests when Docker is unavailable.
 
 **Frontend:**
 
@@ -119,16 +124,16 @@ pnpm test          # Vitest in watch mode
 pnpm test:run      # single run (CI)
 ```
 
-**E2E (Dagger + Playwright):**
+**E2E** (separate workspace; Playwright, chromium only):
 
 ```bash
 cd e2e
-dagger call all --source=..                                                      # all specs
-dagger call test --test-file=login.spec.ts --source=..                           # single spec
-dagger call test --test-file=login.spec.ts --test-file=posts.spec.ts --source=.. # multiple specs
+pnpm test                                                        # local run
+dagger call -m e2e all --source ..                               # from repo root: full CI-fidelity run
+dagger call -m e2e test --test-file=login.spec.ts --source ..    # single spec
 ```
 
-Each spec runs in an isolated sandbox (PostgreSQL + backend + frontend + Playwright containers).
+Each dagger spec runs in an isolated sandbox (PostgreSQL + backend + frontend + Playwright containers).
 
 ## Build
 
@@ -139,7 +144,7 @@ cd backend
 go build ./cmd/server
 ```
 
-**Frontend:**
+**Frontend** (static export to `out/`):
 
 ```bash
 cd frontend
@@ -150,10 +155,10 @@ pnpm build
 
 ```bash
 cd backend
-swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+go generate ./...
 ```
 
-Swagger UI is available at `/swagger/index.html` when the backend runs with `debug = true`.
+This is the single source of regeneration (`go tool swag` pinned in go.mod, plus the embedded-CSS build). Swagger UI is available at `/swagger/index.html` when the backend runs with `debug = true`.
 
 ## API Testing with yaak
 
@@ -172,7 +177,7 @@ The backend ships a Swagger 2.0 spec at `backend/docs/swagger.json`, which [yaak
 When the backend API changes:
 
 1. Update Swagger annotations in Go code
-2. Run `swag init` to regenerate `backend/docs/swagger.json`
+2. Run `go generate ./...` to regenerate `backend/docs/swagger.json`
 3. Re-import into yaak (your environment configs are preserved)
 
 ## Configuration
@@ -192,8 +197,4 @@ The backend reads config from three sources (highest priority wins):
 
 Environment variables are the recommended way to override defaults.
 
-The frontend proxy (`src/proxy.ts`) forwards `/api/*` requests to the backend using `BACKEND_URL`, which defaults to `http://127.0.0.1:7330`. To override, create `frontend/.env.local` (gitignored):
-
-```
-BACKEND_URL=http://your-backend:7330
-```
+The frontend has one environment variable: `BACKEND_URL` (default `http://127.0.0.1:7330`). It feeds the dev-server rewrites in `next.config.ts`, which proxy `/api/v1` and `/swagger` to the backend during development. Production has no frontend server — Caddy reverse-proxies those paths — so `BACKEND_URL` affects only local development. Override it in `frontend/.env.local` (gitignored).

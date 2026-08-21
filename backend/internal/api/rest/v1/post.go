@@ -62,7 +62,7 @@ func CreatePost(postSvc PostService) gin.HandlerFunc {
 const postPageCSP = "default-src 'none'; style-src 'self'; img-src https:; base-uri 'none'; form-action 'none'"
 
 // setNotFoundCacheHeader makes a post lookup's 404 edge-cacheable for 60s
-// (performance-optimization.md decision 29): QID-enumeration probes are then
+// (specs/backend/caching.md): QID-enumeration probes are then
 // absorbed by the CDN instead of re-originating on every request. Only the
 // not-found case is marked — other errors stay uncacheable.
 func setNotFoundCacheHeader(c *gin.Context, err error) {

@@ -1,0 +1,33 @@
+# MRFC: Persistent best-effort delivery queue
+
+Status: implemented
+
+## Problem
+
+Post-creation notifications to Feishu channels were dispatched by an in-process buffered channel drained by a single goroutine: fire-and-forget, no persistence, no retry. A restart lost every pending delivery, a Feishu hiccup dropped the notification permanently, and the single-goroutine dispatcher tops out at ~3 jobs/s at a 300 ms response — two orders of magnitude below the ~116 jobs/s worst-case ceiling of the SaaS reference instance's load model. The product contract ("try hard within a bounded window, then tell the user") had no mechanism behind it.
+
+## Decision
+
+Delivery is a three-layer persistent best-effort subsystem (`internal/service/delivery/`): a `delivery_attempts` PostgreSQL table holds all pending state (hot rows, archived to `delivery_history` and deleted in the same transaction on any terminal state — details in [`specs/backend/delivery-queue.md`](../../specs/backend/delivery-queue.md)), a single-goroutine 1 s ticker sweeps the expiry wall and claims due rows (`FOR UPDATE SKIP LOCKED`, reserving `next_at` past the request timeout plus a 500 ms buffer so in-flight rows are invisible to the next tick — [`specs/backend/delivery-scheduler.md`](../../specs/backend/delivery-scheduler.md)), and a bounded pond v2 pool of 32 workers issues the Feishu HTTP calls. Retry intervals are a hardcoded sequence `[1m, 5m, 10m, 20m]` in `backoff.go` with the 40-minute expiry wall computed as `round_up_to_10min(sum(sequence))`; neither is operator-configurable. Send failures are classified (`delivery_error.go`) into categories with an explicit retryable flag — a permanently rejected card or a revoked webhook archives as `failed` immediately instead of burning the 36-minute budget, and the category is recorded on the history row (`000007_delivery_error_category`) for the admin filter and the `delivery_failed` metric label ([`specs/backend/delivery-retry.md`](../../specs/backend/delivery-retry.md)). Delivery is at-least-once: a crash between send-success and archive-commit can duplicate a card, accepted because card content is idempotent ([`specs/backend/delivery-recovery.md`](../../specs/backend/delivery-recovery.md)). The state machine is `pending → delivered | failed | expired` with no intermediate `running` state — the `next_at` reservation provides in-flight deduplication with one state fewer.
+
+## Alternatives considered
+
+**Keep the fire-and-forget channel dispatcher.** Simplest possible design, but it drops ~97% of deliveries at the 116 jobs/s ceiling and loses all pending work on restart; the product contract requires persistence and bounded retry.
+
+**An external message broker (Cloudflare Queues, Redis, RabbitMQ).** Cloudflare Queues was evaluated in depth and rejected on architecture: its push consumer runs on Workers only, so the Feishu card logic would be reimplemented in a second codebase with its own deploy pipeline and a cloud dependency, for no gain over a Postgres table + ticker. Redis/RabbitMQ add an always-on dependency and operational burden for a single-instance deployment whose write rate is ~0.12 posts/s mean — the same reasoning that rejects a second VPS in [the performance-pass MRFC](./2026-07-09-read-path-performance-pass.md).
+
+**ants v2 for the concurrency layer.** ants is a goroutine-recycling pool with no built-in task queue, so adopting it would require keeping the hand-rolled buffered channel as a separate queuing layer, and it carries a `golang.org/x/sync` dependency. pond v2 is zero-dependency, has a first-class queue (`WithQueueSize`), non-blocking submit, graceful drain, default panic recovery, and a metrics surface — a one-to-one map onto the delivery requirements.
+
+**Configurable backoff sequence / expiry wall.** There is exactly one channel kind (Feishu) and no per-channel retry requirement, so the knobs would be a tuning surface with no consumer. Pure exponential backoff (30s→…→16m) makes late intervals too sparse to catch medium-duration outages and its last interval collides with a 30-minute wall; capped exponential is workable but less deterministic than a fixed sequence whose total makes the auto-wall exact. Changing the constants is a code change + release, which already restarts the process and clears in-flight state.
+
+**Exactly-once delivery via transactional outbox / dedup table.** Would add a write to the hot path of every delivery to prevent an occasional duplicate card whose content is idempotent anyway. At-least-once is the honest contract for a best-effort notification.
+
+**A `running` intermediate state.** Doubling the UPDATE count (pending→running→terminal) and forcing special index treatment for running rows, when the `next_at` reservation achieves the same correctness with the existing partial index on `status = 0`.
+
+**Snapshot columns and `ON DELETE CASCADE` on `delivery_history`.** `post_title`/`channel_name` snapshots violate the normalization rule for zero gain (a 20-row paginated JOIN is sub-millisecond), and cascading user deletion into a 7-day history would lock-storm millions of rows inside one `DELETE FROM users` — `SET NULL` preserves each row as an anonymous record. `delivery_attempts` keeps CASCADE because a ≤40-minute row lifetime bounds the cascade to the user's in-flight attempts; the two tables deliberately take different FK actions for the same logical column.
+
+**A centralized batch cleanup of terminal attempts, and unbatched sweeps.** A periodic batch DELETE over terminal attempts produces a large dead-tuple burst; distributing the delete across in-flight delivery operations keeps each one small. The expire-wall sweep and history prune are batched per statement in the subquery-`LIMIT` form because bare `DELETE/UPDATE ... LIMIT` is a PostgreSQL syntax error, and unbounded sweeps would lock the whole matched range under the 1 s tick.
+
+## Consequences
+
+Deliveries survive restarts, reach a terminal state within 40 minutes, and stay honest with the user via the history row and its error category. The queue is observable (`delivery_pending`/`delivery_dispatched`/`delivery_failed` metrics, `CountByStatus`, the admin history filters and failing-channel query). The costs accepted: at-least-once duplicates (benign for idempotent cards), a hardcoded retry sequence that needs a release to change, `Status` ordering frozen append-only forever, and a scheduler that depends on PostgreSQL-specific claim SQL — the only supported database ([the PostgreSQL-only MRFC](./2026-07-26-postgresql-only.md) removed the multi-dialect branches this subsystem originally carried).

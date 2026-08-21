@@ -20,7 +20,7 @@ host=localhost port=5432 user=markpost password=CHANGE_ME dbname=markpost sslmod
 postgres://markpost:CHANGE_ME@localhost:5432/markpost?sslmode=verify-full
 ```
 
-**Unix domain socket** (same-host deployment; no TCP overhead — see the tuning notes in [performance-optimization.md](./performance-optimization.md)):
+**Unix domain socket** (same-host deployment; no TCP overhead — see the tuning notes in [postgres-tuning.md](./postgres-tuning.md)):
 
 ```
 host=/var/run/postgresql user=markpost password=CHANGE_ME dbname=markpost sslmode=disable

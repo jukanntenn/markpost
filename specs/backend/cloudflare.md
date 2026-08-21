@@ -2,11 +2,11 @@
 
 This document specifies how markpost integrates with Cloudflare's free-tier CDN for the SaaS reference instance, and records the three deployment modes the project supports. It is the authoritative reference for the DNS, TLS, caching, and cache-purge decisions. All Cloudflare behavior claims cite the Cloudflare documentation at `~/Workspace/contexts/cloudflare/cloudflare-docs/` (repo version 2026-07-08); citations use paths relative to that root.
 
-The caching and invalidation _design_ (three cache layers, ETag scheme, cache-tag purge, render cache) lives in [`performance-optimization.md`](./performance-optimization.md). This document covers the _operational_ layer: how to wire a VPS origin to Cloudflare, which SSL mode to choose, how the purge API is called, and what the free-tier limits are.
+The caching and invalidation _design_ (three cache layers, ETag scheme, cache-tag purge, render cache) lives in [`caching.md`](./caching.md). This document covers the _operational_ layer: how to wire a VPS origin to Cloudflare, which SSL mode to choose, how the purge API is called, and what the free-tier limits are.
 
 ## Deployment Modes
 
-markpost ships as self-hostable software _and_ runs as an official SaaS instance. Every design choice must work in both contexts: nothing SaaS-specific is baked into application code or configuration defaults (`performance-optimization.md:471-476`). The three modes differ only in deployment topology, Caddyfile, and DNS — the Go binary is identical.
+markpost ships as self-hostable software _and_ runs as an official SaaS instance. Every design choice must work in both contexts: nothing SaaS-specific is baked into application code or configuration defaults ([`caching.md`](./caching.md#self-hosting-compatibility)). The three modes differ only in deployment topology, Caddyfile, and DNS — the Go binary is identical.
 
 | Mode                          | Origin    | DNS                                          | TLS termination                                                                | CDN | Caddyfile                                                                | Typical use                        |
 | ----------------------------- | --------- | -------------------------------------------- | ------------------------------------------------------------------------------ | --- | ------------------------------------------------------------------------ | ---------------------------------- |
@@ -14,7 +14,7 @@ markpost ships as self-hostable software _and_ runs as an official SaaS instance
 | **Self-hosted (with domain)** | VPS / NAS | domain → origin IP (DNS-only / gray cloud)   | Caddy automatic Let's Encrypt + HTTPS redirect                                 | no  | per-domain site block (not yet templated in repo)                        | personal / small-team self-hosting |
 | **Homelab**                   | NAS       | none (LAN IP:port)                           | none (plaintext HTTP)                                                          | no  | `docker/Caddyfile` (`:7157`, TLS-less)                                   | home network, trusted LAN          |
 
-**The CDN is a precondition for the SaaS reference instance only.** A 3 Mbps origin cannot serve hundreds of reads/second directly (`performance-optimization.md:44-53`). Self-hosted instances on fatter pipes run without one and accept higher origin load. Nothing breaks without a CDN: all cache logic lives at the origin, and the CDN only adds an edge tier.
+**The CDN is a precondition for the SaaS reference instance only.** A 3 Mbps origin cannot serve hundreds of reads/second directly ([`caching.md`](./caching.md#hardware-envelope-saas-reference-instance)). Self-hosted instances on fatter pipes run without one and accept higher origin load. Nothing breaks without a CDN: all cache logic lives at the origin, and the CDN only adds an edge tier.
 
 ## SaaS Mode: Cloudflare Onboarding
 
@@ -116,9 +116,9 @@ Behind the orange cloud, the origin sees only Cloudflare IPs as direct peers. Cl
 - **`True-Client-IP`** — identical to `CF-Connecting-IP` in value, but Enterprise-only.
 - **`X-Forwarded-For`** — the proxy chain (comma-separated).
 
-markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally with no CIDR check). In the SaaS mode all traffic — reads and writes alike — flows through Cloudflare, and the origin firewall is locked to Cloudflare's CIDRs (see _Origin protection_ above), so there is no legitimate direct-connection path. The XFF + Caddy `trusted_proxies` design is retained as **defense in depth**: it self-validates the peer at the TCP layer (where forgery is impossible), so that even if the IP allowlist is bypassed via IP spoofing, a forged `X-Forwarded-For` is overwritten by Caddy rather than appended to. Only Cloudflare (a trusted peer in a Cloudflare CIDR) may prepend to the XFF chain. This keeps gin's `ClientIP()` — and the L1/L2/L3 rate limiters keyed on it — correct even under that residual threat. The detailed mechanism is documented at `performance-optimization.md:240-254`.
+markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally with no CIDR check). In the SaaS mode all traffic — reads and writes alike — flows through Cloudflare, and the origin firewall is locked to Cloudflare's CIDRs (see _Origin protection_ above), so there is no legitimate direct-connection path. The XFF + Caddy `trusted_proxies` design is retained as **defense in depth**: it self-validates the peer at the TCP layer (where forgery is impossible), so that even if the IP allowlist is bypassed via IP spoofing, a forged `X-Forwarded-For` is overwritten by Caddy rather than appended to. Only Cloudflare (a trusted peer in a Cloudflare CIDR) may prepend to the XFF chain. This keeps gin's `ClientIP()` — and the L1/L2/L3 rate limiters keyed on it — correct even under that residual threat. The detailed mechanism is documented in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
 
-Operational requirement: the `cloudflare_cidrs` Ansible var (currently the placeholder `private_ranges`) must be set to the real Cloudflare CIDRs from `https://www.cloudflare.com/ips/`. Cloudflare occasionally updates these ranges; operators must resync. This maintenance responsibility is documented here and at `performance-optimization.md:252`.
+Operational requirement: the `cloudflare_cidrs` Ansible var (currently the placeholder `private_ranges`) must be set to the real Cloudflare CIDRs from `https://www.cloudflare.com/ips/`. Cloudflare occasionally updates these ranges; operators must resync. This maintenance responsibility is documented here and in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
 
 ## Caching
 
@@ -205,7 +205,7 @@ The Free-tier purge limits, applied **per account** via a token-bucket model (`c
 
 The token bucket is not a hard "5/minute ceiling": it holds up to 25 tokens, refilled at 5/minute, so short bursts (up to 25 at once) are absorbed; only when the bucket is empty does a request get rate-limited. markpost purges one tag per deletion — far below any limit. At a hypothetical 3000 deletions/day the average is ~2/minute, comfortably under the 5/minute rate.
 
-Purge is triggered only by **active user/admin deletion** (`DeletePostByQID`). The housekeeping `PruneExpired` deliberately does **not** purge: it reaps already-expired ephemeral content, where stale-but-harmless delivery is acceptable and the prune volume could be large (`performance-optimization.md:151, 221`).
+Purge is triggered only by **active user/admin deletion** (`DeletePostByQID`). The housekeeping `PruneExpired` deliberately does **not** purge: it reaps already-expired ephemeral content, where stale-but-harmless delivery is acceptable and the prune volume could be large ([`caching.md`](./caching.md#deletion-and-invalidation)).
 
 ## Free-tier limits at a glance
 
@@ -216,7 +216,7 @@ Aggregated from `plans/index.json` (cache segment) and the cache docs:
 | CDN storage / bandwidth / requests  | free, no metered quota            | only explicit statement: "users can continue to use Cloudflare's CDN (without Cache Reserve) for free" (`cache/advanced-configuration/cache-reserve.mdx`) |
 | Max cacheable file size             | 512 MB                            | `cache/concepts/default-cache-behavior.mdx`                                                                                                               |
 | Max upload (request body)           | **100 MB**                        | `plans/index.json` network.max_upload_size — bounds create-post body (avg 32 KB, ~3000× headroom)                                                         |
-| Min Edge Cache TTL                  | 2 hours                           | why `stale-while-revalidate` is not used (see `performance-optimization.md:197`)                                                                          |
+| Min Edge Cache TTL                  | 2 hours                           | why `stale-while-revalidate` is not used (see [`caching.md`](./caching.md#http-cache-headers-in-detail))                                                  |
 | Min Browser Cache TTL               | 2 minutes                         |                                                                                                                                                           |
 | Cache Rules                         | 10                                |                                                                                                                                                           |
 | Purge (all 5 types incl. cache-tag) | yes                               | Free supports URL/Hostname/Tag/Prefix/Everything (`plans/index.json:454`)                                                                                 |

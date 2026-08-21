@@ -326,7 +326,7 @@ func TestRenderPost_NotFound(t *testing.T) {
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
-	// Decision 29 (performance-optimization.md): the 404 is edge-cacheable
+	// (specs/backend/caching.md): the 404 is edge-cacheable
 	// for 60s so QID-enumeration probes are absorbed at the CDN.
 	if cc := w.Header().Get("Cache-Control"); cc != "public, max-age=60, s-maxage=60" {
 		t.Errorf("expected short edge-cacheable Cache-Control on 404, got %q", cc)

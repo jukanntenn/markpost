@@ -5,7 +5,7 @@ target: **where is the sweet spot** (sustained rate with SLOs and headroom
 intact) and **where is the hard limit** (which resource wall each mechanism
 hits). Full methodology and results: `docs` report referenced from the repo
 root load-test README; the design discussion lives in
-`specs/backend/performance-optimization.md`.
+`specs/backend/caching.md`.
 
 ## Layout
 

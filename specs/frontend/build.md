@@ -158,7 +158,7 @@ Next.js 官方文档明确（`environment-variables.mdx:152`）：`NEXT_PUBLIC_`
 
 - 静态文件由反代 / CDN 直接服务
 - `/api/*` 由反代转发到 Go 后端
-- **无 Node.js 运行时**，节约内存（符合 [performance-optimization.md](../backend/performance-optimization.md) 的 2C/2G 硬件约束）
+- **无 Node.js 运行时**，节约内存（符合 [caching.md](../backend/caching.md) 的 2C/2G 硬件约束）
 
 详见 [cloudflare.md](../backend/cloudflare.md) 的三种部署模式（SaaS / self-hosted / homelab）和 [docker/build-specification.md](../docker/build-specification.md)。
 

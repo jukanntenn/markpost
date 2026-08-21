@@ -212,4 +212,4 @@ markpost 有两种认证方式，对应不同路径类：
 - [backend/api-schema.md](./backend/api-schema.md) — 端点参考（每路由的请求/响应字段）
 - [backend/error-handling.md](./backend/error-handling.md) — 错误响应格式、ErrCode struct
 - [auth.md](./auth.md) — 认证流程（JWT、OAuth、refresh、密码）
-- [backend/performance-optimization.md](./backend/performance-optimization.md) — 限流设计细节
+- [backend/rate-limiting.md](./backend/rate-limiting.md) — 限流设计细节

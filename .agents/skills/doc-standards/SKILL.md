@@ -34,7 +34,7 @@ Rationale and change stories go to `mrfc/`, never into `specs/` prose. Procedure
 
 ## Splitting oversized pages
 
-A spec page over ~40KB (`specs/backend/delivery.md`, `specs/backend/performance-optimization.md` are the current offenders) is a split candidate: break it into focused pages under the same directory, update `specs/index.md`, fix inbound links, and keep each new page current-state. Split for findability, not word count alone.
+A spec page over ~40KB is a split candidate: break it into focused pages under the same directory, update `specs/index.md`, fix inbound links, and keep each new page current-state. Split for findability, not word count alone.
 
 ## Validate
 

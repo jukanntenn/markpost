@@ -5,7 +5,7 @@ End-to-end HTTP load tests for markpost. For the 2c/2g/3Mbps capacity study
 [`capacity/`](capacity/README.md); the scenarios below are the per-mechanism
 regression suite. The design targets the real
 production architecture from
-[`specs/backend/performance-optimization.md`](../../specs/backend/performance-optimization.md):
+[`specs/backend/caching.md`](../../specs/backend/caching.md):
 the origin sits behind a **Cloudflare CDN**, so it almost never sees a plain
 repeat GET (the edge absorbs those). What reaches the origin is (a) **cold
 misses** — the first render of a QID for an edge node — and (b) **CDN
@@ -72,7 +72,7 @@ run. Results land in `scripts/loadtest/out/results/` (`*.json` raw,
 | `soak`                | Mixed read (15/s) + write (2/s) held 60m to surface memory/connection/goroutine leaks.                               | 15 + 2 req/s | ramp 2m + hold 60m + ramp 2m |
 
 Rates are calibrated to the origin's ~25 resp/s physical envelope
-(`performance-optimization.md`: 375 KB/s ÷ ~15 KB/page ≈ 25 origin responses/s).
+(`caching.md`: 375 KB/s ÷ ~15 KB/page ≈ 25 origin responses/s).
 They model the **回源** (origin-facing) load after the CDN absorbs the bulk of
 user traffic, not the total user concurrency (which the edge handles).
 

@@ -1,0 +1,43 @@
+name: Docs
+
+# Documentation gates (scripts/doc_sync.py: current-state prose, relative
+# links + fragments, one line per paragraph, specs/index completeness,
+# MRFC format) plus the AI-config sync check. Lint ignores *.md by path
+# filter, so doc-only changes get their own fast job — stdlib Python only,
+# no toolchain install.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - "mrfc/**"
+      - ".claude/skills/**"
+      - "scripts/doc_sync.py"
+      - "scripts/doclib.py"
+      - "scripts/verify_*.py"
+      - "scripts/check_agents.py"
+      - "prek.toml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+      - "mrfc/**"
+      - ".claude/skills/**"
+      - "scripts/doc_sync.py"
+      - "scripts/doclib.py"
+      - "scripts/verify_*.py"
+      - "scripts/check_agents.py"
+      - "prek.toml"
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Documentation gates
+        run: python3 scripts/doc_sync.py
+
+      - name: AI tool configs in sync
+        run: python3 scripts/check_agents.py

@@ -154,6 +154,25 @@ files = "^devops/ansible/templates/.*\\.j2$"
 pass_filenames = false
 stages = ["pre-commit"]
 
+# Documentation gates: current-state prose, relative links + fragments,
+# one physical line per paragraph, specs/index completeness, MRFC format
+# (scripts/doc_sync.py). Incremental only — staged Markdown is passed
+# through so each gate restricts itself; prek stashes unstaged changes
+# during hook runs, so any wider scan would see a stale tree. Full-corpus
+# runs are CI's job (docs.yml). The .agents/skills mirror is skipped
+# (byte copy of .claude/skills, owned by agents-sync); ledgers, loadtest
+# reports, and generated Swagger are outside gate scope (see
+# docs/AGENTS.md).
+[[repos.hooks]]
+id = "doc-check"
+name = "documentation gates (doc_sync)"
+language = "system"
+entry = "python3 scripts/doc_sync.py"
+files = "\\.md$"
+exclude = "^\\.agents/|^\\.zcode/|^scripts/loadtest/|^backend/docs/|^(CHANGELOG|KNOWN_ISSUES)\\.md$"
+pass_filenames = true
+stages = ["pre-commit"]
+
 # ---- commit-msg: Conventional Commits ----
 [[repos.hooks]]
 id = "conventional-commits"

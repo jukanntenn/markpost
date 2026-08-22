@@ -13,7 +13,7 @@ from doclib import ROOT, collect, mask_source, restrict
 
 PATTERNS = [
     "README.md",
-    "README_zh.md",
+    "README.zh.md",
     "AGENTS.md",
     "backend/AGENTS.md",
     "frontend/AGENTS.md",

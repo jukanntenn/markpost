@@ -17,7 +17,7 @@ from doclib import ROOT, collect, document_anchors, extract_links, is_external, 
 # Generated Swagger docs stay unchecked.
 PATTERNS = [
     "README.md",
-    "README_zh.md",
+    "README.zh.md",
     "AGENTS.md",
     "backend/AGENTS.md",
     "frontend/AGENTS.md",

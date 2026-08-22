@@ -51,7 +51,7 @@ Standing design rules, each 1–3 lines; this section is their live home as rule
 
 ## Documentation
 
-[`docs/AGENTS.md`](docs/AGENTS.md) owns the standard: one fact, one home across tiers, current-state prose, machine-checkable links, and word budgets for the agent-instruction files. New spec file ⇒ a row in [`specs/index.md`](specs/index.md) in the same change; placement decisions use the `doc-standards` skill.
+[`docs/AGENTS.md`](docs/AGENTS.md) owns the standard: one fact, one home across tiers, current-state prose, machine-checkable links, and word budgets for the agent-instruction files. Documentation is bilingual — every doc pairs `foo.md` with `foo.zh.md`, equal authority, updating together ([rule 7](docs/AGENTS.md)). New spec file ⇒ a row in [`specs/index.md`](specs/index.md) in the same change; placement decisions use the `doc-standards` skill.
 
 ## MRFCs
 

@@ -6,4 +6,4 @@ MRFCs are markpost's RFCs: durable proposals and decision records preserving the
 
 **Never edit an MRFC into a different decision** — supersede it with a new MRFC and cross-link both ([lifecycle rules](README.md#layout-and-naming)).
 
-Edit `README.md` and `README.zh.md` together.
+Edit `README.md` and `README.zh.md` together; every record pairs with a `.zh.md` twin the same way ([docs standard rule 7](../../docs/AGENTS.md)).

@@ -1,0 +1,22 @@
+{
+  "excluded": {
+    "AGENTS.md": "root agent instructions",
+    "CLAUDE.md": "byte-identical mirror of the root AGENTS.md",
+    "backend/AGENTS.md": "subtree agent instructions",
+    "backend/CLAUDE.md": "byte-identical mirror of backend/AGENTS.md",
+    "frontend/AGENTS.md": "subtree agent instructions",
+    "frontend/CLAUDE.md": "byte-identical mirror of frontend/AGENTS.md",
+    "e2e/AGENTS.md": "subtree agent instructions",
+    "e2e/CLAUDE.md": "byte-identical mirror of e2e/AGENTS.md",
+    "docs/AGENTS.md": "the documentation standard itself, agent-loaded",
+    ".agents/mrfcs/AGENTS.md": "mrfcs tree standing orders",
+    ".claude/skills/": "agent workflows (source of the skills mirror)",
+    ".agents/skills/": "byte copy of .claude/skills/",
+    "CHANGELOG.md": "ledger — narrates history by design",
+    "KNOWN_ISSUES.md": "ledger — narrates history by design",
+    "scripts/loadtest/": "point-in-time reports",
+    "backend/docs/": "generated Swagger output",
+    ".zcode/": "session-harness internal files"
+  },
+  "cjk_allowed": {}
+}

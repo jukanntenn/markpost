@@ -18,5 +18,5 @@ Message: `<type>(<scope>): <desc>` — lowercase, imperative, no trailing period
 
 - Generated files (`backend/docs/` Swagger, embedded CSS in `backend/internal/web/`, `go.sum`, `pnpm-lock.yaml`) bundle into the producing commit, or as a standalone `chore` — regenerate via `go generate ./...`, never hand-edit.
 - Pair every GORM struct tag change with its migration file; migration + code stay in one commit.
-- Same change across all locale files (`en`/`ja`/`zh-Hans`/`zh-Hant`), and mixed-language docs (`README.md` + `README_zh.md`), one commit.
+- Same change across all locale files (`en`/`ja`/`zh-Hans`/`zh-Hant`), and language pairs (`foo.md` + `foo.zh.md`), one commit.
 - Never silently include unrecognized files. Never amend, never push, never placeholder messages (wip, update files).

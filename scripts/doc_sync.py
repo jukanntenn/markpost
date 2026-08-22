@@ -18,6 +18,7 @@ GATES = [
     "verify_md_current.py",
     "verify_specs_index.py",
     "verify_mrfc_format.py",
+    "verify_doc_pairs.py",
     "verify_doc_budgets.py",
 ]
 

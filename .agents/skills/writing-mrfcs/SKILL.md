@@ -15,7 +15,7 @@ MRFCs are markpost's RFCs: durable proposals and decision records — the why, t
 
 ## Writing it
 
-- Filename: `yyyy-mm-dd-topic-title.md` — the date the topic was first proposed, a lowercase slug.
+- Filename: `yyyy-mm-dd-topic-title.md` — the date the topic was first proposed, a lowercase slug. Every record is a bilingual pair: write the `foo.md` and `foo.zh.md` sides together, machine tokens and section headings in English (terminology: [docs/AGENTS.md](../../../docs/AGENTS.md) rule 7).
 - `## Problem` must stand without the solution: what forced the decision?
 - `implemented/` states `## Decision` in present tense describing shipped reality — paths and names must match the code today. Proposal-era headings (`## Proposal`, `## Plan`, `## Migration plan`, `## Acceptance criteria`) are rejected here.
 - `## Alternatives considered` is mandatory: one bold-led paragraph per genuine alternative and why it lost. Record the alternatives as they were actually argued; never invent them.
@@ -24,6 +24,6 @@ MRFCs are markpost's RFCs: durable proposals and decision records — the why, t
 
 ## Lifecycle moves
 
-Moving a file between folders re-satisfies the target folder's skeleton in the same change: `proposed/ → implemented/` rewrites Proposal into a present-tense Decision and folds Acceptance criteria/Risks into Consequences; `proposed/ → rejected/` adds the one-line reason to `Status:` and freezes the file. The format gate fails the move otherwise.
+Moving a file between folders re-satisfies the target folder's skeleton in the same change, moving both languages of the pair: `proposed/ → implemented/` rewrites Proposal into a present-tense Decision and folds Acceptance criteria/Risks into Consequences; `proposed/ → rejected/` adds the one-line reason to `Status:` and freezes the file. The format gate fails the move otherwise.
 
 Validate with `python3 scripts/doc_sync.py .agents/mrfcs/<path>` before committing; the prek `doc-check` hook runs it on commit.

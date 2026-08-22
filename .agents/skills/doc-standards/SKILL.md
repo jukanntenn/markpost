@@ -13,7 +13,7 @@ Before writing, check [specs/index.md](../../../specs/index.md) for an existing 
 
 | Tier | Job |
 | --- | --- |
-| `README.md` / `README_zh.md` | User-facing product docs |
+| `README.md` / `README.zh.md` | User-facing product docs |
 | Root `AGENTS.md` | Standing orders for every session, 1–3 lines per rule, linking its home |
 | Subtree `AGENTS.md` (`backend/`, `frontend/`, `e2e/`, `docs/`) | Orders specific to that subtree; never repeat the root |
 | `PRINCIPLES.md` | Frozen archive of behavioral constraints; the live home is root `AGENTS.md` § Conventions |
@@ -30,9 +30,10 @@ Rationale and change stories go to `.agents/mrfcs/`, never into `specs/` prose. 
 - **Current state only** in `specs/` and `docs/`: no "previously/now/no longer/已移除/不再". Name the live mechanism; link the owning MRFC for the why. `verify_md_current.py` gates this.
 - **One physical line per paragraph**; let the editor soft-wrap. Code blocks, tables, and list structure keep their formatting. `verify_md_wrap.py` gates this.
 - **Relative Markdown links with real targets and `#fragment` anchors**; never bare filenames or free prose references. `verify_md_links.py` gates this.
-- **New spec file ⇒ new row in `specs/index.md` in the same change** (and index rows point at existing files). `verify_specs_index.py` gates this.
+- **New spec file ⇒ new row in `specs/index.md` and its zh twin in the same change** (and index rows point at existing files). `verify_specs_index.py` gates this.
+- **Bilingual pairs**: every documentation file pairs `foo.md` with `foo.zh.md`, equal authority — write or edit either side first, bring the twin along in the same change with a minimal patch, never a wholesale re-translation. `verify_doc_pairs.py` gates completeness, switchers, link locale, structure, and purity; exemptions live in `scripts/doc_languages.manifest.json`.
 - **Word ceilings** bound the agent-instruction files (`scripts/doc_budgets.manifest.json`, gated by `verify_doc_budgets.py`); on red, relocate, condense, raise the ceiling last with a justified manifest diff.
-- Deleting or renaming a doc is atomic: move the content, fix every inbound link, update the index — one change.
+- Deleting or renaming a doc is atomic: move the content (both languages), fix every inbound link, update the index — one change.
 
 ## Splitting oversized pages
 

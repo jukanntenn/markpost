@@ -160,7 +160,7 @@ stages = ["pre-commit"]
 
 # Documentation gates: current-state prose, relative links + fragments,
 # one physical line per paragraph, specs/index completeness, MRFC format,
-# word budgets (scripts/doc_sync.py). Incremental only — staged Markdown
+# bilingual pairs, word budgets (scripts/doc_sync.py). Incremental only — staged Markdown
 # is passed through so each gate restricts itself; prek stashes unstaged
 # changes during hook runs, so any wider scan would see a stale tree.
 # Full-corpus runs are CI's job (docs.yml). Only the .agents/skills

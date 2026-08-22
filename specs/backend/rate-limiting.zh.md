@@ -34,15 +34,15 @@
 
 中间件调用 `c.ClientIP()`（应用下述可信代理逻辑）并把结果传给 `tollbooth.LimitByKeys`。tollbooth 自己的 `SetIPLookup` 不做可信代理校验，把 IP 解析委托给它会让可信代理配置所关闭的伪造风险重新出现。
 
-SaaS 拓扑中的全部流量走一条路径：`Client → Cloudflare → Caddy → Go`。Cloudflare 在回源时重写 `X-Forwarded-For` 并设置 `CF-Connecting-IP`；源站防火墙锁定到 Cloudflare 的 CIDR（见 [`cloudflare.zh.md`](./cloudflare.zh.md) _源站防护_）。客户端 IP 恢复使用标准 XFF 链与两层信任配置，作为对 IP 白名单经伪造被绕过这一残余威胁的**纵深防御**保留：
+SaaS 拓扑中的全部流量走一条路径：`Client → Cloudflare → Caddy → Go`。Cloudflare 在回源时设置 `CF-Connecting-IP`（真实客户端 IP）与它自己的 `X-Forwarded-For` 链；源站防火墙锁定到 Cloudflare 的 CIDR（见 [`cloudflare.zh.md`](./cloudflare.zh.md) _源站防护_）。客户端 IP 恢复是一个单值接力，落在两个互相对齐的信任锚上 —— Cloudflare 边缘对该头的断言，与宿主防火墙的 CIDR 白名单：
 
-**Caddy 层。** `reverse_proxy` 以 Cloudflare 公布的 CIDR 段作为 `trusted_proxies` 运行。对来自 Cloudflare 对端的请求（`trusted=true`），Caddy 把自己这一跳追加到 Cloudflare 已用真实客户端 IP 填好的 `X-Forwarded-For` 上。对来自任何其他对端的请求（只可能发生在白名单被绕过时），Caddy **覆写**客户端提供的任何 `X-Forwarded-For`，只留真实的对端 IP —— 伪造的 `X-Forwarded-For: 1.2.3.4` 被丢弃，而非被追加。只有可信对端才能向链前插值。
+**Caddy 层。** `Caddyfile.production.j2` 的每个 `reverse_proxy` 都带 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`。Caddy 在其默认转发头处理**之后**应用用户头操作，因此交付给 Go 的 `X-Forwarded-For` 恒为单个 `CF-Connecting-IP` 值：Cloudflare 在边缘覆写访客提供的任何同名头，而防火墙只放行 Cloudflare 对端到达端口，于是在每条合法请求上该值都由 Cloudflare 断言。同一批块上的 `trusted_proxies` 设为 Cloudflare 公布的 CIDR 段，使默认转发头处理保持一致；XFF 取值本身由 `header_up` 改写固定。
 
-**gin 层。** `SetTrustedProxies(["127.0.0.1", "::1"])` 对应 Caddy 经回环代理到 Go 的事实。`ClientIP()` 先检查直接 TCP 对端，然后从右到左遍历 `X-Forwarded-For`，跳过可信代理 IP 并返回第一个不可信 IP —— MDN 的"可信代理列表"算法。由于合法流量以 `<real-client>, <cloudflare-hop>` 加回环跳到达，gin 得出真实客户端 IP。
+**gin 层。** `SetTrustedProxies(["127.0.0.1", "::1"])` 对应 Caddy 经回环代理到 Go 的事实。`ClientIP()` 信任回环对端并返回单值的 `X-Forwarded-For`。朴素追加的链在这里会坏掉：gin 从右到左遍历链并返回首个不受信 IP，而仅有回环信任时最右侧条目 —— Cloudflare 的边缘跳 —— 会被当作每个访客的返回值，把按 IP 作键的限流器坍缩到少数边缘地址上。
 
-刻意不使用 `gin.PlatformCloudflare`（无条件信任 `CF-Connecting-IP`）：它不做 CIDR 检查，因此一个把 Cloudflare 源 IP 伪造过防火墙的攻击者也能伪造该头并逃避限流。XFF 设计在 TCP 层验证对端，而 TCP 层的伪造是不可能的。
+刻意不把 `gin.PlatformCloudflare`（无条件信任 `CF-Connecting-IP`）用在应用层：它不做 CIDR 检查，因此能直连端口的攻击者可以伪造该头并逃避限流。已部署的设计把该头的真实性锚定在 Cloudflare 边缘覆写加宿主防火墙上 —— 防火墙被绕过是残余威胁，而防火墙正是执行点。
 
-**Cloudflare CIDR 维护。** CIDR 列表由运维者在 Caddyfile 模板中提供（`trusted_proxies` 只接受 CIDR 字面量；它无法抓取 URL）。Cloudflare 偶尔更新其公布的段（https://www.cloudflare.com/ips/）；运维者必须重新同步 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
+**Cloudflare CIDR 维护。** CIDR 列表由运维者提供：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` 供给 `trusted_proxies`（只接受 CIDR 字面量 —— Caddy 无法抓取 URL），同一列表镜像在 VPS 防火墙规则中。Cloudflare 偶尔更新其公布的段（https://www.cloudflare.com/ips/）；运维者必须同步两处 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
 
 <a id="configuration"></a>
 

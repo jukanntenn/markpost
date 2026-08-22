@@ -2,6 +2,8 @@
 
 English | [中文](deployment.zh.md)
 
+> **Frozen.** This multi-environment guide is kept as a reference snapshot; production Cloudflare deployment lives in [`deployment-cloudflare.md`](deployment-cloudflare.md) and is maintained there.
+
 This document covers the full lifecycle of markpost across all environments: local acceptance, dev, staging, and production. Every environment runs the same artifact: a single image shipping a Caddy + Go composite supervised by s6-overlay, with no separate Node server.
 
 ## Architecture

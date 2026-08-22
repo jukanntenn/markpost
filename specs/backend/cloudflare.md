@@ -10,22 +10,25 @@ The caching and invalidation _design_ (three cache layers, ETag scheme, cache-ta
 
 markpost ships as self-hostable software _and_ runs as an official SaaS instance. Every design choice must work in both contexts: nothing SaaS-specific is baked into application code or configuration defaults ([`caching.md`](./caching.md#self-hosting-compatibility)). The three modes differ only in deployment topology, Caddyfile, and DNS — the Go binary is identical.
 
-| Mode                          | Origin    | DNS                                          | TLS termination                                                                | CDN | Caddyfile                                                                | Typical use                        |
-| ----------------------------- | --------- | -------------------------------------------- | ------------------------------------------------------------------------------ | --- | ------------------------------------------------------------------------ | ---------------------------------- |
-| **SaaS**                      | VPS       | domain → Cloudflare (Proxied / orange cloud) | Cloudflare edge (visitor side) + Origin CA on Caddy (origin side, Full strict) | yes | `Caddyfile.j2` (TLS via Origin CA, `trusted_proxies` = Cloudflare CIDRs) | official instance                  |
-| **Self-hosted (with domain)** | VPS / NAS | domain → origin IP (DNS-only / gray cloud)   | Caddy automatic Let's Encrypt + HTTPS redirect                                 | no  | per-domain site block (not yet templated in repo)                        | personal / small-team self-hosting |
-| **Homelab**                   | NAS       | none (LAN IP:port)                           | none (plaintext HTTP)                                                          | no  | `docker/Caddyfile` (`:7157`, TLS-less)                                   | home network, trusted LAN          |
+| Mode                          | Origin    | DNS                                          | TLS termination                                                                | CDN | Caddyfile                                                                           | Typical use                        |
+| ----------------------------- | --------- | -------------------------------------------- | ------------------------------------------------------------------------------ | --- | ----------------------------------------------------------------------------------- | ---------------------------------- |
+| **SaaS**                      | VPS       | domain → Cloudflare (Proxied / orange cloud) | Cloudflare edge (visitor side) + Origin CA on Caddy (origin side, Full strict) | yes | `Caddyfile.production.j2` (TLS via Origin CA, `trusted_proxies` = Cloudflare CIDRs) | official instance                  |
+| **Self-hosted (with domain)** | VPS / NAS | domain → origin IP (DNS-only / gray cloud)   | Caddy automatic Let's Encrypt + HTTPS redirect                                 | no  | per-domain site block (not yet templated in repo)                                   | personal / small-team self-hosting |
+| **Homelab**                   | NAS       | none (LAN IP:port)                           | none (plaintext HTTP)                                                          | no  | `docker/Caddyfile` (`:2053`, TLS-less)                                              | home network, trusted LAN          |
 
 **The CDN is a precondition for the SaaS reference instance only.** A 3 Mbps origin cannot serve hundreds of reads/second directly ([`caching.md`](./caching.md#hardware-envelope-saas-reference-instance)). Self-hosted instances on fatter pipes run without one and accept higher origin load. Nothing breaks without a CDN: all cache logic lives at the origin, and the CDN only adds an edge tier.
 
 ## SaaS Mode: Cloudflare Onboarding
 
-The target topology is:
+The topology is:
 
 ```
-Visitor ──HTTPS──> Cloudflare edge (orange cloud, Full strict) ──HTTPS──> VPS :443 ──> Caddy :7157 ──> Go :7330 / Next.js :3000
+Visitor ──HTTPS:443──> Cloudflare edge (orange cloud, Full strict) ──HTTPS──> VPS :2053 ──> Caddy :2053 ──> Go :7330 / static export
          [TLS-A: Cloudflare edge certificate]                  [TLS-B: Cloudflare Origin CA certificate]
+                                 [Origin Rule rewrites the destination port 443 → 2053]
 ```
+
+The edge listens on the visitor-facing port 443; an Origin Rule rewrites the destination port to the origin's published 2053 (host port 2053 → container port 2053). Caddy serves the Next.js static export from `/app/frontend` and reverse-proxies the API paths to the Go binary — there is no Node server.
 
 Caddy does **not** use a domain site block and does **not** run automatic Let's Encrypt in SaaS mode. TLS-B is handled by a manually installed Cloudflare Origin CA certificate. The two sections below explain why.
 
@@ -72,7 +75,7 @@ Flexible is explicitly discouraged for applications with login:
 
 markpost has user login, admin write paths, and password change — it is exactly such an application. The earlier "TLS-less Caddy" topology was equivalent to Flexible and is superseded by this decision.
 
-**Port.** Cloudflare origin pulls for HTTPS use standard ports; **443** is the canonical choice. The current `docker-compose.yml.j2` maps `8089:7157` — for SaaS mode with Full (strict) this should be adjusted to expose 443 (e.g. `443:7157`). Non-standard origin ports are also accepted by Cloudflare but 443 avoids any compatibility ambiguity.
+**Port.** Visitors reach the edge on the canonical HTTPS port 443. The origin publishes 2053 (`host_port: 2053` maps onto the container's `caddy_port: 2053`), and an **Origin Rule** rewrites the destination port for the zone hostname from 443 to 2053 — a rule pairs a matching expression (hostname equals the domain) with a destination-port override (dashboard: Rules → Overview → Create rule → Origin Rule). Origin Rules are available on every plan, Free included, at 10 rules on Free (`rules/origin-rules/index.mdx`, `rules/origin-rules/create-dashboard.mdx`, plans matrix `rules.origin_rules`).
 
 ### Origin CA certificate
 
@@ -85,13 +88,27 @@ An Origin CA certificate is Cloudflare's free, long-lived (15-year) origin certi
 3. Download both the **Origin Certificate** and the **Private Key** (the private key is shown only once).
 4. Store on the VPS, e.g. `/app/certs/origin.pem` and `/app/certs/origin.key`.
 
-The Caddyfile presents this certificate for TLS-B. Caddy still listens on a bare port (not a domain site block) — the `tls` directive points at the certificate files directly. Schematic (the devops template is not yet updated; this is the target shape):
+The Caddyfile presents this certificate for TLS-B. Caddy still listens on a bare port (not a domain site block) — the `tls` directive points at the certificate files directly. The deployed template is `devops/ansible/templates/Caddyfile.production.j2`; schematic:
 
 ```caddyfile
-:7157 {
+{
+    auto_https off
+}
+
+:2053 {
     tls /app/certs/origin.pem /app/certs/origin.key
     encode zstd gzip
-    # reverse_proxy blocks and trusted_proxies as in Caddyfile.j2
+    handle /api/v1/* {
+        reverse_proxy 127.0.0.1:7330 {
+            trusted_proxies {{ cloudflare_cidrs }}
+            header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
+        }
+    }
+    # /static/*, /swagger/*, /mpk-*, /p-* blocks are identical
+    handle {
+        root * /app/frontend
+        file_server
+    }
 }
 ```
 
@@ -108,7 +125,7 @@ Two layers, applied to the **VPS host firewall** (iptables, not Caddy):
 1. **Allowlist Cloudflare CIDRs, drop everything else** (recommended baseline). The authoritative CIDR list is `https://www.cloudflare.com/ips/` (the docs do not inline the ranges). This is "moderately secure" and "vulnerable to IP spoofing" (`partials/learning-paths/limit-external-connections-network.mdx`).
 2. **Authenticated Origin Pulls (AOP, optional hardening).** mTLS where Cloudflare presents a client certificate to the origin, so "any HTTPS requests outside of Cloudflare will not receive a response from your origin" (`ssl/origin-configuration/authenticated-origin-pull/explanation.mdx`). AOP requires Full or Full (strict) — which is why the SSL mode decision above is a prerequisite. AOP is a follow-on hardening step, not part of the initial onboarding.
 
-This host-firewall layer is distinct from Caddy's `trusted_proxies` (which governs X-Forwarded-For handling, not packet filtering) — both are needed.
+This host-firewall layer is distinct from Caddy's `trusted_proxies` (forwarded-header handling, not packet filtering) — the CIDR allowlist is the packet-layer enforcement that, together with Cloudflare's edge overwrite of `CF-Connecting-IP`, makes the client-IP relay below trustworthy.
 
 ### Client IP detection
 
@@ -118,9 +135,13 @@ Behind the orange cloud, the origin sees only Cloudflare IPs as direct peers. Cl
 - **`True-Client-IP`** — identical to `CF-Connecting-IP` in value, but Enterprise-only.
 - **`X-Forwarded-For`** — the proxy chain (comma-separated).
 
-markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally with no CIDR check). In the SaaS mode all traffic — reads and writes alike — flows through Cloudflare, and the origin firewall is locked to Cloudflare's CIDRs (see _Origin protection_ above), so there is no legitimate direct-connection path. The XFF + Caddy `trusted_proxies` design is retained as **defense in depth**: it self-validates the peer at the TCP layer (where forgery is impossible), so that even if the IP allowlist is bypassed via IP spoofing, a forged `X-Forwarded-For` is overwritten by Caddy rather than appended to. Only Cloudflare (a trusted peer in a Cloudflare CIDR) may prepend to the XFF chain. This keeps gin's `ClientIP()` — and the L1/L2/L3 rate limiters keyed on it — correct even under that residual threat. The detailed mechanism is documented in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
+markpost does **not** use `TrustedPlatform = gin.PlatformCloudflare` (which trusts `CF-Connecting-IP` unconditionally, with no CIDR check, at the application layer). Instead, every `reverse_proxy` block in `Caddyfile.production.j2` carries `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`. Caddy applies user header operations after its default forwarded-header handling, so the `X-Forwarded-For` that reaches Go is always the single `CF-Connecting-IP` value — the multi-hop chain (visitor-supplied XFF, Cloudflare's populated chain, Caddy's own hop) never reaches the application.
 
-Operational requirement: the `cloudflare_cidrs` Ansible var (currently the placeholder `private_ranges`) must be set to the real Cloudflare CIDRs from `https://www.cloudflare.com/ips/`. Cloudflare occasionally updates these ranges; operators must resync. This maintenance responsibility is documented here and in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
+The collapse is required for correctness, not only hygiene: gin trusts only the loopback peer (`SetTrustedProxies(["127.0.0.1", "::1"])`, matching Caddy's loopback proxy hop), and `ClientIP()` walks `X-Forwarded-For` right-to-left, returning the first IP it does not trust. If Caddy forwarded the appended chain `<real-client>, <cloudflare-hop>`, gin would return the Cloudflare edge IP as the client for every visitor, collapsing the IP-keyed L1/login limiters onto a handful of edge addresses.
+
+Trust anchors for that single value: Cloudflare overwrites any visitor-supplied `CF-Connecting-IP` at the edge, so on traffic that has passed through Cloudflare the header is Cloudflare-asserted; and the host firewall (see _Origin protection_ above) keeps every other peer off the port at the packet layer. Residual exposure: a peer that bypasses the firewall can forge `CF-Connecting-IP` and the rewrite propagates the forged value — the firewall is the enforcement point for header authenticity. `trusted_proxies {{ cloudflare_cidrs }}` stays on each block, keeping Caddy's default forwarded-header handling aligned with the same CIDR set; the XFF value itself is fixed by the `header_up` rewrite. The detailed mechanism is documented in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
+
+Operational requirement: the `cloudflare_cidrs` Ansible var in `devops/ansible/group_vars/production/vars.yml` carries the current Cloudflare CIDR list (also mirrored in the VPS firewall). Cloudflare occasionally updates these ranges; operators must resync both places. This maintenance responsibility is documented here and in [`rate-limiting.md`](./rate-limiting.md#ip-resolution-gin-not-tollbooth).
 
 ## Caching
 
@@ -141,6 +162,8 @@ Placing all traffic (including writes and authenticated requests) behind the ora
 - **`Set-Cookie` responses are not cached** under OCC (`cache/concepts/cache-control.mdx`). Login/OAuth/refresh responses set cookies → BYPASS.
 
 The only path that is intentionally edge-cached is the public read `GET /:qid`. Everything else flows to origin on every request.
+
+<a id="cf-cache-status-reference"></a>
 
 ### `CF-Cache-Status` reference
 
@@ -237,7 +260,7 @@ Aggregated from `plans/index.json` (cache segment) and the cache docs:
 
 The Caddyfile differs by mode because TLS handling differs:
 
-**Homelab** — `docker/Caddyfile` (current repo baseline), TLS-less `:7157`, no `trusted_proxies`. Plaintext HTTP over LAN; no reverse-proxy chain so `ClientIP()` works directly.
+**Homelab** — `docker/Caddyfile` (current repo baseline), TLS-less `:2053`, no `trusted_proxies`. Plaintext HTTP over LAN; no reverse-proxy chain so `ClientIP()` works directly.
 
 **Self-hosted (with domain)** — a per-domain site block enables Caddy's automatic HTTPS (Let's Encrypt) and the HTTP→HTTPS redirect. Not yet templated in the repo; target shape:
 
@@ -259,6 +282,6 @@ markpost.example.com {
 
 Because Caddy only serves `Host: markpost.example.com`, a direct `http://<IP>:<port>` request does not match and is not routed to the app — this is how "IP:port not accessible" is enforced. The compose `ports` should expose 80 and 443 for ACME. This mode does not use Cloudflare, so `[cloudflare]` config is absent and the purger is a no-op.
 
-**SaaS** — `devops/ansible/templates/production/Caddyfile.j2`, target shape: `:7157` with `tls /app/certs/origin.pem /app/certs/origin.key` and `trusted_proxies {{ cloudflare_cidrs }}` on each `reverse_proxy`. No domain site block (Origin CA, not Let's Encrypt). The devops template update to this shape is a tracked follow-up; this document records the target.
+**SaaS** — `devops/ansible/templates/Caddyfile.production.j2`: `:2053` with `auto_https off`, `tls /app/certs/origin.pem /app/certs/origin.key`, and each `reverse_proxy` carrying `trusted_proxies {{ cloudflare_cidrs }}` plus the `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}` rewrite (see _Client IP detection_). No domain site block (Origin CA, not Let's Encrypt). It serves the static export with immutable `Cache-Control` on `/_next/static/*`, a 5-minute `max-age` on exported HTML, and the branded 404 page.
 
 In all three modes the Go binary and config schema are identical — only the Caddyfile, DNS, and the optional `[cloudflare]` section differ.

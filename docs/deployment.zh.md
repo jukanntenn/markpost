@@ -2,6 +2,8 @@
 
 [English](deployment.md) | 中文
 
+> **已冻结。** 本多环境指南作为参考快照保留；生产环境的 Cloudflare 部署见 [`deployment-cloudflare.zh.md`](deployment-cloudflare.zh.md)，并在该处维护。
+
 本文档覆盖 markpost 在全部环境下的完整生命周期：本地验收、dev、staging 与 production。所有环境运行同一产物：单镜像内置 s6-overlay 监管的 Caddy + Go 组合，没有独立的 Node 服务器。
 
 <a id="architecture"></a>

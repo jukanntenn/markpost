@@ -97,7 +97,7 @@ Fail → report which check failed (lint/test/build) + the specific violations, 
 
 ### Step 4: README Consistency Check
 
-Compare `README.md` and `README_zh.md` for conflicting or contradictory information:
+Compare `README.md` and `README.zh.md` for conflicting or contradictory information:
 
 - Feature descriptions must agree (content may differ in detail, but must not contradict)
 - API examples must match

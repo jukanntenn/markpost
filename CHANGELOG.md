@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.0-rc.5] - 2026-08-22
+
+### Added
+
+- Published post pages carry a strict content security policy as a second line of defense against malicious content
+
+### Changed
+
+- Repeat visits to pages, and lookups of missing posts, are now absorbed by the CDN edge instead of re-hitting the server, keeping things fast under heavy traffic
+
+### Fixed
+
+- Opening the app in multiple tabs no longer triggers surprise logouts when the session renews in one of the tabs
+
 ## [0.2.0-rc.4] - 2026-08-16
 
 ### Added

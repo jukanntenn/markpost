@@ -36,7 +36,7 @@ The `Status:` value must agree with the folder and takes one of three forms: `pr
 
 `rejected/` keeps whatever proposal-time sections it had, frozen; the verdict lives on the `Status:` line.
 
-Every record is a bilingual pair: the English original with a `.zh.md` twin beside it — same skeleton, machine tokens and section headings in English — and the pair updates together ([bilingual-pairs MRFC](./proposed/2026-08-22-bilingual-documentation-pairs.md)).
+Every record is a bilingual pair: the English original with a `.zh.md` twin beside it — same skeleton, machine tokens and section headings in English — and the pair updates together ([bilingual-pairs MRFC](./implemented/2026-08-22-bilingual-documentation-pairs.md)).
 
 **`## Alternatives considered` is mandatory in every MRFC** — one bold-led paragraph per genuine alternative and why it lost. A decision recorded without what it beat invites re-litigation, which is the failure MRFCs exist to prevent. Alternatives are recorded as they were argued, never invented after the fact.
 

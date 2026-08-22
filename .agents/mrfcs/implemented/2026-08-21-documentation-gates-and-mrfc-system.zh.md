@@ -14,7 +14,7 @@ Markdown 语料已漂离现实，却没有机械手段抓它：specs 与指南�
 
 ## Alternatives considered
 
-**整包移植参考仓库的完整文档分类学。** deepseek-harness 把每一页配成双语（`.md` + `.zh.md` + i18n 清单），把笔记归类到 `.agents/notes` 下并带冻结档案与替代闸门，维护一个不变式系统、逐文件覆盖清单、词数预算、堆叠 PR 规则和一条跑在 mdast 上的 doc-typecheck 管线。它输在：markpost 的语料是单语且小一个数量级，没有根部 Node 工具链来跑 mdast 检查，而配对加清单维护会给每次编辑上税、在这个规模上什么也买不到 —— 部件只在触发信号出现时移植，绝不整包。触发信号已到来；配对层已在 [bilingual-pairs MRFC](../proposed/2026-08-22-bilingual-documentation-pairs.zh.md)中移植。
+**整包移植参考仓库的完整文档分类学。** deepseek-harness 把每一页配成双语（`.md` + `.zh.md` + i18n 清单），把笔记归类到 `.agents/notes` 下并带冻结档案与替代闸门，维护一个不变式系统、逐文件覆盖清单、词数预算、堆叠 PR 规则和一条跑在 mdast 上的 doc-typecheck 管线。它输在：markpost 的语料是单语且小一个数量级，没有根部 Node 工具链来跑 mdast 检查，而配对加清单维护会给每次编辑上税、在这个规模上什么也买不到 —— 部件只在触发信号出现时移植，绝不整包。触发信号已到来；配对层已在 [bilingual-pairs MRFC](../implemented/2026-08-22-bilingual-documentation-pairs.zh.md)中移植。
 
 **闸门调度器。** 参考仓库把所有闸门路由经过一个依赖图运行器，带聚合模式、`needs`/`after` 边、分区和 `allowFailure`。它输在：五个顺序的 stdlib 闸门在几十个 Markdown 文件上几秒钟跑完，而一个调度器会成为树里最复杂的脚本，服务的调度需求 markpost 一个也没有。
 

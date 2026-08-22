@@ -39,7 +39,7 @@ Status: <status>
 
 `rejected/` 保持其提案期的全部章节,冻结;结论写在 `Status:` 行。
 
-每条记录都是双语文档对:英文主文件旁携带 `.zh.md` 镜像 —— 骨架相同,机器 token 与节标题保持英文 —— 且一对文件一同更新([bilingual-pairs MRFC](./proposed/2026-08-22-bilingual-documentation-pairs.zh.md))。
+每条记录都是双语文档对:英文主文件旁携带 `.zh.md` 镜像 —— 骨架相同,机器 token 与节标题保持英文 —— 且一对文件一同更新([bilingual-pairs MRFC](./implemented/2026-08-22-bilingual-documentation-pairs.zh.md))。
 
 **`## Alternatives considered` 在每个 MRFC 中强制存在** —— 每个真实替代方案一个加粗引导的段落及其落败原因。没有记录手下败将的决策会招致重新争论,这正是 MRFC 要防止的失败。替代方案按当时论证的原样记录,绝不在事后虚构。
 

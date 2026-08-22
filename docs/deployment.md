@@ -1,5 +1,7 @@
 # Deployment & Operations Guide
 
+English | [中文](deployment.zh.md)
+
 This document covers the full lifecycle of markpost across all environments: local acceptance, dev, staging, and production. Every environment runs the same artifact: a single image shipping a Caddy + Go composite supervised by s6-overlay, with no separate Node server.
 
 ## Architecture

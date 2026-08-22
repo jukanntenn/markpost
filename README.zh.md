@@ -46,9 +46,9 @@ cp .env.example .env
 编辑 `.env` — 至少修改密码和 JWT 签名密钥：
 
 ```env
-MARKPOST_ADMIN__INITIAL_PASSWORD=<你的密码>
-MARKPOST_JWT__ACCESS_SIGNING_KEY=<随机字符串>
-MARKPOST_JWT__REFRESH_SIGNING_KEY=<随机字符串>
+MARKPOST_ADMIN__INITIAL_PASSWORD=<your-password>
+MARKPOST_JWT__ACCESS_SIGNING_KEY=<random-string>
+MARKPOST_JWT__REFRESH_SIGNING_KEY=<random-string>
 ```
 
 ### 3. 启动

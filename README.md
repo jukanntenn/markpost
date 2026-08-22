@@ -1,4 +1,4 @@
-English | [简体中文](README_zh.md)
+English | [简体中文](README.zh.md)
 
 <div align="center">
 

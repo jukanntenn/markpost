@@ -1,5 +1,7 @@
 # Development Guide
 
+English | [中文](development.zh.md)
+
 How to set up and run markpost locally. The documentation rules live in [AGENTS.md](AGENTS.md); deployment is covered by [deployment.md](deployment.md).
 
 ## Prerequisites

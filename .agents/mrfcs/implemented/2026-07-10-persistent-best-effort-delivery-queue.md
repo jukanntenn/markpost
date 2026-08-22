@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-07-10-persistent-best-effort-delivery-queue.zh.md)
+
 ## Problem
 
 Post-creation notifications to Feishu channels were dispatched by an in-process buffered channel drained by a single goroutine: fire-and-forget, no persistence, no retry. A restart lost every pending delivery, a Feishu hiccup dropped the notification permanently, and the single-goroutine dispatcher tops out at ~3 jobs/s at a 300 ms response — two orders of magnitude below the ~116 jobs/s worst-case ceiling of the SaaS reference instance's load model. The product contract ("try hard within a bounded window, then tell the user") had no mechanism behind it.

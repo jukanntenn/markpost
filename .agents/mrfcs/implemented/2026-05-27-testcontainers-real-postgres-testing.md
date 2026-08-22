@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-05-27-testcontainers-real-postgres-testing.zh.md)
+
 ## Problem
 
 Repository mocks and in-memory databases hide SQL drift: a query that passes against a mock can still be wrong against the real database — dialect-specific operators, JSON behavior, locking clauses, and migration state never execute. Mock-heavy suites give green tests that do not predict production behavior, and the gap only surfaces on deploy.

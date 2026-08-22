@@ -6,11 +6,11 @@ Status: proposed
 
 ## Problem
 
-语料的读者使用两种语言 —— 维护者以中文工作，第一对记录正是依此指示而生 —— 但没有任何机制约定一个页面该用哪种语言书写。`specs/` 逐文件单语，或英文或中文或句中混杂（`auth.md`、`api-design.md`、两篇 `i18n` spec、`e2e/HANDBOOK.md` 为中文原生；十余篇混合双语），`backend/docs/API_SPECIFICATION.md` 是躲在生成 Swagger 豁免之后的过时中文页，根 README 对的命名则早于 MRFC 树确立的约定（`README_zh.md` 对 `.zh.md`）。读者只能以母语读一半语料，另一半完全读不了，而哪一半取决于所在目录。没有任何页面与另一语言的对应页保持同步，因为根本不存在对应页：既有的双语机制 —— 可选的 `.zh.md` 镜像，仅被树的 README 与恰好一条记录使用 —— 使单语文件成为默认，于是 `PRINCIPLES.md`、操作指南和全部历史记录只有英文，而一半 specs 只有中文或混合。[2026-08-21 的裁决](../implemented/2026-08-21-documentation-gates-and-mrfc-system.md)将参考项目的双语机制推迟到触发信号出现为止；在整个语料上服务两个语言社区，正是那个信号。
+语料的读者使用两种语言 —— 维护者以中文工作，第一对记录正是依此指示而生 —— 但没有任何机制约定一个页面该用哪种语言书写。`specs/` 逐文件单语，或英文或中文或句中混杂（`auth.md`、`api-design.md`、两篇 `i18n` spec、`e2e/HANDBOOK.md` 为中文原生；十余篇混合双语），`backend/docs/API_SPECIFICATION.md` 是躲在生成 Swagger 豁免之后的过时中文页，根 README 对的命名则早于 MRFC 树确立的约定（`README_zh.md` 对 `.zh.md`）。读者只能以母语读一半语料，另一半完全读不了，而哪一半取决于所在目录。没有任何页面与另一语言的对应页保持同步，因为根本不存在对应页：既有的双语机制 —— 可选的 `.zh.md` 镜像，仅被树的 README 与恰好一条记录使用 —— 使单语文件成为默认，于是 `PRINCIPLES.md`、操作指南和全部历史记录只有英文，而一半 specs 只有中文或混合。[2026-08-21 的裁决](../implemented/2026-08-21-documentation-gates-and-mrfc-system.zh.md)将参考项目的双语机制推迟到触发信号出现为止；在整个语料上服务两个语言社区，正是那个信号。
 
 ## Proposal
 
-**同等权威的文件对，统一命名。** 除 agent instructions 外，每个文档文件成对交付：英文 `foo.md` 与中文 `foo.zh.md` 并置于同一目录，英文侧不带语言中缀 —— `README_zh.md` 更名为 `README.zh.md`，对齐 MRFC 树、首条记录镜像与格式闸门文件名正则早已共用的约定。两种语言同等权威：任一侧都可先行撰写或编辑，被编辑侧即该次变更之源，镜像在同一变更内以最小补丁跟进 —— 绝不整篇重译；当文件对出现实质分歧，改错的一侧，任何语言都不默认获胜。范围为整个文档语料 —— 根 README、`PRINCIPLES.md`、`docs/`、`specs/`（含索引）、`.agents/mrfcs/`（含每条历史记录）、`e2e/HANDBOOK.md` —— 豁免载于仅列排除项的清单 `scripts/doc_languages.manifest.json`：agent instructions（全部 `AGENTS.md`/`CLAUDE.md`/`SKILL.md` 及 skills 镜像）、账本 `CHANGELOG.md` 与 `KNOWN_ISSUES.md`（按设计叙述历史，逐条翻译是义务而读者价值为零）、`scripts/loadtest/` 时点报告、生成的 Swagger、`.zcode/`。`backend/docs/API_SPECIFICATION.md` 直接删除：它是 [`specs/backend/api-schema.md`](../../../specs/backend/api-schema.md) —— 端点参考的唯一家 —— 的过时中文重复页，且在基本事实上与之矛盾（基础路径 `/api` 对 `/api/v1`）。
+**同等权威的文件对，统一命名。** 除 agent instructions 外，每个文档文件成对交付：英文 `foo.md` 与中文 `foo.zh.md` 并置于同一目录，英文侧不带语言中缀 —— `README_zh.md` 更名为 `README.zh.md`，对齐 MRFC 树、首条记录镜像与格式闸门文件名正则早已共用的约定。两种语言同等权威：任一侧都可先行撰写或编辑，被编辑侧即该次变更之源，镜像在同一变更内以最小补丁跟进 —— 绝不整篇重译；当文件对出现实质分歧，改错的一侧，任何语言都不默认获胜。范围为整个文档语料 —— 根 README、`PRINCIPLES.md`、`docs/`、`specs/`（含索引）、`.agents/mrfcs/`（含每条历史记录）、`e2e/HANDBOOK.md` —— 豁免载于仅列排除项的清单 `scripts/doc_languages.manifest.json`：agent instructions（全部 `AGENTS.md`/`CLAUDE.md`/`SKILL.md` 及 skills 镜像）、账本 `CHANGELOG.md` 与 `KNOWN_ISSUES.md`（按设计叙述历史，逐条翻译是义务而读者价值为零）、`scripts/loadtest/` 时点报告、生成的 Swagger、`.zcode/`。`backend/docs/API_SPECIFICATION.md` 直接删除：它是 [`specs/backend/api-schema.md`](../../../specs/backend/api-schema.zh.md) —— 端点参考的唯一家 —— 的过时中文重复页，且在基本事实上与之矛盾（基础路径 `/api` 对 `/api/v1`）。
 
 **一个闸门，五项检查。** `scripts/verify_doc_pairs.py` —— 基于 `doclib` 的 stdlib Python，与同级闸门一样支持暂存范围收缩，并把暂存文件展开为整对 —— 强制执行：双向配对完整性（范围内每个 `.md` 都有其 `.zh.md`；没有任何 `.zh.md` 是孤儿）；每侧头部区域存在链接其镜像的语言切换行；链接语言区（`.zh.md` 内指向语料内的相对链接定位到 `.zh.md` 变体，`.md` 对应 `.md`；语料之外的目标保持原路径）；简单形态的结构对等 —— 标题深度序列一致、围栏代码块逐字节相同（含注释，因为示例不翻译）；以及语言纯度 —— 范围内 `.md` 的散文不得含 CJK，主题确需 CJK 的页面走清单逐文件豁免（`specs/backend/keyword-filter.md` 是预期案例），`.zh.md` 不做反向检查 —— 中文页合法携带英文术语。它加入 [`doc_sync.py`](../../../scripts/doc_sync.py)，prek 的暂存运行与 CI 的全量运行无需新增接线即可强制执行。
 
@@ -39,7 +39,7 @@ Status: proposed
 - 新闸门注册后，`python3 scripts/doc_sync.py` 在全语料上绿：范围内文件双向成对、切换行齐全、链接语言区正确、标题序列与代码块相同、豁免之外 `.md` 散文无 CJK。
 - `README_zh.md` 消失（带历史更名），`backend/docs/API_SPECIFICATION.md` 删除，`specs/index.md` 拥有中文镜像且每对一行，范围内不再有混合语言页面。
 - 单侧结构编辑（从一侧删去一个标题）在暂存模式与全量运行中都会使闸门变红 —— 在草稿状态演练一次后还原；单侧散文编辑明记为超出本级机器能力，并点名首个信号点升级项。
-- 契约作为规则 7 生效于 `docs/AGENTS.md` 并链接清单，根 `AGENTS.md` 以一行指向它，`doc-standards`、`writing-mrfcs`、`commit` 三个 skill 承载工作流，两条被取代的记录（[2026-08-21](../implemented/2026-08-21-documentation-gates-and-mrfc-system.md)、[layered-instructions](../implemented/2026-08-22-layered-agent-instructions-and-direction-free-mirrors.zh.md)）各携带一行指回本记录的指针。
+- 契约作为规则 7 生效于 `docs/AGENTS.md` 并链接清单，根 `AGENTS.md` 以一行指向它，`doc-standards`、`writing-mrfcs`、`commit` 三个 skill 承载工作流，两条被取代的记录（[2026-08-21](../implemented/2026-08-21-documentation-gates-and-mrfc-system.zh.md)、[layered-instructions](../implemented/2026-08-22-layered-agent-instructions-and-direction-free-mirrors.zh.md)）各携带一行指回本记录的指针。
 
 ## Risks
 

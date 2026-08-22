@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-08-21-documentation-gates-and-mrfc-system.zh.md)
+
 ## Problem
 
 The Markdown corpus had drifted from reality with nothing mechanical to catch it: specs and guides narrated change history and described mechanisms that no longer existed, cross-links rotted silently, spec pages went unindexed, hard-wrapped prose produced reflow noise in every diff, and decision rationale lived inside spec pages as "Decision Record" / "Implementation Plan" sections — plan-speak for shipped work. Review discipline alone had not kept roughly fifty files honest, so every documentation task started with re-deriving facts from the code before a word could be trusted.
@@ -12,7 +14,7 @@ The standard lives in one home, [`docs/AGENTS.md`](../../../docs/AGENTS.md): a t
 
 ## Alternatives considered
 
-**Port the reference repo's full documentation taxonomy.** deepseek-harness pairs every page bilingually (`.md` + `.zh.md` + i18n manifests), classifies notes under `.agents/notes` with a frozen archive and a supersession gate, maintains an invariant system, per-file coverage manifests, word budgets, stacked-PR rules, and a doc-typecheck pipeline over mdast. It lost: markpost's corpus is single-language and an order of magnitude smaller, has no root Node toolchain to run mdast checks, and pairing plus manifest upkeep would tax every edit while buying nothing at this size — pieces are ported only when a trigger signal appears, never wholesale.
+**Port the reference repo's full documentation taxonomy.** deepseek-harness pairs every page bilingually (`.md` + `.zh.md` + i18n manifests), classifies notes under `.agents/notes` with a frozen archive and a supersession gate, maintains an invariant system, per-file coverage manifests, word budgets, stacked-PR rules, and a doc-typecheck pipeline over mdast. It lost: markpost's corpus is single-language and an order of magnitude smaller, has no root Node toolchain to run mdast checks, and pairing plus manifest upkeep would tax every edit while buying nothing at this size — pieces are ported only when a trigger signal appears, never wholesale. The trigger arrived; the pairing tier was ported in [the bilingual-pairs MRFC](../proposed/2026-08-22-bilingual-documentation-pairs.md).
 
 **A gate scheduler.** The reference repo routes all gates through a dependency-graph runner with aggregate modes, `needs`/`after` edges, partitions, and `allowFailure`. It lost: five sequential stdlib gates over a few dozen Markdown files finish in seconds, and a scheduler would be the most complex script in the tree serving no scheduling need markpost has.
 

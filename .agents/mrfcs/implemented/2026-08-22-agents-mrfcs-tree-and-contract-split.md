@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-08-22-agents-mrfcs-tree-and-contract-split.zh.md)
+
 ## Problem
 
 The MRFC system's single README carried two jobs at once: the durable contract of the mechanism (layout, lifecycle, format) and the session-critical orders an agent needs on every touch (grep before writing, never rewrite a decision). An agent landing in the tree had no AGENTS.md to load, so those orders lived only in a document the agent had to know to open. The tree also sat at the repo root (`mrfc/`) while the repo's agent-loaded resources were converging under `.agents/` — the directory AI agent tools treat as their load path, the placement the deepseek-harness reference project uses for its own notes. A naive move would have silently stripped every documentation gate from the corpus: the prek `doc-check` hook excluded `^\.agents/` wholesale and no gate's PATTERNS scanned inside `.agents/`. Finally, the README self-described as "a decision record" — ADR framing that covers only the retrospective half of a corpus whose lifecycle also holds proposals requesting review and rejected verdicts.

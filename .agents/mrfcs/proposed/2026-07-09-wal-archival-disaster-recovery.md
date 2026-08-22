@@ -2,6 +2,8 @@
 
 Status: proposed
 
+English | [中文](2026-07-09-wal-archival-disaster-recovery.zh.md)
+
 ## Problem
 
 markpost runs as a single instance: one VPS, one Postgres container, no replica. If the server dies or the host loses its data, everything is gone — the deploy pipeline schedules no backup at all. The data is 7-day-retention ephemeral content at ~0.12 writes/second, so the recovery design must be proportionate: minimal loss at minimal cost, without replica-operator complexity.

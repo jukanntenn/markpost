@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-07-26-postgresql-only.zh.md)
+
 ## Problem
 
 Supporting PostgreSQL, MySQL, and SQLite simultaneously taxed every data-layer decision: SQL had to stay dialect-portable, indexes and table tuning branched per dialect, migrations needed three-way validation, and the test matrix tripled. Neither MySQL nor SQLite had a single production deployment, so the cost bought nothing — the tax was paid for capabilities nobody used.

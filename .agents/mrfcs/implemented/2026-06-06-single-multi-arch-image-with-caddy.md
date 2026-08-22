@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-06-06-single-multi-arch-image-with-caddy.zh.md)
+
 ## Problem
 
 Shipping the backend and the frontend as separate artifacts meant per-environment assembly: a Node process or static host for the frontend, a reverse proxy picked and configured per deployment, and version skew between the two halves at every deploy. Every environment (staging, production, homelab) re-solved the same plumbing with different answers.

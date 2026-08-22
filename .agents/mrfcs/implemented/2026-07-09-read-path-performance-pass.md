@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-07-09-read-path-performance-pass.zh.md)
+
 ## Problem
 
 The read path — the product's hot path, targeted at a few hundred reads/second on a 2-core / 2 GB / 3 Mbps VPS with a 1 TB monthly quota — was served with zero caching at any layer: every `GET /:qid` did a fresh Postgres read, goldmark render, bluemonday sanitize, and template execute; responses went out uncompressed with no `Cache-Control`/`ETag`; the page's ~8 KB inline `<style>` block was retransmitted on every view; the Postgres pool was unbounded/untuned; and one global rate limiter coupled read throttling to write throttling. At 375 KB/s egress the origin could carry ~25 compressed responses/second — two orders of magnitude below the target load — so the SaaS reference instance could not function at scale without a systemic redesign.

@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-07-15-frontend-static-export.zh.md)
+
 ## Problem
 
 The frontend assumed a Node server at the edge: server-side proxying of `/api` to the backend, request-time i18n configuration, and server-rendered routes. That assumption forced a Node runtime into every deployment and fought the single-image deployment model, where Caddy — not Node — is the only process in front of the backend.

@@ -2,6 +2,8 @@
 
 Status: implemented
 
+English | [中文](2026-08-12-prek-single-source-of-format-and-lint.zh.md)
+
 ## Problem
 
 Formatter and linter invocations were defined in parallel: AI post-edit hooks ran one set of commands, CI another, and developers' muscle memory a third. The definitions drifted — a bare `prettier` entry depended on an ambient binary that only some machines had, and "run the linter" meant different things in different contexts, so formatting fights and lint skips reproduced locally.

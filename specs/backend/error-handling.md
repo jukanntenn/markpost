@@ -1,59 +1,61 @@
 # Error Handling
 
-## 设计原则
+English | [中文](error-handling.zh.md)
 
-- **错误只在边界转换**：error 在产生它的地方保持纯净，跨层时才转换形态。不层层包装、不层层加文字。
-- **不吞错**：每个 error 都要有归宿——要么转成已知错误码，要么记日志后兜底。
-- **不重复包装**：error 的语义码（Code）由最了解上下文的方法一次性确定，上层直接上抛、禁止二次包装。
-- **防御性编程**：handler 层传入的参数应已合理；service 及以下适度校验，但即使漏校验也不触发底层裸错误。
-- **永不 panic**：error 处理链路保证零 panic，客户端永远收到格式正确的 ErrorResponse（见末尾"四层兜底"）。
+## Design Principles
 
-## 分层错误流
+- **Errors transform only at boundaries**: an error stays pure where it originates and changes shape only when crossing layers. No wrapping at every level, no text added at every level.
+- **Never swallow an error**: every error has a destination — either a known error code, or a logged fallback.
+- **No double wrapping**: the semantic code of an error is determined once, by the method with the most context; upper layers re-raise directly and wrap nothing.
+- **Defensive programming**: parameters reaching a handler are already expected to be sound; service layers and below validate moderately, but even a missed check never triggers a raw low-level error.
+- **Never panic**: the error-handling chain guarantees zero panics; the client always receives a well-formed ErrorResponse (see "The four fallback layers" at the end).
+
+## The Layered Error Flow
 
 ```
-infra (GORM)  ──裸透传 sentinel──▶  domain  ──sentinel──▶  service  ──service.Error──▶  handler  ──▶  apierr  ──▶  HTTP
+infra (GORM)  ──bare sentinel pass-through──▶  domain  ──sentinel──▶  service  ──service.Error──▶  handler  ──▶  apierr  ──▶  HTTP
 ```
 
-每层的职责与规则见下方"分层契约"。
+Each layer's responsibilities and rules are in "Layer contracts" below.
 
-## 分层契约
+## Layer Contracts
 
-### infra 层：GORM error 隔离，裸透传
+### The infra layer: GORM error isolation, bare pass-through
 
-**核心规则**：
+**Core rules**:
 
-- 开启 GORM 的 `TranslateError: true`（`gorm.Config`），驱动自动把数据库特定错误码翻译成 GORM 通用 sentinel：
-  - PostgreSQL `23505`（唯一键冲突）→ `gorm.ErrDuplicatedKey`
-  - PostgreSQL `23503`（外键冲突）→ `gorm.ErrForeignKeyViolated`
-  - PostgreSQL `23514`（check 约束）→ `gorm.ErrCheckConstraintViolated`
-  - 记录不存在 → `gorm.ErrRecordNotFound`
-- infra 的 helper 函数**裸透传** GORM 返回的 error，**不加 label 参数**（不写 `fmt.Errorf("create post: %w", err)`）。
-- **为什么不要 label**：操作上下文（"是在哪个操作出错的"）由 OTel span 的 name 承载（见 [observability.md](./observability.md)）。error 本身只表达"是什么错"，不混入调试文字。已知 sentinel 靠 `errors.Is` 识别，无需 label；意外 error 靠 trace_id → span 调用链定位（比单层 label 更精确）。
+- GORM's `TranslateError: true` is enabled (`gorm.Config`); the driver automatically translates database-specific error codes into GORM's generic sentinels:
+  - PostgreSQL `23505` (unique key violation) → `gorm.ErrDuplicatedKey`
+  - PostgreSQL `23503` (foreign key violation) → `gorm.ErrForeignKeyViolated`
+  - PostgreSQL `23514` (check constraint) → `gorm.ErrCheckConstraintViolated`
+  - Record not found → `gorm.ErrRecordNotFound`
+- Infra helper functions pass GORM's returned error through **bare**, with **no label parameter** (no `fmt.Errorf("create post: %w", err)`).
+- **Why no label**: the operation context ("which operation failed") is carried by the OTel span's name (see [observability.md](./observability.md)). The error itself expresses only "what went wrong", with no debugging text mixed in. Known sentinels are identified via `errors.Is`, needing no label; unexpected errors are located through trace_id → the span call chain (more precise than a single-layer label).
 
 ```go
-// infra helper 无 label 参数
+// infra helper has no label parameter
 func findFirst[T any](ctx context.Context, query *gorm.DB) (*T, error) {
     var result T
     if err := query.WithContext(ctx).First(&result).Error; err != nil {
-        return nil, err   // 裸透传，已是 GORM sentinel
+        return nil, err   // bare pass-through: already a GORM sentinel
     }
     return &result, nil
 }
 ```
 
-### domain 层：通用 sentinel
+### The domain layer: universal sentinels
 
-**核心规则**：
+**Core rules**:
 
-- domain 只定义**跨域通用**的 sentinel error（`ErrNotFound`、`ErrConflict`、`ErrAlreadyExists` 等），作为跨层错误识别的稳定契约。
-- repository 接口返回这些 sentinel，**透传不包装**。
-- 域特定的业务错误（如"投稿 qid 重复"、"频道不存在"）**不**在 domain 定义 sentinel，由 service 层根据业务上下文识别后转 service.Error。
+- The domain defines only **cross-domain** sentinel errors (`ErrNotFound`, `ErrConflict`, `ErrAlreadyExists`, and the like) as the stable contract for cross-layer error identification.
+- Repository interfaces return these sentinels, **passing them through unwrapped**.
+- Domain-specific business errors (such as "duplicate submission qid" or "channel does not exist") get **no** sentinel in the domain; the service layer recognizes them from business context and converts them to `service.Error`.
 
-### service 层：最轻量领域隔离
+### The service layer: minimal domain isolation
 
-**核心规则**：
+**Core rules**:
 
-- service 调用 infra/repository 后，用 `errors.Is` 判定 sentinel，转成 `service.Error`：
+- After calling an infra/repository method, the service checks sentinels with `errors.Is` and converts them to `service.Error`:
 
 ```go
 user, err := r.userRepo.FindByID(ctx, id)
@@ -63,26 +65,26 @@ case errors.Is(err, gorm.ErrRecordNotFound):
 case errors.Is(err, gorm.ErrDuplicatedKey):
     return service.New(service.ErrConflict, "email already taken")
 case err != nil:
-    return nil, err   // 意外 error 裸上抛，由 apierr 记日志 + 500
+    return nil, err   // unexpected error passes through raw; apierr logs it + 500
 }
 ```
 
-- **调用内部方法时，内部方法保证返回 `service.Error`**，外层直接上抛**不重复包装**。理由：错误码（Code）由最了解上下文的内部方法一次性确定，外层无需再区分 error 种类。
-- service 层 error **不逐个记日志**——上抛到边界（handler/apierr）才记。
+- **When calling internal methods, those methods guarantee a `service.Error` return**; the outer layer re-raises directly **without re-wrapping**. Rationale: the error code is determined once by the inner method that has the context; the outer layer has no reason to re-classify the error.
+- Service-layer errors are **not logged one by one** — logging happens at the boundary (handler / apierr) where the error surfaces.
 
-### handler 层：binding + 转发
+### The handler layer: binding + forwarding
 
-**核心规则**：
+**Core rules**:
 
-- handler 的 error 基本都来自 service。
-- handler 只做三件事：(1) binding 校验失败 → 转 FieldDetail → `service.Error{Code: ErrValidation}`；(2) 调 service；(3) 把 error 交给 `apierr.RespondError`。
-- **handler 不重复包装 service error**。
+- A handler's errors come almost entirely from the service.
+- A handler does exactly three things: (1) binding failure → convert to FieldDetail → `service.Error{Code: ErrValidation}`; (2) call the service; (3) hand the error to `apierr.RespondError`.
+- **Handlers do not re-wrap service errors**.
 
 ```go
 func SomeHandler(svc SomeService) gin.HandlerFunc {
     return func(c *gin.Context) {
         var req SomeRequest
-        if !bindJSON(c, &req) { return }   // binding 失败已由 handleBindingError 处理
+        if !bindJSON(c, &req) { return }   // binding failure already handled by handleBindingError
         result, err := svc.DoSomething(c.Request.Context(), req)
         if err != nil {
             apierr.RespondError(c, err)
@@ -93,112 +95,112 @@ func SomeHandler(svc SomeService) gin.HandlerFunc {
 }
 ```
 
-### apierr 层：客户端错误响应唯一入口
+### The apierr layer: the single entry point for client error responses
 
-**核心规则**：
+**Core rules**:
 
-- `apierr.RespondError(c, err)` 是 handler 和 middleware 返回客户端错误响应的**唯一入口**。
-- 输入是一个 `error`，内部处理：
-  - 非 `service.Error` → `slog.Error` 记录（带 trace 字段）+ 兜底 500
-  - `service.Error` → 用 ErrCode 自带的 HTTP 状态码 + i18n Message 渲染 ErrorResponse
+- `apierr.RespondError(c, err)` is the **single entry point** through which handlers and middleware return client error responses.
+- The input is an `error`; internally:
+  - not a `service.Error` → logged via `slog.Error` (with trace fields) + fallback 500
+  - a `service.Error` → the ErrCode's own HTTP status code + i18n Message render the ErrorResponse
 
-### middleware 层
+### The middleware layer
 
-**核心规则**：
+**Core rules**:
 
-- 与 handler 同模式，但必须 `c.Abort()` 后再 `RespondError`（中止中间件链）。
-- 详见下方"middleware 错误处理"。
+- The same pattern as handlers, except it must `c.Abort()` before calling `RespondError` (to halt the middleware chain).
+- Details in "Middleware error handling" below.
 
-## service.Error 结构
+## The service.Error Struct
 
 ```go
 type Error struct {
-    Code        *ErrCode       // 指向错误码单例（自带 HTTP/i18n 映射）
-    Description string         // 领域语义描述（给开发者看，不进客户端响应）
-    Err         error          // 底层原始 error（如 repository 返回的）
-    Details     []FieldDetail  // 字段级校验错误（仅用于表单 binding）
+    Code        *ErrCode       // points at the error-code singleton (carries its own HTTP/i18n mappings)
+    Description string         // domain-semantic description (for developers; never reaches the client response)
+    Err         error          // the underlying raw error (e.g. as returned by the repository)
+    Details     []FieldDetail  // field-level validation errors (form binding only)
 }
 
 type FieldDetail struct {
-    Field string   // json 字段名
-    Code  *ErrCode // 字段错误码（required/min/max/...）
-    Param string   // 规则参数值（如 min 的 "6"），供 i18n 模板渲染
+    Field string   // the json field name
+    Code  *ErrCode // the field error code (required/min/max/...)
+    Param string   // the rule parameter value (e.g. "6" for min), consumed by i18n template rendering
 }
 ```
 
-**方法**：实现 `Error()`、`Unwrap()`（返回 `Err`），支持 `errors.As`/`errors.Is`。
+**Methods**: implements `Error()` and `Unwrap()` (returns `Err`), supporting `errors.As` / `errors.Is`.
 
-**构造器**：
+**Constructors**:
 
 - `New(code *ErrCode, description string) *Error`
 - `Wrap(code *ErrCode, description string, err error) *Error`
 - `WithDetails(code *ErrCode, description string, details []FieldDetail) *Error`
-- `NewValidation(details []FieldDetail) *Error`（便捷：Code=ErrValidation）
+- `NewValidation(details []FieldDetail) *Error` (convenience: Code=ErrValidation)
 
-## ErrCode struct 自带映射
+## The ErrCode Struct Carries Its Own Mappings
 
-**核心设计**：`ErrCode` 是一个 struct 实例（非 string 常量），自带 HTTP 状态码、i18n Message、模板占位符、动态参数提供器。消除传统的三张映射 map。
+**Core design**: `ErrCode` is a struct instance (not a string constant) carrying its own HTTP status code, i18n Message, template placeholder, and dynamic parameter provider. This eliminates the traditional three mapping maps.
 
 ```go
 type ErrCode struct {
-    Value         string         // 错误码字符串（进客户端响应的 code 字段）
-    HTTP          int            // 映射的 HTTP 状态码
-    Message       *i18n.Message  // i18n 消息模板（英文 DefaultMessage，权威兜底）
-    Placeholder   string         // 字段校验码的模板占位符名（如 "Min"、"Max"），可选
-    ParamProvider func() string  // 自定义规则的动态阈值提供器，可选
+    Value         string         // the error-code string (lands in the response's code field)
+    HTTP          int            // the mapped HTTP status code
+    Message       *i18n.Message  // i18n message template (English DefaultMessage, the authoritative fallback)
+    Placeholder   string         // template placeholder name for field validation codes (e.g. "Min", "Max"), optional
+    ParamProvider func() string  // dynamic threshold provider for custom rules, optional
 }
 ```
 
-**为什么这样设计**：
+**Why this design**:
 
-- 消除 `httpStatuses`、`errorCodeMessages`、`validationFieldMessages` 三张全局 map。
-- **域完全自治**：auth 的错误码 + httpStatus + i18n message + 占位符全在 `auth/errors.go` 一个文件里定义。
-- **零副作用**：无 `init()` 注册、无全局 merge、无注册函数。纯声明式，静态可分析。
-- **ParamProvider** 解决自定义 validator 规则的 `Param()` 失效问题（见 validate 校验章节）。
+- Eliminates the three global maps `httpStatuses`, `errorCodeMessages`, and `validationFieldMessages`.
+- **Fully autonomous domains**: auth's error codes + httpStatus + i18n message + placeholder are all defined in the single file `auth/errors.go`.
+- **Zero side effects**: no `init()` registration, no global merge, no registration functions. Purely declarative and statically analyzable.
+- **ParamProvider** solves the `Param()`-returns-empty problem for custom validator rules (see the request-validation section).
 
-**使用方式**：错误码是 package-level `var` 单例，`*ErrCode` 指针传递，约定不复制。比较时用 `.Value`（字符串值）或 `.HTTP`（状态码），apierr 里不写大 switch——直接 `code.HTTP` / `code.Message` 取值。
+**Usage**: error codes are package-level `var` singletons passed by `*ErrCode` pointer, with copying avoided by convention. Compare via `.Value` (the string) or `.HTTP` (the status); apierr writes no big switch — it reads `code.HTTP` / `code.Message` directly.
 
-**无本质缺陷**：指针比较的所谓问题，彻底重写下不存在——正确的比较范式是按值或按属性，序列化由 `MarshalJSON` 自动处理，apierr 直接用 ErrCode 自带映射。
+**No inherent flaw**: the alleged problem with pointer comparison does not exist in this design — the correct comparison idiom is by value or by attribute, serialization is handled automatically by `MarshalJSON`, and apierr consumes the ErrCode's own mappings directly.
 
-## 错误码组织（按域分文件）
+## Error Code Organization (per-domain files)
 
 ```
 internal/service/
-├── errors.go        # ErrCode/Error/FieldDetail 类型 + 构造器 + 共享错误码
-├── auth/errors.go   # auth 域专属码
-├── post/errors.go   # post 域专属码
+├── errors.go        # ErrCode/Error/FieldDetail types + constructors + shared error codes
+├── auth/errors.go   # auth domain-specific codes
+├── post/errors.go   # post domain-specific codes
 ├── delivery/errors.go
 └── admin/errors.go
 ```
 
-### 共享错误码（service/errors.go）
+### Shared error codes (service/errors.go)
 
-所有域通用的错误码 + 字段校验通用码：
+Codes common to all domains + the universal field-validation codes:
 
-| ErrCode             | Value             | HTTP    | 含义                                                                                                                        |
-| ------------------- | ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `ErrInternal`       | `internal`        | 500     | 意外的服务器内部错误                                                                                                        |
-| `ErrValidation`     | `validation`      | **422** | 请求参数校验失败（表单 binding）——字段校验失败是"语义上无法处理"（RFC 4918 422），见 [api-design.md](../api-design.md) §3.1 |
-| `ErrInvalidRequest` | `invalid_request` | 400     | 请求格式错误（JSON 反序列化失败、空 body 等）                                                                               |
-| `ErrNotFound`       | `not_found`       | 404     | 资源不存在                                                                                                                  |
-| `ErrUnauthorized`   | `unauthorized`    | 401     | 未认证                                                                                                                      |
-| `ErrForbidden`      | `forbidden`       | 403     | 无权限                                                                                                                      |
-| `ErrConflict`       | `conflict`        | 409     | 资源冲突（重复创建等）                                                                                                      |
-| `ErrRateLimited`    | `rate_limited`    | 429     | 触发限流                                                                                                                    |
+| ErrCode             | Value             | HTTP    | Meaning                                                                                                                                                                    |
+| ------------------- | ----------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ErrInternal`       | `internal`        | 500     | Unexpected internal server error                                                                                                                                           |
+| `ErrValidation`     | `validation`      | **422** | Request parameter validation failure (form binding) — a failed field validation is "semantically unprocessable" (RFC 4918 422); see [api-design.md](../api-design.md) §3.1 |
+| `ErrInvalidRequest` | `invalid_request` | 400     | Malformed request (JSON deserialization failure, empty body, etc.)                                                                                                         |
+| `ErrNotFound`       | `not_found`       | 404     | Resource does not exist                                                                                                                                                    |
+| `ErrUnauthorized`   | `unauthorized`    | 401     | Not authenticated                                                                                                                                                          |
+| `ErrForbidden`      | `forbidden`       | 403     | Insufficient permission                                                                                                                                                    |
+| `ErrConflict`       | `conflict`        | 409     | Resource conflict (duplicate creation, etc.)                                                                                                                               |
+| `ErrRateLimited`    | `rate_limited`    | 429     | Rate limit triggered                                                                                                                                                       |
 
-字段校验通用码（均 422，理由同 `ErrValidation`）：
+Universal field-validation codes (all 422, same rationale as `ErrValidation`):
 
-| ErrCode             | Value             | HTTP | Placeholder | 含义                           |
-| ------------------- | ----------------- | ---- | ----------- | ------------------------------ |
-| `ErrRequired`       | `required`        | 422  | —           | 字段必填                       |
-| `ErrMinLength`      | `min_length`      | 422  | `Min`       | 未达最小长度                   |
-| `ErrMaxLength`      | `max_length`      | 422  | `Max`       | 超过最大长度                   |
-| `ErrLength`         | `length`          | 422  | `Len`       | 长度不符                       |
-| `ErrEmail`          | `invalid_email`   | 422  | —           | 邮箱格式错误                   |
-| `ErrOneOf`          | `not_one_of`      | 422  | `OneOf`     | 值不在允许范围内               |
-| `ErrFieldViolation` | `field_violation` | 422  | `Param`     | 通用兜底（未知 validator tag） |
+| ErrCode             | Value             | HTTP | Placeholder | Meaning                                  |
+| ------------------- | ----------------- | ---- | ----------- | ---------------------------------------- |
+| `ErrRequired`       | `required`        | 422  | —           | Field is required                        |
+| `ErrMinLength`      | `min_length`      | 422  | `Min`       | Below the minimum length                 |
+| `ErrMaxLength`      | `max_length`      | 422  | `Max`       | Above the maximum length                 |
+| `ErrLength`         | `length`          | 422  | `Len`       | Length does not match                    |
+| `ErrEmail`          | `invalid_email`   | 422  | —           | Malformed email address                  |
+| `ErrOneOf`          | `not_one_of`      | 422  | `OneOf`     | Value outside the allowed set            |
+| `ErrFieldViolation` | `field_violation` | 422  | `Param`     | Generic fallback (unknown validator tag) |
 
-### 域专属码示例（service/auth/errors.go）
+### Domain-specific code example (service/auth/errors.go)
 
 ```go
 var (
@@ -220,7 +222,7 @@ var (
 )
 ```
 
-## API 错误响应（GitHub 风格）
+## API Error Responses (GitHub style)
 
 ```go
 type ErrorResponse struct {
@@ -236,9 +238,9 @@ type FieldError struct {
 }
 ```
 
-### 响应示例
+### Response examples
 
-**简单错误（无 errors）**：
+**Simple error (no errors)**:
 
 ```json
 {
@@ -247,7 +249,7 @@ type FieldError struct {
 }
 ```
 
-**表单校验错误（有 errors 数组）**：
+**Form validation error (with errors array)**:
 
 ```json
 {
@@ -268,7 +270,7 @@ type FieldError struct {
 }
 ```
 
-### 前端处理范式
+### The frontend handling pattern
 
 ```typescript
 interface ErrorResponse {
@@ -288,22 +290,22 @@ try {
   if (err.errors) {
     err.errors.forEach((e) => {
       if (e.field) {
-        setError(e.field, { type: e.code, message: e.message }); // 字段错误标红
+        setError(e.field, { type: e.code, message: e.message }); // mark the field error red
       } else {
-        toast.error(e.message); // 非字段错误顶部提示
+        toast.error(e.message); // top notice for non-field errors
       }
     });
   } else {
-    toast.error(err.message); // 简单错误整体提示
+    toast.error(err.message); // whole-form notice for simple errors
   }
 }
 ```
 
-## apierr 包契约
+## The apierr Package Contract
 
-`pkg/apierr` 是 handler/middleware 返回客户端错误响应的统一入口。
+`internal/apierr` is the unified entry point through which handlers and middleware return client error responses.
 
-### RespondError 逻辑
+### RespondError logic
 
 ```go
 func RespondError(c *gin.Context, err error) {
@@ -325,56 +327,56 @@ func writeError(c *gin.Context, code *service.ErrCode, data map[string]any) {
 }
 ```
 
-### i18n 渲染（含兜底）
+### i18n rendering (with fallbacks)
 
 ```go
 func renderMessage(c *gin.Context, code *service.ErrCode, data map[string]any) string {
     msg := ginI18n.MustGetMessage(c, &i18n.LocalizeConfig{
-        DefaultMessage: code.Message,   // 代码内英文兜底
-        TemplateData:   data,           // {{.Field}} {{.Min}} 等
+        DefaultMessage: code.Message,   // in-code English fallback
+        TemplateData:   data,           // {{.Field}} {{.Min}} and friends
     })
     if msg == "" {
-        return code.Message.Other       // 终极兜底：英文原文，永不失败
+        return code.Message.Other       // last-resort fallback: the English original, never fails
     }
     return msg
 }
 ```
 
-### 命名约定
+### Naming conventions
 
-- `writeXxxError`：写入 ErrorResponse
-- `writeXxxResponse`：写入成功 Response
+- `writeXxxError`: writes an ErrorResponse
+- `writeXxxResponse`: writes a success Response
 
-### 便捷函数定位
+### Where convenience functions live
 
-`RespondError` 是默认入口。若 handler 或 middleware 对 error 响应有特殊要求（如自定义 header、附加字段），可自行实现，但**响应体结构必须仍是 ErrorResponse**。
+`RespondError` is the default entry point. A handler or middleware with special error-response needs (custom headers, extra fields) may implement its own path, but **the response body structure must still be ErrorResponse**.
 
-## validate 校验
+## Request Validation
 
-### binding error 的三类来源
+### The three sources of binding errors
 
-gin 的 `ShouldBindJSON`/`ShouldBindQuery`/`ShouldBindHeader` 等返回的 error 分三类（基于 gin 源码 `binding/json.go`、`binding/form.go`）：
+The errors returned by gin's `ShouldBindJSON` / `ShouldBindQuery` / `ShouldBindHeader` (and siblings) fall into three categories (based on gin's `binding/json.go` and `binding/form.go`):
 
-| 阶段              | error 类型                                                             | 处理                                                             |
-| ----------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **JSON 反序列化** | `*json.SyntaxError` / `*json.UnmarshalTypeError` / `io.EOF`（空 body） | → `ErrInvalidRequest`（400，无法定位字段，笼统"请求格式错误"）   |
-| **结构体校验**    | `validator.ValidationErrors`（`[]FieldError`）                         | → `ErrValidation`（422，带 `errors[]` 字段级详情）               |
-| **切片校验**      | `binding.SliceValidationError`（`[]error`）                            | → 递归扁平化为 `[]FieldDetail`（当前无数组 body 接口，保留防御） |
+| Stage                    | Error type                                                               | Handling                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| **JSON deserialization** | `*json.SyntaxError` / `*json.UnmarshalTypeError` / `io.EOF` (empty body) | → `ErrInvalidRequest` (400; no field to point at, a blanket "malformed request")              |
+| **Struct validation**    | `validator.ValidationErrors` (`[]FieldError`)                            | → `ErrValidation` (422, with `errors[]` field-level details)                                  |
+| **Slice validation**     | `binding.SliceValidationError` (`[]error`)                               | → recursively flattened into `[]FieldDetail` (defensive; no array-body endpoints exist today) |
 
-**语义区分的理由**：`ErrInvalidRequest` 表示"整个请求体解析不了"（前端检查 Content-Type / body 构造）；`ErrValidation` 表示"能解析但字段值不合规"（前端回填表单标红）。
+**Why the semantic split**: `ErrInvalidRequest` says "the whole request body cannot be parsed" (the frontend checks Content-Type / body construction); `ErrValidation` says "parses, but a field value is invalid" (the frontend re-fills the form and marks fields red).
 
-### 统一入口 handleBindingError
+### The unified entry: handleBindingError
 
 ```go
 func handleBindingError(c *gin.Context, req any, err error) {
     var se *service.Error
     switch {
-    // 切片校验（递归扁平化）
+    // slice validation (recursive flattening)
     case errors.As(err, new(binding.SliceValidationError)):
         details := flattenSliceErrors(err.(binding.SliceValidationError))
         se = service.NewValidation(details)
 
-    // 字段校验
+    // field validation
     case errors.As(err, new(validator.ValidationErrors)):
         details := make([]FieldDetail, 0)
         for _, fe := range err.(validator.ValidationErrors) {
@@ -382,13 +384,13 @@ func handleBindingError(c *gin.Context, req any, err error) {
         }
         se = service.NewValidation(details)
 
-    // JSON 类型不匹配（可定位字段）
+    // JSON type mismatch (field locatable)
     case errors.As(err, new(*json.UnmarshalTypeError)):
         ute := err.(*json.UnmarshalTypeError)
         se = service.New(service.ErrInvalidRequest,
             fmt.Sprintf("type mismatch on field %s", ute.Field))
 
-    // JSON 语法错 / 空 body / 其他
+    // JSON syntax error / empty body / other
     default:
         se = service.New(service.ErrInvalidRequest, err.Error())
     }
@@ -396,9 +398,9 @@ func handleBindingError(c *gin.Context, req any, err error) {
 }
 ```
 
-### RegisterTagNameFunc（取代手写反射）
+### RegisterTagNameFunc (replaces hand-written reflection)
 
-启动时注册，让 validator 的 `fe.Field()` 直接返回 json tag 名（含嵌套结构体）：
+Registered at startup so validator's `fe.Field()` returns the json tag name directly (nested structs included):
 
 ```go
 func RegisterValidators() {
@@ -415,23 +417,23 @@ func RegisterValidators() {
                 return name
             }
         }
-        return f.Name  // 兜底：Go 字段名
+        return f.Name  // fallback: the Go field name
     })
     v.RegisterValidation("titlesize", validateTitleLength)
     v.RegisterValidation("bodysize", validateBodySize)
 }
 ```
 
-注册后 handler 无需手写 `resolveFieldName` 反射逻辑。
+With this registered, handlers need no hand-written `resolveFieldName` reflection logic.
 
-### tagRegistry（方案 A：显式占位符映射）
+### tagRegistry (option A: explicit placeholder mapping)
 
-定义 validator tag → ErrCode + 占位符的映射表。新增规则只需加一行：
+A mapping table from validator tag → ErrCode + placeholder. Adding a rule is one line:
 
 ```go
 var tagRegistry = map[string]struct {
     code        *ErrCode
-    placeholder string  // 模板占位符名，空表示无参数
+    placeholder string  // template placeholder name; empty means no parameter
 }{
     "required":   {ErrRequired, ""},
     "min":        {ErrMinLength, "Min"},
@@ -444,7 +446,7 @@ var tagRegistry = map[string]struct {
     "contains":   {ErrContains, "Contains"},
     "titlesize":  {ErrTitleSize, "Max"},
     "bodysize":   {ErrBodySize, "Max"},
-    // 新增规则在这里加一行
+    // add one line here per new rule
 }
 
 func fieldErrorToDetail(fe validator.FieldError) FieldDetail {
@@ -454,41 +456,41 @@ func fieldErrorToDetail(fe validator.FieldError) FieldDetail {
     }
     param := fe.Param()
     if param == "" && spec.code.ParamProvider != nil {
-        param = spec.code.ParamProvider()  // 自定义规则取动态阈值
+        param = spec.code.ParamProvider()  // custom rule takes its dynamic threshold
     }
     return FieldDetail{Field: fe.Field(), Code: spec.code, Param: param}
 }
 ```
 
-apierr 渲染时构造 TemplateData：
+apierr builds the TemplateData when rendering:
 
 ```go
 func buildTemplateData(fd FieldDetail) map[string]any {
     data := map[string]any{
         "Field": fd.Field,
-        "Param": fd.Param,  // 通用兜底占位符，永远存在
+        "Param": fd.Param,  // generic fallback placeholder, always present
     }
     if fd.Code.Placeholder != "" {
-        data[fd.Code.Placeholder] = fd.Param  // 语义占位符（Min/Max/...）
+        data[fd.Code.Placeholder] = fd.Param  // semantic placeholder (Min/Max/...)
     }
     return data
 }
 ```
 
-### 明确弃用 validator 自带 translation
+### Why the validator's built-in translation is not used
 
-validator 自带的 `ValidationErrors.Translate(translator)` 方案不采用。理由：
+The validator's own `ValidationErrors.Translate(translator)` mechanism is not adopted. Reasons:
 
-1. **职责越界**：把 error→message 绑死在 validator 包内，与统一 i18n 体系冲突。
-2. **绕过错误码**：直接生成字符串 message，不经过 ErrCode 映射，客户端拿不到结构化的 code/field/param。
-3. **Translator 初始化复杂**：与已有的 go-i18n locale 文件体系重叠冲突。
-4. **自定义规则仍需手动**：titlesize/bodysize 仍要自己注册 transFn，没省事。
+1. **Scope violation**: binding error→message inside the validator package conflicts with the unified i18n system.
+2. **Bypasses error codes**: it produces a string message directly, skipping the ErrCode mapping, so the client gets no structured code/field/param.
+3. **Translator initialization complexity**: overlaps and conflicts with the existing go-i18n locale file system.
+4. **Custom rules still need manual work**: titlesize/bodysize still require registering a transFn — nothing saved.
 
-所有 validator 错误统一走"FieldError → ErrCode + FieldDetail → i18n 渲染"链路。
+All validator errors flow through the "FieldError → ErrCode + FieldDetail → i18n rendering" chain.
 
-### ParamProvider 机制
+### The ParamProvider mechanism
 
-自定义 validator 规则（如 `titlesize`/`bodysize`）通过 `RegisterValidation` 注册，其 `fe.Param()` 永远返回空字符串（validator 只对内置带参规则提供 Param）。阈值来自运行时配置时，用 ErrCode 的 `ParamProvider` 字段提供：
+Custom validator rules (like `titlesize` / `bodysize`) are registered via `RegisterValidation`, and their `fe.Param()` always returns the empty string (validator provides Param only for built-in parameterized rules). When the threshold comes from runtime configuration, the ErrCode's `ParamProvider` field supplies it:
 
 ```go
 var ErrTitleSize = &ErrCode{
@@ -502,11 +504,11 @@ var ErrTitleSize = &ErrCode{
 }
 ```
 
-`fieldErrorToDetail` 发现 `fe.Param()==""` 但 `code.ParamProvider != nil` 时，调用它取值。`config.Get()` 用 `sync.Once` 保证安全，返回值类型不 panic，最坏返回零值（文案瑕疵，非崩溃）。
+When `fieldErrorToDetail` finds `fe.Param()==""` but `code.ParamProvider != nil`, it calls the provider. `config.Get()` is guarded by `sync.Once` and its return types never panic; the worst case is a zero value (a wording blemish, not a crash).
 
-## middleware 错误处理
+## Middleware Error Handling
 
-### panic recovery（fallback middleware）
+### panic recovery (the fallback middleware)
 
 ```go
 func Fallback() gin.HandlerFunc {
@@ -524,55 +526,55 @@ func Fallback() gin.HandlerFunc {
 }
 ```
 
-### 限流（tollbooth）
+### Rate limiting (tollbooth)
 
-429 + `ErrRateLimited` + tollbooth 自动设置的 `X-Rate-Limit-Limit` / `X-Rate-Limit-Duration` 头。**不发 `Retry-After`**（tollbooth 不提供，客户端从头中剩余额度判断重试时机）。
+429 + `ErrRateLimited` + the `X-Rate-Limit-Limit` / `X-Rate-Limit-Duration` headers tollbooth sets automatically. **No `Retry-After` is sent** (tollbooth does not provide one; clients judge retry timing from the remaining allowance in the headers).
 
-## 故障定位（流派 2：无 label，靠 trace）
+## Fault Localization (label-free, trace-based)
 
-error 不携带操作上下文（无 label），定位靠可观测性体系：
+Errors carry no operation context (no labels); localization relies on the observability stack:
 
-**场景 1：已知 sentinel**（如 not_found）—— error 码直接映射，无需排查。
+**Scenario 1: a known sentinel** (e.g. not_found) — the error code maps directly; nothing to chase.
 
-**场景 2：infra 意外 error**（如连接池耗尽）—— `app.jsonl` 记录 trace_id → `traces.jsonl` 查 span 调用链：
-
-```
-POST /:post_key → post.Create → posts.Insert（span 的 err 属性记录原始错误）
-```
-
-span name 提供层级化操作上下文，比单层 label 更精确。
-
-**场景 3：service 内部 error**（如渲染失败）—— `service.Error.Description`（领域语义"render post failed"）+ span 调用链双重定位。
-
-详见 [observability.md](./observability.md)。
-
-## 四层兜底（防御性审查结论）
+**Scenario 2: an unexpected infra error** (e.g. connection pool exhaustion) — `app.jsonl` records the trace_id → `traces.jsonl` shows the span call chain:
 
 ```
-第一层：tagRegistry 兜底
-        未知 validator tag → ErrFieldViolation + {{.Param}} 通用占位符
-
-第二层：RegisterTagNameFunc 兜底
-        字段无 json/form tag → 返回 Go 字段名
-
-第三层：i18n 渲染兜底
-        ginI18n.MustGetMessage 返回空 → code.Message.Other 英文原文（永不失败）
-
-第四层：panic recovery
-        fallback middleware，任何 panic → slog 记录 + 500
+POST /:post_key → post.Create → posts.Insert (the span's err attribute records the original error)
 ```
 
-**审查结论**：0 panic 风险。
+The span names provide hierarchical operation context, more precise than a single-layer label.
 
-- `MustGetMessage` 不 panic（源码确认：`message, _ := GetMessage()` 丢弃 error 返回空串）
-- `config.Get()` 不 panic（`sync.Once`，返回零值）
-- validator 接口方法纯读取不 panic
-- `errors.As` 返回 bool 不 panic
+**Scenario 3: an error internal to a service** (e.g. render failure) — `service.Error.Description` (the domain semantics, "render post failed") plus the span call chain localize it twice over.
 
-程序永不因 error 处理而崩溃，客户端永远收到格式正确的 ErrorResponse（即使 message 可能降级为英文原文）。
+See [observability.md](./observability.md) for the full picture.
 
-## 测试约定
+## The Four Fallback Layers (defensive review conclusion)
 
-- service 测试：断言 `errors.As(err, &service.Error{})` 后检查 `Code.Value` / `Code.HTTP`
-- handler 测试：断言 HTTP 状态码 + ErrorResponse JSON 结构（code/message/errors 字段）
-- binding 测试：覆盖各类 validator tag + JSON 反序列化错误 + 嵌套结构体字段名解析
+```
+Layer 1: tagRegistry fallback
+         unknown validator tag → ErrFieldViolation + the generic {{.Param}} placeholder
+
+Layer 2: RegisterTagNameFunc fallback
+         field without json/form tags → the Go field name
+
+Layer 3: i18n rendering fallback
+         ginI18n.MustGetMessage returns empty → code.Message.Other, the English original (never fails)
+
+Layer 4: panic recovery
+         the fallback middleware: any panic → slog record + 500
+```
+
+**Review conclusion**: zero panic risk.
+
+- `MustGetMessage` does not panic (source-verified: `message, _ := GetMessage()` discards the error and returns an empty string)
+- `config.Get()` does not panic (`sync.Once`, returns a zero value)
+- validator interface methods are pure reads and do not panic
+- `errors.As` returns bool and does not panic
+
+The program never crashes over error handling; the client always receives a well-formed ErrorResponse (even if the message degrades to the English original).
+
+## Testing Conventions
+
+- Service tests: assert `errors.As(err, &service.Error{})` then check `Code.Value` / `Code.HTTP`
+- Handler tests: assert the HTTP status code + the ErrorResponse JSON structure (code/message/errors fields)
+- Binding tests: cover every kind of validator tag + JSON deserialization errors + nested-struct field-name resolution

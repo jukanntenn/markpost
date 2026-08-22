@@ -1,5 +1,7 @@
 # Delivery Queue Data Model
 
+English | [中文](delivery-queue.zh.md)
+
 The delivery queue persists its state in two PostgreSQL tables split by access pattern and lifecycle: `delivery_attempts` (hot, short-lived rows) and `delivery_history` (cold, 7-day archive). The GORM models live in `internal/domain/delivery/delivery.go`; the schema — tables, indexes, and Postgres storage options — is declared in versioned SQL migrations (`000001_init.up.sql` for the tables and indexes, `000007_delivery_error_category.up.sql` for the history error-classification column). The design follows database normalization strictly: no redundant columns unless required as a query key for performance, and foreign keys enforce referential integrity. For the scheduler that drains the queue see [`delivery-scheduler.md`](./delivery-scheduler.md); for retry timing and terminal states see [`delivery-retry.md`](./delivery-retry.md); the decision rationale lives in [the delivery MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md).
 
 ## The `Status` enum (shared by both tables)
@@ -70,7 +72,7 @@ type History struct {
 }
 ```
 
-**`user_id` is `ON DELETE SET NULL`, not CASCADE.** A user's 7-day history can be large (millions of rows under the worst-case load). `ON DELETE CASCADE` would delete all of them inside the `DELETE FROM users` transaction, producing a massive dead-tuple burst that stalls the table. `SET NULL` instead preserves each history row with a null `user_id`; the UI renders "用户已注销" when `user_id` is null, exactly as it renders "原 post 已删除" / "投递渠道已删除" for the null `post_id`/`channel_id`. This makes `user_id` nullable (`*int`), consistent with the already-nullable `post_id`/`channel_id`.
+**`user_id` is `ON DELETE SET NULL`, not CASCADE.** A user's 7-day history can be large (millions of rows under the worst-case load). `ON DELETE CASCADE` would delete all of them inside the `DELETE FROM users` transaction, producing a massive dead-tuple burst that stalls the table. `SET NULL` instead preserves each history row with a null `user_id`; the UI renders the localized deleted-user placeholder when `user_id` is null, exactly as it renders the deleted-post / deleted-channel placeholders for the null `post_id`/`channel_id`. This makes `user_id` nullable (`*int`), consistent with the already-nullable `post_id`/`channel_id`.
 
 **CASCADE on attempts vs SET NULL on history — why the difference.** An attempt row lives ≤40 min, so the cascade from deleting a user (or post/channel) touches at most the user's currently-in-flight attempts — a small, bounded set. A history row lives 7 days, so the same cascade would touch the user's entire delivery record — unbounded and large. The two tables therefore take different FK actions for the _same logical column_: bounded lifetime → CASCADE (cheap, semantically clean); unbounded lifetime → SET NULL (no lock storm, preserves audit).
 
@@ -96,7 +98,7 @@ LIMIT 20 OFFSET $3;
 
 **`error_category`.** Terminal failures carry the classified send-failure category (see [`delivery-retry.md`](./delivery-retry.md)); `delivered` and `expired` rows store the empty string, as do rows written before the column existed. The category drives the admin history filter (`HistoryFilter.ErrorCategory`) and the `delivery_failed` metric label.
 
-**The history read surface.** `AttemptRepository` (internal/domain/delivery/repository.go) exposes the query set the UI needs, all over this table: `ListHistory`/`CountHistory` (paginated user or admin history with user/channel/status/error-category filters), `LatestPerChannel` (per-channel delivery-health overview on the channel list), `DailyStats`/`DailyStatsAll` (per-day outcome counts for the trend charts), `TodayCounts` (today's delivered/failed plus in-flight pending), `CountSince` (admin week-over-week delta), and `LockedChannels` (channels whose 24 h window shows all failures or a >50% failure rate, for the admin "需要关注" card).
+**The history read surface.** `AttemptRepository` (internal/domain/delivery/repository.go) exposes the query set the UI needs, all over this table: `ListHistory`/`CountHistory` (paginated user or admin history with user/channel/status/error-category filters), `LatestPerChannel` (per-channel delivery-health overview on the channel list), `DailyStats`/`DailyStatsAll` (per-day outcome counts for the trend charts), `TodayCounts` (today's delivered/failed plus in-flight pending), `CountSince` (admin week-over-week delta), and `LockedChannels` (channels whose 24 h window shows all failures or a >50% failure rate, for the admin needs-attention card).
 
 **Storage.** ~70 million rows over 7 days at ~60 bytes/row ≈ **4.2 GB**, well within the 40 GB disk alongside posts' ~11 GB.
 

@@ -1,5 +1,7 @@
 # Configuration Specification
 
+English | [中文](configuration.zh.md)
+
 This document defines the rules and conventions for the Markpost configuration system. It is intended as a reference for developers and operators.
 
 ## 1. File Format and Path

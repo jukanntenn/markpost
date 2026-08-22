@@ -1,5 +1,7 @@
 # Database DSN Specification
 
+English | [中文](dsn.zh.md)
+
 This document defines markpost's PostgreSQL connection DSN formats, sslmode choices, timezone handling, and password injection. The database schema is owned by [database-schema.md](./database-schema.md); config loading and the env override mechanism are owned by [configuration.md](./configuration.md).
 
 PostgreSQL is the only supported database. The `db.driver` config key accepts exactly `"postgresql"` (validated by `oneof=postgresql`, defaulted by Viper), and `internal/infra/db.go` opens the connection with GORM's postgres driver on pgx v5 — never lib/pq.

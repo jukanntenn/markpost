@@ -1,5 +1,7 @@
 # Delivery Scheduler and Claim Path
 
+English | [中文](delivery-scheduler.zh.md)
+
 The delivery subsystem is a three-layer pipeline: a PostgreSQL table for persistence, a single-goroutine ticker for scheduling, and a bounded pond v2 worker pool for concurrency. This page specifies the dispatcher (`internal/service/delivery/dispatcher.go`) — enqueue, the scheduler tick, the atomic claim, worker execution, and cleanup. The data model is specified in [`delivery-queue.md`](./delivery-queue.md); retry timing and failure classification in [`delivery-retry.md`](./delivery-retry.md); delivery semantics and crash recovery in [`delivery-recovery.md`](./delivery-recovery.md). Decision rationale (pond over ants, no broker, batched sweeps) lives in [the delivery MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md).
 
 ## Capacity envelope (the SaaS reference instance)

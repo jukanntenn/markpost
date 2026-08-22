@@ -1,5 +1,7 @@
 # Database Schema
 
+English | [中文](database-schema.zh.md)
+
 This document describes the current database schema for Markpost. The schema is defined through GORM model structs in `internal/domain/` and managed via versioned SQL migrations with `golang-migrate` (embedded in the binary at `internal/infra/migrations/`). PostgreSQL 17 is the only supported database. Type descriptions below use PostgreSQL semantics.
 
 ## Entity Relationship Diagram
@@ -86,18 +88,18 @@ Defined in `internal/domain/post/post.go`. Stores user posts with Markdown body 
 
 ### `refresh_tokens`
 
-Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT authentication. Records are created and **soft-revoked**（`revoked=true`），保留记录用于 token theft 重用检测（见 [auth.md](../auth.md) §2.2-2.3）。过期 + revoked 的行由定期清理物理删除。
+Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT authentication. Records are created and **soft-revoked** (`revoked=true`); the rows are kept for refresh-token theft reuse detection (see [auth.md](../auth.md) §2.2-2.3). Rows that are both expired and revoked are physically deleted by periodic cleanup.
 
 Explicit table name: `refresh_tokens`.
 
-| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints | Description                                                                           |
-| ----------- | ------------ | --------------------- | -------- | ------- | ----------- | ------------------------------------------------------------------------------------- |
-| `ID`        | `id`         | bigint auto-increment | no       | —       | PK          | Primary key                                                                           |
-| `UserID`    | `user_id`    | integer               | no       | —       | index       | Owning user (no FK constraint; cleanup handled at application level)                  |
-| `TokenHash` | `token_hash` | varchar               | no       | —       | unique      | SHA256 hash of the refresh token                                                      |
-| `Revoked`   | `revoked`    | boolean               | no       | `false` | —           | 吊销标记。`true` 表示已吊销（用于 token theft 重用检测，见 [auth.md](../auth.md) §2） |
-| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | —           | Token expiration time                                                                 |
-| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —           | Record creation time (auto)                                                           |
+| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints | Description                                                                                                           |
+| ----------- | ------------ | --------------------- | -------- | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| `ID`        | `id`         | bigint auto-increment | no       | —       | PK          | Primary key                                                                                                           |
+| `UserID`    | `user_id`    | integer               | no       | —       | index       | Owning user (no FK constraint; cleanup handled at application level)                                                  |
+| `TokenHash` | `token_hash` | varchar               | no       | —       | unique      | SHA256 hash of the refresh token                                                                                      |
+| `Revoked`   | `revoked`    | boolean               | no       | `false` | —           | Revocation flag. `true` marks a revoked token (for refresh-token theft reuse detection; see [auth.md](../auth.md) §2) |
+| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | —           | Token expiration time                                                                                                 |
+| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —           | Record creation time (auto)                                                                                           |
 
 ### `token_blacklist`
 
@@ -148,7 +150,7 @@ GORM association fields (e.g., `Post.User`, `Channel.User`) define `ON DELETE CA
 
 ### 5. PostgreSQL Only
 
-PostgreSQL 17 is the only supported database (sqlite/mysql drivers were permanently removed). Schema is managed exclusively through versioned SQL migrations (`internal/infra/migrations/`). GORM struct tags document the model's column metadata but do not drive schema changes.
+PostgreSQL 17 is the only supported database. Schema is managed exclusively through versioned SQL migrations (`internal/infra/migrations/`). GORM struct tags document the model's column metadata but do not drive schema changes.
 
 ### 6. Schema Migration
 
@@ -160,6 +162,6 @@ Tables without an explicit `TableName()` method use GORM's default pluralized na
 
 ---
 
-## 数据库连接（DSN）
+## Database Connection (DSN)
 
-Schema 设计只管表结构。数据库连接（DSN 格式）见 [dsn.md](./dsn.md)。
+Schema design covers table structure only. Database connection (DSN formats) lives in [dsn.md](./dsn.md).

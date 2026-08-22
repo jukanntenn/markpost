@@ -1,5 +1,7 @@
 # PostgreSQL Tuning
 
+English | [中文](postgres-tuning.zh.md)
+
 Connection, storage, and topology tuning for the single Postgres instance markpost runs against: connection-pool bounds in the Go process, server GUCs and TOAST compression applied by the deploy templates and migrations, and the sibling-container + Unix-socket topology. The decision record (GUC values, lz4 over application-level compression, Docker over bare metal) lives in [the performance-pass MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.md); DSN formats are specified in [`dsn.md`](./dsn.md).
 
 ## Connection pool

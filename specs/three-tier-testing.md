@@ -1,5 +1,7 @@
 # Three-Tier Testing Strategy
 
+English | [中文](three-tier-testing.zh.md)
+
 ## Tier 1: Unit Tests
 
 ### Backend

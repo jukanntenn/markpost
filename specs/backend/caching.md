@@ -1,5 +1,7 @@
 # Read-Path Caching
 
+English | [中文](caching.zh.md)
+
 This page specifies markpost's read-path caching design: the three cache layers (browser / CDN / origin render cache), the ETag/304 scheme, the CDN purge contract, and deletion-driven invalidation. Compression and page-weight work live in [`compression.md`](./compression.md); request throttling in [`rate-limiting.md`](./rate-limiting.md). The decision record — why Cloudflare, why these TTLs, what was rejected — is [the performance-pass MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.md). The operational Cloudflare layer (onboarding, SSL mode, free-tier boundaries) is [`cloudflare.md`](./cloudflare.md).
 
 ## Scope and workload

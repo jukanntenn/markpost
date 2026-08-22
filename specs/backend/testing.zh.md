@@ -1,10 +1,12 @@
-# Backend Testing
+# 后端测试
 
-English | [中文](testing.zh.md)
+[English](testing.md) | 中文
 
-## Test File Placement
+<a id="test-file-placement"></a>
 
-Test files are placed alongside the source files they test, following Go convention:
+## 测试文件放置
+
+测试文件与其被测源文件同目录放置，遵循 Go 惯例：
 
 ```
 internal/service/post/post.go
@@ -13,9 +15,11 @@ internal/api/rest/v1/auth.go
 internal/api/rest/v1/auth_test.go
 ```
 
-## Test Database
+<a id="test-database"></a>
 
-The `infra` package provides `SetupTestDB(t)`, which starts (or reuses) a real PostgreSQL testcontainer, applies all embedded migrations, and returns a connected `*gorm.DB` whose cleanup truncates all data between tests (`internal/infra/testdb.go`):
+## 测试数据库
+
+`infra` 包提供 `SetupTestDB(t)`：启动（或复用）一个真实的 PostgreSQL testcontainer，应用全部内嵌迁移，并返回一个已连接的 `*gorm.DB`，其清理会在测试之间清空所有数据（`internal/infra/testdb.go`）：
 
 ```go
 func TestSomething(t *testing.T) {
@@ -24,11 +28,13 @@ func TestSomething(t *testing.T) {
 }
 ```
 
-Any package calling `infra.SetupTestDB` routes its `TestMain` through `infra.RunTestMain` (see `internal/infra/main_test.go`): the shared container outlives individual tests, and the package terminates it itself. A running Docker daemon is required; set `TESTCONTAINERS_SKIP=1` to skip container-backed tests where none exists.
+任何调用 `infra.SetupTestDB` 的包都把它的 `TestMain` 交给 `infra.RunTestMain` 路由（见 `internal/infra/main_test.go`）：共享容器存活期长于单个测试，由该包自行终止它。需要运行中的 Docker 守护进程；在没有守护进程的环境设置 `TESTCONTAINERS_SKIP=1` 跳过依赖容器的测试。
 
-## Mock Repositories
+<a id="mock-repositories"></a>
 
-Service tests use hand-written mock repositories that implement the domain interfaces:
+## Mock 仓储
+
+Service 测试使用实现 domain 接口的手写 mock 仓储：
 
 ```go
 type mockPostRepository struct {
@@ -55,11 +61,15 @@ func (m *mockPostRepository) GetByQID(_ context.Context, qid string) (*post.Post
 }
 ```
 
-## Test Patterns
+<a id="test-patterns"></a>
 
-### Table-Driven Tests
+## 测试模式
 
-Tests are organized using subtests with `t.Run`:
+<a id="table-driven-tests"></a>
+
+### 表驱动测试
+
+测试用 `t.Run` 子测试组织：
 
 ```go
 func TestService_CreatePost(t *testing.T) {
@@ -86,9 +96,11 @@ func TestService_CreatePost(t *testing.T) {
 }
 ```
 
-### Handler Tests
+<a id="handler-tests"></a>
 
-Handler tests set up a Gin test context and verify HTTP responses:
+### Handler 测试
+
+Handler 测试搭建 Gin 测试上下文并校验 HTTP 响应：
 
 ```go
 func TestLoginWithUsername(t *testing.T) {
@@ -98,7 +110,9 @@ func TestLoginWithUsername(t *testing.T) {
 }
 ```
 
-## Running Tests
+<a id="running-tests"></a>
+
+## 运行测试
 
 ```bash
 # All tests

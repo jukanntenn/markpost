@@ -1,5 +1,7 @@
 # Delivery Semantics and Crash Recovery
 
+English | [中文](delivery-recovery.zh.md)
+
 The delivery subsystem's product contract and its behavior across process crashes. The mechanism references live in the sibling pages — [`delivery-queue.md`](./delivery-queue.md) for the tables, [`delivery-scheduler.md`](./delivery-scheduler.md) for the dispatcher, [`delivery-retry.md`](./delivery-retry.md) for retry policy. Why exactly-once and an external broker were rejected is recorded in [the delivery MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md).
 
 ## Product semantics

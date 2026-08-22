@@ -1,5 +1,7 @@
 # Keyword Filter Expressions
 
+English | [中文](keyword-filter.zh.md)
+
 This document specifies the keyword filter expression grammar that delivery channels use to decide whether a post should be pushed. It is the authoritative reference for the syntax, matching semantics, validation rules, and the cross-language contract between the Go backend (evaluator) and the TypeScript frontend (live preview).
 
 ## Overview

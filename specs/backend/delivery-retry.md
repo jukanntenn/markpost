@@ -1,5 +1,7 @@
 # Delivery Retry and Backoff
 
+English | [中文](delivery-retry.zh.md)
+
 Retry policy for the delivery queue: a hardcoded fixed backoff sequence with an auto-computed expiry wall, plus error classification that fails permanently-rejected sends fast instead of burning the retry budget. The constants live in `internal/service/delivery/backoff.go` and `internal/service/delivery/delivery_error.go`. Why the sequence is hardcoded rather than configurable, and the alternatives that lost, are recorded in [the delivery MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md); the queue tables it mutates are specified in [`delivery-queue.md`](./delivery-queue.md) and the scheduler that drives it in [`delivery-scheduler.md`](./delivery-scheduler.md).
 
 ## The backoff sequence

@@ -28,13 +28,15 @@ def linked_specs(index: Path) -> set[str]:
             continue
         if target.startswith("../"):
             continue
+        if target.lstrip("./").split("#", 1)[0].split("?", 1)[0] in ("index.md", "index.zh.md"):
+            continue  # the language switcher between the two indexes, not a spec row
         out.add("specs/" + target.lstrip("./").split("#", 1)[0].split("?", 1)[0])
     return out
 
 
 def stem(path: str) -> str:
     """specs/foo.md and specs/foo.zh.md share the stem specs/foo."""
-    return path[: -len(".zh.md")] if path.endswith(".zh.md") else path
+    return path[: -len(".zh.md")] if path.endswith(".zh.md") else path[: -len(".md")]
 
 
 def main(argv: list[str]) -> int:

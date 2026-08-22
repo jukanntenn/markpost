@@ -1,5 +1,7 @@
 # Docker Build Specification
 
+English | [中文](build-specification.zh.md)
+
 ## Base Images
 
 | Image                | Stage                      | Version               | Size (compressed) |
@@ -86,7 +88,7 @@ Each build context has a `.dockerignore` that excludes non-essential files:
 
 Registry-based build cache (`--cache-to`/`--cache-from`) is deliberately NOT used: builds against the internal registry gain nothing from cross-machine cache layers (single builder machine) and the `mode=max` cache blobs would just consume registry disk. Only the local buildx builder cache applies; `--no-cache` disables it. CI release builds use GitHub Actions cache (`type=gha`) instead — see `.github/workflows/docker-publish.yml`.
 
-## Build Script (`docker/build.py`)
+## Build Script (docker/build.py)
 
 ### Behavior
 

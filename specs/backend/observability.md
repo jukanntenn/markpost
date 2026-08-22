@@ -1,101 +1,103 @@
 # Observability
 
-可观测性的三支柱（Logs / Traces / Metrics）规范。日志（Logs）作为可观测性的一部分，与 traces、metrics 统一在此文档描述。
+English | [中文](observability.zh.md)
 
-## 技术栈与硬约束
+The three observability pillars (Logs / Traces / Metrics) in one specification. Logging, as one pillar, is described here together with traces and metrics.
 
-### 硬约束
+## Tech Stack and Hard Constraints
 
-**三支柱全部 export 到本地文件系统，不引入外部服务**（no Jaeger / Prometheus / Loki / OTLP collector）。所有可观测性产物（日志/spans/metrics）落盘为 JSONL 文件，`jq` 分析。
+### Hard constraints
 
-### 路线 A：slog + 自写 trace Handler
+**All three pillars export to the local filesystem; no external services** (no Jaeger / Prometheus / Loki / OTLP collector). Every observability artifact (logs / spans / metrics) lands on disk as JSONL files, analyzed with `jq`.
 
-日志这条支柱采用 `log/slog`（Go 标准库）+ 自写 slog Handler 从 ctx 提取 trace_id 注入每条日志，**不采用 OTel Logs SDK**。
+### Route A: slog + a hand-written trace Handler
 
-**明确不采用 `slog-otel`**（维护不活跃）—— 改为自写 ~20 行 slog Handler 实现 trace↔log 关联。保留此决策记录。
+The logging pillar uses `log/slog` (Go standard library) plus a hand-written slog Handler that pulls the trace_id from ctx into every log entry; **the OTel Logs SDK is not used**.
 
-### 三支柱落盘
+**`slog-otel` is not used** (inactive maintenance) — a hand-written ~20-line slog Handler implements the trace↔log correlation instead. This decision record is kept.
 
-| 支柱        | 采集                                                                  | 落盘                                                           |
-| ----------- | --------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **Logs**    | `log/slog`，自写 Handler 从 ctx 提取 trace_id/span_id 注入每条日志    | timberjack → `app-*.jsonl`                                     |
-| **Traces**  | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）+ 业务手动子 span | `stdouttrace.New(WithWriter(timberjack))` → `traces-*.jsonl`   |
-| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ runtime 自动采集       | `stdoutmetric.New(WithWriter(timberjack))` → `metrics-*.jsonl` |
+### The three pillars on disk
 
-### 技术可行性依据
+| Pillar      | Collection                                                                              | On disk                                                        |
+| ----------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Logs**    | `log/slog`, hand-written Handler injecting trace_id/span_id from ctx into every entry   | timberjack → `app-*.jsonl`                                     |
+| **Traces**  | OTel Go SDK + `otelgin.Middleware` (automatic HTTP spans) + manual business child spans | `stdouttrace.New(WithWriter(timberjack))` → `traces-*.jsonl`   |
+| **Metrics** | OTel Go metric SDK (counter/gauge/histogram) + automatic runtime collection             | `stdoutmetric.New(WithWriter(timberjack))` → `metrics-*.jsonl` |
 
-- timberjack 的 `Logger` 实现 `io.Writer`（`timberjack.go` 的 `Write(p []byte)` 方法），可直接作为日志和 exporter 的输出 sink。
-- OTel 三个 stdout exporter 都提供 `WithWriter(io.Writer)` 选项（`stdouttrace/config.go`、`stdoutmetric/config.go`、`stdoutlog/config.go`），所以 timberjack 实例可直接喂给 exporter，实现 trace/metric 各自独立滚动落盘。
+### Technical feasibility basis
 
-## 文件布局与滚动
+- timberjack's `Logger` implements `io.Writer` (the `Write(p []byte)` method in `timberjack.go`), so it serves directly as the output sink for logs and exporters.
+- All three OTel stdout exporters offer a `WithWriter(io.Writer)` option (`stdouttrace/config.go`, `stdoutmetric/config.go`, `stdoutlog/config.go`), so a timberjack instance feeds an exporter directly, giving traces and metrics their own independently rotating files.
 
-### 三文件模型
+## File Layout and Rotation
+
+### The three-file model
 
 ```
 /app/data/logs/
-├── app-2026-07-14.jsonl          业务事件 + HTTP 访问 + 错误（slog）
-├── app-2026-07-14T00-00-00.000-time.jsonl.zst   零点滚动归档
-├── traces-2026-07-14.jsonl       OTel span
-├── metrics-2026-07-14.jsonl      OTel metric 数据点
+├── app-2026-07-14.jsonl          business events + HTTP access + errors (slog)
+├── app-2026-07-14T00-00-00.000-time.jsonl.zst   midnight rotation archive
+├── traces-2026-07-14.jsonl       OTel spans
+├── metrics-2026-07-14.jsonl      OTel metric data points
 └── ...
 ```
 
-三文件通过 `trace_id` 串联：app 发现异常 → traces 看调用链 → metrics 看当时指标。
+The three files chain together through `trace_id`: spot an anomaly in app → read the call chain in traces → check the metrics of that moment.
 
-### timberjack 滚动配置（混合策略，三文件共用）
+### timberjack rotation config (hybrid strategy, shared by all three files)
 
-| 配置项             | 值                          | 说明                                |
-| ------------------ | --------------------------- | ----------------------------------- |
-| `RotateAt`         | `["00:00"]`                 | 每天零点滚动（为主）                |
-| `MaxSize`          | 100 MB                      | 故障日中途切兜底（单文件不过大）    |
-| `MaxBackups`       | 14                          | 保留 14 个旧文件（约两周）          |
-| `MaxAge`           | 30                          | 30 天前的删除（与 MaxBackups 取严） |
-| `Compression`      | `"zstd"`                    | 旧文件 zstd 压缩                    |
-| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | 毫秒格式，避免 size 二次切时重名    |
+| Setting            | Value                       | Purpose                                                               |
+| ------------------ | --------------------------- | --------------------------------------------------------------------- |
+| `RotateAt`         | `["00:00"]`                 | Rotate at midnight daily (primary)                                    |
+| `MaxSize`          | 100 MB                      | Mid-day fallback cut on incident days (keeps single files bounded)    |
+| `MaxBackups`       | 14                          | Keep 14 old files (about two weeks)                                   |
+| `MaxAge`           | 30                          | Delete past 30 days (stricter of MaxBackups/MaxAge wins)              |
+| `Compression`      | `"zstd"`                    | zstd-compress old files                                               |
+| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | Millisecond format; avoids name collisions on a second size-based cut |
 
-**混合策略说明**：以每天零点切为主，但若某天日志暴增（故障风暴），100MB 会中途切一次，那一天有 2 个文件。`BackupTimeFormat` 用毫秒格式确保 size 二次切时不重名。如果看重"严格一天一文件"，可去掉 MaxSize 改纯日期切，但失去单文件大小控制。
+**Hybrid strategy explained**: midnight rotation is the primary trigger, but if a day's logs surge (an incident storm), the 100 MB cap cuts a second file mid-day, giving that day 2 files. `BackupTimeFormat`'s millisecond precision keeps the second size-based cut from colliding names. If "strictly one file per day" matters more, drop MaxSize and rotate purely by date — at the cost of single-file size control.
 
-## Logs（slog）
+## Logs (slog)
 
-### 日志级别规范
+### Log level conventions
 
-- **Error**：意外错误、panic、非 service.Error 的边界错误、未知错误码
-- **Warn**：可恢复异常（限流、降级、重试）
-- **Info**：生命周期事件（启动/关闭/配置加载）、关键业务事件（post 创建、登录、delivery 派发）
-- **Debug**：开发期细节，生产默认关闭
+- **Error**: unexpected errors, panics, boundary errors that are not service.Error, unknown error codes
+- **Warn**: recoverable anomalies (rate limiting, degradation, retries)
+- **Info**: lifecycle events (startup / shutdown / config loading), key business events (post creation, login, delivery dispatch)
+- **Debug**: development-time detail, off in production by default
 
-### 何时记日志
+### When to log
 
-- **启动生命周期**：config loaded / db init / server start / listening address
-- **边界意外错误**：`apierr.RespondError` 遇到非 service.Error 或未知错误码时，**用 `slog.Error` 带 trace 字段**（不用 `log.Printf`）
-- **panic recovery**：fallback middleware recover 后 `slog.Error` 记录（带 trace_id、path、error）
-- **关键业务事件**：post 创建、登录、delivery 派发等，带结构化字段（user_id、post_id、session_id 等）
+- **Startup lifecycle**: config loaded / db init / server start / listening address
+- **Unexpected boundary errors**: when `apierr.RespondError` meets a non-service.Error or an unknown error code, it logs **with `slog.Error` and trace fields** (not `log.Printf`)
+- **panic recovery**: after the fallback middleware recovers, `slog.Error` records it (with trace_id, path, error)
+- **Key business events**: post creation, login, delivery dispatch, etc., with structured fields (user_id, post_id, session_id, ...)
 
-**service 层 error 不逐个记日志** —— 上抛到边界（handler/apierr）才记。
+**Service-layer errors are not logged one by one** — logging happens at the boundary (handler / apierr) where they surface.
 
-### 绝不记录的敏感数据
+### Sensitive data that is never logged
 
-- 密码（明文或哈希）
-- JWT token（access 或 refresh）
-- OAuth client secret
-- Post key 值（生产日志中）
-- 完整请求体（可能含用户内容）
+- Passwords (plaintext or hashed)
+- JWT tokens (access or refresh)
+- OAuth client secrets
+- Post key values (in production logs)
+- Full request bodies (may contain user content)
 
-### fatal 日志
+### Fatal logs
 
-**统一用 `slog.Error` + `os.Exit(1)`，废弃 `log.Fatalf`**。理由：保证 fatal 也进结构化日志（app.jsonl）、带 trace 等字段。
+**Fatal logging is uniformly `slog.Error` + `os.Exit(1)`; `log.Fatalf` is unused.** Rationale: fatal entries land in the structured log (app.jsonl) with trace fields.
 
-仅启动期不可恢复错误使用 fatal（进程无法继续）：
+Fatal is reserved for unrecoverable startup errors (the process cannot continue):
 
-- Config 文件加载失败
-- 数据库连接失败
-- Admin 用户初始化失败
-- Trusted proxy 配置失败
-- Server bind 失败
+- Config file loading failure
+- Database connection failure
+- Admin user initialization failure
+- Trusted proxy configuration failure
+- Server bind failure
 
-### trace↔log 关联（自写 slog Handler）
+### trace↔log correlation (the hand-written slog Handler)
 
-自写约 20 行 slog Handler，从 `ctx` 提取 trace 信息注入每条日志：
+A hand-written ~20-line slog Handler pulls trace information from `ctx` into every log entry:
 
 ```go
 func (h *traceHandler) Handle(ctx context.Context, r slog.Record) slog.Record {
@@ -110,93 +112,93 @@ func (h *traceHandler) Handle(ctx context.Context, r slog.Record) slog.Record {
 }
 ```
 
-API：`trace.SpanFromContext(ctx).SpanContext()` → `.TraceID()` / `.SpanID()`（来自 `go.opentelemetry.io/otel/trace`）。
+API: `trace.SpanFromContext(ctx).SpanContext()` → `.TraceID()` / `.SpanID()` (from `go.opentelemetry.io/otel/trace`).
 
-## Traces（OTel）
+## Traces (OTel)
 
-### 自动建 span（otelgin 中间件）
+### Automatic spans (the otelgin middleware)
 
-`otelgin.Middleware(serviceName, opts...)` 注册为中间件，每个 HTTP 请求自动建 span：
+`otelgin.Middleware(serviceName, opts...)` registers as middleware and creates a span for every HTTP request automatically:
 
 ```go
 r.Use(otelgin.Middleware("markpost"))
 ```
 
-自动记录：HTTP method、path、status code、latency。
+Recorded automatically: HTTP method, path, status code, latency.
 
-### 手动子 span
+### Manual child spans
 
-业务关键操作用 `tracer.Start(ctx, "operation.name")` 建子 span：
+Business-critical operations open child spans with `tracer.Start(ctx, "operation.name")`:
 
-| 操作                                  | span name                          |
-| ------------------------------------- | ---------------------------------- |
-| DB 写事务（创建 post、delivery 派发） | `post.Create`、`delivery.Dispatch` |
-| Markdown 渲染                         | `post.RenderHTML`                  |
-| delivery 调度循环                     | `delivery.Schedule`                |
-| 外部调用（OAuth 回调 GitHub）         | `auth.GitHubCallback`              |
+| Operation                                                | Span name                          |
+| -------------------------------------------------------- | ---------------------------------- |
+| DB write transactions (post creation, delivery dispatch) | `post.Create`, `delivery.Dispatch` |
+| Markdown rendering                                       | `post.RenderHTML`                  |
+| The delivery scheduling loop                             | `delivery.Schedule`                |
+| External calls (OAuth callback to GitHub)                | `auth.GitHubCallback`              |
 
-子 span 通过 `trace.SpanFromContext(ctx)` 继承父 span 的 trace_id，形成调用链。**错误时在 span 上记录 error 属性**：`span.SetStatus(codes.Error, msg); span.RecordError(err)`。
+Child spans inherit the parent's trace_id through `trace.SpanFromContext(ctx)`, forming call chains. **On error, record an error attribute on the span**: `span.SetStatus(codes.Error, msg); span.RecordError(err)`.
 
-### 采样策略
+### Sampling policy
 
-`ParentBased(AlwaysOn)` —— 默认全采。
+`ParentBased(AlwaysOn)` — sample everything by default.
 
-理由：单服务、不涉及跨服务传播，traces 文件量可控。后续若 QPS 增长，改为 `ParentBased(TraceIDRatioBased(0.1))` 即可（预留配置项）。
+Rationale: a single service with no cross-service propagation, so the traces file stays a manageable size. If QPS grows, switching to `ParentBased(TraceIDRatioBased(0.1))` is one line (a config slot is reserved).
 
-## Metrics（OTel）
+## Metrics (OTel)
 
 ### Reader
 
-`PeriodicReader(stdoutmetricExporter, metric.WithInterval(60*time.Second))` —— 每 60 秒 export 一次到 metrics 文件。
+`PeriodicReader(stdoutmetricExporter, metric.WithInterval(60*time.Second))` — exports to the metrics file every 60 seconds.
 
-### 命名风格
+### Naming style
 
-遵循 OTel 语义约定 semconv（点号分隔，如 `http.server.request.duration`），**非**下划线风格（`http_request_duration_seconds`）。
+OTel semantic conventions (semconv), dot-separated like `http.server.request.duration` — **not** the underscore style (`http_request_duration_seconds`).
 
-### 指标清单
+### Metric inventory
 
-暂采纳以下指标，后续按需扩展：
+The metrics adopted today, extended as needed:
 
-| 层   | 指标                                 | 类型      | 标签                   | 说明                                              |
-| ---- | ------------------------------------ | --------- | ---------------------- | ------------------------------------------------- |
-| HTTP | `http.server.request.duration`       | histogram | method, path, status   | 接口级性能（otelgin 自动 + 补充）                 |
-| HTTP | `http.server.active_requests`        | gauge     | —                      | 当前在途请求数                                    |
-| 业务 | `markpost.posts.created_total`       | counter   | —                      | 投稿创建数                                        |
-| 业务 | `markpost.auth.login_total`          | counter   | result=success/failure | 登录成功/失败分布                                 |
-| 业务 | `markpost.auth.token_refresh_total`  | counter   | —                      | token 刷新次数                                    |
-| 业务 | `markpost.delivery.pending`          | gauge     | —                      | 待派发数                                          |
-| 业务 | `markpost.delivery.dispatched_total` | counter   | —                      | 已派发数                                          |
-| 业务 | `markpost.delivery.failed_total`     | counter   | reason                 | 派发失败数（按原因）                              |
-| 系统 | runtime metrics                      | —         | —                      | OTel Go runtime 自动采集（goroutine 数、GC、mem） |
+| Layer    | Metric                               | Type      | Labels                 | Purpose                                                  |
+| -------- | ------------------------------------ | --------- | ---------------------- | -------------------------------------------------------- |
+| HTTP     | `http.server.request.duration`       | histogram | method, path, status   | Per-endpoint performance (otelgin automatic + additions) |
+| HTTP     | `http.server.active_requests`        | gauge     | —                      | In-flight request count                                  |
+| Business | `markpost.posts.created_total`       | counter   | —                      | Posts created                                            |
+| Business | `markpost.auth.login_total`          | counter   | result=success/failure | Login success / failure distribution                     |
+| Business | `markpost.auth.token_refresh_total`  | counter   | —                      | Token refresh count                                      |
+| Business | `markpost.delivery.pending`          | gauge     | —                      | Pending dispatch count                                   |
+| Business | `markpost.delivery.dispatched_total` | counter   | —                      | Dispatched count                                         |
+| Business | `markpost.delivery.failed_total`     | counter   | reason                 | Dispatch failures (by reason)                            |
+| System   | runtime metrics                      | —         | —                      | OTel Go runtime auto-collection (goroutines, GC, memory) |
 
-### 日志关联字段
+### Log correlation fields
 
-每条业务日志自动带 `trace_id`、`span_id`，以及业务相关字段（`user_id`、`post_id` 等如适用）。
+Every business log entry carries `trace_id` and `span_id` automatically, plus business fields where applicable (`user_id`, `post_id`, etc.).
 
-## 初始化装配（cmd/server/main.go）
+## Initialization Wiring (cmd/server/main.go)
 
-启动时按顺序装配：
+At startup, in order:
 
-1. **创建三个 timberjack Logger**（app/traces/metrics），配置滚动参数
-2. **构造 exporter**：
+1. **Create the three timberjack Loggers** (app / traces / metrics) with the rotation settings
+2. **Construct the exporters**:
    - `stdouttrace.New(stdouttrace.WithWriter(appTracesLogger))`
    - `stdoutmetric.New(stdoutmetric.WithWriter(appMetricsLogger))`
-3. **装配 Provider**：
+3. **Wire the providers**:
    - `sdktrace.NewTracerProvider/sdktrace.WithBatcher(traceExporter)` → `otel.SetTracerProvider`
    - `sdkmetric.NewMeterProvider/sdkmetric.WithReader(metric.NewPeriodicReader(metricExporter))` → `otel.SetMeterProvider`
-4. **注册 otelgin 中间件**：`r.Use(otelgin.Middleware("markpost"))`
-5. **装配自写 slog Handler**（注入 trace_id），`slog.SetDefault`
-6. **优雅关闭**：`Shutdown(ctx)` flush exporter + `Close()` 三个 timberjack
+4. **Register the otelgin middleware**: `r.Use(otelgin.Middleware("markpost"))`
+5. **Install the hand-written slog Handler** (injects trace_id), `slog.SetDefault`
+6. **Graceful shutdown**: `Shutdown(ctx)` flushes the exporters + `Close()` on the three timberjack loggers
 
-## 输出格式
+## Output Format
 
-三文件均为 JSON Lines（JSONL），每行一个 JSON 对象，`jq` 可分析：
+All three files are JSON Lines (JSONL), one JSON object per line, analyzable with `jq`:
 
 ```bash
-# 按 trace_id 串联三文件
+# join the three files by trace_id
 jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/app-*.jsonl
 jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/traces-*.jsonl
 jq 'select(.trace_id=="a1b2c3d4...")' /app/data/logs/metrics-*.jsonl
 ```
 
-stdout exporter 默认输出 JSON，metrics 的 stdoutmetric 输出较冗长（每数据点一行），文件会比 traces 大。这是可接受的默认格式。
+The stdout exporters emit JSON by default; stdoutmetric's output is verbose (one line per data point), so the metrics file is larger than traces. This is the accepted default format.

@@ -1,5 +1,7 @@
 # Cloudflare CDN Integration
 
+English | [中文](cloudflare.zh.md)
+
 This document specifies how markpost integrates with Cloudflare's free-tier CDN for the SaaS reference instance, and records the three deployment modes the project supports. It is the authoritative reference for the DNS, TLS, caching, and cache-purge decisions. All Cloudflare behavior claims cite the Cloudflare documentation at `~/Workspace/contexts/cloudflare/cloudflare-docs/` (repo version 2026-07-08); citations use paths relative to that root.
 
 The caching and invalidation _design_ (three cache layers, ETag scheme, cache-tag purge, render cache) lives in [`caching.md`](./caching.md). This document covers the _operational_ layer: how to wire a VPS origin to Cloudflare, which SSL mode to choose, how the purge API is called, and what the free-tier limits are.

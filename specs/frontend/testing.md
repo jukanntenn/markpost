@@ -1,5 +1,7 @@
 # Frontend Testing
 
+English | [中文](testing.zh.md)
+
 ## Unit Tests
 
 ### Framework

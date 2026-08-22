@@ -1,0 +1,19 @@
+{
+  "owner": "jukanntenn",
+  "repository": "markpost",
+  "statuses": [
+    "Inbox",
+    "Backlog",
+    "Ready",
+    "In progress",
+    "In review",
+    "Done",
+    "No action"
+  ],
+  "priorityField": "Priority",
+  "lifecycleActor": "github-actions[bot]",
+  "bodyUnitLimit": 50,
+  "types": ["idea", "feature", "bug", "research", "task"],
+  "requireProject": false,
+  "projectNumber": null
+}

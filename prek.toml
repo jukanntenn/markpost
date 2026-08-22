@@ -68,6 +68,17 @@ files = "(^|/)(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
 pass_filenames = false
 stages = ["pre-commit"]
 
+# Issue/pull-request policy logic carries its own unittest suite; the
+# workflow files lint via actionlint above, the logic gates here (CI runs
+# the same suite through `prek run --all-files`).
+[[repos.hooks]]
+id = "issue-policy-tests"
+name = "issue policy unit tests"
+language = "system"
+entry = "python3 .github/issue-management/policy_test.py"
+files = "^\\.github/issue-management/"
+pass_filenames = false
+
 # ---- fmt group: root-level formatters (non-frontend, non-agent-dir) ----
 # prettier resolves through frontend's pinned install (CI installs pnpm and
 # frontend deps but no toolchain-level prettier; a bare `prettier` entry

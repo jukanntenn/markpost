@@ -11,7 +11,7 @@ Group by logical change, not by file. Draft a plan, confirm, then execute. Never
 2. Separate AI-edited files from unrecognized ones; list unrecognized separately, never mix them in.
 3. Group by logical unit (handler+service+repository, page+fetcher+types); order: `build/chore` → `feat` → `fix` → `refactor` → `style` → `docs` → `test`, `chore(release)` last.
 4. Present the plan once; after confirmation run `git add` + `git commit` batch by batch. Rejected → stop, no second plan.
-5. Verification is owned by prek — never run parallel lint/format/test commands by hand. `git commit` itself runs the pre-commit stage (fmt + lint + generated-files drift + agents-sync) and `commit-msg` checks the message; never `--no-verify`. To gate by hand first, from the repo root: `prek run --all-files` (CI's Lint gate). Tests are the push gate, not a commit gate — `prek run --stage pre-push --all-files` runs them on demand.
+5. Verification is owned by prek — never run parallel lint/format/test commands by hand. `git commit` itself runs the pre-commit stage (fmt + lint + generated-files drift + agent-instructions-sync) and `commit-msg` checks the message; never `--no-verify`. To gate by hand first, from the repo root: `prek run --all-files` (CI's Lint gate). Tests are the push gate, not a commit gate — `prek run --stage pre-push --all-files` runs them on demand.
 6. Single file → skip the plan, commit directly.
 
 Message: `<type>(<scope>): <desc>` — lowercase, imperative, no trailing period. Types: `feat`/`fix`/`refactor`/`docs`/`test`/`chore`/`ci`/`build`/`style`/`perf`. Scopes: `backend`/`frontend`/`auth`/`post`/`delivery`/`admin`/`i18n`/`devops`/`ci`/`tooling`/`db` (omit for cross-cutting). Match the change's language.

@@ -1,6 +1,6 @@
 # Compression and Page Weight
 
-Transmission minimization for the read path: HTTP compression at Caddy, CSS externalization + minification + content-hash fingerprinting, and render-time HTML minification. Under the SaaS reference instance's 3 Mbps / 1 TB budget, every byte saved is simultaneously link headroom and quota headroom (see [`caching.md`](./caching.md) _Hardware envelope_), which is why byte reduction dominates CPU optimization in this design. The decision record (zstd over brotli, no precompression, no Node toolchain) lives in [the performance-pass MRFC](../../mrfc/implemented/2026-07-09-read-path-performance-pass.md).
+Transmission minimization for the read path: HTTP compression at Caddy, CSS externalization + minification + content-hash fingerprinting, and render-time HTML minification. Under the SaaS reference instance's 3 Mbps / 1 TB budget, every byte saved is simultaneously link headroom and quota headroom (see [`caching.md`](./caching.md) _Hardware envelope_), which is why byte reduction dominates CPU optimization in this design. The decision record (zstd over brotli, no precompression, no Node toolchain) lives in [the performance-pass MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.md).
 
 ## Why page weight dominates
 

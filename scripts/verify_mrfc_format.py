@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-# Every MRFC follows one format (see mrfc/README.md): filename
+# Every MRFC follows one format (see .agents/mrfcs/README.md): filename
 # yyyy-mm-dd-topic.md under a lifecycle directory, an `# MRFC: <title>`
 # header with a Status line agreeing with that directory, a `## Problem`
 # body opener, and a mandatory `## Alternatives considered` section.
 # Proposal-era headings (## Proposal, ## Plan, ## Migration plan,
 # ## Acceptance criteria) are spec-speak and rejected in implemented/.
+# A record may carry a .zh.md twin beside its English original; the twin
+# follows the same skeleton (machine tokens and headings in English).
 # Part of doc_sync.py.
 from __future__ import annotations
 
@@ -14,15 +16,18 @@ import sys
 from doclib import ROOT, collect, restrict
 
 LIFECYCLES = {"proposed", "implemented", "rejected"}
-FILENAME = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]*\.md$")
+TREE_ROOT_FILES = {"README.md", "AGENTS.md", "README.zh.md"}
+FILENAME = re.compile(r"^\d{4}-\d{2}-\d{2}-[a-z0-9][a-z0-9-]*(\.zh)?\.md$")
 TITLE = re.compile(r"^# MRFC: \S.+")
 STATUS = re.compile(r"^Status: (proposed|implemented|rejected)(\s+—\s*\S.*)?$")
 PROPOSAL_SPEAK = ("## Proposal", "## Plan", "## Migration plan", "## Acceptance criteria")
 
+MRFC_DIR = ".agents/mrfcs"
+
 
 def find_violations(path) -> list[str]:
     rel = path.relative_to(ROOT)
-    parts = path.relative_to(ROOT / "mrfc").parts
+    parts = path.relative_to(ROOT / MRFC_DIR).parts
     lifecycle = parts[0]
     out: list[str] = []
 
@@ -30,6 +35,11 @@ def find_violations(path) -> list[str]:
         return [f"{rel}: lifecycle directory must be one of {sorted(LIFECYCLES)}"]
     if not FILENAME.match(path.name):
         out.append(f"{rel}: filename must be yyyy-mm-dd-topic-title.md (lowercase slug)")
+    if path.name.endswith(".zh.md"):
+        twin = path.with_name(path.name[: -len(".zh.md")] + ".md")
+        if not twin.is_file():
+            out.append(f"{rel}: a .zh.md record requires its English original {twin.name} in the same directory")
+            return out
 
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or not TITLE.match(lines[0]):
@@ -81,24 +91,24 @@ def find_violations(path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    files = collect(["mrfc/proposed/*.md", "mrfc/implemented/*.md", "mrfc/rejected/*.md", "mrfc/*.md"])
-    files = [f for f in files if f.name != "README.md"]
+    files = collect([f"{MRFC_DIR}/proposed/*.md", f"{MRFC_DIR}/implemented/*.md", f"{MRFC_DIR}/rejected/*.md", f"{MRFC_DIR}/*.md"])
+    files = [f for f in files if f.name not in TREE_ROOT_FILES]
     if argv[1:]:
         files = restrict(files, argv[1:])
 
     strays = [
         str(p.relative_to(ROOT))
-        for p in collect(["mrfc/*.md", "mrfc/**/*.md"])
-        if p.name != "README.md" and (p.parent == ROOT / "mrfc" or p.parent.name not in LIFECYCLES)
+        for p in collect([f"{MRFC_DIR}/*.md", f"{MRFC_DIR}/**/*.md"])
+        if p.name not in TREE_ROOT_FILES and (p.parent == ROOT / MRFC_DIR or p.parent.name not in LIFECYCLES)
     ]
 
     problems: list[str] = []
     for path in files:
         problems.extend(find_violations(path))
-    problems += [f"{s}: MRFCs live directly under mrfc/{{proposed,implemented,rejected}}/" for s in strays]
+    problems += [f"{s}: MRFCs live directly under {MRFC_DIR}/{{proposed,implemented,rejected}}/" for s in strays]
 
     if problems:
-        print("verify_mrfc_format: format violations found (see mrfc/README.md):", file=sys.stderr)
+        print(f"verify_mrfc_format: format violations found (see {MRFC_DIR}/README.md):", file=sys.stderr)
         print("\n".join(f"  {p}" for p in problems), file=sys.stderr)
         return 1
     print(f"verify_mrfc_format: {len(files)} MRFC(s) follow the format")

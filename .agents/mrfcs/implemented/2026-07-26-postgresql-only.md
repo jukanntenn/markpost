@@ -20,4 +20,4 @@ markpost runs on PostgreSQL 17 only. `backend/internal/infra/db.go` opens the co
 
 ## Consequences
 
-Any deployment, including a homelab, runs a PostgreSQL 17 instance — the single Docker image and dev compose both provide one. In return, the data layer uses the best available PostgreSQL mechanism for each job, tests run against the one real engine, and migrations are written once. Dropping the drivers entirely rather than carrying them unused is [PRINCIPLES.md](../../PRINCIPLES.md) "Design from first principles" applied.
+Any deployment, including a homelab, runs a PostgreSQL 17 instance — the single Docker image and dev compose both provide one. In return, the data layer uses the best available PostgreSQL mechanism for each job, tests run against the one real engine, and migrations are written once. Dropping the drivers entirely rather than carrying them unused is [PRINCIPLES.md](../../../PRINCIPLES.md) "Design from first principles" applied.

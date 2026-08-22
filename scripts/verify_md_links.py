@@ -12,18 +12,21 @@ from urllib.parse import unquote
 
 from doclib import ROOT, collect, document_anchors, extract_links, is_external, mask_source, restrict
 
-# .agents/skills/ is a byte mirror of .claude/skills/ (sync_agents.py)
-# and is never scanned directly; generated Swagger docs stay unchecked.
+# The .agents/skills/ mirror of .claude/skills/ (sync_agent_instructions.py) is never
+# scanned directly; .agents/mrfcs/ is hand-written content and is scanned.
+# Generated Swagger docs stay unchecked.
 PATTERNS = [
     "README.md",
     "README_zh.md",
     "AGENTS.md",
+    "backend/AGENTS.md",
+    "frontend/AGENTS.md",
     "PRINCIPLES.md",
     "docs/*.md",
     "specs/*.md",
     "specs/**/*.md",
-    "mrfc/*.md",
-    "mrfc/**/*.md",
+    ".agents/mrfcs/*.md",
+    ".agents/mrfcs/**/*.md",
     "e2e/*.md",
     ".claude/skills/*.md",
     ".claude/skills/**/*.md",

@@ -1,6 +1,6 @@
 # Disaster Recovery
 
-markpost's resilience posture: a single instance whose read path survives origin death on the CDN edge, whose data is 7-day-retention ephemeral content, and whose backup design is WAL archival to object storage. The decided-but-undeployed backup architecture and its alternatives (live replica, R2, wal-g) are recorded in [the disaster-recovery MRFC](../../mrfc/proposed/2026-07-09-wal-archival-disaster-recovery.md); the single-instance decision itself (no Redis, no replica, no second VPS) is part of [the performance-pass MRFC](../../mrfc/implemented/2026-07-09-read-path-performance-pass.md).
+markpost's resilience posture: a single instance whose read path survives origin death on the CDN edge, whose data is 7-day-retention ephemeral content, and whose backup design is WAL archival to object storage. The decided-but-undeployed backup architecture and its alternatives (live replica, R2, wal-g) are recorded in [the disaster-recovery MRFC](../../.agents/mrfcs/proposed/2026-07-09-wal-archival-disaster-recovery.md); the single-instance decision itself (no Redis, no replica, no second VPS) is part of [the performance-pass MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.md).
 
 ## Current posture
 

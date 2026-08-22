@@ -1,20 +1,22 @@
 # Markpost Request for Comments (MRFC)
 
-One kind of document lives here: a decision record. An MRFC captures a decision that affects this codebase — the _why_, _what we gave up_, and the parts code and specs cannot carry. Specs describe current state; MRFCs explain why that state is what it is.
+English | [中文](README.zh.md)
+
+MRFCs are markpost's RFCs: durable proposals and decision records — the _why_, _what we gave up_, and the parts code and specs cannot carry. Specs describe current state; MRFCs explain why that state is what it is.
 
 ## Layout and naming
 
-Every MRFC lives at `mrfc/{lifecycle}/yyyy-mm-dd-topic-title.md`. The date is when the topic was first proposed (per git history). The lifecycle tree is the inventory — browse it or grep the repository; there is no index file to maintain.
+Every MRFC lives at `.agents/mrfcs/{lifecycle}/yyyy-mm-dd-topic-title.md`. The date is when the topic was first proposed (per git history). The lifecycle tree is the inventory — browse it or grep the repository; there is no index file to maintain.
 
 - **`proposed/`** — proposals reviewed before implementation. Not yet built, or only partly built.
 - **`implemented/`** — the decision shipped. The file records what was decided and what was rejected, in the present tense. When code later renames a file or changes a default, update the MRFC's facts (paths, names, structure) in the same change — but never edit it into a different decision; supersede it with a new MRFC and cross-link both.
 - **`rejected/`** — the proposal was considered and declined. Keep one only while its rationale prevents a tempting mistake; otherwise delete it.
 
-Cross-references between MRFCs use relative Markdown links, never bare prose, so [`verify_md_links`](../scripts/verify_md_links.py) can check them and they survive moves between folders.
+Cross-references between MRFCs use relative Markdown links, never bare prose, so [`verify_md_links`](../../scripts/verify_md_links.py) can check them and they survive moves between folders.
 
 ## When to write one
 
-Every non-trivial change adds or updates at least one MRFC in the same PR. A change is non-trivial when it alters behavior, architecture, a contract shared across files, tooling, testing strategy, an on-disk or wire format, or anything a maintainer may reasonably revisit. Purely mechanical or local edits are exempt. Updating the MRFC that already owns the decision satisfies the rule — do not create a duplicate; grep `mrfc/` for the topic first.
+Every non-trivial change adds or updates at least one MRFC in the same PR. A change is non-trivial when it alters behavior, architecture, a contract shared across files, tooling, testing strategy, an on-disk or wire format, or anything a maintainer may reasonably revisit. Purely mechanical or local edits are exempt. Updating the MRFC that already owns the decision satisfies the rule — do not create a duplicate; grep `.agents/mrfcs/` for the topic first.
 
 ## The file format
 
@@ -34,8 +36,10 @@ The `Status:` value must agree with the folder and takes one of three forms: `pr
 
 `rejected/` keeps whatever proposal-time sections it had, frozen; the verdict lives on the `Status:` line.
 
+A record may carry a `.zh.md` twin beside its English original — same skeleton, machine tokens and section headings in English — and the pair updates together.
+
 **`## Alternatives considered` is mandatory in every MRFC** — one bold-led paragraph per genuine alternative and why it lost. A decision recorded without what it beat invites re-litigation, which is the failure MRFCs exist to prevent. Alternatives are recorded as they were argued, never invented after the fact.
 
 Moving a file between lifecycle folders means updating its `Status:` line and re-satisfying that folder's skeleton in the same change: `proposed/` → `implemented/` rewrites `## Proposal` into a present-tense `## Decision` and folds `## Acceptance criteria`/`## Risks` into `## Consequences`; `proposed/` → `rejected/` only adds the reason to `Status:` and freezes the file.
 
-[`verify_mrfc_format.py`](../scripts/verify_mrfc_format.py) enforces all of the above; it runs as part of [`doc_sync.py`](../scripts/doc_sync.py).
+[`verify_mrfc_format.py`](../../scripts/verify_mrfc_format.py) enforces all of the above; it runs as part of [`doc_sync.py`](../../scripts/doc_sync.py).

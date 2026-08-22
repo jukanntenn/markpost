@@ -1,5 +1,7 @@
 # Coding principles
 
+Superseded by [AGENTS.md § Conventions](AGENTS.md#conventions) as the live home for rules; kept as an archive until migration completes, no further updates.
+
 Behavioral constraints for the agent. Each is a rule the agent gets wrong without being told. Production safety and data integrity outrank every principle here — including the license to redesign from scratch; against a mere default or style rule, the principle wins.
 
 ## Ground every conclusion in fact

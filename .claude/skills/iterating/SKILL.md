@@ -4,7 +4,7 @@ description: Iterate the user's input into a delivered artifact — explore the 
 argument-hint: "Requirements or design points to discuss"
 ---
 
-The operational form of the project's PRINCIPLES — ground every conclusion in fact, defer to community convention, design from first principles, fix the root cause; read PRINCIPLES.md for the values, what follows is the how.
+The operational form of the project's design rules — ground every conclusion in fact, defer to community convention, design from first principles, fix the root cause; read root `AGENTS.md` § Conventions and the frozen `PRINCIPLES.md` for the values, what follows is the how.
 
 The user's input — the request that triggered this skill, or the text passed with it — is the work to move through.
 

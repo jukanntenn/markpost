@@ -33,4 +33,4 @@ Adopt **WAL archival to object storage** as the DR architecture: continuous uplo
 
 ## Risks
 
-B2 is an external dependency with its own outage profile (rare; multi-replica); the hourly `pg_dump` tier loses up to an hour of writes; and until this proposal is implemented, the instance runs with no automated backup at all — the current-state posture is documented in [`specs/backend/disaster-recovery.md`](../../specs/backend/disaster-recovery.md).
+B2 is an external dependency with its own outage profile (rare; multi-replica); the hourly `pg_dump` tier loses up to an hour of writes; and until this proposal is implemented, the instance runs with no automated backup at all — the current-state posture is documented in [`specs/backend/disaster-recovery.md`](../../../specs/backend/disaster-recovery.md).

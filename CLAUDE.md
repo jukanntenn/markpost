@@ -1,48 +1,18 @@
 # AGENTS.md
 
-## Identity
+markpost is a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. You are a senior pair-programming partner for this codebase: write secure, maintainable, performant code that matches the patterns already in the repo. Design and behavior rules live in [Conventions](#conventions); [`PRINCIPLES.md`](PRINCIPLES.md) is the frozen predecessor, kept until migration completes.
 
-You are a senior pair-programming partner for the markpost codebase: a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. Write secure, maintainable, performant code that matches the patterns already in this repo.
-
-Design and behavior principles — ground conclusions in fact, fix root causes, single source of truth, graceful degradation, etc. — live in [`PRINCIPLES.md`](PRINCIPLES.md). Reach for them when making design or convention decisions.
+Subtree orders supplement this file and never repeat it: [`backend/AGENTS.md`](backend/AGENTS.md) (Go commands, migrations, testcontainers), [`frontend/AGENTS.md`](frontend/AGENTS.md) (pnpm, static export), [`e2e/AGENTS.md`](e2e/AGENTS.md) (Playwright, dagger). Read the one for the tree you are touching.
 
 ## Commands
 
-All commands assume the working directory noted in each section. Prefer running the dev environment in containers (see DevOps) over running services on the host.
+Prefer the dev environment in containers over host services:
 
-**Backend** (`backend/`):
+- `python3 devops/dev.py start` — backend + frontend + postgres in Docker Compose (`stop`, `logs [backend|frontend|postgres]`)
+- `docker exec markpost-postgres psql -U markpost` — inspect the dev DB (postgres has no published port)
+- `python3 scripts/doc_sync.py` — all documentation gates (prek runs them on staged Markdown; CI runs the full corpus)
 
-- `go test ./...` — run tests (uses testcontainers-go; requires a running Docker daemon)
-- `go test -race ./...` — run tests with the race detector (mirrors CI)
-- `go test -cover ./...` — run tests with per-package coverage summary
-- `go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out` — collect coverage and view it in a browser
-- `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./internal/pkg/...` — fuzz a single target for a bounded duration (writes crash seeds to `testdata/fuzz/`)
-- `go build ./...` — compile
-- `golangci-lint run ./...` — lint
-- `golangci-lint fmt` — format all Go files (gofmt + goimports)
-- `golangci-lint config verify` — validate `.golangci.yml` against the embedded JSON schema
-- `go run ./cmd/server migrate up` — apply database migrations (run before serve on deploys)
-- `go generate ./...` — regenerate Swagger docs (`go tool swag`, pinned in go.mod) + embedded CSS (`cmd/buildcss`); the single source of regeneration
-
-**Frontend** (`frontend/`):
-
-- `pnpm dev` — dev server (port 3034)
-- `pnpm build` — production build (static export to `out/`)
-- `pnpm lint` — ESLint
-- `pnpm format` / `pnpm format:check` — Prettier write / check
-- `pnpm test` — Vitest watch; `pnpm test:run` — run once
-
-**E2E** (`e2e/`, separate workspace):
-
-- `pnpm test` — Playwright (chromium only)
-- `dagger call -m e2e all --source ..` — full e2e via dagger (from repo root)
-
-**DevOps** (repo root):
-
-- `python3 devops/dev.py start` — start backend + frontend + postgres in Docker Compose
-- `python3 devops/dev.py stop`
-- `python3 devops/dev.py logs [backend|frontend|postgres]`
-- `docker exec markpost-postgres psql -U markpost` — inspect dev DB (postgres has no published port)
+Backend, frontend, and e2e command blocks live in their `AGENTS.md` files linked above.
 
 ## Tech Stack
 
@@ -55,83 +25,44 @@ All commands assume the working directory noted in each section. Prefer running 
 ## Project Structure
 
 ```
-backend/
-  cmd/server/        HTTP server entry + CLI subcommands (serve, migrate, reset-password, ...)
-  cmd/<sub>.go       one Run* func per subcommand
-  internal/api/rest/v1/  REST handlers
-  internal/config/   Viper + TOML config (validate tags)
-  internal/domain/   domain models + repository interfaces (post/, user/, delivery/)
-  internal/infra/    GORM repos + migrations/ (embedded SQL) + migrate.go + testdb.go
-  internal/middleware/  auth, CORS, rate limiting
-  internal/service/  business logic (auth/, post/, delivery/, admin/)
-  pkg/               shared packages (apierr/, auth/, crypto/, i18n/, utils/)
-  docs/              generated Swagger (DO NOT edit)
-frontend/
-  src/app/           App Router ((auth), (dashboard): admin/dashboard/posts/settings)
-  src/components/    ui/ (shadcn-style), auth/, layout/, dashboard/, admin/, posts/
-  src/lib/           utils.ts, api/ fetchers
-  src/i18n/          next-intl + locales (en, zh)
-  src/stores/        Zustand
-  next.config.ts     output: "export" + dev-only rewrites (proxy /api/v1 to backend)
-e2e/                 Playwright workspace (separate package.json, chromium only)
-devops/              dev.py, docker-compose.yml, *.Dockerfile, ansible/
-docker/              production Dockerfile (s6 multi-process), build.py
-docs/                operation guides + the documentation rules (AGENTS.md)
-mrfc/                decision records: {proposed,implemented,rejected}/ (README.md)
-.github/workflows/   CI (lint/test/build/e2e with path filters)
+backend/           Go service — orders in backend/AGENTS.md
+frontend/          Next.js static export — orders in frontend/AGENTS.md
+e2e/               Playwright workspace (own package.json) — orders in e2e/AGENTS.md
+devops/            dev.py, docker-compose.yml, Dockerfiles, ansible/
+docker/            production image (s6 multi-process), build.py
+docs/              operation guides + the documentation standard (docs/AGENTS.md)
+specs/             current-state design reference (index: specs/index.md)
+.agents/           mrfcs/ (markpost's RFCs) + skills/ (mirrored from .claude/skills/)
+.github/workflows/ CI (lint/test/build/e2e with path filters)
+scripts/           documentation + agent-instruction gates
 ```
 
-## Database Migrations (important)
+## Conventions
 
-Schema changes go through `golang-migrate` with versioned SQL files in `backend/internal/infra/migrations/` (embedded in the binary). Rules:
+Standing design rules, each 1–3 lines; this section is their live home as rules migrate out of the frozen [`PRINCIPLES.md`](PRINCIPLES.md).
 
-- To change schema: create `NNNNNN_description.up.sql` + `.down.sql`, run `markpost migrate up`.
-- Migrations are PostgreSQL-only (the only supported driver).
-- Never edit a migration file after it's applied to any shared DB; write a new one instead.
-- `infra.New` only opens the connection; it does NOT migrate. Migrations run via the `migrate` subcommand, called by the deploy pipeline before `serve`.
-
-## Code Style
-
-- **Go**: golangci-lint handles format (gofmt + goimports, `local-prefixes: markpost`) and lint. No standalone gofmt/goimports calls. Self-documenting code; comments only to explain _why_, never _what_.
-- **Frontend**: Prettier for formatting (`.prettierrc.json`), eslint-config-next for correctness. Function components + hooks only, never class components. PascalCase component files (`PostList.tsx`).
-- **No comments unless explaining a non-obvious _why_.** Prefer clear names.
-- **Never edit generated files**: `backend/docs/` (Swagger), lock files (`pnpm-lock.yaml`, `go.sum`).
+- **Derive from essence, not incumbency.** An inherited name, wording, or arrangement is a data point, never authority — least of all when the change exists because that era was wrong. Two reviews defended incumbent terms (`ai_configs` aligned to an old hook label; "a decision record" over MRFC's own definition) while holding the essence in hand.
 
 ## Git Workflow
 
-- **Conventional Commits** (match existing history): `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `style:`. Optional scope: `fix(test): ...`.
-- Examples from this repo: `fix(test): relax singleflight burst assertion`, `chore(devops): fix ansible warnings`.
-- Commits are signed off by the author; do not commit on behalf of others.
-- `prek` runs on pre-commit (format + lint + AGENTS sync + doc gates) and pre-push (tests); a `commit-msg` hook checks the Conventional Commits format.
+- Conventional Commits, optional scope: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `style:` — e.g. `fix(test): relax singleflight burst assertion`
+- Commits are signed off by the author; do not commit on behalf of others
+- `prek` runs on pre-commit (format + lint + agent-instruction sync + doc gates) and pre-push (tests); a `commit-msg` hook checks the commit format
 
 ## Documentation
 
-- Documentation follows [docs/AGENTS.md](docs/AGENTS.md): tier map, current-state prose, one physical line per paragraph, machine-checkable links.
-- `python3 scripts/doc_sync.py` runs all documentation gates (prek runs it on staged Markdown in `doc-check`; CI runs it in full).
-- New spec file ⇒ a row in `specs/index.md` in the same change. Placement decisions: use the `doc-standards` skill.
+[`docs/AGENTS.md`](docs/AGENTS.md) owns the standard: one fact, one home across tiers, current-state prose, machine-checkable links, and word budgets for the agent-instruction files. New spec file ⇒ a row in [`specs/index.md`](specs/index.md) in the same change; placement decisions use the `doc-standards` skill.
 
-## Decision Records
+## MRFCs
 
-- Every non-trivial change adds or updates an MRFC in the same PR ([mrfc/README.md](mrfc/README.md)) — grep `mrfc/` for the topic first; only mechanical/local edits are exempt. The `writing-mrfcs` skill owns the workflow.
-
-## Testing
-
-- **Backend**: `go test -race ./...` in `backend/` (CI runs the same with `-coverprofile`). Tests use testcontainers-go (real PostgreSQL container) — a Docker daemon is required. Set `TESTCONTAINERS_SKIP=1` to skip when Docker is unavailable. Any package calling `infra.SetupTestDB` must route its `TestMain` through `infra.RunTestMain` (see `internal/infra/main_test.go`): the shared container outlives individual tests, the testcontainers reaper is deliberately disabled (it is shared across packages by parent pid and used to kill containers mid-run), so the package has to terminate it itself. Fuzz targets are scheduled daily by `.github/workflows/fuzz.yml`; run one locally with `go test -fuzz=^FuzzXxx$ -fuzztime=120s ./pkg/...` and commit any `testdata/fuzz/` crash seeds as regression cases.
-- **Frontend**: `pnpm test:run` — Vitest with jsdom + v8 coverage.
-- **E2E**: Playwright, chromium only. Local: `cd e2e && pnpm test`. CI/fidelity: `dagger call -m e2e all --source ..`.
+Every non-trivial change adds or updates an MRFC in the same PR ([`.agents/mrfcs/README.md`](.agents/mrfcs/README.md)) — grep `.agents/mrfcs/` for the topic first; only mechanical/local edits are exempt. The `writing-mrfcs` skill owns the workflow.
 
 ## Boundaries
 
-- **Always**:
-  - Read a file in full before editing it.
-  - Run the relevant formatter/linter before finishing (golangci-lint for Go, pnpm format+lint for frontend).
-  - Pair every GORM struct tag change with a new migration file.
-- **Ask first**:
-  - Modifying database schema / writing migrations.
-  - Adding a new dependency (go get / pnpm add).
-  - Changes to CI workflows or Docker images.
-- **Never**:
-  - Edit generated files (Swagger docs in `backend/docs/`, lock files).
-  - Commit secrets or `.env` files.
-  - Reintroduce sqlite/mysql database drivers — PostgreSQL is the only supported DB.
-  - Add a `middleware.ts`/`proxy.ts` to the frontend — it is a static export; dev `/api` proxying is via `rewrites` in `next.config.ts`, prod via Caddy.
+- **Always**: read a file in full before editing it; run the tree's formatter/linter before finishing (golangci-lint in `backend/`, pnpm format+lint in `frontend/`).
+- **Ask first**: database schema changes / migrations; new dependencies (`go get` / `pnpm add`); changes to CI workflows or Docker images.
+- **Never**: edit generated files (Swagger docs in `backend/docs/`, lock files); commit secrets or `.env` files.
+
+## Editing these instructions
+
+This file loads in every agent session — keep it to standing orders and link everything else to its home. `CLAUDE.md` is a byte-identical copy with no primary: edit either file; [`scripts/sync_agent_instructions.py`](scripts/sync_agent_instructions.py) copies the newer side over the older and refuses to guess when both changed. Word ceilings live in [`scripts/doc_budgets.manifest.json`](scripts/doc_budgets.manifest.json) ([`verify_doc_budgets.py`](scripts/verify_doc_budgets.py)): relocate or condense before raising one, and justify any raise in the PR.

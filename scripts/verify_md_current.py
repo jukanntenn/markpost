@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Specs and operation guides describe current state: reject narration of
 # removed schemes and change history ("previously", "已移除", "no
-# longer", ...). Decision history belongs in mrfc/, ledgers
+# longer", ...). Decision history belongs in .agents/mrfcs/, ledgers
 # (CHANGELOG.md, KNOWN_ISSUES.md) are exempt by design. Part of
 # doc_sync.py.
 from __future__ import annotations
@@ -71,7 +71,7 @@ def main(argv: list[str]) -> int:
             violations.append(f"  {path.relative_to(ROOT)}:{line}  [{phrase}]  {clipped}")
 
     if violations:
-        print("verify_md_current: history narration found (state the current fact; record history in mrfc/):", file=sys.stderr)
+        print("verify_md_current: history narration found (state the current fact; record history in an MRFC):", file=sys.stderr)
         print("\n".join(violations), file=sys.stderr)
         return 1
     print(f"verify_md_current: {len(files)} file(s) checked, current-state prose only")

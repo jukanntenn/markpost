@@ -114,7 +114,7 @@ type RateLimitConfig struct {
 // DeliveryConfig holds delivery-related configuration. The retry sequence and
 // expiry wall are NOT here — they are hardcoded constants in
 // internal/service/delivery/backoff.go (one channel kind today, so per-channel
-// retry tuning has no consumer; see mrfc/implemented/2026-07-10-persistent-best-effort-delivery-queue.md).
+// retry tuning has no consumer; see .agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md).
 type DeliveryConfig struct {
 	BodyPreviewChars int           `mapstructure:"body_preview_chars" validate:"gte=0"`
 	RequestTimeout   time.Duration `mapstructure:"request_timeout" validate:"required"`

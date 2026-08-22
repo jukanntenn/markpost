@@ -1,6 +1,6 @@
 ---
 name: doc-standards
-description: Use when writing, moving, reviewing, or auditing documentation in markpost — deciding where a fact lives (README/specs/docs/mrfc/skills), adding a spec to specs/index.md, trimming history narration from current-state docs, responding to a doc_sync.py gate failure, or requests like "improve the docs", "where should this be documented", "this doc is too long".
+description: Use when writing, moving, reviewing, or auditing documentation in markpost — deciding where a fact lives (README/specs/docs/.agents/mrfcs/skills), adding a spec to specs/index.md, trimming history narration from current-state docs, responding to a doc_sync.py gate failure, or requests like "improve the docs", "where should this be documented", "this doc is too long".
 ---
 
 # Applying the markpost documentation standard
@@ -14,15 +14,16 @@ Before writing, check [specs/index.md](../../../specs/index.md) for an existing 
 | Tier | Job |
 | --- | --- |
 | `README.md` / `README_zh.md` | User-facing product docs |
-| `AGENTS.md` | Standing orders for agents, 1–3 lines per rule, linking its home |
-| `PRINCIPLES.md` | Behavioral constraints, each anchored to a real incident |
+| Root `AGENTS.md` | Standing orders for every session, 1–3 lines per rule, linking its home |
+| Subtree `AGENTS.md` (`backend/`, `frontend/`, `e2e/`, `docs/`) | Orders specific to that subtree; never repeat the root |
+| `PRINCIPLES.md` | Frozen archive of behavioral constraints; the live home is root `AGENTS.md` § Conventions |
 | `specs/` | Current-state design reference; `specs/index.md` is the authoritative index |
 | `docs/` | Operation guides (development, deployment); [docs/AGENTS.md](../../../docs/AGENTS.md) owns the doc rules |
-| `mrfc/` | Decision records — the why and what was given up ([mrfc/README.md](../../../mrfc/README.md)) |
+| `.agents/mrfcs/` | markpost's RFCs — proposals and decision records ([README](../../../.agents/mrfcs/README.md)) |
 | `CHANGELOG.md` / `KNOWN_ISSUES.md` | Ledgers — narrate history by design, exempt from prose gates |
-| `.claude/skills/` | Reusable workflows (then run `scripts/sync_agents.py`) |
+| `.claude/skills/` | Reusable workflows (then run `scripts/sync_agent_instructions.py`) |
 
-Rationale and change stories go to `mrfc/`, never into `specs/` prose. Procedures ("how to deploy") go to `docs/`; facts about the system ("what the delivery scheduler does") go to `specs/`.
+Rationale and change stories go to `.agents/mrfcs/`, never into `specs/` prose. Procedures ("how to deploy") go to `docs/`; facts about the system ("what the delivery scheduler does") go to `specs/`.
 
 ## Writing discipline
 
@@ -30,6 +31,7 @@ Rationale and change stories go to `mrfc/`, never into `specs/` prose. Procedure
 - **One physical line per paragraph**; let the editor soft-wrap. Code blocks, tables, and list structure keep their formatting. `verify_md_wrap.py` gates this.
 - **Relative Markdown links with real targets and `#fragment` anchors**; never bare filenames or free prose references. `verify_md_links.py` gates this.
 - **New spec file ⇒ new row in `specs/index.md` in the same change** (and index rows point at existing files). `verify_specs_index.py` gates this.
+- **Word ceilings** bound the agent-instruction files (`scripts/doc_budgets.manifest.json`, gated by `verify_doc_budgets.py`); on red, relocate, condense, raise the ceiling last with a justified manifest diff.
 - Deleting or renaming a doc is atomic: move the content, fix every inbound link, update the index — one change.
 
 ## Splitting oversized pages

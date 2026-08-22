@@ -1,6 +1,6 @@
 # Rate Limiting
 
-Request throttling for the public read path, the API-authenticated write path, and the login endpoints: four independent token-bucket limiters built on tollbooth v8, each scoped to a route class and keyed on the dimension that actually identifies the actor. The wiring lives in `cmd/server/main.go` (`SetupRoutes`) and `internal/middleware/rate_limit.go`; the configuration in the `[ratelimit]` TOML section. The decision record (why four limiters, why these key dimensions, what was rejected) lives in [the performance-pass MRFC](../../mrfc/implemented/2026-07-09-read-path-performance-pass.md).
+Request throttling for the public read path, the API-authenticated write path, and the login endpoints: four independent token-bucket limiters built on tollbooth v8, each scoped to a route class and keyed on the dimension that actually identifies the actor. The wiring lives in `cmd/server/main.go` (`SetupRoutes`) and `internal/middleware/rate_limit.go`; the configuration in the `[ratelimit]` TOML section. The decision record (why four limiters, why these key dimensions, what was rejected) lives in [the performance-pass MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.md).
 
 ## The four limiters
 

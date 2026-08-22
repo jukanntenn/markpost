@@ -11,7 +11,7 @@ import "time"
 // Hardcoded, not configurable: there is exactly one delivery channel kind
 // today (Feishu), so per-channel retry tuning has no consumer. Changing the
 // sequence is a code change + release, which already restarts the process and
-// clears in-flight state. See mrfc/implemented/2026-07-10-persistent-best-effort-delivery-queue.md.
+// clears in-flight state. See .agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.md.
 var backoffSequence = [...]time.Duration{
 	1 * time.Minute,
 	5 * time.Minute,

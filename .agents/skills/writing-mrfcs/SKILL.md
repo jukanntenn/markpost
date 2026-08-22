@@ -1,15 +1,15 @@
 ---
 name: writing-mrfcs
-description: Use when a non-trivial change lands in markpost (new capability, schema change, architectural shift, tooling/process change) and needs a decision record, when searching mrfc/ for prior decisions on a topic, when superseding or rejecting an existing MRFC, or when asked "why is X like this" / "record this decision".
+description: Use when a non-trivial change lands in markpost (new capability, schema change, architectural shift, tooling/process change) and needs an MRFC, when searching .agents/mrfcs/ for prior decisions on a topic, when superseding or rejecting an existing MRFC, or when asked "why is X like this" / "record this decision".
 ---
 
 # Writing MRFCs
 
-MRFCs are markpost's decision records: the why, the alternatives that lost, and what the trade-off bought. The full contract — naming, lifecycle, format skeleton — lives in [mrfc/README.md](../../../mrfc/README.md); `scripts/verify_mrfc_format.py` enforces it.
+MRFCs are markpost's RFCs: durable proposals and decision records — the why, the alternatives that lost, and what the trade-off bought. The full contract — naming, lifecycle, format skeleton — lives in [.agents/mrfcs/README.md](../../../.agents/mrfcs/README.md); `scripts/verify_mrfc_format.py` enforces it.
 
 ## Before writing
 
-1. `grep -ri "<topic keywords>" mrfc/` — the decision may already have a home. Updating the owning MRFC in the same PR satisfies the rule; never create a duplicate.
+1. `grep -ri "<topic keywords>" .agents/mrfcs/` — the decision may already have a home. Updating the owning MRFC in the same PR satisfies the rule; never create a duplicate.
 2. If a new decision supersedes an old one: write the new MRFC, cross-link both (old → new with a one-line pointer, new → old in Alternatives), and keep the old file unless fully consolidated.
 3. Pick the lifecycle: `proposed/` for anything not yet built (substantial future work gets written down *before* implementation), `implemented/` for decisions that shipped, `rejected/` for declines worth remembering.
 
@@ -26,4 +26,4 @@ MRFCs are markpost's decision records: the why, the alternatives that lost, and 
 
 Moving a file between folders re-satisfies the target folder's skeleton in the same change: `proposed/ → implemented/` rewrites Proposal into a present-tense Decision and folds Acceptance criteria/Risks into Consequences; `proposed/ → rejected/` adds the one-line reason to `Status:` and freezes the file. The format gate fails the move otherwise.
 
-Validate with `python3 scripts/doc_sync.py mrfc/<path>` before committing; the prek `doc-check` hook runs it on commit.
+Validate with `python3 scripts/doc_sync.py .agents/mrfcs/<path>` before committing; the prek `doc-check` hook runs it on commit.

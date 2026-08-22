@@ -54,13 +54,17 @@ hooks = [{ id = "actionlint" }]
 [[repos]]
 repo = "local"
 
-# AI tool configs in sync (AGENTS.md == CLAUDE.md, skills mirrored).
+# Agent-instruction mirrors in sync: byte-identical AGENTS.md/CLAUDE.md
+# pairs (list in scripts/agentlib.py) plus the .claude/skills ->
+# .agents/skills mirror. Self-healing: a single-sided edit is copied over
+# the stale twin and staged; only a both-sides-changed conflict or a
+# deletion fails, with guidance in the error output.
 [[repos.hooks]]
-id = "agents-sync"
-name = "AI tool configs in sync"
+id = "agent-instructions-sync"
+name = "Agent instructions in sync"
 language = "system"
-entry = "scripts/check_agents.py"
-files = "^(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
+entry = "scripts/check_agent_instructions.py"
+files = "(^|/)(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
 pass_filenames = false
 stages = ["pre-commit"]
 
@@ -155,21 +159,22 @@ pass_filenames = false
 stages = ["pre-commit"]
 
 # Documentation gates: current-state prose, relative links + fragments,
-# one physical line per paragraph, specs/index completeness, MRFC format
-# (scripts/doc_sync.py). Incremental only — staged Markdown is passed
-# through so each gate restricts itself; prek stashes unstaged changes
-# during hook runs, so any wider scan would see a stale tree. Full-corpus
-# runs are CI's job (docs.yml). The .agents/skills mirror is skipped
-# (byte copy of .claude/skills, owned by agents-sync); ledgers, loadtest
-# reports, and generated Swagger are outside gate scope (see
-# docs/AGENTS.md).
+# one physical line per paragraph, specs/index completeness, MRFC format,
+# word budgets (scripts/doc_sync.py). Incremental only — staged Markdown
+# is passed through so each gate restricts itself; prek stashes unstaged
+# changes during hook runs, so any wider scan would see a stale tree.
+# Full-corpus runs are CI's job (docs.yml). Only the .agents/skills
+# mirror is skipped (byte copy of .claude/skills, owned by
+# agent-instructions-sync); .agents/mrfcs/ is hand-written content and
+# stays gated. Ledgers, loadtest reports, and generated Swagger are
+# outside gate scope (see docs/AGENTS.md).
 [[repos.hooks]]
 id = "doc-check"
 name = "documentation gates (doc_sync)"
 language = "system"
 entry = "python3 scripts/doc_sync.py"
 files = "\\.md$"
-exclude = "^\\.agents/|^\\.zcode/|^scripts/loadtest/|^backend/docs/|^(CHANGELOG|KNOWN_ISSUES)\\.md$"
+exclude = "^\\.agents/skills/|^\\.zcode/|^scripts/loadtest/|^backend/docs/|^(CHANGELOG|KNOWN_ISSUES)\\.md$"
 pass_filenames = true
 stages = ["pre-commit"]
 

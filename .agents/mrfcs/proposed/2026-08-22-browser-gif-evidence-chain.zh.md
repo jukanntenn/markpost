@@ -6,7 +6,7 @@ English | [中文](2026-08-22-browser-gif-evidence-chain.md)
 
 ## Problem
 
-[开发闭环](2026-08-22-agent-driven-development-loop.zh.md)以 Playwright 截图作为 UI 变更层的证据标准：截图证明一个状态渲染正确，仅此而已。交互恰是截图装不下的东西——过渡、动画时序、hover 与 focus 行为、多步流程——而 UI 回归也正藏在那里。参考实现对涉及 GUI 的 pull request 录制一段简短的浏览器 GIF，把录像当作证据链的一环；markpost 的 v1 有意推迟了这套机制，本记录持有升级路径与启用触发条件。
+[开发闭环](../implemented/2026-08-22-agent-driven-development-loop.zh.md)以 Playwright 截图作为 UI 变更层的证据标准：截图证明一个状态渲染正确，仅此而已。交互恰是截图装不下的东西——过渡、动画时序、hover 与 focus 行为、多步流程——而 UI 回归也正藏在那里。参考实现对涉及 GUI 的 pull request 录制一段简短的浏览器 GIF，把录像当作证据链的一环；markpost 的 v1 有意推迟了这套机制，本记录持有升级路径与启用触发条件。
 
 ## Proposal
 

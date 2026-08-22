@@ -6,7 +6,7 @@ English | [中文](2026-08-22-browser-gif-evidence-chain.zh.md)
 
 ## Problem
 
-The [development loop](2026-08-22-agent-driven-development-loop.md) accepts Playwright screenshots as the evidence standard for UI-changing layers: they prove that a state renders, and nothing more. Interaction is exactly what screenshots cannot carry — transitions, animation timing, hover and focus behavior, multi-step flows — and it is also where UI regressions hide. The reference harness records a short browser GIF for GUI-changing pull requests and treats the recording as part of the evidence chain; markpost's v1 deferred that machinery deliberately, so this record holds the upgrade path and the trigger for taking it.
+The [development loop](../implemented/2026-08-22-agent-driven-development-loop.md) accepts Playwright screenshots as the evidence standard for UI-changing layers: they prove that a state renders, and nothing more. Interaction is exactly what screenshots cannot carry — transitions, animation timing, hover and focus behavior, multi-step flows — and it is also where UI regressions hide. The reference harness records a short browser GIF for GUI-changing pull requests and treats the recording as part of the evidence chain; markpost's v1 deferred that machinery deliberately, so this record holds the upgrade path and the trigger for taking it.
 
 ## Proposal
 

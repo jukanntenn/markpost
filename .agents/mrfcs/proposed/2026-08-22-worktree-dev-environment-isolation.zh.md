@@ -6,7 +6,7 @@ English | [中文](2026-08-22-worktree-dev-environment-isolation.md)
 
 ## Problem
 
-[开发闭环](2026-08-22-agent-driven-development-loop.zh.md)把栈的每层一个 git worktree 放在 `.local/worktrees/` 下，但 compose dev 环境无条件命名其容器——`markpost-backend`、`markpost-frontend`、`markpost-postgres`——并绑定单一的共享 `markpost_pgdata` 卷。两个后果：主 checkout 与所有 worktree 之间同时只能跑一套 dev 环境（启动 worktree 的环境要求先停主 checkout 的），闭环 v1 把这个互斥当作已知限制接受了下来，串行化了一切需要运行中环境的验证。单元测试与 testcontainers 支撑的后端测试不受影响——它们不需要 compose 环境——因此这个约束咬住的恰是想要并行做全栈或前端对后端验证的地方。
+[开发闭环](../implemented/2026-08-22-agent-driven-development-loop.zh.md)把栈的每层一个 git worktree 放在 `.local/worktrees/` 下，但 compose dev 环境无条件命名其容器——`markpost-backend`、`markpost-frontend`、`markpost-postgres`——并绑定单一的共享 `markpost_pgdata` 卷。两个后果：主 checkout 与所有 worktree 之间同时只能跑一套 dev 环境（启动 worktree 的环境要求先停主 checkout 的），闭环 v1 把这个互斥当作已知限制接受了下来，串行化了一切需要运行中环境的验证。单元测试与 testcontainers 支撑的后端测试不受影响——它们不需要 compose 环境——因此这个约束咬住的恰是想要并行做全栈或前端对后端验证的地方。
 
 ## Proposal
 

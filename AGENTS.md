@@ -43,6 +43,10 @@ Standing design rules, each 1–3 lines; this section is their live home as rule
 
 - **Derive from essence, not incumbency.** An inherited name, wording, or arrangement is a data point, never authority — least of all when the change exists because that era was wrong. Two reviews defended incumbent terms (`ai_configs` aligned to an old hook label; "a decision record" over MRFC's own definition) while holding the essence in hand.
 
+## Development Loop
+
+Work flows issue-first: template-filed issues enter the board as `Inbox`; only the maintainer moves an issue to `Ready` (gate 1). The agent — a machine account via `GH_TOKEN` — claims `Ready` issues, decomposes by decision into MRFCs, and drives two-phase PR stacks: RFC stack (gate 2), then implementation stack (gate 3), landed only through `gh stack merge`. RFC layers reference `Related to #N`; only a stack's top implementation layer carries `Fixes #N`. The [`dev-loop` skill](.agents/skills/dev-loop/SKILL.md) owns the mechanics; [the loop record](.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md) holds the rationale.
+
 ## Git Workflow
 
 - Conventional Commits, optional scope: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `build:`, `style:` — e.g. `fix(test): relax singleflight burst assertion`

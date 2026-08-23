@@ -326,7 +326,16 @@ def upsert_comment(number: int, body: str, marker: str) -> None:
     slug = f"repos/{FULL_NAME}/issues/{number}/comments"
     for comment in gh_api(f"{slug}?per_page=100"):
         if marker in (comment.get("body") or ""):
-            _gh("api", "-X", "PATCH", f"{slug}/{comment['id']}", "-f", f"body={body}")
+            # Creating posts under issues/{n}/comments; updating an existing
+            # issue comment is the flat issues/comments/{id} endpoint.
+            _gh(
+                "api",
+                "-X",
+                "PATCH",
+                f"repos/{FULL_NAME}/issues/comments/{comment['id']}",
+                "-f",
+                f"body={body}",
+            )
             return
     _gh("api", "-X", "POST", slug, "-f", f"body={body}")
 

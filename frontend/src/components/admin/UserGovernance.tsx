@@ -96,7 +96,7 @@ export function UserActionsMenu({
           </Menu.Item>
         )}
         <Menu.Item onClick={() => onAction({ kind: 'setVip', to: !user.vip })}>
-          {user.vip ? t('vip.revoke') : t('vip.grant')}
+          {user.vip ? t('vip.revokeVip') : t('vip.grantVip')}
         </Menu.Item>
         <Menu.Item onClick={() => onAction({ kind: 'reset' })}>
           {t('resetPassword')}

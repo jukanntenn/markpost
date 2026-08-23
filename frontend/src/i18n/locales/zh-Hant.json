@@ -587,12 +587,16 @@
       },
       "actions": "操作",
       "vip": {
-        "grant": "授予 VIP",
-        "revoke": "撤銷 VIP",
-        "grant.title": "授予 {name} VIP？",
-        "grant.desc": "將 {name} 標記為 VIP。VIP 是榮譽徽章，不附帶任何權限。",
-        "revoke.title": "撤銷 {name} 的 VIP？",
-        "revoke.desc": "{name} 的 VIP 徽章將消失。若「GitHub 登入自動 VIP」策略處於開啟狀態，其下次 GitHub 登入會重新獲得。"
+        "grantVip": "授予 VIP",
+        "revokeVip": "撤銷 VIP",
+        "grant": {
+          "title": "授予 {name} VIP？",
+          "desc": "將 {name} 標記為 VIP。VIP 是榮譽徽章，不附帶任何權限。"
+        },
+        "revoke": {
+          "title": "撤銷 {name} 的 VIP？",
+          "desc": "{name} 的 VIP 徽章將消失。若「GitHub 登入自動 VIP」策略處於開啟狀態，其下次 GitHub 登入會重新獲得。"
+        }
       },
       "vipStrategy": {
         "label": "GitHub 登入自動 VIP",

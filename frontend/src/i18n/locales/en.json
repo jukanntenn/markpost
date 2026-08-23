@@ -587,12 +587,16 @@
       },
       "actions": "Actions",
       "vip": {
-        "grant": "Grant VIP",
-        "revoke": "Revoke VIP",
-        "grant.title": "Grant VIP to {name}?",
-        "grant.desc": "This marks {name} as VIP. VIP is an honorific badge — it grants no permissions.",
-        "revoke.title": "Revoke {name}'s VIP?",
-        "revoke.desc": "The VIP badge disappears for {name}. If the GitHub-login auto-VIP strategy is enabled, their next GitHub login re-grants it."
+        "grantVip": "Grant VIP",
+        "revokeVip": "Revoke VIP",
+        "grant": {
+          "title": "Grant VIP to {name}?",
+          "desc": "This marks {name} as VIP. VIP is an honorific badge — it grants no permissions."
+        },
+        "revoke": {
+          "title": "Revoke {name}'s VIP?",
+          "desc": "The VIP badge disappears for {name}. If the GitHub-login auto-VIP strategy is enabled, their next GitHub login re-grants it."
+        }
       },
       "vipStrategy": {
         "label": "GitHub login auto-VIP",

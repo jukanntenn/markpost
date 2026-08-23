@@ -36,6 +36,7 @@ import type { AdminUser } from '@/types/users'
 // 前端隐藏（selfDemote 场景）。
 type PendingAction =
   | { kind: 'role'; to: 'admin' | 'user' }
+  | { kind: 'setVip'; to: boolean }
   | { kind: 'disable' }
   | { kind: 'enable' }
   | { kind: 'forceLogout' }
@@ -94,6 +95,9 @@ export function UserActionsMenu({
               : t('changeRole')}
           </Menu.Item>
         )}
+        <Menu.Item onClick={() => onAction({ kind: 'setVip', to: !user.vip })}>
+          {user.vip ? t('vip.revoke') : t('vip.grant')}
+        </Menu.Item>
         <Menu.Item onClick={() => onAction({ kind: 'reset' })}>
           {t('resetPassword')}
         </Menu.Item>
@@ -186,6 +190,21 @@ export function UserGovernanceDialogs({
     onError: fail,
   })
 
+  const vipMutation = useMutation({
+    mutationFn: (vip: boolean) => adminApi.setUserVip(user.id, vip),
+    onSuccess: (_d, vip) => {
+      invalidateAll()
+      toastManager.add({
+        type: 'success',
+        title: vip
+          ? t('toasts.vipGranted', { name: user.username })
+          : t('toasts.vipRevoked', { name: user.username }),
+      })
+      close()
+    },
+    onError: fail,
+  })
+
   const logoutMutation = useMutation({
     mutationFn: () => adminApi.revokeAllSessions(user.id),
     onSuccess: () => {
@@ -227,6 +246,10 @@ export function UserGovernanceDialogs({
         return action.to === 'admin'
           ? t('role.toAdmin.title')
           : t('role.toUser.title')
+      case 'setVip':
+        return action.to
+          ? t('vip.grant.title', { name: user.username })
+          : t('vip.revoke.title', { name: user.username })
       case 'disable':
         return t('disable.title', { name: user.username })
       case 'enable':
@@ -248,6 +271,10 @@ export function UserGovernanceDialogs({
         return action.to === 'admin'
           ? t('role.toAdmin.desc', { name: user.username })
           : t('role.toUser.desc', { name: user.username })
+      case 'setVip':
+        return action.to
+          ? t('vip.grant.desc', { name: user.username })
+          : t('vip.revoke.desc', { name: user.username })
       case 'disable':
         return t('disable.desc', { name: user.username })
       case 'enable':
@@ -265,6 +292,7 @@ export function UserGovernanceDialogs({
 
   const pending =
     roleMutation.isPending ||
+    vipMutation.isPending ||
     activeMutation.isPending ||
     logoutMutation.isPending ||
     resetMutation.isPending ||
@@ -274,6 +302,9 @@ export function UserGovernanceDialogs({
     switch (action?.kind) {
       case 'role':
         roleMutation.mutate(action.to)
+        break
+      case 'setVip':
+        vipMutation.mutate(action.to)
         break
       case 'disable':
         activeMutation.mutate(false)

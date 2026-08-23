@@ -477,7 +477,9 @@
           "disable": "disabled {target}",
           "enable": "enabled {target}",
           "delete": "deleted user {target}",
-          "revoke_sessions": "forced {target} sign-out"
+          "revoke_sessions": "forced {target} sign-out",
+          "vipGrant": "granted VIP to {target}",
+          "vipRevoke": "revoked VIP from {target}"
         },
         "post": {
           "delete": "deleted post {target}"
@@ -487,6 +489,10 @@
           "enable": "enabled channel {target}",
           "disable": "disabled channel {target}",
           "delete": "deleted channel {target}"
+        },
+        "setting": {
+          "enable": "enabled setting {target}",
+          "disable": "disabled setting {target}"
         }
       },
       "meta": {
@@ -525,7 +531,8 @@
         "postKeyCopied": "Post Key copied",
         "sessionsRevokedToast": "Sessions revoked",
         "emailVerified": "Verified",
-        "emailNotVerified": "Not verified"
+        "emailNotVerified": "Not verified",
+        "vip": "VIP"
       },
       "reset": {
         "title": "Reset {name}'s password",
@@ -574,9 +581,26 @@
         "disabled": "Disabled {name}",
         "enabled": "Enabled {name}",
         "signOut": "Forced {name} sign-out",
-        "deleted": "User deleted"
+        "deleted": "User deleted",
+        "vipGranted": "VIP granted to {name}",
+        "vipRevoked": "VIP revoked for {name}"
       },
-      "actions": "Actions"
+      "actions": "Actions",
+      "vip": {
+        "grant": "Grant VIP",
+        "revoke": "Revoke VIP",
+        "grant.title": "Grant VIP to {name}?",
+        "grant.desc": "This marks {name} as VIP. VIP is an honorific badge — it grants no permissions.",
+        "revoke.title": "Revoke {name}'s VIP?",
+        "revoke.desc": "The VIP badge disappears for {name}. If the GitHub-login auto-VIP strategy is enabled, their next GitHub login re-grants it."
+      },
+      "vipStrategy": {
+        "label": "GitHub login auto-VIP",
+        "toasts": {
+          "enabled": "VIP strategy enabled",
+          "disabled": "VIP strategy disabled"
+        }
+      }
     },
     "userDialog": {
       "title": "New user",

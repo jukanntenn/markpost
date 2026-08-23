@@ -33,6 +33,20 @@ export function auditActionText(row: AuditLogItem): {
         values: { target: userTarget(row) },
       }
     }
+    case 'user.set_vip': {
+      const vip = (row.metadata as Record<string, unknown>)?.vip
+      return {
+        key: vip === true ? 'user.vipGrant' : 'user.vipRevoke',
+        values: { target: userTarget(row) },
+      }
+    }
+    case 'setting.set': {
+      const enabled = (row.metadata as Record<string, unknown>)?.enabled
+      return {
+        key: enabled === true ? 'setting.enable' : 'setting.disable',
+        values: { target: row.target_id },
+      }
+    }
     case 'user.delete':
       return { key: 'user.delete', values: { target: userTarget(row) } }
     case 'user.revoke_sessions':

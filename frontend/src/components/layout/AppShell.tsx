@@ -20,6 +20,7 @@ import { toastManager } from '@/stores/toast'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Menu } from '@/components/ui/menu'
+import { VipBadge } from '@/components/ui/vip-badge'
 import { SidebarNav } from '@/components/layout/SidebarNav'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
 
@@ -126,11 +127,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="hidden sm:inline">
                   {user?.username || tCommon('user')}
                 </span>
+                {user?.vip && <VipBadge />}
                 <ChevronDownIcon className="size-4 text-muted-foreground" />
               </Menu.Trigger>
               <Menu.Popup>
                 <Menu.Group>
-                  <Menu.Label>{user?.username || tCommon('user')}</Menu.Label>
+                  <Menu.Label className="flex items-center gap-1.5">
+                    {user?.username || tCommon('user')}
+                    {user?.vip && <VipBadge />}
+                  </Menu.Label>
                 </Menu.Group>
                 <Menu.Separator />
                 {isAdmin && (

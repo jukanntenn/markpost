@@ -10,6 +10,9 @@ export interface User {
   // B1.12: ban-state awareness
   is_active?: boolean
   is_email_verified?: boolean
+  // Honorific granted by the GitHub-login VIP strategy (issue #10); no
+  // permissions ride on it.
+  vip?: boolean
 }
 
 export interface LoginResponse {

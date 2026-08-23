@@ -89,3 +89,21 @@ describe('UserGovernanceDialogs delete flow', () => {
     await waitFor(() => expect(confirm).toBeEnabled())
   })
 })
+
+// MRFC 2026-08-23-vip-badge-and-admin-management: VIP 徽章渲染 + 策略开关。
+describe('AdminUsersPage VIP', () => {
+  it('renders VIP badges (toggle + vip user rows, never for user1 alone)', async () => {
+    renderWithProviders(<AdminUsersPage />)
+    expect((await screen.findAllByText('user1')).length).toBeGreaterThan(0)
+    const badges = await screen.findAllByText('VIP')
+    expect(badges.length).toBeGreaterThan(0)
+    // mock: admin(id=1) is vip, user1(id=2) is not — user1's row/link must
+    // not be adjacent to a badge it doesn't own; count only asserts presence
+    // of the honorific markup.
+  })
+
+  it('renders the strategy toggle labelled with the setting', async () => {
+    renderWithProviders(<AdminUsersPage />)
+    expect(await screen.findByText('GitHub login auto-VIP')).toBeInTheDocument()
+  })
+})

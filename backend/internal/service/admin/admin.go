@@ -38,6 +38,7 @@ type UserMutator interface {
 	SetRole(ctx context.Context, userID int, role user.Role) error
 	SetPassword(ctx context.Context, userID int, password string) error
 	SetActive(ctx context.Context, userID int, active bool) error
+	SetUserVIP(ctx context.Context, userID int, vip bool) error
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	// BumpTokenVersion increments token_version — the single primitive behind
 	// instant invalidation of all of a user's tokens (C2.6).
@@ -278,6 +279,21 @@ func (s *Service) SetUserActive(ctx context.Context, actorID, userID int, active
 	}
 	if !active {
 		return s.bump(ctx, userID)
+	}
+	return nil
+}
+
+// SetUserVIP writes the per-user VIP honorific (admin operation). No
+// self-targeting guard (no invariant breaks) and no token_version bump: vip
+// rides no claim and carries no authority — the middleware re-reads the row
+// each request, so the toggle is visible immediately (MRFC
+// 2026-08-23-vip-badge-and-admin-management).
+func (s *Service) SetUserVIP(ctx context.Context, userID int, vip bool) error {
+	if _, err := s.userMutator.GetByID(ctx, userID); err != nil {
+		return service.WrapNotFoundOrInternal(err, "user not found", "get user failed")
+	}
+	if err := s.userMutator.SetUserVIP(ctx, userID, vip); err != nil {
+		return service.Wrap(service.ErrInternal, "set vip failed", err)
 	}
 	return nil
 }

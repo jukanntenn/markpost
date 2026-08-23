@@ -477,7 +477,9 @@
           "disable": "{target} を無効化しました",
           "enable": "{target} を再有効化しました",
           "delete": "ユーザー {target} を削除しました",
-          "revoke_sessions": "{target} を強制ログアウトしました"
+          "revoke_sessions": "{target} を強制ログアウトしました",
+          "vipGrant": "{target} に VIP を付与しました",
+          "vipRevoke": "{target} の VIP を取り消しました"
         },
         "post": {
           "delete": "投稿 {target} を削除しました"
@@ -487,6 +489,10 @@
           "enable": "チャンネル {target} を有効化しました",
           "disable": "チャンネル {target} を無効化しました",
           "delete": "チャンネル {target} を削除しました"
+        },
+        "setting": {
+          "enable": "設定 {target} を有効にしました",
+          "disable": "設定 {target} を無効にしました"
         }
       },
       "meta": {
@@ -525,7 +531,8 @@
         "postKeyCopied": "Post Key をコピーしました",
         "sessionsRevokedToast": "セッションを失効しました",
         "emailVerified": "認証済み",
-        "emailNotVerified": "未認証"
+        "emailNotVerified": "未認証",
+        "vip": "VIP"
       },
       "reset": {
         "title": "{name} のパスワードをリセット",
@@ -574,9 +581,26 @@
         "disabled": "{name} を無効化しました",
         "enabled": "{name} を再有効化しました",
         "signOut": "{name} を強制ログアウトしました",
-        "deleted": "ユーザーを削除しました"
+        "deleted": "ユーザーを削除しました",
+        "vipGranted": "{name} に VIP を付与しました",
+        "vipRevoked": "{name} の VIP を取り消しました"
       },
-      "actions": "操作"
+      "actions": "操作",
+      "vip": {
+        "grant": "VIP 付与",
+        "revoke": "VIP 取り消し",
+        "grant.title": "{name} に VIP を付与しますか？",
+        "grant.desc": "{name} を VIP にします。VIP は名誉バッジであり、権限は伴いません。",
+        "revoke.title": "{name} の VIP を取り消しますか？",
+        "revoke.desc": "{name} の VIP バッジが消えます。「GitHub ログイン自動 VIP」戦略が有効な場合、次回の GitHub ログインで再び付与されます。"
+      },
+      "vipStrategy": {
+        "label": "GitHub ログイン自動 VIP",
+        "toasts": {
+          "enabled": "VIP 戦略を有効にしました",
+          "disabled": "VIP 戦略を無効にしました"
+        }
+      }
     },
     "userDialog": {
       "title": "ユーザーを追加",

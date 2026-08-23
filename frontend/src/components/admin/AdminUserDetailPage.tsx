@@ -15,6 +15,7 @@ import { relativeTime } from '@/utils/relative-time'
 import { useLocaleContext } from '@/components/providers/LocaleProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { VipBadge } from '@/components/ui/vip-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ListState } from '@/components/ui/list-state'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -162,6 +163,7 @@ export function AdminUserDetailPage() {
               <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
                 {user.role === 'admin' ? t('roleAdmin') : t('roleUser')}
               </Badge>
+              {user.vip && <VipBadge />}
               <StatusBadge active={user.is_active} />
             </header>
             <p className="text-sm text-muted-foreground">
@@ -222,6 +224,9 @@ export function AdminUserDetailPage() {
                       user.is_active ? t('status.normal') : t('status.disabled')
                     }
                   />
+                  <ProfileRow label={tUsers('detail.vip')} value="">
+                    {user.vip ? <VipBadge /> : <span>—</span>}
+                  </ProfileRow>
                   <ProfileRow
                     label={t('lastLoginAt')}
                     value={

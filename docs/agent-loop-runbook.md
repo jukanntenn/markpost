@@ -1,0 +1,36 @@
+# Agent-loop runbook
+
+English | [中文](agent-loop-runbook.zh.md)
+
+The one-time activation checklist and the measured platform constraints for standing the agent-driven development loop up in a repository, written for reuse with the shared machine account. The design rationale lives in [the loop record](../.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md); this page owns the procedure.
+
+## Activation checklist
+
+1. Create the machine account as a collaborator of the repository, generate its classic PAT with the four scopes below, and hand it to agent sessions as `GH_TOKEN`.
+2. Create the label set: `type/idea|feature|bug|research|task` for issues, `area/<domain>` for pull requests.
+3. Land the repository half: the five issue templates with `config.yml` (blank issues off), the pull-request template, the policy script with its unit tests, the two workflows, the skills, and the root `AGENTS.md` section — via one bootstrap pull request.
+4. Create the board: a personal GitHub Project with a custom single-select `Loop status` field (`Inbox / Backlog / Ready / In progress / In review / Done / No action`), a `Priority` field (`P0–P3`), and the machine account added as a `WRITER` collaborator of the project.
+5. Store the board-writing PAT as the repository secret `MARKPOST_PROJECT_TOKEN`, and point the loop's `config.json` at the project with `requireProject: true`.
+6. After the bootstrap pull request merges — never before — set the repository to merge commits only and enable branch protection: one approving review, dismiss stale approvals, require conversation resolution, include administrators, forbid force pushes to `main`.
+7. Install the stack tool on the host: `gh extension install github/gh-stack`.
+
+## Measured platform constraints
+
+Every row below was hit and verified in this repository's activation; each cost a debug cycle that this table is meant to save.
+
+| Constraint                                                                 | Evidence                                                                                                       | Avoidance                                                                                                                              |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_TOKEN` has no scope for user-owned Projects v2                     | actionlint's permission list exposes no such grant; direct mutation failed                                     | board-mutating workflows authenticate with the `MARKPOST_PROJECT_TOKEN` secret (a classic PAT)                                         |
+| PAT scopes do not grant resource visibility                                | the correctly scoped token still got `NOT_FOUND` on the private project                                        | add the machine account as a `WRITER` collaborator of the project (`updateProjectV2Collaborators`, input `userId` plus `role: WRITER`) |
+| The project's default `Status` field is neither deletable nor API-editable | `deleteProjectV2Field` rejects non-custom fields; no option-edit mutation exists                               | carry the workflow statuses in a custom `Loop status` field; hide the default in views                                                 |
+| Fine-grained PATs cannot select collaborator repositories                  | the repository picker lists only token-owner repositories                                                      | use a classic PAT                                                                                                                      |
+| The gh CLI needs `read:org` for internal queries                           | `gh pr edit` failed its GraphQL preflight without the scope                                                    | include `read:org` in the PAT                                                                                                          |
+| HTTPS pushes touching `.github/workflows/**` need the `workflow` scope     | the remote rejected the push citing the missing scope                                                          | include `workflow` in the PAT; SSH pushes are not scope-limited                                                                        |
+| Issue-comment create and update endpoints differ                           | `PATCH` on `issues/{n}/comments/{id}` returns 404                                                              | create posts to `issues/{n}/comments`; updates go to the flat `issues/comments/{id}`                                                   |
+| Nobody approves their own pull request                                     | a sole maintainer deadlocks under required-approval plus include-administrators on a self-authored PR          | agent PRs carry the machine account's authorship, and protection is enabled only after the bootstrap merge                             |
+| Workflow-side policy scripts are absent from `main` during bootstrap       | checking out the default branch found no `policy.py`                                                           | the workflows check out the event commit (`github.sha`) instead of the default branch                                                  |
+| prek runs on one consistent staged snapshot                                | an unstaged modified `prek.toml` aborts the commit; a staged rename with rewritten content fails the doc gates | stage configuration and rewritten content together, and order commits so each staged set is self-consistent                            |
+
+## Verifying each step
+
+Confirm the token identity and reach first (`GH_TOKEN=<pat> gh api user` names the machine account; `gh api repos/<owner>/<repo>` shows `push`), then verify the board path with a real event: any pull-request activity on a resolving issue moves the board and posts the marker comment (`<!-- markpost-lifecycle: <status> by <account>]`), and any reviewed pull request turns the Issue policy check green or red on real content. The loop's first production fast-path run — issue, machine-authored PR, human approval, agent merge, auto-closed issue, board `Done` — is the end-to-end acceptance.

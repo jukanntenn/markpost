@@ -37,6 +37,11 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Validate pull request
+        # The referenced-issue validation reads board status on the private
+        # user-owned Project, which GITHUB_TOKEN cannot see (and cannot be
+        # granted): authenticate with the same board-capable PAT the
+        # lifecycle workflow uses, falling back to github.token for the
+        # pre-review window where no board read happens.
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.MARKPOST_PROJECT_TOKEN || github.token }}
         run: python3 .github/issue-management/policy.py pr

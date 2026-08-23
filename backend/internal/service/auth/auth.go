@@ -48,6 +48,13 @@ func (noopOAuthStateStore) Consume(string) (oauthStateEntry, bool) {
 	return oauthStateEntry{}, false
 }
 
+// VIPStrategyChecker is the read port for the GitHub-login VIP grant strategy
+// switch (MRFC 2026-08-23-github-login-vip-grant-strategy). Backed by the
+// settings repository in the composition root.
+type VIPStrategyChecker interface {
+	VIPStrategyEnabled(ctx context.Context) (bool, error)
+}
+
 // Service handles authentication operations including OAuth, JWT token management,
 // and user session handling.
 type Service struct {
@@ -57,6 +64,7 @@ type Service struct {
 	jwt             *JWTService          // JWT token generation and validation
 	issuer          string               // Token issuer identifier
 	stateStore      OAuthStateStore      // OAuth state→verifier store (PKCE + CSRF)
+	vipStrategy     VIPStrategyChecker   // GitHub-login VIP grant switch (nil = never grant)
 	userURL         string               // Override for GitHub user API URL (for testing)
 	initialPassword string               // Password for the initial admin user (created on first startup)
 	attempts        *LoginAttemptTracker // C2.1 层 B：账号级登录失败锁定
@@ -81,6 +89,15 @@ func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth
 func (s *Service) WithOAuthStateStore(store OAuthStateStore) *Service {
 	if store != nil {
 		s.stateStore = store
+	}
+	return s
+}
+
+// WithVIPStrategy wires the GitHub-login VIP grant switch (settings-repository
+// backed in the composition root). Nil keeps granting disabled.
+func (s *Service) WithVIPStrategy(checker VIPStrategyChecker) *Service {
+	if checker != nil {
+		s.vipStrategy = checker
 	}
 	return s
 }
@@ -145,7 +162,34 @@ func (s *Service) LoginWithGitHub(ctx context.Context, code, state string) (*use
 		return nil, nil, service.Wrap(service.ErrInternal, "create user failed", err)
 	}
 
+	s.grantVIPForGitHubLogin(ctx, u)
+
 	return s.completeLogin(ctx, u)
+}
+
+// grantVIPForGitHubLogin applies the VIP grant strategy: while enabled, any
+// GitHub login idempotently sets vip=true; while disabled (or unwired), logins
+// leave vip untouched in both directions (MRFC
+// 2026-08-23-github-login-vip-grant-strategy). A strategy-read failure fails
+// toward not-granting — a wrongly granted vip is harder to walk back than a
+// missed one — and never blocks the login itself.
+func (s *Service) grantVIPForGitHubLogin(ctx context.Context, u *user.User) {
+	if s.vipStrategy == nil {
+		return
+	}
+	enabled, err := s.vipStrategy.VIPStrategyEnabled(ctx)
+	if err != nil {
+		slog.Error("vip strategy read failed; skipping grant", "error", err, "user_id", u.ID)
+		return
+	}
+	if !enabled || u.VIP {
+		return
+	}
+	if err := s.users.SetUserVIP(ctx, u.ID, true); err != nil {
+		slog.Error("vip grant write failed", "error", err, "user_id", u.ID)
+		return
+	}
+	u.VIP = true
 }
 
 func (s *Service) getGitHubUser(ctx context.Context, token *oauth2.Token) (*user.GitHubUser, error) {

@@ -12,6 +12,7 @@ import (
 	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
+	"markpost/internal/domain/settings"
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
 	adminsvc "markpost/internal/service/admin"
@@ -42,6 +43,8 @@ type AdminService interface {
 	ListUserSessions(ctx context.Context, userID int) ([]user.RefreshToken, error)
 	RevokeUserSessions(ctx context.Context, userID int) error
 	RevokeSessionByID(ctx context.Context, tokenID int) error
+	GetSettings(ctx context.Context) ([]settings.Setting, error)
+	SetSetting(ctx context.Context, actorID int, key string, value settings.SettingValue) error
 	GetStats(ctx context.Context) (*adminsvc.Stats, error)
 	DailyStatsAll(ctx context.Context, days int) ([]*delivery.DailyStat, error)
 	LockedChannels(ctx context.Context) ([]*delivery.LockedChannel, error)
@@ -848,5 +851,106 @@ func AdminRevokeSession(adminSvc AdminService) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"revoked": true})
+	}
+}
+
+// AdminSettingItem represents one runtime setting row (admin).
+type AdminSettingItem struct {
+	Key       string                `json:"key"`
+	Value     settings.SettingValue `json:"value"`
+	UpdatedBy *int64                `json:"updated_by"`
+	UpdatedAt time.Time             `json:"updated_at"`
+}
+
+// AdminSettingListResponse wraps the settings rows (I.10: non-nil slice).
+type AdminSettingListResponse struct {
+	Items []AdminSettingItem `json:"items"`
+}
+
+func newAdminSettingItem(s settings.Setting) AdminSettingItem {
+	return AdminSettingItem{
+		Key:       s.Key,
+		Value:     s.Value,
+		UpdatedBy: s.UpdatedBy,
+		UpdatedAt: s.UpdatedAt,
+	}
+}
+
+// AdminSetSettingRequest represents the request body for upserting one
+// runtime setting.
+type AdminSetSettingRequest struct {
+	Enabled bool `json:"enabled"`
+}
+
+// AdminGetSettings godoc
+// @Summary List runtime settings (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} v1.AdminSettingListResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/settings [get]
+func AdminGetSettings(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rows, err := adminSvc.GetSettings(c.Request.Context())
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		items := make([]AdminSettingItem, 0, len(rows))
+		for _, s := range rows {
+			items = append(items, newAdminSettingItem(s))
+		}
+		c.JSON(http.StatusOK, AdminSettingListResponse{Items: items})
+	}
+}
+
+// AdminSetSetting godoc
+// @Summary Upsert one runtime setting (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param key path string true "Setting key (v1: vip)"
+// @Param body body AdminSetSettingRequest true "Setting value"
+// @Success 200 {object} v1.AdminSettingListResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/settings/{key} [put]
+func AdminSetSetting(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := c.Param("key")
+
+		var req AdminSetSettingRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+
+		if err := adminSvc.SetSetting(c.Request.Context(), currentUserID(c), key, settings.SettingValue{Enabled: req.Enabled}); err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "setting.set",
+			TargetType: "setting",
+			TargetID:   key,
+			Metadata:   map[string]any{"enabled": req.Enabled},
+			IP:         c.ClientIP(),
+		})
+
+		rows, err := adminSvc.GetSettings(c.Request.Context())
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		items := make([]AdminSettingItem, 0, len(rows))
+		for _, s := range rows {
+			items = append(items, newAdminSettingItem(s))
+		}
+		c.JSON(http.StatusOK, AdminSettingListResponse{Items: items})
 	}
 }

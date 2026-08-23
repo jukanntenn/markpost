@@ -25,4 +25,13 @@ var (
 		HTTP:    403,
 		Message: &i18n.Message{ID: "error.last_admin", Other: "Cannot demote the last administrator"},
 	}
+
+	// ErrUnknownSetting rejects writes to runtime settings keys outside the
+	// seeded set (MRFC 2026-08-23-github-login-vip-grant-strategy: v1 admits
+	// only what a migration seeded).
+	ErrUnknownSetting = &service.ErrCode{
+		Value:   "unknown_setting",
+		HTTP:    400,
+		Message: &i18n.Message{ID: "error.unknown_setting", Other: "Unknown setting key"},
+	}
 )

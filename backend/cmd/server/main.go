@@ -28,6 +28,7 @@ import (
 	_ "markpost/docs"
 	v1 "markpost/internal/api/rest/v1"
 	"markpost/internal/config"
+	"markpost/internal/domain/settings"
 	"markpost/internal/domain/user"
 	"markpost/internal/infra"
 	"markpost/internal/middleware"
@@ -57,6 +58,7 @@ var jwtSvc *auth.JWTService
 
 var userRepo user.Repository
 var tokenRepo user.TokenRepository
+var settingsRepo settings.Repository
 
 // version is injected at build time via -ldflags "-X main.version=..." for
 // Docker builds (which lack a .git directory). Local `go build`/`go run` leave
@@ -315,6 +317,7 @@ func serve(configPath string) {
 
 	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
 	tokenRepo = infra.NewTokenRepository(dbInstance.DB())
+	settingsRepo = infra.NewSettingsRepository(dbInstance.DB())
 
 	RegisterValidators()
 
@@ -352,6 +355,7 @@ func serve(configPath string) {
 	} else {
 		slog.Error("OAuth state store disabled", "error", err)
 	}
+	authSvc = authSvc.WithVIPStrategy(settingsRepo)
 
 	slog.Info("initializing first admin user", "username", cfg.Admin.InitialUsername)
 	if err := authSvc.InitializeFirstAdmin(context.Background(), cfg.Admin.InitialUsername); err != nil {
@@ -381,6 +385,7 @@ func serve(configPath string) {
 	adminSvc := admin.NewService(userRepo, postSvc, deliverySvc, attemptRepo, tokenRepo, auditRepo)
 	adminSvc.SetUserMutator(userRepo)
 	adminSvc.SetChannelMutator(deliveryRepo)
+	adminSvc.SetSettingsStore(settingsRepo)
 
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
@@ -565,6 +570,8 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.GET("/delivery/stats", v1.AdminDeliveryStats(adminSvc))
 			adminGroup.GET("/audit-logs", v1.AdminListAuditLogs(adminSvc))
 			adminGroup.GET("/stats", v1.AdminGetStats(adminSvc))
+			adminGroup.GET("/settings", v1.AdminGetSettings(adminSvc))
+			adminGroup.PUT("/settings/:key", middleware.RateLimitByUserID(l3Write), v1.AdminSetSetting(adminSvc))
 			adminGroup.GET("/locked-channels", v1.AdminLockedChannels(adminSvc))
 			adminGroup.DELETE("/sessions/:token_id", middleware.RateLimitByUserID(l3Write), v1.AdminRevokeSession(adminSvc))
 			adminGroup.DELETE("/posts/:id", middleware.RateLimitByUserID(l3Write), v1.DeleteAnyPost(postSvc, adminSvc))

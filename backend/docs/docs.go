@@ -2561,6 +2561,9 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                },
+                "vip": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3011,6 +3014,9 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                },
+                "vip": {
+                    "type": "boolean"
                 }
             }
         },

@@ -195,6 +195,11 @@ func (r *UserRepository) SetActive(ctx context.Context, userID int, active bool)
 	return updateByID[user.User](ctx, r.db, userID, map[string]any{"is_active": active}, "SetActive")
 }
 
+// SetUserVIP writes the durable VIP honorific (MRFC 2026-08-23-user-vip-flag).
+func (r *UserRepository) SetUserVIP(ctx context.Context, userID int, vip bool) error {
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"vip": vip}, "SetUserVIP")
+}
+
 // DeleteByID deletes a user by their ID.
 func (r *UserRepository) DeleteByID(ctx context.Context, userID int) (int64, error) {
 	return deleteWhere[user.User](ctx, r.db.Where("id = ?", userID))

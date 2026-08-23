@@ -26,21 +26,25 @@ type GitHubUser struct {
 
 // User represents a user entity.
 type User struct {
-	ID              int        `json:"id" gorm:"primaryKey;autoIncrement"`
-	Email           string     `json:"email" gorm:"unique;not null;default:''"`
-	Username        string     `json:"username" gorm:"unique;not null"`
-	Name            string     `json:"name"`
-	Password        string     `json:"-" gorm:"column:password_hash"`
-	AvatarURL       *string    `json:"avatar_url"`
-	PostKey         string     `json:"post_key" gorm:"unique;not null"`
-	GitHubID        *int64     `json:"github_id" gorm:"unique;column:github_id"`
-	Role            Role       `json:"role" gorm:"not null;default:'user'"`
-	IsActive        bool       `json:"is_active" gorm:"default:true"`
-	IsEmailVerified bool       `json:"is_email_verified" gorm:"default:false"`
-	LastLoginAt     *time.Time `json:"last_login_at"`
-	TokenVersion    int64      `json:"-" gorm:"not null;default:0"`
-	CreatedAt       time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt       time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	ID              int     `json:"id" gorm:"primaryKey;autoIncrement"`
+	Email           string  `json:"email" gorm:"unique;not null;default:''"`
+	Username        string  `json:"username" gorm:"unique;not null"`
+	Name            string  `json:"name"`
+	Password        string  `json:"-" gorm:"column:password_hash"`
+	AvatarURL       *string `json:"avatar_url"`
+	PostKey         string  `json:"post_key" gorm:"unique;not null"`
+	GitHubID        *int64  `json:"github_id" gorm:"unique;column:github_id"`
+	Role            Role    `json:"role" gorm:"not null;default:'user'"`
+	IsActive        bool    `json:"is_active" gorm:"default:true"`
+	IsEmailVerified bool    `json:"is_email_verified" gorm:"default:false"`
+	// VIP is the durable per-user honorific granted by the GitHub-login
+	// strategy and admin-manageable afterwards; it carries no authority
+	// (MRFC 2026-08-23-user-vip-flag).
+	VIP          bool       `json:"vip" gorm:"column:vip;not null;default:false"`
+	LastLoginAt  *time.Time `json:"last_login_at"`
+	TokenVersion int64      `json:"-" gorm:"not null;default:0"`
+	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // IsAdmin returns true if the user has the admin role.

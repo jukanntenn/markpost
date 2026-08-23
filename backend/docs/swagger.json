@@ -2555,6 +2555,9 @@
                 },
                 "username": {
                     "type": "string"
+                },
+                "vip": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3005,6 +3008,9 @@
                 },
                 "username": {
                     "type": "string"
+                },
+                "vip": {
+                    "type": "boolean"
                 }
             }
         },

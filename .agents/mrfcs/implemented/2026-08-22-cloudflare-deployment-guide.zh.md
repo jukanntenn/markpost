@@ -4,6 +4,8 @@ Status: implemented
 
 [English](2026-08-22-cloudflare-deployment-guide.md) | 中文
 
+> 端口拓扑已被 [回源落位宿主 443 的共享网关决策](2026-08-23-origin-port-443-shared-gateway.zh.md) 取代 —— 2053 实为缓存禁用端口；本文其余内容仍然成立。
+
 ## Problem
 
 SaaS 生产实例（`markpost.cc`，Cloudflare 之后的 VPS 源站）需要一份运维者可以端到端执行的操作指南 —— 控制台步骤、宿主机准备、部署、验证。[`docs/deployment.zh.md`](../../../docs/deployment.zh.md) 已长成一份覆盖完整多环境生命周期的参考（验收、dev、staging、production、Ansible 内部、运维任务、镜像标签语义），作为该 runbook 太长。更糟的是，持有 Cloudflare 设计事实的规格已经偏离 deploy 目录实际交付的内容：[`specs/backend/cloudflare.zh.md`](../../../specs/backend/cloudflare.zh.md) 把 `:7157` 的 Caddy 与 `443:7157` 映射描述为未实现的目标，把 Caddyfile 模板称为已跟踪的后续工作，并声称 `cloudflare_cidrs` 仍是占位符 —— 而 [`Caddyfile.production.j2`](../../../devops/ansible/templates/Caddyfile.production.j2) 交付的是 `:2053`，源站经一条把 443 改写为 2053 的 Origin Rule 到达，真实 CIDR 已位于 `group_vars/production/vars.yml`。按规格写 runbook 会与仓库矛盾；按仓库写会与规格矛盾。最深的漂移是客户端 IP 机制：规格描述一条在 TCP 层设防的纯 XFF 追加链，但模板的 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}` 改写取代了那条链 —— 而且规格自述的设计按原文无法工作：gin（`SetTrustedProxies` 仅回环）从右到左遍历 XFF，会把 Cloudflare 边缘跳当作每个访客的客户端 IP 返回，以 IP 为键的限流器将坍缩。

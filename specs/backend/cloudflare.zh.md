@@ -12,11 +12,11 @@
 
 markpost 既作为可自托管软件交付，也作为官方 SaaS 实例运行。每个设计选择必须在两种语境中都可行：任何 SaaS 专属内容都没有固化进应用代码或配置默认值（[`caching.zh.md`](./caching.zh.md#self-hosting-compatibility)）。三种模式只在部署拓扑、Caddyfile 与 DNS 上不同 —— Go 二进制完全相同。
 
-| 模式                 | 源站      | DNS                                 | TLS 终结                                                               | CDN | Caddyfile                                                                          | 典型用途             |
-| -------------------- | --------- | ----------------------------------- | ---------------------------------------------------------------------- | --- | ---------------------------------------------------------------------------------- | -------------------- |
-| **SaaS**             | VPS       | 域名 → Cloudflare（Proxied / 橙云） | Cloudflare 边缘（访客侧）+ Caddy 上的 Origin CA（源站侧，Full strict） | 有  | `Caddyfile.production.j2`（TLS 经 Origin CA，`trusted_proxies` = Cloudflare CIDR） | 官方实例             |
-| **自托管（有域名）** | VPS / NAS | 域名 → 源站 IP（DNS-only / 灰云）   | Caddy 自动 Let's Encrypt + HTTPS 重定向                                | 无  | 按域名的 site 块（仓库中尚无模板）                                                 | 个人 / 小团队自托管  |
-| **家庭实验室**       | NAS       | 无（局域网 IP:port）                | 无（明文 HTTP）                                                        | 无  | `docker/Caddyfile`（`:2053`，无 TLS）                                              | 家庭网络，可信局域网 |
+| 模式                 | 源站      | DNS                                 | TLS 终结                                                                        | CDN | Caddyfile                                                                     | 典型用途             |
+| -------------------- | --------- | ----------------------------------- | ------------------------------------------------------------------------------- | --- | ----------------------------------------------------------------------------- | -------------------- |
+| **SaaS**             | VPS       | 域名 → Cloudflare（Proxied / 橙云） | Cloudflare 边缘（访客侧）+ 宿主 Caddy 网关上的 Origin CA（源站侧，Full strict） | 有  | 宿主网关 `markpost.caddy.j2` + `Caddyfile.production.j2`（明文 HTTP，仅回环） | 官方实例             |
+| **自托管（有域名）** | VPS / NAS | 域名 → 源站 IP（DNS-only / 灰云）   | Caddy 自动 Let's Encrypt + HTTPS 重定向                                         | 无  | 按域名的 site 块（仓库中尚无模板）                                            | 个人 / 小团队自托管  |
+| **家庭实验室**       | NAS       | 无（局域网 IP:port）                | 无（明文 HTTP）                                                                 | 无  | `docker/Caddyfile`（`:2053`，无 TLS）                                         | 家庭网络，可信局域网 |
 
 **CDN 只是 SaaS 参考实例的前置条件。** 3 Mbps 的源站无法直接支撑每秒几百次读取（[`caching.zh.md`](./caching.zh.md#hardware-envelope-saas-reference-instance)）。管道更粗的自托管实例没有 CDN 也能运行，并接受更高的源站负载。没有 CDN 时没有任何东西损坏：全部缓存逻辑都在源站，CDN 只是在前面加一层边缘。
 
@@ -27,14 +27,13 @@ markpost 既作为可自托管软件交付，也作为官方 SaaS 实例运行�
 拓扑是：
 
 ```
-Visitor ──HTTPS:443──> Cloudflare edge (orange cloud, Full strict) ──HTTPS──> VPS :2053 ──> Caddy :2053 ──> Go :7330 / static export
-         [TLS-A: Cloudflare edge certificate]                  [TLS-B: Cloudflare Origin CA certificate]
-                                 [Origin Rule rewrites the destination port 443 → 2053]
+Visitor ──HTTPS:443──> Cloudflare edge (orange cloud, Full strict) ──HTTPS:443──> host Caddy gateway ──HTTP──> 127.0.0.1:8080 → container Caddy :2053 ──> Go :7330 / static export
+         [TLS-A: Cloudflare edge certificate]                  [TLS-B: Origin CA on the host gateway]  [plain HTTP, published loopback-only]
 ```
 
-边缘监听面向访客的 443 端口；一条 Origin Rule 把目标端口改写为源站发布的 2053（宿主端口 2053 → 容器端口 2053）。Caddy 从 `/app/frontend` 服务 Next.js 静态导出，并把 API 路径反向代理到 Go 二进制 —— 没有 Node 服务器。
+边缘监听面向访客的 443 端口，回源也落在 443 —— 由宿主机的 systemd Caddy（共享网关，`import /etc/caddy/conf.d/*.caddy`）终结，它把 `markpost.cc` 反向代理到容器仅回环发布的端口。容器的 Caddy 从 `/app/frontend` 服务 Next.js 静态导出，并把 API 路径反向代理到 Go 二进制 —— 没有 Node 服务器。
 
-SaaS 模式中 Caddy **不**使用按域名的 site 块，也**不**运行自动 Let's Encrypt。TLS-B 由手动安装的 Cloudflare Origin CA 证书处理。下面两节解释原因。
+网关使用带手动安装 Origin CA 证书的按域名 site 块；容器 Caddy 监听裸端口、明文 HTTP。两者在 SaaS 模式下都**不**运行自动 Let's Encrypt —— 已代理域名解析到 Cloudflare IP，ACME HTTP-01 challenge 永远到不了 VPS。下面各节解释各个部件。
 
 <a id="dns-and-the-orange-cloud"></a>
 
@@ -83,7 +82,7 @@ markpost 选择 **Full (strict)**。Cloudflare 强烈推荐它：
 
 markpost 有用户登录、管理员写路径与改密码 —— 它正是这样的应用。更早的"无 TLS Caddy"拓扑等价于 Flexible，被本决策取代。
 
-**端口。** 访客经规范 HTTPS 端口 443 到达边缘。源站发布 2053（`host_port: 2053` 映射到容器的 `caddy_port: 2053`），一条 **Origin Rule** 把该区域主机名的目标端口从 443 改写为 2053 —— 规则由一个匹配表达式（主机名等于域名）加一个目标端口覆盖组成（仪表盘：Rules → Overview → Create rule → Origin Rule）。Origin Rules 在每个套餐上可用，Free 亦然，Free 为 10 条（`rules/origin-rules/index.mdx`、`rules/origin-rules/create-dashboard.mdx`、套餐矩阵 `rules.origin_rules`）。
+**端口。** 访客经规范 HTTPS 端口 443 到达边缘，回源一跳也必须落在 443：在 Cloudflare 的代理 HTTPS 端口（443、2053、2083、2087、2096、8443）中，除 443 外全部列在 "Ports supported by Cloudflare, but with caching disabled"（`fundamentals/reference/network-ports.mdx`），且经 `additional_cacheable_ports` 重新启用仅限 Enterprise（`cache/how-to/cache-rules/settings.mdx`）。更早的 2053 + Origin Rule 拓扑（一条 Origin Rule 把目标端口 443 改写为 2053 —— 规则本身在 Free 可用，共 10 条，`rules/origin-rules/index.mdx`）正因为这个原因让整个 zone 恒为 `CF-Cache-Status: DYNAMIC`：当时核对了规则可用性，没有核对缓存端口矩阵。443 只能绑定一个进程，因此由 VPS 上共享的宿主 Caddy 持有，各服务以 `conf.d` 站点块接入；markpost 容器把明文 HTTP 端口仅发布到回环（`127.0.0.1:8080` → 容器 `:2053`）。不需要边缘缓存的服务可以留在缓存禁用端口上。
 
 <a id="origin-ca-certificate"></a>
 
@@ -98,19 +97,21 @@ Origin CA 证书是 Cloudflare 免费的长期（15 年）源站证书，只被 
 3. 下载 **Origin Certificate** 与 **Private Key** 两者（私钥只展示一次）。
 4. 存到 VPS 上，如 `/app/certs/origin.pem` 与 `/app/certs/origin.key`。
 
-Caddyfile 为 TLS-B 出示这张证书。Caddy 仍监听裸端口（不是按域名的 site 块）—— `tls` 指令直接指向证书文件。已部署的模板是 `devops/ansible/templates/Caddyfile.production.j2`；示意：
+宿主 Caddy 网关为 TLS-B 出示这张证书 —— 一个按域名的 site 块，`tls` 指令直接指向证书文件，由 `devops/ansible/templates/markpost.caddy.j2` 部署到 `/etc/caddy/conf.d/markpost.caddy`（playbook 把证书从 `~/docker/markpost/certs/` 复制到 `/etc/caddy/certs/markpost/`）。网关块与它所喂养的明文容器监听（`devops/ansible/templates/Caddyfile.production.j2`）示意：
 
 ```caddyfile
-{
-    auto_https off
+# gateway: /etc/caddy/conf.d/markpost.caddy (host Caddy, binds 443)
+markpost.cc {
+    tls /etc/caddy/certs/markpost/origin.pem /etc/caddy/certs/markpost/origin.key
+    reverse_proxy 127.0.0.1:8080
 }
 
+# container: plain HTTP, published loopback-only (127.0.0.1:8080 -> :2053)
 :2053 {
-    tls /app/certs/origin.pem /app/certs/origin.key
     encode zstd gzip
     handle /api/v1/* {
         reverse_proxy 127.0.0.1:7330 {
-            trusted_proxies {{ cloudflare_cidrs }}
+            trusted_proxies private_ranges
             header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
         }
     }
@@ -122,7 +123,7 @@ Caddyfile 为 TLS-B 出示这张证书。Caddy 仍监听裸端口（不是按域
 }
 ```
 
-SaaS 模式**不**使用自动 Let's Encrypt：已代理域名解析到 Cloudflare IP，Caddy 的 ACME HTTP-01 challenge 到不了 VPS，签发会失败。Origin CA 证书替代它。
+SaaS 模式**不**使用自动 Let's Encrypt：已代理域名解析到 Cloudflare IP，ACME HTTP-01 challenge 到不了 VPS，签发会失败。Origin CA 证书替代它。
 
 <a id="origin-protection-only-cloudflare-may-connect"></a>
 
@@ -149,13 +150,13 @@ SaaS 模式**不**使用自动 Let's Encrypt：已代理域名解析到 Cloudfla
 - **`True-Client-IP`** —— 取值与 `CF-Connecting-IP` 相同，但仅 Enterprise 可用。
 - **`X-Forwarded-For`** —— 代理链（逗号分隔）。
 
-markpost **不**使用 `TrustedPlatform = gin.PlatformCloudflare`（它在应用层无条件信任 `CF-Connecting-IP`，无 CIDR 检查）。取而代之，`Caddyfile.production.j2` 的每个 `reverse_proxy` 块都带 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`。Caddy 在其默认转发头处理**之后**应用用户头操作，因此到达 Go 的 `X-Forwarded-For` 恒为单个 `CF-Connecting-IP` 值 —— 多跳链（访客提供的 XFF、Cloudflare 填充的链、Caddy 自己的一跳）从不抵达应用。
+markpost **不**使用 `TrustedPlatform = gin.PlatformCloudflare`（它在应用层无条件信任 `CF-Connecting-IP`，无 CIDR 检查）。取而代之，`CF-Connecting-IP` 经宿主 Caddy 网关原样透传（它不是 hop-by-hop 头），容器 `Caddyfile.production.j2` 的每个 `reverse_proxy` 块都带 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`。Caddy 在其默认转发头处理**之后**应用用户头操作，因此到达 Go 的 `X-Forwarded-For` 恒为单个 `CF-Connecting-IP` 值 —— 多跳链（访客提供的 XFF、Cloudflare 填充的链、网关一跳、Caddy 自己的一跳）从不抵达应用。
 
 这一收敛是正确性所必需，而非仅为整洁：gin 只信任回环对端（`SetTrustedProxies(["127.0.0.1", "::1"])`，与 Caddy 的回环代理跳一致），`ClientIP()` 从右到左遍历 `X-Forwarded-For`，返回首个不受信 IP。若 Caddy 转发追加后的链 `<real-client>, <cloudflare-hop>`，gin 会把 Cloudflare 边缘 IP 当作每个访客的客户端 IP，以 IP 为键的 L1/login 限流器将坍缩到少数边缘地址上。
 
-该单值的信任锚：Cloudflare 在边缘覆写访客提供的任何 `CF-Connecting-IP`，因此凡是流经 Cloudflare 的流量，该头由 Cloudflare 断言；宿主防火墙（见上文_源站防护_）在包层把其余对端挡在端口之外。残余暴露：绕过防火墙的对端可以伪造 `CF-Connecting-IP`，改写会传播该伪造值 —— 头真实性的执行点是防火墙。每个块上保留 `trusted_proxies {{ cloudflare_cidrs }}`，使 Caddy 默认转发头处理与同一 CIDR 集保持一致；XFF 取值本身由 `header_up` 改写固定。详细机制见 [`rate-limiting.zh.md`](./rate-limiting.zh.md#ip-resolution-gin-not-tollbooth)。
+该单值的信任锚：Cloudflare 在边缘覆写访客提供的任何 `CF-Connecting-IP`，因此凡是流经 Cloudflare 的流量，该头由 Cloudflare 断言；宿主防火墙（见上文_源站防护_）在包层把非 Cloudflare 对端挡在 443 之外；容器的端口仅回环发布，唯一可能的直接对端就是宿主网关本身。残余暴露：绕过防火墙的对端可以伪造 `CF-Connecting-IP`，改写会传播该伪造值 —— 头真实性的执行点是防火墙。每个块上的 `trusted_proxies private_ranges` 覆盖网关经网桥 NAT 后的地址；XFF 取值本身由 `header_up` 改写固定。详细机制见 [`rate-limiting.zh.md`](./rate-limiting.zh.md#ip-resolution-gin-not-tollbooth)。
 
-运维要求：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` Ansible 变量承载当前 Cloudflare CIDR 列表（同时镜像在 VPS 防火墙中）。Cloudflare 偶尔更新这些段；运维者必须同步两处。这一维护职责在此处与 [`rate-limiting.zh.md`](./rate-limiting.zh.md#ip-resolution-gin-not-tollbooth)中均有记录。
+运维要求：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` Ansible 变量承载当前 Cloudflare CIDR 列表，供宿主防火墙使用 —— 唯一的执行点，没有任何模板消费该列表。Cloudflare 偶尔更新这些段；运维者必须同步防火墙（该变量是列表在文档中的归宿）。这一维护职责在此处与 [`rate-limiting.zh.md`](./rate-limiting.zh.md#ip-resolution-gin-not-tollbooth)中均有记录。
 
 <a id="caching"></a>
 
@@ -165,9 +166,9 @@ markpost **不**使用 `TrustedPlatform = gin.PlatformCloudflare`（它在应用
 
 ### Cloudflare 默认缓存什么
 
-Cloudflare **按文件扩展名缓存，而非按 MIME 类型**，且**默认不缓存 HTML 或 JSON**（`cache/concepts/default-cache-behavior.mdx`）。默认缓存的扩展名是一组静态资源类型（CSS、JS、JPG、PNG、PDF、WOFF2、SVG……）；HTML/JSON/API 响应返回 `DYNAMIC` 并直通源站，除非源站的头或某条 Cache Rule 使其合格。
+Cloudflare **按文件扩展名缓存，而非按 MIME 类型**，且**默认不缓存 HTML 或 JSON**（`cache/concepts/default-cache-behavior.mdx`）。默认缓存的扩展名是一组静态资源类型（CSS、JS、JPG、PNG、PDF、WOFF2、SVG……）；HTML/JSON/API 响应返回 `DYNAMIC` 并直通源站，除非某条 Cache Rule 使其合格。
 
-markpost 依赖**源站头**路径：`RenderPost` 以 `Cache-Control: public, max-age=300, s-maxage=3600` 服务 HTML（`backend/internal/api/rest/v1/post.go:72`）。因为 `public` + `max-age>0` 满足 Cloudflare 的缓存条件，HTML 文章页进入边缘缓存，尽管 HTML 不在默认缓存之列。
+源站头本身无法把缓存资格扩展到默认名单之外的内容 —— "To cache additional content, refer to Cache Rules"（`cache/concepts/default-cache-behavior.mdx`）—— 因此由一条 **Cache Rule** 让文章页可缓存：`URI Path` `starts with` `/p-` → **Eligible for cache**（控制台：Rules → Overview → Create rule → Cache Rule），规则的 Edge TTL 保持未设置。资格就位后，TTL 来自源站：`RenderPost` 以 `Cache-Control: public, max-age=300, s-maxage=3600` 服务 HTML（`backend/internal/api/rest/v1/post.go:72`）。
 
 Cloudflare 在 **Origin Cache Control（OCC）**之下尊重源站缓存头，OCC 默认开启且在 Free/Pro/Business 上无法关闭（`cache/concepts/cache-control.mdx`）。这就是 markpost 头中的 `s-maxage`/`max-age` 指令真实生效的原因。
 
@@ -197,11 +198,11 @@ Cloudflare 在 **Origin Cache Control（OCC）**之下尊重源站缓存头，OC
 | REVALIDATED  | 源站经条件请求（304）确认未变；从缓存服务                       |
 | UPDATING     | 已过期，后台再验证（异步 SWR 路径）期间服务陈旧内容             |
 | STALE        | 已过期且源站不可达；服务陈旧内容                                |
-| DYNAMIC      | 不具缓存资格；直通源站（无正确头的 HTML）                       |
+| DYNAMIC      | 不具缓存资格；直通源站（未被 Cache Rule 覆盖的 HTML）           |
 | BYPASS       | 源站指示绕过（`no-cache`/`private`/`max-age=0`，或 Set-Cookie） |
 | NONE/UNKNOWN | Cloudflare 在到达缓存前应答（Worker、WAF 拦截、重定向）         |
 
-若文章页持续显示 `DYNAMIC`，说明缓存头没有生效；重复访问先 `MISS` 后 `HIT` 确认缓存工作正常。
+若文章页持续显示 `DYNAMIC`，说明 Cache Rule 缺失或未匹配 `/p-*`；重复访问先 `MISS` 后 `HIT` 确认缓存工作正常。
 
 <a id="cache-purge"></a>
 
@@ -273,6 +274,7 @@ Free 套餐的清除限制，按**账户**经令牌桶模型施加（`cache/how-
 | 上传（请求体）上限                | **100 MB**                 | `plans/index.json` network.max_upload_size —— 约束创建文章的正文（平均 32 KB，约 3000 倍余量）                                                  |
 | Edge Cache TTL 下限               | 2 小时                     | 这是不使用 `stale-while-revalidate` 的原因（见 [`caching.zh.md`](./caching.zh.md#http-cache-headers-in-detail)）                                |
 | Browser Cache TTL 下限            | 2 分钟                     |                                                                                                                                                 |
+| 可缓存 HTTPS 端口                 | **仅 443**                 | 其余代理 HTTPS 端口一律缓存禁用；重新启用仅限 Enterprise（`fundamentals/reference/network-ports.mdx`）                                          |
 | Cache Rules                       | 10                         |                                                                                                                                                 |
 | 清除（含缓存标签在内的全部 5 种） | 有                         | Free 支持 URL/Hostname/Tag/Prefix/Everything（`plans/index.json:454`）                                                                          |
 | 清除速率                          | 5/分，桶 25，100 操作/请求 | 按账户                                                                                                                                          |
@@ -314,6 +316,6 @@ markpost.example.com {
 
 因为 Caddy 只服务 `Host: markpost.example.com`，直连的 `http://<IP>:<port>` 请求不匹配、不会被路由到应用 —— 这就是"IP:port 不可访问"的实施方式。compose 的 `ports` 应为 ACME 暴露 80 与 443。该模式不使用 Cloudflare，因此没有 `[cloudflare]` 配置，purger 是 no-op。
 
-**SaaS** —— `devops/ansible/templates/Caddyfile.production.j2`：`:2053` 带 `auto_https off`、`tls /app/certs/origin.pem /app/certs/origin.key`，每个 `reverse_proxy` 带 `trusted_proxies {{ cloudflare_cidrs }}` 与 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}` 改写（见_客户端 IP 检测_）。没有按域名的 site 块（Origin CA，而非 Let's Encrypt）。它以不可变的 `Cache-Control` 服务 `/_next/static/*`、导出 HTML 带 5 分钟 `max-age`，并服务品牌化 404 页。
+**SaaS** —— 两个 Caddy。宿主 Caddy 网关以 Origin CA 证书绑定 443（`markpost.caddy.j2` → `/etc/caddy/conf.d/markpost.caddy`，与 VPS 上其他服务共享的按域名 site 块），代理到 `127.0.0.1:8080`。容器 Caddy（`devops/ansible/templates/Caddyfile.production.j2`）在 `:2053` 服务明文 HTTP、仅回环发布，每个 `reverse_proxy` 带 `trusted_proxies private_ranges` 与 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}` 改写（见_客户端 IP 检测_）。它以不可变的 `Cache-Control` 服务 `/_next/static/*`、导出 HTML 带 5 分钟 `max-age`，并服务品牌化 404 页。
 
 三种模式下 Go 二进制与配置 schema 完全相同 —— 只有 Caddyfile、DNS 与可选的 `[cloudflare]` 节不同。

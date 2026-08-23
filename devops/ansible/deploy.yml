@@ -59,6 +59,55 @@
         dest: "{{ caddyfile }}"
         mode: "0644"
 
+    # Host Caddy gateway (production only): the shared systemd Caddy on the
+    # VPS terminates TLS on 443 and proxies to the container's loopback port.
+    # These tasks run BEFORE the container is recreated so that, on the
+    # 2053→443 switch day (Origin Rule deleted in the dashboard first), the
+    # gateway is already serving when the container flips ports. The reload
+    # handler fires only when the cert copy or the site block changes.
+    - name: Ensure gateway certificate directory exists
+      ansible.builtin.file:
+        path: "{{ gateway_certs_dir }}"
+        state: directory
+        owner: root
+        group: caddy
+        mode: "0750"
+      become: true
+      when: env == 'production'
+
+    - name: Copy Origin CA certificate to the host Caddy gateway
+      ansible.builtin.copy:
+        remote_src: true
+        src: "{{ app_path }}/certs/{{ item.name }}"
+        dest: "{{ gateway_certs_dir }}/{{ item.name }}"
+        owner: root
+        group: caddy
+        mode: "{{ item.mode }}"
+      loop:
+        - { name: origin.pem, mode: "0644" }
+        - { name: origin.key, mode: "0640" }
+      become: true
+      when: env == 'production'
+      notify: Reload host Caddy gateway
+
+    - name: Template markpost site block into the host Caddy gateway
+      ansible.builtin.template:
+        src: markpost.caddy.j2
+        dest: "{{ gateway_site_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      when: env == 'production'
+      notify: Reload host Caddy gateway
+
+    # Handlers otherwise wait for the end of the play — after the edge
+    # verification below — so a first deploy would verify against a gateway
+    # that has the site block on disk but never reloaded. Flush here so the
+    # reload happens before the container and traffic flip.
+    - name: Flush gateway handlers before the traffic flip
+      ansible.builtin.meta: flush_handlers
+
     # Schema changes are applied by `markpost migrate up`, never implicitly on
     # serve — infra.New only opens the connection. So the deploy has to order
     # postgres → migrate → app itself, rather than bringing everything up at
@@ -141,3 +190,10 @@
       delegate_to: localhost
       run_once: true
       changed_when: false
+
+  handlers:
+    - name: Reload host Caddy gateway
+      ansible.builtin.systemd:
+        name: caddy
+        state: reloaded
+      become: true

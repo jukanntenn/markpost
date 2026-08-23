@@ -1,0 +1,14 @@
+# {{ ansible_managed }}
+# markpost site block for the shared host Caddy gateway (production).
+#
+# Cloudflare (Full strict) connects here on 443 — the only proxied HTTPS port
+# with edge caching enabled; every other proxied HTTPS port is cache-disabled
+# and re-enabling is Enterprise-only. TLS terminates here with the Origin CA
+# cert (the playbook copies it from {{ app_path }}/certs/); the hop to the
+# markpost container is plain HTTP on the loopback-published port.
+# CF-Connecting-IP is not a hop-by-hop header and passes through untouched;
+# the container's Caddy rewrites X-Forwarded-For from it.
+{{ gateway_host }} {
+	tls {{ gateway_certs_dir }}/origin.pem {{ gateway_certs_dir }}/origin.key
+	reverse_proxy 127.0.0.1:{{ host_port }}
+}

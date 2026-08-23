@@ -34,15 +34,15 @@
 
 中间件调用 `c.ClientIP()`（应用下述可信代理逻辑）并把结果传给 `tollbooth.LimitByKeys`。tollbooth 自己的 `SetIPLookup` 不做可信代理校验，把 IP 解析委托给它会让可信代理配置所关闭的伪造风险重新出现。
 
-SaaS 拓扑中的全部流量走一条路径：`Client → Cloudflare → Caddy → Go`。Cloudflare 在回源时设置 `CF-Connecting-IP`（真实客户端 IP）与它自己的 `X-Forwarded-For` 链；源站防火墙锁定到 Cloudflare 的 CIDR（见 [`cloudflare.zh.md`](./cloudflare.zh.md) _源站防护_）。客户端 IP 恢复是一个单值接力，落在两个互相对齐的信任锚上 —— Cloudflare 边缘对该头的断言，与宿主防火墙的 CIDR 白名单：
+SaaS 拓扑中的全部流量走一条路径：`Client → Cloudflare → 宿主 Caddy 网关 → 容器 Caddy → Go`。Cloudflare 在回源时设置 `CF-Connecting-IP`（真实客户端 IP）与它自己的 `X-Forwarded-For` 链；源站防火墙在 443 上锁定到 Cloudflare 的 CIDR，容器端口仅回环发布（见 [`cloudflare.zh.md`](./cloudflare.zh.md) _源站防护_）。客户端 IP 恢复是一个单值接力，落在互相对齐的信任锚上 —— Cloudflare 边缘对该头的断言、宿主防火墙的 CIDR 白名单、以及仅回环的端口发布：
 
-**Caddy 层。** `Caddyfile.production.j2` 的每个 `reverse_proxy` 都带 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`。Caddy 在其默认转发头处理**之后**应用用户头操作，因此交付给 Go 的 `X-Forwarded-For` 恒为单个 `CF-Connecting-IP` 值：Cloudflare 在边缘覆写访客提供的任何同名头，而防火墙只放行 Cloudflare 对端到达端口，于是在每条合法请求上该值都由 Cloudflare 断言。同一批块上的 `trusted_proxies` 设为 Cloudflare 公布的 CIDR 段，使默认转发头处理保持一致；XFF 取值本身由 `header_up` 改写固定。
+**Caddy 层。** `CF-Connecting-IP` 经宿主网关原样透传（不是 hop-by-hop 头），容器 `Caddyfile.production.j2` 的每个 `reverse_proxy` 都带 `header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}`。Caddy 在其默认转发头处理**之后**应用用户头操作，因此交付给 Go 的 `X-Forwarded-For` 恒为单个 `CF-Connecting-IP` 值：Cloudflare 在边缘覆写访客提供的任何同名头，而容器端口只有宿主网关能够到达，于是在每条合法请求上该值都由 Cloudflare 断言。同一批块上的 `trusted_proxies` 设为 `private_ranges`（对端是网关经网桥 NAT 后的地址），使默认转发头处理保持一致；XFF 取值本身由 `header_up` 改写固定。
 
 **gin 层。** `SetTrustedProxies(["127.0.0.1", "::1"])` 对应 Caddy 经回环代理到 Go 的事实。`ClientIP()` 信任回环对端并返回单值的 `X-Forwarded-For`。朴素追加的链在这里会坏掉：gin 从右到左遍历链并返回首个不受信 IP，而仅有回环信任时最右侧条目 —— Cloudflare 的边缘跳 —— 会被当作每个访客的返回值，把按 IP 作键的限流器坍缩到少数边缘地址上。
 
 刻意不把 `gin.PlatformCloudflare`（无条件信任 `CF-Connecting-IP`）用在应用层：它不做 CIDR 检查，因此能直连端口的攻击者可以伪造该头并逃避限流。已部署的设计把该头的真实性锚定在 Cloudflare 边缘覆写加宿主防火墙上 —— 防火墙被绕过是残余威胁，而防火墙正是执行点。
 
-**Cloudflare CIDR 维护。** CIDR 列表由运维者提供：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` 供给 `trusted_proxies`（只接受 CIDR 字面量 —— Caddy 无法抓取 URL），同一列表镜像在 VPS 防火墙规则中。Cloudflare 偶尔更新其公布的段（https://www.cloudflare.com/ips/）；运维者必须同步两处 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
+**Cloudflare CIDR 维护。** CIDR 列表由运维者提供：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` 是该列表在文档中的归宿，供 443 上的宿主防火墙白名单使用（唯一执行点 —— 自 `trusted_proxies` 改为 `private_ranges` 后没有任何模板消费它）。Cloudflare 偶尔更新其公布的段（https://www.cloudflare.com/ips/）；运维者必须同步防火墙 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
 
 <a id="configuration"></a>
 

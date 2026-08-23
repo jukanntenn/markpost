@@ -188,6 +188,7 @@ export const handlers = [
       username: body.username,
       role: 'user',
       is_active: true,
+      vip: false,
       created_at: new Date().toISOString(),
     }
     mockAdminUsers.push(created)

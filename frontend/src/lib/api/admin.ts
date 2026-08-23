@@ -4,6 +4,7 @@ import type {
   AdminUser,
   AdminResetPasswordResponse,
   AdminStatsResponse,
+  AdminSettingsResponse,
 } from '@/types/users'
 import type { AdminPostsResponse } from '@/types/posts'
 import type {
@@ -50,6 +51,22 @@ export const adminApi = {
     request<AdminUser>(`/api/v1/admin/users/${id}/active`, {
       method: 'PATCH',
       json: { active },
+    }),
+
+  // MRFC 2026-08-23-vip-badge-and-admin-management: per-user VIP honorific.
+  setUserVip: (id: number, vip: boolean) =>
+    request<AdminUser>(`/api/v1/admin/users/${id}/vip`, {
+      method: 'PATCH',
+      json: { vip },
+    }),
+
+  // Runtime settings (v1: the github-login VIP strategy switch, key "vip").
+  listSettings: () => request<AdminSettingsResponse>('/api/v1/admin/settings'),
+
+  updateSetting: (key: string, enabled: boolean) =>
+    request<AdminSettingsResponse>(`/api/v1/admin/settings/${key}`, {
+      method: 'PUT',
+      json: { enabled },
     }),
 
   deleteUser: (id: number) =>

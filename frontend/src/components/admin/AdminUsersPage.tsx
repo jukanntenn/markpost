@@ -27,12 +27,14 @@ import {
 import { relativeTime } from '@/utils/relative-time'
 import { useLocaleContext } from '@/components/providers/LocaleProvider'
 import { AdminUserDialog } from './AdminUserDialog'
+import { VipStrategyToggle } from './VipStrategyToggle'
 import {
   UserActionsMenu,
   UserGovernanceDialogs,
   type PendingAction,
 } from './UserGovernance'
 import type { AdminUser } from '@/types/users'
+import { VipBadge } from '@/components/ui/vip-badge'
 
 // D3.1 用户列表：搜索（debounce 300ms）+ 状态 badge + 详情入口 + ⋮ 快捷操作。
 export function AdminUsersPage() {
@@ -66,10 +68,13 @@ export function AdminUsersPage() {
     <div className="space-y-6">
       <PageHeading
         actions={
-          <Button onClick={() => setCreateOpen(true)}>
-            <PlusIcon className="mr-1 size-4" />
-            {tUsers('addUser')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <VipStrategyToggle />
+            <Button onClick={() => setCreateOpen(true)}>
+              <PlusIcon className="mr-1 size-4" />
+              {tUsers('addUser')}
+            </Button>
+          </div>
         }
       >
         {tUsers('title')}
@@ -129,12 +134,15 @@ export function AdminUsersPage() {
                     {u.id}
                   </TableCell>
                   <TableCell className="font-medium">
-                    <a
-                      href={`/admin/users?id=${u.id}`}
-                      className="hover:underline"
-                    >
-                      {u.username}
-                    </a>
+                    <span className="inline-flex items-center gap-1.5">
+                      <a
+                        href={`/admin/users?id=${u.id}`}
+                        className="hover:underline"
+                      >
+                        {u.username}
+                      </a>
+                      {u.vip && <VipBadge />}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>
@@ -170,12 +178,15 @@ export function AdminUsersPage() {
           {users.map((u) => (
             <li key={u.id} className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between gap-3">
-                <a
-                  href={`/admin/users?id=${u.id}`}
-                  className="min-w-0 truncate font-semibold hover:underline"
-                >
-                  {u.username}
-                </a>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <a
+                    href={`/admin/users?id=${u.id}`}
+                    className="min-w-0 truncate font-semibold hover:underline"
+                  >
+                    {u.username}
+                  </a>
+                  {u.vip && <VipBadge />}
+                </span>
                 <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>
                   {u.role === 'admin' ? t('roleAdmin') : t('roleUser')}
                 </Badge>

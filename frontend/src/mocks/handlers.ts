@@ -188,10 +188,31 @@ export const handlers = [
       username: body.username,
       role: 'user',
       is_active: true,
+      vip: false,
       created_at: new Date().toISOString(),
     }
     mockAdminUsers.push(created)
     return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.patch('/api/v1/admin/users/:id/vip', async ({ params, request }) => {
+    const body = (await request.json()) as { vip?: boolean }
+    const target = mockAdminUsers.find((u) => u.id === Number(params.id))
+    if (!target) return new HttpResponse(null, { status: 404 })
+    target.vip = body.vip ?? false
+    return HttpResponse.json(target)
+  }),
+
+  http.get('/api/v1/admin/settings', () => {
+    return HttpResponse.json({ items: mockSettings })
+  }),
+
+  http.put('/api/v1/admin/settings/:key', async ({ params, request }) => {
+    if (params.key !== 'vip') return new HttpResponse(null, { status: 400 })
+    const body = (await request.json()) as { enabled?: boolean }
+    const target = mockSettings.find((s) => s.key === 'vip')
+    if (target) target.value.enabled = body.enabled ?? false
+    return HttpResponse.json({ items: mockSettings })
   }),
 
   http.get('/api/v1/admin/posts', ({ request }) => {
@@ -361,6 +382,7 @@ export const mockAdminUsers = [
     username: 'admin',
     role: 'admin',
     is_active: true,
+    vip: true,
     created_at: '2024-01-01T00:00:00Z',
   },
   {
@@ -369,7 +391,17 @@ export const mockAdminUsers = [
     username: 'user1',
     role: 'user',
     is_active: true,
+    vip: false,
     created_at: '2024-01-02T00:00:00Z',
+  },
+]
+
+const mockSettings = [
+  {
+    key: 'vip',
+    value: { enabled: true },
+    updated_by: 1,
+    updated_at: '2024-01-01T00:00:00Z',
   },
 ]
 

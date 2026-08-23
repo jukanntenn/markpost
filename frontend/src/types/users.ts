@@ -12,6 +12,7 @@ export interface AdminUser {
   github_id: number | null
   role: UserRole
   is_active: boolean
+  vip: boolean
   post_key: string
   last_login_at: string | null
   created_at: string
@@ -38,4 +39,17 @@ export interface AdminStats {
 
 export interface AdminStatsResponse {
   counts: AdminStats
+}
+
+// Runtime settings row (GET/PUT /api/v1/admin/settings). v1 carries the
+// GitHub-login VIP strategy switch under key "vip".
+export interface AdminSettingItem {
+  key: string
+  value: { enabled: boolean }
+  updated_by: number | null
+  updated_at: string
+}
+
+export interface AdminSettingsResponse {
+  items: AdminSettingItem[]
 }

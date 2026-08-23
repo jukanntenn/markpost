@@ -9,6 +9,7 @@ import { deliveryKeys, deliveryApi, postKeyKeys } from '@/lib/api'
 import { useAuthStore } from '@/stores/auth'
 import { usePostKey } from '@/hooks/usePostKey'
 import { useLocaleContext } from '@/components/providers/LocaleProvider'
+import { VipBadge } from '@/components/ui/vip-badge'
 import { ListState } from '@/components/ui/list-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -160,7 +161,10 @@ export function DashboardPage() {
     <div className="mx-auto max-w-5xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-headline font-bold tracking-tight">
-          {t('welcome', { name: user?.username ?? '' })}
+          <span className="inline-flex items-center gap-2">
+            {t('welcome', { name: user?.username ?? '' })}
+            {user?.vip && <VipBadge />}
+          </span>
         </h1>
         <span className="text-sm text-muted-foreground">
           {new Date().toLocaleDateString(locale, {

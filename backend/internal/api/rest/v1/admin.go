@@ -32,6 +32,7 @@ type AdminService interface {
 	SetUserRole(ctx context.Context, actorID, userID int, role user.Role) error
 	ResetUserPassword(ctx context.Context, userID int) (string, error)
 	SetUserActive(ctx context.Context, actorID, userID int, active bool) error
+	SetUserVIP(ctx context.Context, userID int, vip bool) error
 	DeleteUser(ctx context.Context, actorID, userID int) (int64, error)
 	GetUserByID(ctx context.Context, userID int) (*user.User, error)
 	CreateChannel(ctx context.Context, channel *delivery.Channel) error
@@ -952,5 +953,60 @@ func AdminSetSetting(adminSvc AdminService) gin.HandlerFunc {
 			items = append(items, newAdminSettingItem(s))
 		}
 		c.JSON(http.StatusOK, AdminSettingListResponse{Items: items})
+	}
+}
+
+// AdminSetUserVIPRequest represents the request body for setting a user's VIP
+// status (admin).
+type AdminSetUserVIPRequest struct {
+	VIP bool `json:"vip"`
+}
+
+// AdminSetUserVIP godoc
+// @Summary Set a user's VIP status (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Param body body AdminSetUserVIPRequest true "VIP status"
+// @Success 200 {object} v1.AdminUserItem
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/{id}/vip [patch]
+func AdminSetUserVIP(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		var req AdminSetUserVIPRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+
+		if err := adminSvc.SetUserVIP(c.Request.Context(), userID, req.VIP); err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "user.set_vip",
+			TargetType: "user",
+			TargetID:   fmt.Sprintf("%d", userID),
+			Metadata:   map[string]any{"vip": req.VIP},
+			IP:         c.ClientIP(),
+		})
+
+		u, err := adminSvc.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, newAdminUserItem(*u))
 	}
 }

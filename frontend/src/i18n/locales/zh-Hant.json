@@ -477,7 +477,9 @@
           "disable": "封鎖了 {target}",
           "enable": "解除封鎖了 {target}",
           "delete": "刪除了使用者 {target}",
-          "revoke_sessions": "強制 {target} 登出"
+          "revoke_sessions": "強制 {target} 登出",
+          "vipGrant": "授予了 {target} VIP",
+          "vipRevoke": "撤銷了 {target} 的 VIP"
         },
         "post": {
           "delete": "刪除了文章 {target}"
@@ -487,6 +489,10 @@
           "enable": "啟用了管道 {target}",
           "disable": "停用了管道 {target}",
           "delete": "刪除了管道 {target}"
+        },
+        "setting": {
+          "enable": "開啟了設定 {target}",
+          "disable": "關閉了設定 {target}"
         }
       },
       "meta": {
@@ -525,7 +531,8 @@
         "postKeyCopied": "Post Key 已複製",
         "sessionsRevokedToast": "工作階段已撤銷",
         "emailVerified": "已驗證",
-        "emailNotVerified": "未驗證"
+        "emailNotVerified": "未驗證",
+        "vip": "VIP"
       },
       "reset": {
         "title": "重設 {name} 的密碼",
@@ -574,9 +581,30 @@
         "disabled": "已封鎖 {name}",
         "enabled": "已解除封鎖 {name}",
         "signOut": "已強制 {name} 登出",
-        "deleted": "使用者已刪除"
+        "deleted": "使用者已刪除",
+        "vipGranted": "已授予 {name} VIP",
+        "vipRevoked": "已撤銷 {name} 的 VIP"
       },
-      "actions": "操作"
+      "actions": "操作",
+      "vip": {
+        "grantVip": "授予 VIP",
+        "revokeVip": "撤銷 VIP",
+        "grant": {
+          "title": "授予 {name} VIP？",
+          "desc": "將 {name} 標記為 VIP。VIP 是榮譽徽章，不附帶任何權限。"
+        },
+        "revoke": {
+          "title": "撤銷 {name} 的 VIP？",
+          "desc": "{name} 的 VIP 徽章將消失。若「GitHub 登入自動 VIP」策略處於開啟狀態，其下次 GitHub 登入會重新獲得。"
+        }
+      },
+      "vipStrategy": {
+        "label": "GitHub 登入自動 VIP",
+        "toasts": {
+          "enabled": "VIP 策略已開啟",
+          "disabled": "VIP 策略已關閉"
+        }
+      }
     },
     "userDialog": {
       "title": "新增使用者",

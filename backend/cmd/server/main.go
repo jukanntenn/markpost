@@ -558,6 +558,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.PATCH("/users/:id/role", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserRole(adminSvc))
 			adminGroup.POST("/users/:id/password", middleware.RateLimitByUserID(l3Write), v1.AdminResetUserPassword(adminSvc))
 			adminGroup.PATCH("/users/:id/active", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserActive(adminSvc))
+			adminGroup.PATCH("/users/:id/vip", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserVIP(adminSvc))
 			adminGroup.DELETE("/users/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteUser(adminSvc))
 			adminGroup.GET("/users/:id/sessions", v1.AdminListSessions(adminSvc))
 			adminGroup.DELETE("/users/:id/sessions", middleware.RateLimitByUserID(l3Write), v1.AdminRevokeUserSessions(adminSvc))

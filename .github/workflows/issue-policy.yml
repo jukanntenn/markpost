@@ -1,0 +1,42 @@
+name: Issue policy
+
+# Pull-request check for the agent-driven development loop: once a
+# non-draft, non-bot PR enters review (review requested or any review
+# submitted), validate the conventional-commit title, the area/* label,
+# the issue references, and every referenced issue's template contract
+# (see .agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md).
+# Failures post an audit comment on the PR and fail the check.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+      - ready_for_review
+      - review_requested
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+jobs:
+  policy:
+    name: Issue policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out policy at the event commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Validate pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/issue-management/policy.py pr

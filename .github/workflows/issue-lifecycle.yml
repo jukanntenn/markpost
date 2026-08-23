@@ -1,0 +1,58 @@
+name: Issue lifecycle
+
+# Board automation for the agent-driven development loop: moves the GitHub
+# Project statuses on repository events — opened/reopened to Inbox, closed
+# to Done or No action by close reason, resolving-PR activity to In
+# progress, review requested to In review, and a changes-requested review
+# back to In progress only when automation set the current status (the
+# marker comment records the actor; a human's manual placement is never
+# overridden). Inert until config.json sets requireProject/projectNumber.
+# GITHUB_TOKEN has no scope for user-owned Projects v2 (measured against
+# actionlint's permission list), so active board writes authenticate with
+# the MARKPOST_PROJECT_TOKEN secret (classic PAT, project scope) — absent
+# that secret the github.token fallback is used, which only serves the
+# inert requireProject=false mode.
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - closed
+      - reopened
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: issue-lifecycle-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  lifecycle:
+    name: Issue lifecycle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out policy at the event commit
+        # The event commit (PR merge ref or main sha) rather than main: the
+        # policy script ships through review in the same PRs it validates
+        # (CI changes are an Ask-first category), and this keeps the
+        # bootstrap window and steady state on one path.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Handle repository event
+        env:
+          GH_TOKEN: ${{ secrets.MARKPOST_PROJECT_TOKEN || github.token }}
+        run: python3 .github/issue-management/policy.py lifecycle

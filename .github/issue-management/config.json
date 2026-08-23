@@ -1,0 +1,20 @@
+{
+  "owner": "jukanntenn",
+  "repository": "markpost",
+  "projectNumber": 1,
+  "statusField": "Loop status",
+  "statuses": [
+    "Inbox",
+    "Backlog",
+    "Ready",
+    "In progress",
+    "In review",
+    "Done",
+    "No action"
+  ],
+  "priorityField": "Priority",
+  "lifecycleActor": "gh2bda",
+  "bodyUnitLimit": 50,
+  "types": ["idea", "feature", "bug", "research", "task"],
+  "requireProject": true
+}

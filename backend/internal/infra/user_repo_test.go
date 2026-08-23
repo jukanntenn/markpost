@@ -417,6 +417,47 @@ func TestUserRepository_SetActive(t *testing.T) {
 	})
 }
 
+func TestUserRepository_SetUserVIP(t *testing.T) {
+	db := SetupTestDB(t)
+	repo := NewUserRepository(db, 16)
+	ctx := context.Background()
+
+	u, _ := repo.Create(ctx, "vip@example.com", "vipuser", "pass")
+	if u.VIP {
+		t.Fatal("expected new users to default to non-VIP")
+	}
+
+	t.Run("grants vip", func(t *testing.T) {
+		if err := repo.SetUserVIP(ctx, u.ID, true); err != nil {
+			t.Fatalf("SetUserVIP(true): %v", err)
+		}
+		got, _ := repo.GetByID(ctx, u.ID)
+		if !got.VIP {
+			t.Error("expected user to be VIP after SetUserVIP(true)")
+		}
+	})
+
+	t.Run("revokes vip", func(t *testing.T) {
+		if err := repo.SetUserVIP(ctx, u.ID, false); err != nil {
+			t.Fatalf("SetUserVIP(false): %v", err)
+		}
+		got, _ := repo.GetByID(ctx, u.ID)
+		if got.VIP {
+			t.Error("expected user to be non-VIP after SetUserVIP(false)")
+		}
+	})
+
+	t.Run("returns not found for nonexistent user", func(t *testing.T) {
+		err := repo.SetUserVIP(ctx, 99999, true)
+		if err == nil {
+			t.Fatal("expected error for nonexistent user")
+		}
+		if !errors.Is(err, domain.ErrNotFound) {
+			t.Errorf("expected ErrNotFound, got: %v", err)
+		}
+	})
+}
+
 func timeNow() time.Time {
 	return time.Now().Truncate(time.Second)
 }

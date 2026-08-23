@@ -27,6 +27,8 @@ type Repository interface {
 	RotatePostKey(ctx context.Context, userID int) (string, error)
 	SetRole(ctx context.Context, userID int, role Role) error
 	SetActive(ctx context.Context, userID int, active bool) error
+	// SetUserVIP writes the durable VIP honorific (MRFC 2026-08-23-user-vip-flag).
+	SetUserVIP(ctx context.Context, userID int, vip bool) error
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	GetAll(ctx context.Context, offset, limit int) ([]User, error)
 	// Search returns users whose username matches the LIKE pattern (admin user

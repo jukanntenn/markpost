@@ -25,6 +25,7 @@ type UserResponse struct {
 	Role            string  `json:"role"`
 	IsActive        bool    `json:"is_active"`
 	IsEmailVerified bool    `json:"is_email_verified"`
+	VIP             bool    `json:"vip"`
 }
 
 func newUserResponse(u user.User) UserResponse {
@@ -37,6 +38,7 @@ func newUserResponse(u user.User) UserResponse {
 		Role:            string(u.Role),
 		IsActive:        u.IsActive,
 		IsEmailVerified: u.IsEmailVerified,
+		VIP:             u.VIP,
 	}
 }
 
@@ -298,6 +300,7 @@ type AdminUserItem struct {
 	GitHubID        *int64     `json:"github_id"`
 	Role            string     `json:"role"`
 	IsActive        bool       `json:"is_active"`
+	VIP             bool       `json:"vip"`
 	PostKey         string     `json:"post_key"`
 	LastLoginAt     *time.Time `json:"last_login_at"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -313,6 +316,7 @@ func newAdminUserItem(u user.User) AdminUserItem {
 		GitHubID:        u.GitHubID,
 		Role:            string(u.Role),
 		IsActive:        u.IsActive,
+		VIP:             u.VIP,
 		PostKey:         u.PostKey,
 		LastLoginAt:     u.LastLoginAt,
 		CreatedAt:       u.CreatedAt,

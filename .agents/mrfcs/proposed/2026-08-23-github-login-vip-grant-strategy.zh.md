@@ -12,7 +12,7 @@ Status: proposed
 
 **开关存储——键值设置表。** 新表 `settings`（`key TEXT PRIMARY KEY, value JSONB NOT NULL, updated_by INTEGER, updated_at TIMESTAMPTZ`），由其迁移播种 `vip = {"enabled": true}`，策略随上线即开启。这是未来策略的共用归宿，一次买断。管理面：`GET /api/v1/admin/settings` 返回全部行，`PUT /api/v1/admin/settings/:key` 写一行（v1 仅 `vip`，体 `{"enabled": <bool>}`），都在 `RequireAdmin` 之后，审计动作 `setting.set` 记录键与值。读取按用直查表——登录是低频路径，本就跑好几条查询；在没有度量之前不加缓存。
 
-**授予语义。** 在 `LoginWithGitHub`（`backend/internal/service/auth/auth.go`）里 `GetOrCreateFromGitHub` 之后：策略开启时，把该用户 vip 置 true——幂等，新建用户与再登录用户一视同仁，存量 GitHub 用户在窗口期内登录即加入首批。策略关闭时，登录对 vip 不做任何事：不授予、不撤销。管理员的手工写入（叠在此层之上的 VIP 徽章与管理层的逐用户 PATCH 端点）是唯一的撤销路径，而[标志本身](2026-08-23-user-vip-flag.zh.md)授予即持久，关闭策略永远不会让首批失去资格。若登录途中设置读取失败，登录照常完成但不授予，错误记日志——向「不授予」一侧失败，因为错误授予的 vip 比漏发的更难收回。
+**授予语义。** 在 `LoginWithGitHub`（`backend/internal/service/auth/auth.go`）里 `GetOrCreateFromGitHub` 之后：策略开启时，把该用户 vip 置 true——幂等，新建用户与再登录用户一视同仁，存量 GitHub 用户在窗口期内登录即加入首批。策略关闭时，登录对 vip 不做任何事：不授予、不撤销。管理员的手工写入（叠在此层之上的 VIP 徽章与管理层的逐用户 PATCH 端点）是唯一的撤销路径，而[标志本身](../implemented/2026-08-23-user-vip-flag.zh.md)授予即持久，关闭策略永远不会让首批失去资格。若登录途中设置读取失败，登录照常完成但不授予，错误记日志——向「不授予」一侧失败，因为错误授予的 vip 比漏发的更难收回。
 
 **一个摆在明面上的权衡。** 策略开启期间，管理员对某用户 vip 的撤销会被该用户下一次 GitHub 登录重新覆盖——策略自我重申。想让撤销立住的管理员先关策略、再逐个整理。逐用户豁免位曾被考虑并刻意推迟：没有需求提出过，且它会给每个用户行增加第二个可变事实。
 

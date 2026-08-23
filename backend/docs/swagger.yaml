@@ -228,6 +228,8 @@ definitions:
         type: string
       username:
         type: string
+      vip:
+        type: boolean
     type: object
   v1.AuthResponse:
     properties:
@@ -520,6 +522,8 @@ definitions:
         type: string
       username:
         type: string
+      vip:
+        type: boolean
     type: object
   v1.UsernameLoginRequest:
     properties:

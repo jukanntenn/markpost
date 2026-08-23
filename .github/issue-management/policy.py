@@ -291,13 +291,14 @@ def project_item(number: int) -> dict | None:
                 nodes {
                   id
                   project { number }
-                  fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+                  fieldValueByName(name: "%s") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
                 }
               }
             }
           }
         }
-        """,
+        """
+        % CONFIG["statusField"],
         owner=CONFIG["owner"],
         repo=CONFIG["repository"],
         number=str(CONFIG["projectNumber"]),
@@ -389,7 +390,7 @@ def _status_field() -> dict:
         number=str(CONFIG["projectNumber"]),
     )
     for field in data["user"]["projectV2"]["fields"]["nodes"]:
-        if field and field["name"] == "Status":
+        if field and field["name"] == CONFIG["statusField"]:
             return field
     raise RuntimeError("Project 缺少 Status 字段")
 

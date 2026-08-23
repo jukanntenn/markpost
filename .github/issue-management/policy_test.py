@@ -201,11 +201,12 @@ class NextStatus(unittest.TestCase):
         self.assertIsNone(policy.next_status("Done", "implementation"))
 
     def test_backward_needs_automation_actor(self):
-        target = policy.next_status("In review", "changes-requested", "github-actions[bot]")
+        actor = policy.LIFECYCLE_ACTOR
+        target = policy.next_status("In review", "changes-requested", actor)
         self.assertEqual(target, "In progress")
         self.assertIsNone(policy.next_status("In review", "changes-requested", "jukanntenn"))
         self.assertIsNone(policy.next_status("In review", "changes-requested", None))
-        self.assertIsNone(policy.next_status("In progress", "changes-requested", "github-actions[bot]"))
+        self.assertIsNone(policy.next_status("In progress", "changes-requested", actor))
 
     def test_unknown_command(self):
         with self.assertRaises(ValueError):

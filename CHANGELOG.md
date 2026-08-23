@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0-rc.6] - 2026-08-23
+
+### Added
+
+- Users marked as VIP now carry a badge next to their name in the app
+- Admins can grant or revoke VIP status for any user from the user management page
+- Admins can choose whether signing in with GitHub automatically grants VIP status
+
 ## [0.2.0-rc.5] - 2026-08-22
 
 ### Added

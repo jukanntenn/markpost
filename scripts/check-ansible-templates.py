@@ -50,6 +50,9 @@ BASE_VARS = {
     "debug": False,
     "go_port": 7330,
     "host_port": 8089,
+    "tls_profile": "http",
+    "gateway_host": "markpost.example.com",
+    "gateway_certs_dir": "/etc/caddy/certs/markpost",
     "image": "jukanntenn/markpost:v0.0.0",
     "jwt_access_signing_key": "a",
     "jwt_refresh_signing_key": "r",
@@ -130,10 +133,10 @@ def check_config(doc: dict, scenario: dict, fail) -> None:
 
 def check_compose(doc: dict, scenario: dict, fail) -> None:
     mounts = doc["services"]["markpost"]["volumes"]
-    want_certs = scenario["env"] == "production"
-    has_certs = any("/app/certs" in m for m in mounts)
-    if has_certs is not want_certs:
-        fail(f"certs mount present={has_certs}, want={want_certs}")
+    # No environment mounts certs into the container any more — TLS moved to
+    # the host Caddy gateway (the playbook copies the cert to /etc/caddy).
+    if any("/app/certs" in m for m in mounts):
+        fail("certs mount present; TLS terminates on the host gateway now")
     if not any(m.endswith("/app/data") for m in mounts):
         fail("/app/data bind-mount missing")
     for name in ("markpost", "postgres"):

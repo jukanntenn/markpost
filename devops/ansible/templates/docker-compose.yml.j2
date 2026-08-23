@@ -4,8 +4,9 @@
 # Topology is identical across dev / staging / production: the markpost
 # container (Caddy + Go backend via s6-overlay) plus a sibling postgres reached
 # over a shared Unix-socket volume. Per-environment differences are confined to
-# the published host port and whether the certs directory is bind-mounted
-# (production only, for the Cloudflare Origin CA cert).
+# the published host port and its binding: production publishes loopback-only
+# for the host Caddy gateway (443 terminates TLS there; the container serves
+# plain HTTP), dev/staging publish the port directly.
 #
 # Postgres is never published on the host — it is reachable only from the app
 # container over the shared postgres-socket volume.
@@ -14,7 +15,13 @@ services:
     image: {{ image }}
     container_name: {{ app_name }}
     ports:
+{% if env == 'production' %}
+      # Loopback-only: the host Caddy gateway (edge :443 → 127.0.0.1:{{ host_port }})
+      # is the sole consumer; nothing off-host can reach the container.
+      - "127.0.0.1:{{ host_port }}:{{ caddy_port }}"
+{% else %}
       - "{{ host_port }}:{{ caddy_port }}"
+{% endif %}
     volumes:
       - {{ config_file }}:/app/config.toml:ro
       # /app/data holds observability JSONL (app/traces/metrics-*.jsonl via
@@ -22,9 +29,6 @@ services:
       # every environment so logs/traces/metrics reach the host instead of
       # being trapped in the container writable layer.
       - {{ app_path }}/data:/app/data
-{% if env == 'production' %}
-      - {{ app_path }}/certs:/app/certs:ro
-{% endif %}
       - {{ caddyfile }}:/etc/caddy/Caddyfile:ro
       - postgres-socket:/var/run/postgresql
     environment:
@@ -33,7 +37,10 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:{{ caddy_port }}/api/v1/health"]
+      # The container serves plain HTTP in every environment (production TLS
+      # terminates on the host Caddy gateway); the scheme knob stays for the
+      # transitional 'origin' profile.
+      test: ["CMD", "curl", "-fsS", "-k", "{{ 'https' if tls_profile == 'origin' else 'http' }}://127.0.0.1:{{ caddy_port }}/api/v1/health"]
       interval: 10s
       timeout: 5s
       retries: 3

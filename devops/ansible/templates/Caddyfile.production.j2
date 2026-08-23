@@ -1,23 +1,23 @@
 # {{ ansible_managed }}
 # markpost Caddyfile (production).
 #
-# Cloudflare Origin CA certificate (Full strict mode). Cloudflare terminates
-# visitor-side TLS at the edge; Caddy terminates the edge→origin leg. The cert
-# is mounted at /app/certs/ from the host certs/ directory.
+# Plain HTTP only. TLS terminates on the host Caddy gateway (port 443,
+# Cloudflare Origin CA cert, Full strict), which reverse-proxies to the
+# loopback-published port below; because the published port binds 127.0.0.1,
+# the host gateway is the only possible peer.
 #
-# trusted_proxies: Cloudflare's published CIDR ranges so only Cloudflare (a
-# trusted peer) may prepend to X-Forwarded-For. Direct connections have their
-# XFF overwritten by Caddy, closing the spoofing gap.
-# Source: https://www.cloudflare.com/ips/ — sync when Cloudflare updates.
-# Internal layout: Caddy :2053, Go backend 127.0.0.1:7330.
+# trusted_proxies: private ranges cover the gateway's NAT'd bridge address as
+# seen from the container. The default XFF append is superseded by the
+# header_up rewrite: CF-Connecting-IP passes through the gateway untouched
+# (not a hop-by-hop header), so the XFF reaching Go is always the single
+# Cloudflare-asserted client IP.
+# Internal layout: Caddy :{{ caddy_port }}, Go backend 127.0.0.1:7330.
 
 {
 	auto_https off
 }
 
-:2053 {
-	tls /app/certs/origin.pem /app/certs/origin.key
-
+:{{ caddy_port }} {
 	header {
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
@@ -27,35 +27,35 @@
 
 	handle /api/v1/* {
 		reverse_proxy 127.0.0.1:7330 {
-			trusted_proxies {{ cloudflare_cidrs }}
+			trusted_proxies private_ranges
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 		}
 	}
 
 	handle /static/* {
 		reverse_proxy 127.0.0.1:7330 {
-			trusted_proxies {{ cloudflare_cidrs }}
+			trusted_proxies private_ranges
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 		}
 	}
 
 	handle /swagger/* {
 		reverse_proxy 127.0.0.1:7330 {
-			trusted_proxies {{ cloudflare_cidrs }}
+			trusted_proxies private_ranges
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 		}
 	}
 
 	handle /mpk-* {
 		reverse_proxy 127.0.0.1:7330 {
-			trusted_proxies {{ cloudflare_cidrs }}
+			trusted_proxies private_ranges
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 		}
 	}
 
 	handle /p-* {
 		reverse_proxy 127.0.0.1:7330 {
-			trusted_proxies {{ cloudflare_cidrs }}
+			trusted_proxies private_ranges
 			header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 		}
 	}

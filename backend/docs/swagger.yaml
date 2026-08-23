@@ -86,6 +86,11 @@ definitions:
       pending:
         type: integer
     type: object
+  settings.SettingValue:
+    properties:
+      enabled:
+        type: boolean
+    type: object
   user.RefreshToken:
     properties:
       created_at:
@@ -167,6 +172,11 @@ definitions:
       enabled:
         type: boolean
     type: object
+  v1.AdminSetSettingRequest:
+    properties:
+      enabled:
+        type: boolean
+    type: object
   v1.AdminSetUserActiveRequest:
     properties:
       active:
@@ -181,6 +191,24 @@ definitions:
         type: string
     required:
     - role
+    type: object
+  v1.AdminSettingItem:
+    properties:
+      key:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: integer
+      value:
+        $ref: '#/definitions/settings.SettingValue'
+    type: object
+  v1.AdminSettingListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/v1.AdminSettingItem'
+        type: array
     type: object
   v1.AdminStatsCounts:
     properties:
@@ -1005,6 +1033,68 @@ paths:
       security:
       - BearerAuth: []
       summary: Revoke a single user session (admin, D3.2)
+      tags:
+      - admin
+  /api/v1/admin/settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.AdminSettingListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List runtime settings (admin)
+      tags:
+      - admin
+  /api/v1/admin/settings/{key}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 'Setting key (v1: vip)'
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: Setting value
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AdminSetSettingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.AdminSettingListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert one runtime setting (admin)
       tags:
       - admin
   /api/v1/admin/stats:

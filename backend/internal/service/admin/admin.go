@@ -4,6 +4,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"markpost/internal/domain"
@@ -11,6 +12,7 @@ import (
 	"markpost/internal/domain/audit"
 	"markpost/internal/domain/delivery"
 	"markpost/internal/domain/post"
+	"markpost/internal/domain/settings"
 	"markpost/internal/domain/user"
 	"markpost/internal/service"
 	"markpost/internal/service/auth"
@@ -90,6 +92,13 @@ type AuditRecorder interface {
 	ActionCounts(ctx context.Context, filter audit.AuditFilter) (map[string]int64, error)
 }
 
+// SettingsStore defines the interface for runtime settings access (MRFC
+// 2026-08-23-github-login-vip-grant-strategy).
+type SettingsStore interface {
+	GetAll(ctx context.Context) ([]settings.Setting, error)
+	Set(ctx context.Context, key string, value settings.SettingValue, updatedBy int) error
+}
+
 // Service provides admin-level business logic.
 type Service struct {
 	userLister     UserLister
@@ -100,6 +109,7 @@ type Service struct {
 	historyLister  HistoryLister
 	sessionLister  SessionLister
 	auditRecorder  AuditRecorder
+	settingsStore  SettingsStore
 }
 
 // NewService creates a new admin Service instance.
@@ -129,6 +139,11 @@ func (s *Service) SetUserMutator(mutator UserMutator) {
 // SetChannelMutator sets the channel mutator for write operations.
 func (s *Service) SetChannelMutator(mutator ChannelMutator) {
 	s.channelMutator = mutator
+}
+
+// SetSettingsStore sets the runtime settings store.
+func (s *Service) SetSettingsStore(store SettingsStore) {
+	s.settingsStore = store
 }
 
 // RecordAudit records an admin write operation for audit purposes.
@@ -439,6 +454,31 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		PostsWeekDelta:   postsDelta,
 		HistoryWeekDelta: historyDelta,
 	}, nil
+}
+
+// GetSettings returns every runtime setting row (admin operation).
+func (s *Service) GetSettings(ctx context.Context) ([]settings.Setting, error) {
+	rows, err := s.settingsStore.GetAll(ctx)
+	if err != nil {
+		return nil, service.Wrap(service.ErrInternal, "list settings failed", err)
+	}
+	// I.10 契约：空列表序列化为 [] 而非 null。
+	if rows == nil {
+		rows = []settings.Setting{}
+	}
+	return rows, nil
+}
+
+// SetSetting upserts one runtime setting (admin operation). v1 admits only
+// the seeded keys — an unknown key is a client error, not a silent new row.
+func (s *Service) SetSetting(ctx context.Context, actorID int, key string, value settings.SettingValue) error {
+	if key != settings.KeyVIP {
+		return service.New(ErrUnknownSetting, fmt.Sprintf("unknown setting key %q", key))
+	}
+	if err := s.settingsStore.Set(ctx, key, value, actorID); err != nil {
+		return service.Wrap(service.ErrInternal, "set setting failed", err)
+	}
+	return nil
 }
 
 // DailyStatsAll returns the site-wide per-day delivery counts (D2.5).

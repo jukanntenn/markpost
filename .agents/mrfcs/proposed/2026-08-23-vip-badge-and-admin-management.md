@@ -6,7 +6,7 @@ English | [中文](2026-08-23-vip-badge-and-admin-management.zh.md)
 
 ## Problem
 
-With vip stored ([the flag MRFC](../implemented/2026-08-23-user-vip-flag.md)) and granted by strategy ([the grant MRFC](2026-08-23-github-login-vip-grant-strategy.md)), the strategy still has no surface: a VIP user cannot see their own standing — and that visibility is the entire product of a growth strategy — and admins have no per-user lever and no switch in the UI. The frontend renders the current user's username in the dashboard welcome and the app-shell user menu, and admin renders usernames in the users list and detail pages; the repo has its own Badge component and a governance-dialog pattern to copy. What the badge says, where it appears, and how admins drive both levers is what this layer decides.
+With vip stored ([the flag MRFC](../implemented/2026-08-23-user-vip-flag.md)) and granted by strategy ([the grant MRFC](../implemented/2026-08-23-github-login-vip-grant-strategy.md)), the strategy still has no surface: a VIP user cannot see their own standing — and that visibility is the entire product of a growth strategy — and admins have no per-user lever and no switch in the UI. The frontend renders the current user's username in the dashboard welcome and the app-shell user menu, and admin renders usernames in the users list and detail pages; the repo has its own Badge component and a governance-dialog pattern to copy. What the badge says, where it appears, and how admins drive both levers is what this layer decides.
 
 ## Proposal
 

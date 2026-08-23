@@ -57,7 +57,7 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 	}
 
 	t.Cleanup(func() {
-		db.Exec("TRUNCATE users, posts, refresh_tokens, token_blacklist, delivery_channels, delivery_attempts, delivery_history RESTART IDENTITY CASCADE")
+		db.Exec("TRUNCATE users, posts, refresh_tokens, token_blacklist, delivery_channels, delivery_attempts, delivery_history, settings RESTART IDENTITY CASCADE")
 		sqlDB, _ := db.DB()
 		if sqlDB != nil {
 			_ = sqlDB.Close()

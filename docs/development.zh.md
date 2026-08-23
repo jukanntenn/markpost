@@ -2,7 +2,7 @@
 
 [English](development.md) | 中文
 
-如何在本地搭建并运行 markpost。文档规则见 [AGENTS.md](AGENTS.md)；部署见 [deployment.zh.md](deployment.zh.md)。
+如何在本地搭建并运行 markpost。文档规则见 [AGENTS.md](AGENTS.md)；部署见 [deployment.zh.md](deployment.zh.md)；agent 驱动开发闭环的运行手册（激活清单与平台约束）见 [agent-loop-runbook.zh.md](agent-loop-runbook.zh.md)。
 
 <a id="prerequisites"></a>
 

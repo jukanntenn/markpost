@@ -1,6 +1,6 @@
 # MRFC: Issue-policy exemption for release pull requests
 
-Status: proposed
+Status: implemented
 
 English | [中文](2026-08-24-issue-policy-release-exemption.zh.md)
 
@@ -10,9 +10,9 @@ The [`issue-policy` workflow](../../../.github/workflows/issue-policy.yml) valid
 
 Once [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-conclusion-jobs-required-checks.md) makes gate 3 platform-enforced, red-but-mergeable stops existing: either release pull requests are exempt and green, or every release blocks on a check that cannot apply to it.
 
-## Proposal
+## Decision
 
-[`policy.py`](../../../.github/issue-management/policy.py) `pr` skips the three intake checks — title form, area label, issue reference — when the pull request's head branch matches `release/**`; the head ref arrives in the event payload, so detection is a pure-function branch with no API call. Everything else still runs: any references a release pull request does carry are validated as usual, and the issue-side checks are unchanged. With releases green, `Issue policy` joins `main`'s required checks alongside the five conclusion checks, making the intake contract platform-enforced too. Release branch naming is rigid already (`release/v0.2.0-rc.6`, measured) — owned by the release skill, not a new convention this record invents.
+[`policy.py`](../../../.github/issue-management/policy.py) `pr` skips the three intake checks — title form, area label, issue reference — when the pull request's head branch matches `release/**`: `is_release_pull` is a pure function of the head ref on the pull-request snapshot `run_pr_check` already fetches, so detection adds no API call and covers every event shape the workflow triggers on. Everything else still runs: any references a release pull request carries are validated as usual, and the issue-side checks are unchanged. `Issue policy` joins `main`'s required checks alongside the five conclusion checks — applying the settings is the maintainer's branch-protection step. Release branch naming stays owned by the release skill (`release/v0.2.0-rc.6`, measured).
 
 ## Alternatives considered
 
@@ -22,10 +22,6 @@ Once [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-concl
 
 **Skip the issue-policy workflow itself for `release/**` heads.** Loses the checks that do apply — referenced-issue validation whenever a reference exists — and hides the workflow from release pull requests entirely; the exemption belongs in the policy's intake rules, where the contract lives.
 
-## Acceptance criteria
+## Consequences
 
-A pull request from a `release/**` branch with no labels and no references passes `policy.py pr`; a non-release pull request missing any of the three checks still fails (both in the policy unit-test suite prek runs). After both layers land, `Issue policy` is added to `main`'s required checks and a real release pull request is measured green end-to-end.
-
-## Risks
-
-The exemption is branch-name-scoped: a release cut from a misnamed branch fails policy and, once required checks are on, blocks — visible immediately, fixed by renaming, and the release skill owns the naming. Reading the head ref must cover every event shape the workflow triggers on (`pull_request`, `pull_request_review`), covered by the unit suite. And exempting releases from the intake contract means area mislabeling on a release pull request can never be caught by policy — nothing about releases routes by area today, so the cost is theoretical.
+Release pull requests can be all-green: a bare `release/**` pull request with no labels and no references passes `policy.py pr`, while a non-release pull request missing any of the three checks still fails — both directions pinned in the policy unit-test suite (`is_release_pull` release, near-miss, and missing-ref cases) that prek runs on every commit and CI re-runs; the next real release pull request is the end-to-end measurement. The exemption is branch-name-scoped: a release cut from a misnamed branch fails policy and, once required checks are on, blocks — visible immediately, fixed by renaming, and the release skill owns the naming. Exempting releases from the intake contract means area mislabeling on a release pull request can never be caught by policy — nothing about releases routes by area today, so the cost is theoretical.

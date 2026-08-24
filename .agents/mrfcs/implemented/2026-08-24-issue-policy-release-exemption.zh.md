@@ -1,6 +1,6 @@
 # MRFC: Issue-policy exemption for release pull requests
 
-Status: proposed
+Status: implemented
 
 [English](2026-08-24-issue-policy-release-exemption.md) | 中文
 
@@ -10,9 +10,9 @@ Status: proposed
 
 一旦 [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-conclusion-jobs-required-checks.zh.md) 使门禁 3 获得平台强制,"红但仍可合并"就不复存在:要么 release PR 被豁免而全绿,要么每次发版都卡在一个对它不适用的检查上。
 
-## Proposal
+## Decision
 
-[`policy.py`](../../../.github/issue-management/policy.py) 的 `pr` 子命令在 PR 的 head 分支匹配 `release/**` 时跳过三项准入检查——标题形式、area 标签、issue 引用;head ref 随事件载荷而来,判定是纯函数分支,无额外 API 调用。其余照旧:release PR 真携带的引用仍被正常校验,issue 侧检查不变。release 全绿后,`Issue policy` 与五个 conclusion 检查一并加入 `main` 的 required checks,准入契约同样获得平台强制。release 分支命名本已刚性(`release/v0.2.0-rc.6`,实测)——归 release 技能所有,不是本记录新造的约定。
+[`policy.py`](../../../.github/issue-management/policy.py) 的 `pr` 子命令在 PR 的 head 分支匹配 `release/**` 时跳过三项准入检查——标题形式、area 标签、issue 引用:`is_release_pull` 是 head ref 的纯函数,读自 `run_pr_check` 本就获取的 PR 快照,判定零新增 API 调用,并天然覆盖 workflow 触发的全部事件形态。其余照旧:release PR 真携带的引用仍被正常校验,issue 侧检查不变。`Issue policy` 与五个 conclusion 检查一并加入 `main` 的 required checks——执行设置是维护者的分支保护步骤。release 分支命名仍归 release 技能所有(`release/v0.2.0-rc.6`,实测)。
 
 ## Alternatives considered
 
@@ -22,10 +22,6 @@ Status: proposed
 
 **对 `release/**` head 直接跳过 issue-policy workflow。** 丢掉了仍然适用的检查——release PR 一旦携带引用,引用校验照跑——并让 workflow 从 release PR 页面上彻底消失;豁免应放在策略的准入规则里,契约住在那里。
 
-## Acceptance criteria
+## Consequences
 
-来自 `release/**` 分支、无标签无引用的 PR 通过 `policy.py pr`;非 release PR 缺任一检查仍然失败(两者都进 prek 运行的策略单元测试)。两层落地后,`Issue policy` 加入 `main` 的 required checks,并在一次真实发版 PR 上端到端实测为绿。
-
-## Risks
-
-豁免以分支名为界:从错误命名的分支发版会挂掉 policy,required checks 生效后即阻塞——立即可见,改名即修,命名归 release 技能管。读取 head ref 必须覆盖 workflow 触发的全部事件形态(`pull_request`、`pull_request_review`),由单元测试覆盖。豁免也意味着 release PR 上的 area 误标永远无法被策略捕获——今天没有任何按 area 路由发版的机制,此代价是理论性的。
+release PR 可以全绿:来自 `release/**`、无标签无引用的 PR 通过 `policy.py pr`,非 release PR 缺任一检查仍然失败——两个方向都钉进 prek 每次提交与 CI 反复运行的策略单元测试(`is_release_pull` 的 release、近误与缺失分支);下一次真实发版 PR 即端到端实测。豁免以分支名为界:从错误命名的分支发版会挂掉 policy,required checks 生效后即阻塞——立即可见,改名即修,命名归 release 技能管。豁免也意味着 release PR 上的 area 误标永远无法被策略捕获——今天没有任何按 area 路由发版的机制,此代价是理论性的。

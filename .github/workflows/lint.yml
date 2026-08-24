@@ -10,11 +10,6 @@ on:
       - "LICENSE"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - ".gitignore"
-      - "LICENSE"
   workflow_dispatch:
 
 # Single source of truth: every check CI runs is declared in prek
@@ -22,7 +17,29 @@ on:
 # toolchains prek's hooks call (golangci-lint, pnpm, swag via go tool) and runs
 # `prek run --all-files`. No parallel lint/format definition exists in CI.
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      lint: ${{ steps.f.outputs.lint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: f
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        with:
+          # Path selectivity lives at job level, not on the pull_request
+          # trigger, so the workflow always reports and required checks
+          # cannot hang at "Expected" on out-of-path PRs.
+          filters: |
+            lint:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.gitignore'
+              - '!LICENSE'
+
   lint:
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,3 +79,19 @@ jobs:
         # Formatters mutate; prek exits non-zero if any file needed formatting
         # or any lint/gate failed — the comprehensive single-source gate.
         run: uvx prek run --all-files
+
+  # Stable per-workflow verdict for branch protection's required checks
+  # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
+  # runs past skips and failures, skipped jobs count as success.
+  conclusion:
+    needs: [changes, lint]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate job results
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          if echo "$results" | grep -Eq '"(failure|cancelled)"'; then
+            echo "::error::A job failed or was cancelled: $results"
+            exit 1
+          fi

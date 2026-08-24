@@ -10,7 +10,7 @@ markpost 曾以直推 `main` 的方式交付：历史里一个 pull request 都�
 
 ## Decision
 
-**三门人类门禁；其余全部 agent 驱动。** 决定做什么（issue 进入 `Ready`）、批准设计（RFC 栈）、验收交付（实施栈）是每个非平凡变更中人类的三次决策；平凡变更只保留交付门禁。`Ready` 前移靠 skill 纪律——agent 永不把 issue 推入 `Ready`，只认领已在其中的 issue——因为项目看板权限表达不了这道边界；另外两道门禁在分支保护开启后由平台强制（见下的维护者设置项）。既有的 Ask-first 边界（schema 迁移、新依赖、CI 与 Docker 变更）延续为 pull request 模板必有的"Ask-first 项"一节，作为人类 review 的强制关注清单。agent 在请求人类 review 前对每层先出预审：对照 `AGENTS.md`、specs 与文档门禁的结构化 comment review。approve 单属人类——不是靠约定，而是因为机器账号无法 approve 自己的 pull request，平台让"comment review 归 agent、approve 归人类"这组分工成为承重结构。
+**三门人类门禁；其余全部 agent 驱动。** 决定做什么（issue 进入 `Ready`）、批准设计（RFC 栈）、验收交付（实施栈）是每个非平凡变更中人类的三次决策；平凡变更只保留交付门禁。`Ready` 前移靠 skill 纪律——agent 永不把 issue 推入 `Ready`，只认领已在其中的 issue——因为项目看板权限表达不了这道边界；另外两道门禁在分支保护开启后由平台强制（见下的维护者设置项；required checks 的设计见 [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.zh.md)）。既有的 Ask-first 边界（schema 迁移、新依赖、CI 与 Docker 变更）延续为 pull request 模板必有的"Ask-first 项"一节，作为人类 review 的强制关注清单。agent 在请求人类 review 前对每层先出预审：对照 `AGENTS.md`、specs 与文档门禁的结构化 comment review。approve 单属人类——不是靠约定，而是因为机器账号无法 approve 自己的 pull request，平台让"comment review 归 agent、approve 归人类"这组分工成为承重结构。
 
 **机器账号执笔。** 所有 agent 驱动的 GitHub 操作——认领、push 分支、开 pull request、评论、落栈——以专属机器账号执行（`gh2bda`，本仓库的 collaborator，并被有意设计为可在维护者多个 agent 驱动项目间复用），凭一张 classic PAT——其四个 scope 各自解开一堵实测撞过的墙：`repo`（fine-grained 替代方案根本选不了协作者仓库）、`project`（看板写入）、`read:org`（gh CLI 的内部查询，如 `gh pr edit`）、`workflow`（HTTPS 推送触及 `.github/workflows/**`；SSH 推送不受 scope 限制）——经 agent 环境的 `GH_TOKEN` 生效，维护者自己的 `gh` 登录原封不动地留给决策动作。classic token 不是仓库级 scope 的——爆炸半径由账号的协作清单而非 token 界定，因此该账号只在运行闭环的仓库获得访问。这组分离买到共享身份买不到的三样东西：审批门禁能区分 agent 预审与人类签核、审计轨迹能把每个时间线动作归因到真实驱动者、agent 的爆炸半径是这些协作仓库而非整个人类账号。
 

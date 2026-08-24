@@ -8,7 +8,7 @@ English | [中文](2026-08-24-issue-policy-release-exemption.zh.md)
 
 The [`issue-policy` workflow](../../../.github/workflows/issue-policy.yml) validates every non-draft, non-bot pull request against the intake contract: a conventional-commit title, at least one `area/*` label, and at least one issue reference. A release pull request fails this by nature: it carries a version bump and a changelog, references no issue, and historically carries no area label. Measured 2026-08-23: PR #23 (`chore: release v0.2.0-rc.6`) failed `Issue policy` with both errors and merged red anyway.
 
-Once [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.md) makes gate 3 platform-enforced, red-but-mergeable stops existing: either release pull requests are exempt and green, or every release blocks on a check that cannot apply to it.
+Once [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-conclusion-jobs-required-checks.md) makes gate 3 platform-enforced, red-but-mergeable stops existing: either release pull requests are exempt and green, or every release blocks on a check that cannot apply to it.
 
 ## Proposal
 

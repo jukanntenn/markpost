@@ -16,7 +16,7 @@ required checks 也无法直接指向当时的 job 名。五个质量 workflow�
 
 五个质量 workflow 对每个目标为 `main` 的 `pull_request` 运行,不再做 workflow 级路径过滤;`push: main` 的过滤原样保留,main 推送的算力经济不受损。路径选择性位于 job 级:每个 workflow 以一个 `changes` job(dorny/paths-filter)门控真实 job——Lint 与 Docs 新增,Test、Build、E2E 原有——job 级条件在 push 与 dispatch 上的适用方式与 Test、Build、E2E 的既有实践一致。
 
-每个 workflow 以一个 `conclusion` job 收尾:其 `needs` 列出其余全部 job,`if: always()` 使其在跳过与失败之后照常运行;单一步骤仅在任一 need 结果为 `failure` 或 `cancelled` 时失败——被跳过的 job 记为成功。由此每个 PR 恒定产出五个稳定检查:`Lint / conclusion`、`Test / conclusion`、`Build / conclusion`、`E2E / conclusion`、`Docs / conclusion`。
+每个 workflow 以一个 `conclusion` job 收尾:其 `needs` 列出其余全部 job,`if: always()` 使其在跳过与失败之后照常运行;单一步骤仅在任一 need 结果为 `failure` 或 `cancelled` 时失败——被跳过的 job 记为成功。每个 job 带显式名——五个裸 `conclusion` 在分支保护的 required 选择器里无法区分选中——由此每个 PR 恒定产出五个稳定检查:`Lint conclusion`、`Test conclusion`、`Build conclusion`、`E2E conclusion`、`Docs conclusion`。
 
 `main` 的 required checks 即这五个 conclusion 检查,并在 release 豁免([issue-policy 豁免](2026-08-24-issue-policy-release-exemption.zh.md))就位后加上 `Issue policy`;执行设置是维护者的分支保护步骤——workflow 侧随本记录落地。
 

@@ -71,6 +71,9 @@ jobs:
   # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
   # runs past skips and failures, skipped jobs count as success.
   conclusion:
+    # Distinct check name so branch protection's required-check picker is
+    # unambiguous (five bare "conclusion" names are not selectable apart).
+    name: Docs conclusion
     needs: [changes, docs]
     if: always()
     runs-on: ubuntu-latest

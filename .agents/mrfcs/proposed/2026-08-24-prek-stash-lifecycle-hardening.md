@@ -22,7 +22,7 @@ Anti-revive: recovery goes through the audit script's previewed path (`git apply
 
 Retention: `prek cache gc` — the upstream stale-patch retention, 30 days — joins the same triage cadence, and the agent workspace schedules it weekly; the do-not-clean warning retires once these guards land.
 
-Upstream: the root fixes — delete or mark consumed patches, and warn about orphaned patches from dead pids — belong in prek itself; markpost files the upstream issue (a maintainer action) and re-evaluates the repo-side guards when a fixed release is adopted. The [prek MRFC](2026-08-12-prek-single-source-of-format-and-lint.md) keeps ownership of the tooling decision; this record owns the incident hardening.
+Upstream: the root fixes — delete or mark consumed patches, and warn about orphaned patches from dead pids — belong in prek itself; markpost files the upstream issue (a maintainer action) and re-evaluates the repo-side guards when a fixed release is adopted. The [prek MRFC](../implemented/2026-08-12-prek-single-source-of-format-and-lint.md) keeps ownership of the tooling decision; this record owns the incident hardening.
 
 ## Alternatives considered
 

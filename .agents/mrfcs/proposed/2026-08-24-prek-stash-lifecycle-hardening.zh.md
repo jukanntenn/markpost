@@ -22,7 +22,7 @@ prek 自身绝不跨会话 apply 旧 patch(全源码唯一的 `git apply` 调用
 
 保留期:`prek cache gc`——上游的陈旧 patch 保留期,30 天——加入同一分诊节律,agent 工作区另排每周执行;守卫落地后,"勿清缓存"警告退役。
 
-上游:根因修复——删除或标记已消费 patch、对死 pid 的孤儿 patch 告警——属于 prek 本体;markpost 向上游提 issue(维护者动作),并在采用修复版本时重估仓库侧守卫。[prek MRFC](2026-08-12-prek-single-source-of-format-and-lint.zh.md) 继续持有工具决策;本记录持有事故加固。
+上游:根因修复——删除或标记已消费 patch、对死 pid 的孤儿 patch 告警——属于 prek 本体;markpost 向上游提 issue(维护者动作),并在采用修复版本时重估仓库侧守卫。[prek MRFC](../implemented/2026-08-12-prek-single-source-of-format-and-lint.zh.md) 继续持有工具决策;本记录持有事故加固。
 
 ## Alternatives considered
 

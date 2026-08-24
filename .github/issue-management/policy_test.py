@@ -215,6 +215,11 @@ class NextStatus(unittest.TestCase):
         self.assertIsNone(policy.next_status("In review", "implementation"))
         self.assertIsNone(policy.next_status("Done", "implementation"))
 
+    def test_review_requested_moves_ready_to_in_review(self):
+        # The #15 regression: a workflow-trigger gap left this path dead code.
+        command = policy.resolving_command("pull_request", {"action": "review_requested"})
+        self.assertEqual(policy.next_status("Ready", command), "In review")
+
     def test_backward_needs_automation_actor(self):
         actor = policy.LIFECYCLE_ACTOR
         target = policy.next_status("In review", "changes-requested", actor)

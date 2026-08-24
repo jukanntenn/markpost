@@ -217,6 +217,13 @@ def validate_pr(pull: dict, references: dict) -> list[str]:
     return errors
 
 
+def is_release_pull(head_ref: str | None) -> bool:
+    """Release PRs (version bump + changelog on a release/** head) are exempt
+    from the three intake checks; references they do carry still validate
+    (.agents/mrfcs/implemented/2026-08-24-issue-policy-release-exemption.md)."""
+    return bool(head_ref) and head_ref.startswith("release/")
+
+
 def requires_policy(is_draft: bool, author_type: str, review_requests: int, reviews: int) -> bool:
     """Policy applies once a human-authored PR is non-draft and under review."""
     automated = author_type in {"Bot", "App"}
@@ -445,7 +452,7 @@ def run_pr_check(event: dict) -> int:
         "title": pull["title"],
         "labels": [label["name"] for label in pull["labels"]],
     }
-    errors = validate_pr(snapshot, references)
+    errors = [] if is_release_pull((pull.get("head") or {}).get("ref")) else validate_pr(snapshot, references)
     for issue_number in references["all"]:
         issue = issue_snapshot(issue_number)
         if issue is not None:

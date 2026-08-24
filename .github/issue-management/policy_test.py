@@ -156,6 +156,21 @@ class ValidatePR(unittest.TestCase):
         self.assertTrue(policy.validate_pr(self.pr(), {"all": [], "resolving": [], "related": []}))
 
 
+class IsReleasePull(unittest.TestCase):
+    def test_release_branches(self):
+        self.assertTrue(policy.is_release_pull("release/v0.2.0-rc.6"))
+        self.assertTrue(policy.is_release_pull("release/2.0"))
+
+    def test_non_release_branches(self):
+        self.assertFalse(policy.is_release_pull("impl/25-release-policy-exemption"))
+        self.assertFalse(policy.is_release_pull("releases/v1.0.0"))
+        self.assertFalse(policy.is_release_pull("fix/release-notes"))
+
+    def test_missing_head_ref(self):
+        self.assertFalse(policy.is_release_pull(None))
+        self.assertFalse(policy.is_release_pull(""))
+
+
 class RequiresPolicy(unittest.TestCase):
     def test_matrix(self):
         self.assertTrue(policy.requires_policy(False, "User", 1, 0))

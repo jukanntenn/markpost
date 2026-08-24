@@ -7,7 +7,7 @@ docs/
 specs/
 wiki/
 README.md
-README_zh.md
+README.zh.md
 CHANGELOG.md
 KNOWN_ISSUES.md
 
@@ -90,3 +90,30 @@ backend/fake.json
 backend/internal/infra/data/
 scripts/
 .mcp.json
+
+# Nested secrets and local-only files. Two asymmetries motivate this block:
+# dockerignore's no-slash patterns (`.env`, `*.log` above) match the context
+# root only, while gitignore's match at any depth — so a `backend/.env` or
+# `frontend/.env.local` rides every build context even though git (and prek's
+# detect-private-key) never sees it; and the local variant files under
+# docker/ (Caddyfile.local, docker-compose.local.yml, .env.example) are
+# tracked but serve local/e2e runs, not the image. Key-material patterns are
+# forward defense: nothing matches today, and a build that ever needs an
+# in-tree file (e.g. a tracked frontend/.env.production) must add a `!`
+# exception in the same change.
+**/.env*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/id_rsa*
+**/id_ed25519*
+**/*.local
+**/*.local.yml
+**/*.local.yaml
+
+# Local runtime dirs (root-only `data/` above does not match these) and the
+# Next.js generated env stub (gitignored via frontend/.gitignore).
+backend/data/
+backend/devops/
+**/next-env.d.ts

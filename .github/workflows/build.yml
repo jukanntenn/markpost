@@ -10,11 +10,6 @@ on:
       - "LICENSE"
   pull_request:
     branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - ".gitignore"
-      - "LICENSE"
   workflow_dispatch:
 
 jobs:
@@ -85,3 +80,19 @@ jobs:
       - name: Build
         working-directory: frontend
         run: pnpm build
+
+  # Stable per-workflow verdict for branch protection's required checks
+  # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
+  # runs past skips and failures, skipped jobs count as success.
+  conclusion:
+    needs: [changes, build-backend, build-frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate job results
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          if echo "$results" | grep -Eq '"(failure|cancelled)"'; then
+            echo "::error::A job failed or was cancelled: $results"
+            exit 1
+          fi

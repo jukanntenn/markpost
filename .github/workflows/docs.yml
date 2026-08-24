@@ -24,23 +24,39 @@ on:
       - "prek.toml"
   pull_request:
     branches: [main]
-    paths:
-      - "**/*.md"
-      - ".agents/mrfcs/**"
-      - ".claude/skills/**"
-      - "scripts/doc_sync.py"
-      - "scripts/doclib.py"
-      - "scripts/verify_*.py"
-      - "scripts/agentlib.py"
-      - "scripts/check_agent_instructions.py"
-      - "scripts/sync_agent_instructions.py"
-      - "scripts/doc_budgets.manifest.json"
-      - "scripts/doc_languages.manifest.json"
-      - "prek.toml"
   workflow_dispatch:
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.f.outputs.docs }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: f
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        with:
+          # Same positive list the push trigger uses; path selectivity lives
+          # at job level so required checks cannot hang at "Expected".
+          filters: |
+            docs:
+              - '**/*.md'
+              - '.agents/mrfcs/**'
+              - '.claude/skills/**'
+              - 'scripts/doc_sync.py'
+              - 'scripts/doclib.py'
+              - 'scripts/verify_*.py'
+              - 'scripts/agentlib.py'
+              - 'scripts/check_agent_instructions.py'
+              - 'scripts/sync_agent_instructions.py'
+              - 'scripts/doc_budgets.manifest.json'
+              - 'scripts/doc_languages.manifest.json'
+              - 'prek.toml'
+              - '.github/workflows/docs.yml'
+
   docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -50,3 +66,19 @@ jobs:
 
       - name: Agent instructions in sync
         run: python3 scripts/check_agent_instructions.py
+
+  # Stable per-workflow verdict for branch protection's required checks
+  # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
+  # runs past skips and failures, skipped jobs count as success.
+  conclusion:
+    needs: [changes, docs]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate job results
+        run: |
+          results='${{ toJSON(needs.*.result) }}'
+          if echo "$results" | grep -Eq '"(failure|cancelled)"'; then
+            echo "::error::A job failed or was cancelled: $results"
+            exit 1
+          fi

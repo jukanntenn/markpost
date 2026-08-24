@@ -10,12 +10,13 @@ The design record is [the agent-driven development loop MRFC](../../../.agents/m
 ## Session-open triage (always, in order)
 
 1. Enumerate in-flight work: `gh pr list --author @me --state open --json number,title`, then `gh pr view <n> --json isDraft,reviewDecision,statusCheckRollup,mergeStateStatus` per PR, plus the GraphQL stack for each chain.
-2. Act per stack and phase:
+2. Run `python3 scripts/prek_patch_audit.py` before editing anything: orphaned prek patches mean an interrupted hook run holds work missing from the tree — recover per the runbook constraint row, then `prek cache gc`.
+3. Act per stack and phase:
    - **RFC stack, approved, checks green, no unresolved change requests** → land it with [merging-stacked-prs](../merging-stacked-prs/SKILL.md), then start the implementation phase for its issue.
    - **Implementation stack, approved, green** → land it, clean up branches and worktrees, verify the issue auto-closed and the board shows `Done`.
    - **changes_requested or new review comments** → run [responding-to-review](../responding-to-review/SKILL.md).
    - **Awaiting the gate with nothing to do** → leave it standing; report the waiting state if the session was manually kicked.
-3. Nothing in flight → claim: issues in `Ready`, unassigned, ordered by priority (P0 first) then age. Claiming is `gh issue edit <n> --add-assignee @me` plus a comment declaring the decomposition entry point — never a board write.
+4. Nothing in flight → claim: issues in `Ready`, unassigned, ordered by priority (P0 first) then age. Claiming is `gh issue edit <n> --add-assignee @me` plus a comment declaring the decomposition entry point — never a board write.
 
 ## Phase: claim → decomposition → RFC stack
 

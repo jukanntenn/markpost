@@ -27,6 +27,8 @@ function delivery(
     post_title: 'My post',
     status,
     last_error: '',
+    // 后端语义:仅 failed 有失败分类,delivered/expired/legacy 为空串。
+    error_category: status === 'failed' ? 'upstream_client_error' : '',
     created_at: '2026-08-10T09:00:00Z',
     username: null,
   }

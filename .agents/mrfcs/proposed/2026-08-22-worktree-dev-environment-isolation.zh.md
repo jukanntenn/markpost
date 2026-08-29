@@ -27,3 +27,5 @@ English | [中文](2026-08-22-worktree-dev-environment-isolation.md)
 ## Risks
 
 compose 文件插值给一份被运维当配置阅读的文件增加了间接层；把每个默认值保持为今天的不带前缀名称框住了这项成本。端口参数化在 backend 与 frontend 端口接线不一致时存在漂移风险——冲突检查的存在就是把这种情况响亮地点出来而非离奇地失败。每套并发环境消耗其完整的容器与内存足迹；并行是按 `--env` 的主动选择，绝不是默认。并发运行的环境之间共享同一 postgres 镜像，因此按环境分卷必须被未来的任何迁移工具尊重。
+
+触发状态(2026-08-24):两个点燃条件均已实测——跨会话的全栈验证被串行化(2026-08-22 部署轮)、worktree 环境损坏迫使宿主侧回退(#19 截图轮)。处置:保持 `proposed` 直到下次具体需要并行验证;prek 侧的 worktree 危害另行追踪于 [prek stash 事故加固](../implemented/2026-08-24-prek-stash-lifecycle-hardening.zh.md)。

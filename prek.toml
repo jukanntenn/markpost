@@ -79,6 +79,15 @@ entry = "python3 .github/issue-management/policy_test.py"
 files = "^\\.github/issue-management/"
 pass_filenames = false
 
+# Same pattern for the prek patch-cache auditor's unit suite.
+[[repos.hooks]]
+id = "prek-patch-audit-tests"
+name = "prek patch audit unit tests"
+language = "system"
+entry = "python3 scripts/prek_patch_audit_test.py"
+files = "^scripts/prek_patch_audit"
+pass_filenames = false
+
 # ---- fmt group: root-level formatters (non-frontend, non-agent-dir) ----
 # prettier resolves through frontend's pinned install (CI installs pnpm and
 # frontend deps but no toolchain-level prettier; a bare `prettier` entry

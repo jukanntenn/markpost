@@ -39,5 +39,5 @@ English | [中文](agent-loop-runbook.md)
 ## Verifying each step
 
 先确认 token 身份与触达（`GH_TOKEN=<pat> gh api user` 输出机器账号名；`gh api repos/<owner>/<repo>` 显示 `push`），再用真实事件验证看板链路：resolving issue 上的任意 pull request 活动都会搬动看板并留下标记评论（`<!-- markpost-lifecycle: <status> by <account>]`），受审的 pull request 会让 Issue policy check 依据真实内容给出绿或红。闭环的首次生产快速通道——issue、机器署名 PR、人类批准、agent 合并、issue 自动关闭、看板 `Done`——即端到端验收。
-| prek 的 stash 循环可能静默持有未暂存工作                    | keeper 把改动写入 `~/.cache/prek/patches/<ms>-<pid>.patch`、把树 checkout 干净、Drop 时回放;被杀的运行把工作留在树上之外(2026-08-22/23,#16) | 会话开场跑 `python3 scripts/prek_patch_audit.py`;经其预览命令恢复,绝不盲 `git apply`;同一节律跑 `prek cache gc` |
-| pre-commit 在 worktree 内误报                               | `backend-generate-check` 在 `.local/worktrees/*` 下判根 `docs/*.md` 已删除,同命令手工执行 exit 0(#16 轨迹)                                    | 手工复刻钩子命令,通过后 `--no-verify` 提交,并在 PR 正文披露两者 |
+| prek 的 stash 循环可能静默持有未暂存工作 | keeper 把改动写入 `~/.cache/prek/patches/<ms>-<pid>.patch`、把树 checkout 干净、Drop 时回放;被杀的运行把工作留在树上之外(2026-08-22/23,#16) | 会话开场跑 `python3 scripts/prek_patch_audit.py`;经其预览命令恢复,绝不盲 `git apply`;同一节律跑 `prek cache gc` |
+| pre-commit 在 worktree 内误报 | `backend-generate-check` 在 `.local/worktrees/*` 下判根 `docs/*.md` 已删除,同命令手工执行 exit 0(#16 轨迹) | 手工复刻钩子命令,通过后 `--no-verify` 提交,并在 PR 正文披露两者 |

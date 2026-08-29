@@ -28,6 +28,7 @@ See the [buildx documentation](https://docs.docker.com/build/buildx/) for refere
 
 ```
 markpost/
+├── .dockerignore                    # The only dockerignore — every build uses the repo root as context
 ├── docker/                          # Production image building
 │   ├── build.py                     # Build script (environment check + buildx invocation)
 │   ├── Dockerfile                   # Single multi-stage production image (backend + frontend + s6 runtime)
@@ -41,10 +42,8 @@ markpost/
 │   ├── backend.Dockerfile           # Backend dev image (with hot-reload)
 │   ├── frontend.Dockerfile          # Frontend dev image
 │   └── ansible/                     # Deployment playbooks and templates
-├── backend/
-│   └── .dockerignore                # Excludes tests, docs, tools from build context
+├── backend/                         # No subtree dockerignore — root **/ patterns cover nested paths
 └── frontend/
-    ├── .dockerignore                # Excludes .env.local from build context
     └── package.json                 # Contains "packageManager" field for corepack
 ```
 
@@ -79,10 +78,9 @@ pnpm is activated via `corepack enable` instead of `npm install -g pnpm`. The ex
 
 ### Build Context Filtering
 
-Each build context has a `.dockerignore` that excludes non-essential files:
+Every build surface — `docker/build.py` (production), the `devops/` dev compose files, and CI's `docker-publish.yml` — builds from the repo root, so the root `.dockerignore` is the only context filter; there are no subtree dockerignores.
 
-- **Backend**: test files, generated docs, dev tools, config files, IDE files
-- **Frontend**: `.env.local`
+No-slash patterns (`.env`, `*.log`) match the context root only, unlike gitignore where they match at any depth — nested local files therefore need explicit `**/` patterns: `**/.env*` and key material (`**/*.pem`, `**/*.key`, `**/id_rsa*`, …) keep local secrets out of the context even though git (and prek's detect-private-key) never sees them, and the `**/*.local*` families drop local variant configs (`docker/Caddyfile.local`, `docker/docker-compose.local.yml`). A future build that needs an in-tree file matching these patterns must add a `!` exception in the same change.
 
 ### Build Cache
 

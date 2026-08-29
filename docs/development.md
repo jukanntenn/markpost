@@ -182,6 +182,12 @@ When the backend API changes:
 2. Run `go generate ./...` to regenerate `backend/docs/swagger.json`
 3. Re-import into yaak (your environment configs are preserved)
 
+## Agent MCP tooling
+
+`.mcp.json` defines MCP servers for coding agents working in this repo, including serena for semantic code navigation. Serena starts without an explicit project argument and uses its working directory at launch as the active project.
+
+Serena's web dashboard opens a browser tab on every launch; to disable it, set `web_dashboard_open_on_launch: False` in `~/.serena/serena_config.yml` — a user-side setting that lives outside the repo.
+
 ## Configuration
 
 The backend reads config from three sources (highest priority wins):

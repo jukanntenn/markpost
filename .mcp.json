@@ -32,9 +32,7 @@
         "serena",
         "start-mcp-server",
         "--context",
-        "ide-assistant",
-        "--project",
-        "$(pwd)"
+        "ide-assistant"
       ]
     }
   }

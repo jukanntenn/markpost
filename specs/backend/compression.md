@@ -27,7 +27,7 @@ Every Caddyfile in the repo (`docker/Caddyfile*`, `devops/ansible/templates/Cadd
 - **gzip** is retained as the universal fallback for clients that do not advertise zstd.
 - **brotli** and **server-side precompression** (Caddy's `precompressed` directive) are rejected: brotli needs a non-default Caddy build for marginal gain, and precompression only helps static assets — the one static asset here (the fingerprinted CSS) is already ~1.8 KB compressed. Dynamic HTML/raw responses cannot be precompressed regardless.
 
-`Vary: Accept-Encoding` (set by Caddy on compression, explicitly by the handler otherwise) keeps the CDN's gzip and zstd variants in separate cache entries. `304` responses have no body and are not compressed.
+`Vary: Accept-Encoding` (set by Caddy on compression, explicitly by the handler otherwise) keeps the CDN's gzip and zstd variants in separate cache entries. `304` responses have no body and are not compressed. When Caddy compresses a response it appends the negotiated encoding to the strong ETag (`"<hash>-gzip"` / `"<hash>-zstd"`); the origin emits the bare hash, responses below Caddy's compression threshold keep it, and `If-None-Match` revalidates to `304` with either the bare or the suffixed validator (the `304` itself carries the bare form).
 
 ## CSS externalization, minification, and fingerprinting
 

@@ -31,7 +31,7 @@
 - **gzip** 作为通用回退保留，面向不声明 zstd 的客户端。
 - **brotli** 与**服务端预压缩**（Caddy 的 `precompressed` 指令）被拒绝：brotli 需要非默认的 Caddy 构建却只有边际收益，预压缩只帮助静态资源 —— 这里唯一的静态资源（带指纹的 CSS）压缩后已约 1.8 KB。动态 HTML/raw 响应无论如何都无法预压缩。
 
-`Vary: Accept-Encoding`（压缩时由 Caddy 设置，其余情况由 handler 显式设置）让 CDN 的 gzip 与 zstd 变体各占独立的缓存条目。`304` 响应没有正文，也不被压缩。
+`Vary: Accept-Encoding`（压缩时由 Caddy 设置，其余情况由 handler 显式设置）让 CDN 的 gzip 与 zstd 变体各占独立的缓存条目。`304` 响应没有正文，也不被压缩。Caddy 压缩响应时会在强 ETag 后追加所用编码（`"<hash>-gzip"` / `"<hash>-zstd"`）；源站下发的是裸哈希，低于 Caddy 压缩阈值的响应保持裸形式，而 `If-None-Match` 无论携带裸形式还是带后缀形式都能再验证得到 `304`（`304` 本身携带裸形式）。
 
 <a id="css-externalization-minification-and-fingerprinting"></a>
 

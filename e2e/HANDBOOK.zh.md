@@ -105,24 +105,19 @@ dagger call test --source=.. --test-file=login.spec.ts
 
 ### 测试文件清单
 
-| 测试文件                            | 覆盖功能                                                                                                 |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `login.spec.ts`                     | 登录表单、验证、错误提示、键盘提交、重定向                                                               |
-| `landing.spec.ts`                   | 着陆页冒烟：结构齐备、CTA 按会话状态切换（/login ↔ /dashboard）                                          |
-| `dashboard.spec.ts`                 | Post Key 显示/隐藏/复制、用户菜单、登出                                                                  |
-| `dashboard-create-post.spec.ts`     | 快速创建帖子、表单验证                                                                                   |
-| `posts.spec.ts`                     | 帖子列表页、未认证重定向                                                                                 |
-| `admin.spec.ts`                     | 管理页权限、导航链接                                                                                     |
-| `admin-users.spec.ts`               | 用户列表、管理员显示                                                                                     |
-| `admin-posts.spec.ts`               | 帖子管理、搜索功能                                                                                       |
-| `admin-channels.spec.ts`            | 渠道列表、创建渠道                                                                                       |
-| `admin-delivery-history.spec.ts`    | 投递历史空状态                                                                                           |
-| `settings.spec.ts`                  | 设置页渲染、语言切换、密码验证                                                                           |
-| `settings-change-password.spec.ts`  | 修改密码并验证登录                                                                                       |
-| `settings-delivery-channel.spec.ts` | 渠道 CRUD、启用/禁用切换                                                                                 |
-| `delivery-history.spec.ts`          | 投递历史区域显示                                                                                         |
-| `oauth-callback.spec.ts`            | OAuth 全流程：成功登录、缺少参数、错误参数、无效 state、令牌交换失败、用户信息获取失败、state 一次性消费 |
-| `feishu-webhook.spec.ts`            | Webhook 触发与负载验证                                                                                   |
+| 测试文件                           | 覆盖功能                                                                                                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `login.spec.ts`                    | 登录表单、验证、错误提示、5 次失败后锁定、`next=` 目标保留                                                                                                        |
+| `landing.spec.ts`                  | 着陆页冒烟：结构齐备、CTA 按会话状态切换（/login ↔ /dashboard）                                                                                                   |
+| `dashboard.spec.ts`                | 新用户引导、流水线状态与 Post Key 区块、登出                                                                                                                      |
+| `posts.spec.ts`                    | 帖子列表页、空态 Post Key 提示、Post Key 发帖后列表渲染                                                                                                           |
+| `post-render.spec.ts`              | 公开帖页为图片盖 `referrerpolicy=no-referrer`                                                                                                                     |
+| `caching.spec.ts`                  | 两种响应形态（`/:qid` 与 `?format=raw`）缓存冒烟：Cache-Control/Cache-Tag/Vary 策略、各形态 ETag 形状与稳定性、按形态 If-None-Match 304、Last-Modified 为创建时间 |
+| `settings-change-password.spec.ts` | 修改密码并验证重新登录、内联校验错误                                                                                                                              |
+| `delivery-channel.spec.ts`         | 渠道创建/编辑/删除、测试动作、关键词语法错误                                                                                                                      |
+| `admin-users.spec.ts`              | 用户列表与角色徽章、自我降级防护、用户详情页、删除确认                                                                                                            |
+| `admin-audit.spec.ts`              | 审计日志表格渲染、按动作过滤更新 URL                                                                                                                              |
+| `oauth-callback.spec.ts`           | OAuth 全流程：成功登录、缺少/错误参数、无效 state、令牌交换失败、用户信息获取失败、state 一次性消费                                                               |
 
 ---
 

@@ -87,24 +87,19 @@ dagger call test --source=.. --test-file=login.spec.ts
 
 ### Spec file inventory
 
-| Spec file                           | Covered behavior                                                                                                                                    |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `login.spec.ts`                     | Login form, validation, error messages, keyboard submit, redirect                                                                                   |
-| `landing.spec.ts`                   | Landing smoke: structure present, CTA switches with session state (/login ↔ /dashboard)                                                             |
-| `dashboard.spec.ts`                 | Post Key show/hide/copy, user menu, logout                                                                                                          |
-| `dashboard-create-post.spec.ts`     | Quick post creation, form validation                                                                                                                |
-| `posts.spec.ts`                     | Post list page, unauthenticated redirect                                                                                                            |
-| `admin.spec.ts`                     | Admin page permissions, navigation links                                                                                                            |
-| `admin-users.spec.ts`               | User list, admin display                                                                                                                            |
-| `admin-posts.spec.ts`               | Post management, search                                                                                                                             |
-| `admin-channels.spec.ts`            | Channel list, channel creation                                                                                                                      |
-| `admin-delivery-history.spec.ts`    | Delivery history empty state                                                                                                                        |
-| `settings.spec.ts`                  | Settings page rendering, language switch, password validation                                                                                       |
-| `settings-change-password.spec.ts`  | Change password and verify login                                                                                                                    |
-| `settings-delivery-channel.spec.ts` | Channel CRUD, enable/disable toggle                                                                                                                 |
-| `delivery-history.spec.ts`          | Delivery history region display                                                                                                                     |
-| `oauth-callback.spec.ts`            | Full OAuth flow: successful login, missing params, bad params, invalid state, token-exchange failure, user-info failure, one-time state consumption |
-| `feishu-webhook.spec.ts`            | Webhook trigger and payload verification                                                                                                            |
+| Spec file                          | Covered behavior                                                                                                                                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `login.spec.ts`                    | Login form, validation, error messages, account lockout after 5 failures, `next=` target preservation                                                                                              |
+| `landing.spec.ts`                  | Landing smoke: structure present, CTA switches with session state (/login ↔ /dashboard)                                                                                                            |
+| `dashboard.spec.ts`                | New-user onboarding guide, pipeline status + Post Key block, logout                                                                                                                                |
+| `posts.spec.ts`                    | Post list page, empty-state Post Key hint, list after creating a post via Post Key                                                                                                                 |
+| `post-render.spec.ts`              | Public post page stamps `referrerpolicy=no-referrer` on images                                                                                                                                     |
+| `caching.spec.ts`                  | Cache smoke for both response forms (`/:qid` vs `?format=raw`): Cache-Control/Cache-Tag/Vary policy, per-form ETag shape and stability, If-None-Match 304 per form, Last-Modified as creation time |
+| `settings-change-password.spec.ts` | Change password and verify re-login, inline validation errors                                                                                                                                      |
+| `delivery-channel.spec.ts`         | Channel create/edit/delete, test action, keyword syntax errors                                                                                                                                     |
+| `admin-users.spec.ts`              | User list with role badges, self-demote guard, user detail page, delete confirmation                                                                                                               |
+| `admin-audit.spec.ts`              | Audit log table renders, action filter updates the URL                                                                                                                                             |
+| `oauth-callback.spec.ts`           | Full OAuth flow: success, missing/error/invalid params, token-exchange failure, user-info failure, one-time state consumption                                                                      |
 
 ---
 

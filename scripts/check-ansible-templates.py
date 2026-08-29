@@ -59,6 +59,11 @@ BASE_VARS = {
     "admin_password": "p",
     "postgres_db": "markpost",
     "postgres_user": "markpost",
+    # host_vars fact every inventory host defines (app_path above already
+    # assumes it); the heartbeat's push URL is an optional vault secret — the
+    # deploy tasks guard on its presence, the templates assume it exists.
+    "user": "deploy",
+    "kuma_heartbeat_url": "https://kuma.example.com/api/push/token",
 }
 
 SCENARIOS = {
@@ -144,9 +149,26 @@ def check_compose(doc: dict, scenario: dict, fail) -> None:
             fail(f"service {name} has no logging cap")
 
 
+def parse_ini(text: str) -> dict:
+    import configparser
+    import io
+
+    parser = configparser.ConfigParser()
+    parser.read_string(text)
+    return {s: dict(parser[s]) for s in parser.sections()}
+
+
+def check_heartbeat_conf(doc: dict, scenario: dict, fail) -> None:
+    if "program:markpost-heartbeat" not in doc:
+        fail("supervisor section [program:markpost-heartbeat] missing")
+    elif doc["program:markpost-heartbeat"].get("autorestart") != "true":
+        fail("heartbeat program must autorestart")
+
+
 CHECKS = {
     "config.toml.j2": (tomllib.loads, check_config),
     "docker-compose.yml.j2": (yaml.safe_load, check_compose),
+    "markpost-heartbeat.conf.j2": (parse_ini, check_heartbeat_conf),
 }
 
 

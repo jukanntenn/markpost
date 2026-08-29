@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+# supervisor program for the markpost availability heartbeat (production
+# only). The script is a self-restarting sleep loop, so supervisor's job is
+# just to keep it alive across crashes and reboots; `supervisorctl reread &&
+# update` (the deploy handler) starts or restarts it on config change.
+[program:markpost-heartbeat]
+command=/bin/sh {{ app_path }}/heartbeat.sh
+autostart=true
+autorestart=true
+startsecs=10
+user={{ user }}
+redirect_stderr=true
+stdout_logfile={{ app_path }}/data/heartbeat.log
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=2

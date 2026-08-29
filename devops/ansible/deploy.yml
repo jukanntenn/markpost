@@ -156,6 +156,30 @@
         wait: true
         wait_timeout: 120
 
+    # Availability heartbeat (production only): a supervisor-managed loop on
+    # the VPS probes the loopback-published /api/v1/ready and pushes the
+    # verdict to the uptime-kuma push monitor. Guarded on kuma_heartbeat_url
+    # (a vault secret) so the deploy stays green until the push monitor exists
+    # in kuma and the URL is vaulted — see docs/monitoring.md for the setup
+    # order. Removing the vault var does not uninstall; the runbook owns that.
+    - name: Template heartbeat script
+      ansible.builtin.template:
+        src: heartbeat.sh.j2
+        dest: "{{ app_path }}/heartbeat.sh"
+        mode: "0750"
+      when: env == 'production' and kuma_heartbeat_url is defined
+
+    - name: Template markpost heartbeat supervisor program
+      ansible.builtin.template:
+        src: markpost-heartbeat.conf.j2
+        dest: /etc/supervisor/conf.d/markpost-heartbeat.conf
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      when: env == 'production' and kuma_heartbeat_url is defined
+      notify: Update markpost heartbeat supervisor program
+
     # Post-deploy verification from the controller, through the URL real
     # visitors use (LAN IP / tunnel / Cloudflare). Compose's wait only proves
     # the container healthcheck passes inside the container; this also catches
@@ -196,4 +220,11 @@
       ansible.builtin.systemd:
         name: caddy
         state: reloaded
+      become: true
+
+    # reread spots the new/changed conf; update applies it — starting the
+    # program on first deploy and restarting it when the script changes.
+    # supervisorctl speaks to a root-owned socket, hence become.
+    - name: Update markpost heartbeat supervisor program
+      ansible.builtin.shell: supervisorctl reread && supervisorctl update
       become: true

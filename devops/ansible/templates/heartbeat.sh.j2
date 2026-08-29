@@ -1,0 +1,34 @@
+# {{ ansible_managed }}
+# markpost availability heartbeat: probe the loopback-published readiness
+# endpoint, then push the verdict to the uptime-kuma push monitor.
+#
+# kuma flags the monitor down in two independent ways: this script pushes
+# status=down (app-level failure — covers the Cloudflare blind spot, since the
+# push path bypasses the edge) or the pushes stop entirely (host death, this
+# script crashed). The push URL is secret: anyone holding it can forge "up"
+# beats and mask an outage, so it lives in the ansible vault
+# (kuma_heartbeat_url) and is interpolated here at deploy time.
+#
+# The loop never exits on purpose; supervisor's autorestart is the recovery
+# path if it dies anyway.
+MARKPOST_READY_URL="http://127.0.0.1:{{ host_port }}/api/v1/ready"
+KUMA_PUSH_URL="{{ kuma_heartbeat_url }}"
+INTERVAL=60
+
+while true; do
+    if curl -fsS -m 5 "$MARKPOST_READY_URL" >/dev/null 2>&1; then
+        status=up
+        msg="ready"
+    else
+        status=down
+        msg="local readiness probe failed"
+    fi
+    # A failed push is not fatal: kuma marks the monitor down only after its
+    # own retry window without a beat, so one transient blip on the kuma side
+    # does not immediately page. -G + --data-urlencode keeps msg's spaces
+    # properly encoded in the query string.
+    curl -fsS -m 10 -G "$KUMA_PUSH_URL" \
+        --data-urlencode "status=${status}" \
+        --data-urlencode "msg=${msg}" >/dev/null 2>&1 || true
+    sleep "$INTERVAL"
+done

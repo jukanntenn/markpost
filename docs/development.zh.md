@@ -208,6 +208,14 @@ go generate ./...
 2. 运行 `go generate ./...` 重新生成 `backend/docs/swagger.json`
 3. 重新导入 yaak（环境配置会被保留）
 
+<a id="agent-mcp-tooling"></a>
+
+## Agent MCP 工具
+
+`.mcp.json` 为在本仓库工作的编码 agent 定义了 MCP server，其中包括用于语义代码导航的 serena。serena 启动时不带显式 project 参数，以启动时的工作目录作为活动项目。
+
+serena 的 web dashboard 每次启动都会自动打开浏览器标签页；如需关闭，在 `~/.serena/serena_config.yml` 中设置 `web_dashboard_open_on_launch: False` —— 该配置属于用户侧，位于仓库之外。
+
 <a id="configuration"></a>
 
 ## 配置

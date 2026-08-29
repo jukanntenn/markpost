@@ -17,11 +17,12 @@ Base path: `/api/v1`
 
 ## Health Check
 
-| Method | Path      | Auth | Description          |
-| ------ | --------- | ---- | -------------------- |
-| GET    | `/health` | —    | Service health check |
+| Method | Path      | Auth | Description                                                                                                                  |
+| ------ | --------- | ---- | ---------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/health` | —    | Liveness: the process is up. Always 200 while serving                                                                        |
+| GET    | `/ready`  | —    | Readiness: a driver-level database round trip. 503 when the process is up but unfit to serve (DB unreachable/pool exhausted) |
 
-**Response**: `{ "status": "ok" }`
+**Response** (`/health`): `{ "status": "ok" }` · (`/ready`): `{ "status": "ready" }` or 503 `{ "status": "unavailable" }`
 
 ---
 

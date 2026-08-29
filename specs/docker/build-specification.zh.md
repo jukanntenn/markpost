@@ -34,6 +34,7 @@
 
 ```
 markpost/
+├── .dockerignore                    # The only dockerignore — every build uses the repo root as context
 ├── docker/                          # Production image building
 │   ├── build.py                     # Build script (environment check + buildx invocation)
 │   ├── Dockerfile                   # Single multi-stage production image (backend + frontend + s6 runtime)
@@ -47,10 +48,8 @@ markpost/
 │   ├── backend.Dockerfile           # Backend dev image (with hot-reload)
 │   ├── frontend.Dockerfile          # Frontend dev image
 │   └── ansible/                     # Deployment playbooks and templates
-├── backend/
-│   └── .dockerignore                # Excludes tests, docs, tools from build context
+├── backend/                         # No subtree dockerignore — root **/ patterns cover nested paths
 └── frontend/
-    ├── .dockerignore                # Excludes .env.local from build context
     └── package.json                 # Contains "packageManager" field for corepack
 ```
 
@@ -97,10 +96,9 @@ pnpm 通过 `corepack enable` 激活，而非 `npm install -g pnpm`。确切的 
 
 ### 构建上下文过滤
 
-每个构建上下文都有 `.dockerignore`，排除非必要文件：
+所有构建面 —— `docker/build.py`（生产）、`devops/` 的 dev compose、CI 的 `docker-publish.yml` —— 都以仓库根为上下文，因此根 `.dockerignore` 是唯一生效的过滤器；不存在子树 dockerignore。
 
-- **后端**：测试文件、生成文档、开发工具、配置文件、IDE 文件
-- **前端**：`.env.local`
+无斜杠模式（`.env`、`*.log`）只匹配上下文根，这一点与 gitignore（匹配任意深度）不同 —— 嵌套的本地文件因此需要显式 `**/` 模式：`**/.env*` 与密钥类（`**/*.pem`、`**/*.key`、`**/id_rsa*` 等）让本地密钥进不了上下文，即使 git（以及 prek 的 detect-private-key）根本看不到它们；`**/*.local*` 家族排除本地变体配置（`docker/Caddyfile.local`、`docker/docker-compose.local.yml`）。未来构建若需要命中这些模式的入树文件，必须在同一变更中加 `!` 例外。
 
 <a id="build-cache"></a>
 

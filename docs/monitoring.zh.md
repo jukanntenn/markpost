@@ -2,7 +2,7 @@
 
 [English](monitoring.md) | 中文
 
-markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/uptime-kuma) 实例从外部探测 production 与 staging，并由生产主机反向推送心跳。告警发往飞书（主）与邮件（兜底）。本 runbook 承载监控项清单、通知渠道配置、告警策略与心跳的部署 / 卸载流程。
+markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/uptime-kuma) 实例从外部探测 production 与 staging，并由生产主机反向推送心跳；源站上的 Beszel agent 另将主机与容器指标上报给异地 hub。告警发往飞书（主）与邮件（兜底）。本 runbook 承载监控项清单、通知渠道配置、告警策略与心跳的部署 / 卸载流程。
 
 <a id="probe-model"></a>
 
@@ -70,14 +70,45 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 
 卸载是手动的（部署不会卸载）：删除 `/etc/supervisor/conf.d/markpost-heartbeat.conf`，执行 `sudo supervisorctl reread && sudo supervisorctl update`，并删除 vault 变量。
 
+<a id="host-metrics"></a>
+
+## 主机指标（Beszel）
+
+上面的监控项回答"**是否**"；Beszel agent 回答"**为何**"——主机与容器级资源历史加阈值告警，上报给独立运维服务器上的 hub。设计记录：[host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.zh.md) 与 [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.zh.md)。
+
+**agent（仓库自动化，仅 production）。** 独立单服务 compose 项目位于 `~/docker/beszel-agent`，由 [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：钉版 `henrygd/beszel-agent`、host 网络、只读 `docker.sock`。采集主机 CPU/内存/磁盘/负载/网络，以及 `markpost` 与 `markpost-postgres` 两个容器的统计；对 hub 仅有出站 WebSocket——防火墙零新增放行。
+
+**hub（运维所有，在本仓库之外）。** 按 [beszel.dev](https://beszel.dev) 部署（docker compose、内嵌 SQLite）在独立服务器上，置于 TLS 之后。在那里为 ttyo 添加 system 并复制其展示的公钥。
+
+**告警。** hub 上的 warning/critical 双阈值；建议起点，观察一周曲线后调整：
+
+| 指标                   | warning / critical |
+| ---------------------- | ------------------ |
+| 磁盘使用率             | 80% / 90%          |
+| 内存                   | 80% / 92%          |
+| CPU                    | 85% / 95%          |
+| 系统状态（agent 离线） | — / 任意           |
+
+通知走与 kuma 相同的飞书渠道（在 hub 上配置 shoutrrr `lark://` URL）。
+
+**配置顺序。**
+
+1. 运维：在独立服务器上起 hub，添加 system，复制公钥。
+2. 在 `devops/ansible/group_vars/production/vars.yml` 设置 `beszel_hub_url`（hub 的 `/beszel/agent` WebSocket URL）与 `beszel_agent_key`（公钥——不是密钥）。
+3. `ansible-playbook devops/ansible/deploy.yml -e target=production` —— 两变量齐备后部署才会安装 agent。
+4. 验证：`docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` 显示运行中，hub 的 system 页面出现实时数据。
+
+卸载是手动的（部署不会卸载）：`docker compose -f ~/docker/beszel-agent/docker-compose.yml down`，删除 `~/docker/beszel-agent`，删除两个变量。
+
 <a id="alert-triage"></a>
 
 ## 告警分诊
 
-| 红色监控项                          | 含义                                | 第一步                                                   |
-| ----------------------------------- | ----------------------------------- | -------------------------------------------------------- |
-| user path + readiness + heartbeat   | 源站整体宕机                        | SSH 到 ttyo；`docker compose ps`、容器日志               |
-| user path + readiness，heartbeat 绿 | Cloudflare / 边缘路径故障；源站存活 | Cloudflare 控制台；源站无恙                              |
-| 仅 user path                        | 静态导出或 CDN 缓存问题             | curl 对比 `/` 与 `/api/v1/ready`；检查发布               |
-| readiness（503）+ heartbeat `down`  | 数据库故障                          | `docker compose logs postgres`；磁盘空间                 |
-| 仅 heartbeat                        | 心跳循环、supervisor 或 kuma 可达性 | `sudo supervisorctl status markpost-heartbeat`；心跳日志 |
+| 红色监控项                          | 含义                                | 第一步                                                                      |
+| ----------------------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
+| user path + readiness + heartbeat   | 源站整体宕机                        | SSH 到 ttyo；`docker compose ps`、容器日志                                  |
+| user path + readiness，heartbeat 绿 | Cloudflare / 边缘路径故障；源站存活 | Cloudflare 控制台；源站无恙                                                 |
+| 仅 user path                        | 静态导出或 CDN 缓存问题             | curl 对比 `/` 与 `/api/v1/ready`；检查发布                                  |
+| readiness（503）+ heartbeat `down`  | 数据库故障                          | `docker compose logs postgres`；磁盘空间                                    |
+| 仅 heartbeat                        | 心跳循环、supervisor 或 kuma 可达性 | `sudo supervisorctl status markpost-heartbeat`；心跳日志                    |
+| Beszel agent 离线（经飞书）         | ttyo 存活但 agent/路径/hub 故障     | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`；hub 可达性 |

@@ -162,20 +162,21 @@
     # (a vault secret) so the deploy stays green until the push monitor exists
     # in kuma and the URL is vaulted — see docs/monitoring.md for the setup
     # order. Removing the vault var does not uninstall; the runbook owns that.
-    - name: Template heartbeat script
-      ansible.builtin.template:
-        src: heartbeat.py.j2
+    - name: Install heartbeat script
+      ansible.builtin.copy:
+        src: heartbeat.py
         dest: "{{ app_path }}/heartbeat.py"
         mode: "0750"
       when: env == 'production' and kuma_heartbeat_url is defined
 
+    # 0600: the vaulted push URL rides the environment= line in this conf.
     - name: Template markpost heartbeat supervisor program
       ansible.builtin.template:
         src: markpost-heartbeat.conf.j2
         dest: /etc/supervisor/conf.d/markpost-heartbeat.conf
         owner: root
         group: root
-        mode: "0644"
+        mode: "0600"
       become: true
       when: env == 'production' and kuma_heartbeat_url is defined
       notify: Update markpost heartbeat supervisor program

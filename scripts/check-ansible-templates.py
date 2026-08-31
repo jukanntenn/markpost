@@ -60,8 +60,9 @@ BASE_VARS = {
     "postgres_db": "markpost",
     "postgres_user": "markpost",
     # host_vars fact every inventory host defines (app_path above already
-    # assumes it); the heartbeat's push URL is an optional vault secret — the
-    # deploy tasks guard on its presence, the templates assume it exists.
+    # assumes it); the heartbeat conf interpolates the vaulted push URL into
+    # its environment= line — the deploy tasks guard on the variable, the
+    # conf template assumes it exists.
     "user": "deploy",
     "kuma_heartbeat_url": "https://kuma.example.com/api/push/token",
 }
@@ -158,24 +159,24 @@ def parse_ini(text: str) -> dict:
     return {s: dict(parser[s]) for s in parser.sections()}
 
 
-def parse_python(text: str):
-    import ast
-
-    return ast.parse(text)
-
-
 def check_heartbeat_conf(doc: dict, scenario: dict, fail) -> None:
-    if "program:markpost-heartbeat" not in doc:
+    program = doc.get("program:markpost-heartbeat")
+    if program is None:
         fail("supervisor section [program:markpost-heartbeat] missing")
-    elif doc["program:markpost-heartbeat"].get("autorestart") != "true":
+        return
+    if program.get("autorestart") != "true":
         fail("heartbeat program must autorestart")
+    env = program.get("environment", "")
+    if "KUMA_HEARTBEAT_URL=" not in env:
+        # The script refuses to start without it; a conf that lost the
+        # environment line would look fine until the first deploy.
+        fail("environment= must carry KUMA_HEARTBEAT_URL for the heartbeat")
 
 
 CHECKS = {
     "config.toml.j2": (tomllib.loads, check_config),
     "docker-compose.yml.j2": (yaml.safe_load, check_compose),
     "markpost-heartbeat.conf.j2": (parse_ini, check_heartbeat_conf),
-    "heartbeat.py.j2": (parse_python, None),
 }
 
 
@@ -213,8 +214,7 @@ def main() -> int:
             except Exception as exc:
                 fail(f"rendered output does not parse: {exc}")
                 continue
-            if check:
-                check(doc, BASE_VARS | overrides, fail)
+            check(doc, BASE_VARS | overrides, fail)
 
     if failures:
         print("ERROR: ansible template render check failed", file=sys.stderr)

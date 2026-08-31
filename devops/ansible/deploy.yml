@@ -164,8 +164,8 @@
     # order. Removing the vault var does not uninstall; the runbook owns that.
     - name: Template heartbeat script
       ansible.builtin.template:
-        src: heartbeat.sh.j2
-        dest: "{{ app_path }}/heartbeat.sh"
+        src: heartbeat.py.j2
+        dest: "{{ app_path }}/heartbeat.py"
         mode: "0750"
       when: env == 'production' and kuma_heartbeat_url is defined
 

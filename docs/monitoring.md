@@ -59,7 +59,7 @@ Add both, then set them as default notifications (Settings → Notifications →
 
 ## Heartbeat (production)
 
-On the production VPS, a supervisor program `markpost-heartbeat` runs [`heartbeat.sh.j2`](../devops/ansible/templates/heartbeat.sh.j2) (rendered to `~/docker/markpost/heartbeat.sh`): every 60 s it probes `http://127.0.0.1:8080/api/v1/ready` and pushes the verdict to kuma's push endpoint. kuma marks the monitor down when a `down` verdict arrives (app-level failure, including database trouble) or when pushes stop (host death). The log is `~/docker/markpost/data/heartbeat.log`.
+On the production VPS, a supervisor program `markpost-heartbeat` runs [`heartbeat.py.j2`](../devops/ansible/templates/heartbeat.py.j2) (rendered to `~/docker/markpost/heartbeat.py`): every 60 s it probes `http://127.0.0.1:8080/api/v1/ready` and pushes the verdict to kuma's push endpoint. kuma marks the monitor down when a `down` verdict arrives (app-level failure, including database trouble) or when pushes stop (host death). The log is `~/docker/markpost/data/heartbeat.log`.
 
 The deploy tasks in [`deploy.yml`](../devops/ansible/deploy.yml) install the script and program only when the vault variable `kuma_heartbeat_url` is defined, so the setup order is:
 

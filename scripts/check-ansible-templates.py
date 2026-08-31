@@ -158,6 +158,12 @@ def parse_ini(text: str) -> dict:
     return {s: dict(parser[s]) for s in parser.sections()}
 
 
+def parse_python(text: str):
+    import ast
+
+    return ast.parse(text)
+
+
 def check_heartbeat_conf(doc: dict, scenario: dict, fail) -> None:
     if "program:markpost-heartbeat" not in doc:
         fail("supervisor section [program:markpost-heartbeat] missing")
@@ -169,6 +175,7 @@ CHECKS = {
     "config.toml.j2": (tomllib.loads, check_config),
     "docker-compose.yml.j2": (yaml.safe_load, check_compose),
     "markpost-heartbeat.conf.j2": (parse_ini, check_heartbeat_conf),
+    "heartbeat.py.j2": (parse_python, None),
 }
 
 
@@ -206,7 +213,8 @@ def main() -> int:
             except Exception as exc:
                 fail(f"rendered output does not parse: {exc}")
                 continue
-            check(doc, BASE_VARS | overrides, fail)
+            if check:
+                check(doc, BASE_VARS | overrides, fail)
 
     if failures:
         print("ERROR: ansible template render check failed", file=sys.stderr)

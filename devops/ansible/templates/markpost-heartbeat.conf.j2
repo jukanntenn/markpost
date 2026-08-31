@@ -4,7 +4,7 @@
 # just to keep it alive across crashes and reboots; `supervisorctl reread &&
 # update` (the deploy handler) starts or restarts it on config change.
 [program:markpost-heartbeat]
-command=/bin/sh {{ app_path }}/heartbeat.sh
+command=/usr/bin/python3 {{ app_path }}/heartbeat.py
 autostart=true
 autorestart=true
 startsecs=10

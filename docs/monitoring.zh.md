@@ -59,7 +59,7 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 
 ## 心跳（production）
 
-生产 VPS 上的 supervisor 程序 `markpost-heartbeat` 运行 [`heartbeat.sh.j2`](../devops/ansible/templates/heartbeat.sh.j2)（渲染到 `~/docker/markpost/heartbeat.sh`）：每 60 秒探测 `http://127.0.0.1:8080/api/v1/ready`，并把判定推送给 kuma 的 push 端点。收到 `down` 判定（应用级故障，含数据库问题）或推送停止（主机死亡）时，kuma 将监控项置为 down。日志位于 `~/docker/markpost/data/heartbeat.log`。
+生产 VPS 上的 supervisor 程序 `markpost-heartbeat` 运行 [`heartbeat.py.j2`](../devops/ansible/templates/heartbeat.py.j2)（渲染到 `~/docker/markpost/heartbeat.py`）：每 60 秒探测 `http://127.0.0.1:8080/api/v1/ready`，并把判定推送给 kuma 的 push 端点。收到 `down` 判定（应用级故障，含数据库问题）或推送停止（主机死亡）时，kuma 将监控项置为 down。日志位于 `~/docker/markpost/data/heartbeat.log`。
 
 [`deploy.yml`](../devops/ansible/deploy.yml) 中的部署任务仅在 vault 变量 `kuma_heartbeat_url` 已定义时安装脚本与程序，因此配置顺序是：
 

@@ -32,7 +32,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { feishuConfigurationSchema } from '@/utils/channel-form'
-import { compileKeywordFilter } from '@/lib/keyword-filter'
+import {
+  compileKeywordFilter,
+  describeFilter,
+  type FilterError,
+  type Phrasebook,
+} from '@/lib/keyword-filter'
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover'
 import type { DeliveryChannel } from '@/types/delivery'
 
 interface DeliveryChannelDialogProps {
@@ -457,8 +467,26 @@ export function DeliveryChannelDialog({
   )
 }
 
-// D5.6 关键词过滤：onChange 实时编译（保留语法校验，移除语义解释），
-// [?] hover（桌面）+ tap（移动）展开完整语法。
+// D5.6 关键词过滤：onChange 实时编译 + 自然语言预览（cron-guru 式，
+// 兑现 specs/backend/keyword-filter.md 承诺的全角标点防坑 UX），
+// [?] Popover 承载语法速查与可点击试写的示例。
+const KEYWORD_EXAMPLES = [
+  'alert',
+  'error, warning',
+  'prod & !debug',
+  '(error, warning) & prod',
+  '"a,b"',
+]
+
+const TOKEN_CHARS: Record<string, string> = {
+  comma: ',',
+  pipe: '|',
+  amp: '&',
+  not: '!',
+  lparen: '(',
+  rparen: ')',
+}
+
 function KeywordField({
   control,
   disabled,
@@ -469,7 +497,36 @@ function KeywordField({
   fieldMsg: (m: string | undefined) => string
 }) {
   const t = useTranslations('delivery')
-  const [syntaxHelpOpen, setSyntaxHelpOpen] = useState(false)
+
+  const phr: Phrasebook = {
+    quote: (kw) => t('dialog.keywordsPhQuote', { kw }),
+    contains: (kw) => t('dialog.keywordsPhContains', { kw }),
+    notContains: (kw) => t('dialog.keywordsPhNotContains', { kw }),
+    notGroup: (inner) => t('dialog.keywordsPhNotGroup', { inner }),
+    and: (a, b) => t('dialog.keywordsPhAnd', { a, b }),
+    or: (a, b) => t('dialog.keywordsPhOr', { a, b }),
+    group: (inner) => t('dialog.keywordsPhGroup', { inner }),
+  }
+
+  // 结构化解析错误 → 本地化文案；eof 单独处理（没有字符可指）。
+  const errorMessage = (err: FilterError): string => {
+    const tok =
+      err.token && err.token !== 'eof' ? (TOKEN_CHARS[err.token] ?? '') : ''
+    switch (err.code) {
+      case 'unterminated_quote':
+        return t('dialog.keywordsErrQuote', { pos: err.pos ?? 0 })
+      case 'empty_keyword':
+        return t('dialog.keywordsErrEmptyKw')
+      case 'missing_rparen':
+        return err.token === 'eof'
+          ? t('dialog.keywordsErrRparenEnd')
+          : t('dialog.keywordsErrRparen', { pos: err.pos ?? 0, token: tok })
+      default:
+        return err.token === 'eof'
+          ? t('dialog.keywordsErrIncomplete')
+          : t('dialog.keywordsErrUnexpected', { pos: err.pos ?? 0, token: tok })
+    }
+  }
 
   return (
     <Controller
@@ -479,7 +536,8 @@ function KeywordField({
         field: { ref, name, value, onChange, onBlur },
         fieldState: { invalid, isTouched, isDirty: dirty, error },
       }) => {
-        const { error: compileError } = compileKeywordFilter(value)
+        const { node, error: compileError } = compileKeywordFilter(value)
+        const clause = describeFilter(node, phr)
         return (
           <Field.Root
             name={name}
@@ -490,24 +548,7 @@ function KeywordField({
           >
             <Field.Label className="gap-1">
               {t('dialog.keywords')}
-              <span className="relative inline-flex">
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  aria-label={t('dialog.keywordsSyntax')}
-                  aria-expanded={syntaxHelpOpen}
-                  onClick={() => setSyntaxHelpOpen((v) => !v)}
-                  className="flex size-4 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground"
-                >
-                  ?
-                </button>
-                {/* D5.6：hover（桌面）与 tap（移动）均可展开语法帮助 */}
-                <span
-                  className={`pointer-events-none absolute top-full left-0 z-10 mt-1 w-56 rounded-md border bg-popover p-2 text-xs text-popover-foreground shadow-lg ${syntaxHelpOpen ? 'block' : 'hidden group-hover:block'}`}
-                >
-                  {t('dialog.keywordsSyntax')}
-                </span>
-              </span>
+              <KeywordSyntaxHelp disabled={disabled} onPickExample={onChange} />
             </Field.Label>
             <Field.Control
               ref={ref}
@@ -518,16 +559,79 @@ function KeywordField({
               placeholder={t('dialog.keywordsPlaceholder')}
               disabled={disabled}
             />
-            <Field.Description>{t('dialog.keywordsHelp')}</Field.Description>
+            {!compileError && (
+              <Field.Description className="text-muted-foreground">
+                {clause === null
+                  ? t('dialog.keywordsPreviewAlways')
+                  : t('dialog.keywordsPreviewSentence', { expr: clause })}
+              </Field.Description>
+            )}
             <Field.Error match={!!error || !!compileError}>
               {compileError
-                ? t('dialog.keywordsInvalid', { error: compileError })
+                ? errorMessage(compileError)
                 : fieldMsg(error?.message)}
             </Field.Error>
           </Field.Root>
         )
       }}
     />
+  )
+}
+
+function KeywordSyntaxHelp({
+  disabled,
+  onPickExample,
+}: {
+  disabled: boolean
+  onPickExample: (expr: string) => void
+}) {
+  const t = useTranslations('delivery')
+  // 受控开合：点示例即关闭，让用户立刻看到填入的表达式与预览。
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        disabled={disabled}
+        aria-label={t('dialog.keywordsSyntax')}
+        className="flex size-4 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        ?
+      </PopoverTrigger>
+      <PopoverContent>
+        <p className="text-[13px] font-semibold">
+          {t('dialog.keywordsSyntaxTitle')}
+        </p>
+        <ul className="mt-1.5 space-y-1">
+          <li>{t('dialog.keywordsHelpOr')}</li>
+          <li>{t('dialog.keywordsHelpAnd')}</li>
+          <li>{t('dialog.keywordsHelpNot')}</li>
+          <li>{t('dialog.keywordsHelpGroup')}</li>
+          <li>{t('dialog.keywordsHelpQuote')}</li>
+        </ul>
+        <ul className="mt-2 space-y-1 text-muted-foreground">
+          <li>{t('dialog.keywordsNoteSpaces')}</li>
+          <li>{t('dialog.keywordsNoteFullwidth')}</li>
+          <li>{t('dialog.keywordsNoteEmpty')}</li>
+        </ul>
+        <p className="mt-2.5 font-medium">{t('dialog.keywordsTry')}</p>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {KEYWORD_EXAMPLES.map((ex) => (
+            <button
+              key={ex}
+              type="button"
+              onClick={() => {
+                onPickExample(ex)
+                setOpen(false)
+              }}
+              className="rounded border bg-background px-1.5 py-0.5 font-mono hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 

@@ -208,7 +208,12 @@ Matcher 在 `internal/service/delivery/post_delivery.go` 被调用。检查被�
 
 ### 前端
 
-`src/lib/keyword-filter.ts` 是该文法的 TypeScript 移植，**仅用于表单实时校验与预览**——后端仍是权威。它暴露 `compileKeywordFilter(expr)`（返回 `{ node, error }`）与 `describeFilter(node)`（渲染带优先级括号的人类可读描述，例如 `a | (b & c)`）。`src/components/settings/DeliveryChannelForm.tsx` 在输入框下渲染一行 `KeywordFilterFeedback`：有效时是可读预览，无效时是红色错误消息。
+`src/lib/keyword-filter.ts` 是该文法的 TypeScript 移植，**仅用于表单实时校验与预览**——后端仍是权威。它暴露：
+
+- `compileKeywordFilter(expr)` → `{ node, error }`，其中 `error` 是结构化的：`code`（`unterminated_quote` / `unexpected_token` / `missing_rparen` / `empty_keyword` 之一）、指向出错字符的 1 基码点位置 `pos`（输入耗尽时为 null）、以及肇事的 `token` 种类。表单据此映射本地化消息，例如 `语法错误：第 3 个字符附近不应出现「,」，这里需要一个关键词或「(」`。
+- `describeFilter(node, phrasebook)` → 各语言的自然语言子句，例如 `包含「prod」且（包含「error」或包含「warning」）且不包含「debug」`。渲染器只管结构——按优先级加括号、双重否定折叠、超过 30 码点的关键词截断——连接词由各语言通过 `Phrasebook` 接口提供；完整句子由 `keywordsPreviewSentence` / `keywordsPreviewAlways` 消息（en、zh-Hans、zh-Hant、ja）拼装。
+
+`src/components/delivery/DeliveryChannelDialog.tsx` 把关键词字段渲染成三层反馈回路：输入框下方的自然语言实时预览（cron-guru 式）、本地化的结构化解析报错、以及承载语法速查、空格/全角标点陷阱和可点击试写示例的 `[?]` 弹出面板（`src/components/ui/popover.tsx`）。
 
 <a id="performance"></a>
 

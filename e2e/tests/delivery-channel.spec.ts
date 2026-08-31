@@ -42,6 +42,29 @@ test("shows keyword syntax error in the dialog (D5.2)", async ({
   await expect(page.getByText(/Syntax error/)).toBeVisible();
 });
 
+test("previews the keyword filter in natural language (D5.6)", async ({
+  page,
+  loginPage,
+  deliveryPage,
+}) => {
+  await loginPage.goto();
+  await loginPage.login("markpost", "markpost");
+  await page.waitForURL("**/dashboard");
+  await deliveryPage.goto();
+  await deliveryPage.clickAddChannel();
+  await expect(
+    page.getByText("Delivers every post (empty — no filtering)"),
+  ).toBeVisible();
+  await deliveryPage.channelKeywordsInput.fill(
+    "prod & (error, warning) & !debug",
+  );
+  await expect(
+    page.getByText(
+      "Delivers when the title contains “prod” and (contains “error” or contains “warning”) and does not contain “debug”",
+    ),
+  ).toBeVisible();
+});
+
 test("edit mode exposes test + delete actions (D5.3)", async ({
   page,
   loginPage,

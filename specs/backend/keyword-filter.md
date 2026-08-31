@@ -174,7 +174,12 @@ The matcher is invoked from `internal/service/delivery/post_delivery.go`. The ch
 
 ### Frontend
 
-`src/lib/keyword-filter.ts` is a TypeScript port of the grammar used **only for live form validation and preview** — the backend remains authoritative. It exposes `compileKeywordFilter(expr)` (returns `{ node, error }`) and `describeFilter(node)` (renders a human-readable description with precedence parentheses, e.g. `a | (b & c)`). `src/components/settings/DeliveryChannelForm.tsx` renders a `KeywordFilterFeedback` line under the input: a readable preview when valid, a red error message when not.
+`src/lib/keyword-filter.ts` is a TypeScript port of the grammar used **only for live form validation and preview** — the backend remains authoritative. It exposes:
+
+- `compileKeywordFilter(expr)` → `{ node, error }`, where `error` is structured: `code` (one of `unterminated_quote`, `unexpected_token`, `missing_rparen`, `empty_keyword`), a 1-based code-point `pos` pointing at the offending character (null when input ran out), and the offending `token` kind. The form maps these to localized messages, e.g. `Syntax error near character 3: "," is not allowed here — a keyword or "(" is required`.
+- `describeFilter(node, phrasebook)` → a natural-language clause per locale, e.g. `contains “prod” and (contains “error” or contains “warning”) and does not contain “debug”`. The walker owns structure — precedence-aware parentheses, double-negation folding, 30-code-point keyword truncation — while each locale supplies connectives through the `Phrasebook` interface; the full sentence is composed from the `keywordsPreviewSentence` / `keywordsPreviewAlways` messages (en, zh-Hans, zh-Hant, ja).
+
+`src/components/delivery/DeliveryChannelDialog.tsx` renders the keyword field as a three-layer feedback loop: a live natural-language preview line under the input (cron-guru style), localized structured parse errors, and a `[?]` popover (`src/components/ui/popover.tsx`) holding the syntax cheat sheet, the space/full-width gotchas, and click-to-fill examples.
 
 ### Performance
 

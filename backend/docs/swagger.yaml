@@ -2058,6 +2058,25 @@ paths:
       summary: Delete a post owned by the current user
       tags:
       - posts
+  /api/v1/ready:
+    get:
+      description: 'Deep health probe: a driver-level database round trip. Unlike
+        /health (liveness only), it reports 503 when the process is up but unfit to
+        serve — e.g. Postgres unreachable or the pool exhausted.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/v1.HealthResponse'
+      summary: Readiness check
+      tags:
+      - health
   /api/v1/version:
     get:
       description: 'Reports the build version (VERSION build-arg: git tag for release

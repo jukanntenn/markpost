@@ -26,7 +26,7 @@
 
 **匿名客户端。** 若 `c.ClientIP()` 返回空（无法解析），按 IP 作键的限流器立即返回 `429`，而不是把所有匿名客户端折叠进一个共享的 `"unknown"` 桶 —— 一个匿名攻击者绝不能耗尽其他所有人的限额。选 `429` 而非 `400`，因为语义是"你正在被限流"（无身份 → 无配额），不是"请求格式错误"。
 
-**豁免。** `GET /api/v1/health` 与 `GET /api/v1/version` 注册在每个限流器组之外；Docker 健康检查在回环定时器上访问 health，让它受 L1 约束会在负载下造成假阳性健康失败。
+**豁免。** `GET /api/v1/health`、`GET /api/v1/ready` 与 `GET /api/v1/version` 注册在每个限流器组之外；Docker 健康检查在回环定时器上访问 health、外部可用性监控轮询 ready，让它们受 L1 约束会在负载下造成假阳性健康失败。
 
 <a id="ip-resolution-gin-not-tollbooth"></a>
 

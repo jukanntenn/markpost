@@ -59,6 +59,12 @@ BASE_VARS = {
     "admin_password": "p",
     "postgres_db": "markpost",
     "postgres_user": "markpost",
+    # host_vars fact every inventory host defines (app_path above already
+    # assumes it); the heartbeat conf interpolates the vaulted push URL into
+    # its environment= line — the deploy tasks guard on the variable, the
+    # conf template assumes it exists.
+    "user": "deploy",
+    "kuma_heartbeat_url": "https://kuma.example.com/api/push/token",
 }
 
 SCENARIOS = {
@@ -144,9 +150,33 @@ def check_compose(doc: dict, scenario: dict, fail) -> None:
             fail(f"service {name} has no logging cap")
 
 
+def parse_ini(text: str) -> dict:
+    import configparser
+    import io
+
+    parser = configparser.ConfigParser()
+    parser.read_string(text)
+    return {s: dict(parser[s]) for s in parser.sections()}
+
+
+def check_heartbeat_conf(doc: dict, scenario: dict, fail) -> None:
+    program = doc.get("program:markpost-heartbeat")
+    if program is None:
+        fail("supervisor section [program:markpost-heartbeat] missing")
+        return
+    if program.get("autorestart") != "true":
+        fail("heartbeat program must autorestart")
+    env = program.get("environment", "")
+    if "KUMA_HEARTBEAT_URL=" not in env:
+        # The script refuses to start without it; a conf that lost the
+        # environment line would look fine until the first deploy.
+        fail("environment= must carry KUMA_HEARTBEAT_URL for the heartbeat")
+
+
 CHECKS = {
     "config.toml.j2": (tomllib.loads, check_config),
     "docker-compose.yml.j2": (yaml.safe_load, check_compose),
+    "markpost-heartbeat.conf.j2": (parse_ini, check_heartbeat_conf),
 }
 
 

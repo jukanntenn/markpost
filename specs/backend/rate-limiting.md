@@ -24,7 +24,7 @@ Request throttling for the public read path, the API-authenticated write path, a
 
 **Anonymous clients.** If `c.ClientIP()` returns empty (unresolvable), IP-keyed limiters return `429` immediately rather than collapsing all anonymous clients into a shared `"unknown"` bucket — one anonymous attacker must not be able to exhaust the limit for everyone else. `429` over `400` because the semantic is "you are being rate-limited" (no identity → no quota), not "malformed request".
 
-**Exemptions.** `GET /api/v1/health` and `GET /api/v1/version` are registered outside every limiter group; Docker healthchecks hit health on a loopback timer, and subjecting it to L1 would cause false-positive health failures under load.
+**Exemptions.** `GET /api/v1/health`, `GET /api/v1/ready`, and `GET /api/v1/version` are registered outside every limiter group; Docker healthchecks hit health on a loopback timer and external uptime monitors poll ready, and subjecting them to L1 would cause false-positive health failures under load.
 
 ## IP resolution: gin, not tollbooth
 

@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -290,6 +291,14 @@ func serve(configPath string) {
 		log.Fatalf("Failed to init database: %v", err)
 	}
 
+	// Readiness probe backing store: the pool beneath gorm, extracted once so
+	// the /api/v1/ready handler can take it as a Pinger without the API
+	// layer importing gorm.
+	sqlDB, err := dbInstance.DB().DB()
+	if err != nil {
+		log.Fatalf("Failed to get database pool: %v", err)
+	}
+
 	// Observability: three pillars (logs/traces/metrics) to the local filesystem.
 	logDir := cfg.Observability.LogDir
 	if logDir == "" {
@@ -419,7 +428,7 @@ func serve(configPath string) {
 	UseCors(r)
 
 	slog.Info("initializing rate limiting")
-	SetupRoutes(r, deliverySvc, adminSvc)
+	SetupRoutes(r, deliverySvc, adminSvc, sqlDB)
 
 	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	slog.Info("server starting", "addr", listenAddr)
@@ -481,7 +490,7 @@ func logTimezoneSelfCheck(cfgTimezone string, db *gorm.DB) {
 }
 
 // SetupRoutes configures all API routes for the application.
-func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service) {
+func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service, sqlDB *sql.DB) {
 	cfg := config.Get()
 
 	// Three independent rate limiters, each scoped to a route class and keyed on
@@ -501,6 +510,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	apiV1 := r.Group("/api/v1")
 	apiV1.Use(middleware.NoStore())
 	apiV1.GET("/health", v1.Health())
+	apiV1.GET("/ready", v1.Readiness(sqlDB))
 	apiV1.GET("/version", v1.Version(effectiveVersion()))
 
 	oauthGroup := apiV1.Group("/oauth")

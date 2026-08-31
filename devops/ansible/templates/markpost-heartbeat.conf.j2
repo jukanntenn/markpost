@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+# supervisor program for the markpost availability heartbeat (production
+# only). The script itself is static (devops/ansible/files/heartbeat.py);
+# the non-secret knobs ride the command line and the secret push URL rides
+# KUMA_HEARTBEAT_URL, vaulted and interpolated here only — which is why this
+# conf is 0600 while the script is 0750. `supervisorctl reread && update`
+# (the deploy handler) starts or restarts it on config change.
+[program:markpost-heartbeat]
+command=/usr/bin/python3 {{ app_path }}/heartbeat.py --ready-url http://127.0.0.1:{{ host_port }}/api/v1/ready --interval 60
+environment=KUMA_HEARTBEAT_URL="{{ kuma_heartbeat_url }}"
+autostart=true
+autorestart=true
+startsecs=10
+user={{ user }}
+redirect_stderr=true
+stdout_logfile={{ app_path }}/data/heartbeat.log
+stdout_logfile_maxbytes=1MB
+stdout_logfile_backups=2

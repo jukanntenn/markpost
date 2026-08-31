@@ -21,11 +21,12 @@ Base path: `/api/v1`
 
 ## 健康检查
 
-| Method | Path      | Auth | Description  |
-| ------ | --------- | ---- | ------------ |
-| GET    | `/health` | —    | 服务健康检查 |
+| Method | Path      | Auth | Description                                                              |
+| ------ | --------- | ---- | ------------------------------------------------------------------------ |
+| GET    | `/health` | —    | 存活：进程在服务，恒 200                                                 |
+| GET    | `/ready`  | —    | 就绪：驱动层数据库往返。进程活着但不适合服务（DB 不可达 / 池耗尽）时 503 |
 
-**Response**: `{ "status": "ok" }`
+**Response**（`/health`）：`{ "status": "ok" }` ·（`/ready`）：`{ "status": "ready" }` 或 503 `{ "status": "unavailable" }`
 
 ---
 

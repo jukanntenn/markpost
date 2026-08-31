@@ -22,7 +22,7 @@ Add a single per-user retention policy that drives **both** `posts` and `deliver
 
 Effective cutoffs are per row: posts use `created_at < now() − COALESCE(user override, global)`; delivery_history the same but via `LEFT JOIN`, since rows orphaned by `ON DELETE SET NULL` fall back to the global window — an anonymous row can carry no personal policy. Global defaults stay in config.toml: changing them is deploy-weight, not an operations act.
 
-**Prune commands keep their shape, change their predicate.** Both CLIs keep `--dry-run`/`--batch-size`, the batched subquery-LIMIT loops ([delivery queue MRFC](../implemented/2026-07-10-persistent-best-effort-delivery-queue.md)), and the render-cache drop by QID; the single cutoff becomes a per-row `CASE` (`retention_days = 0` → never eligible; the NULL comparison excludes the row). A daily systemd timer deployed by Ansible invokes both commands, closing the scheduling debt — without it the policy is theater on fresh deployments.
+**Prune commands keep their shape, change their predicate.** Both CLIs keep `--dry-run`/`--batch-size`, the batched subquery-LIMIT loops ([delivery queue MRFC](../implemented/2026-07-10-persistent-best-effort-delivery-queue.md)), and the render-cache drop by QID; the single cutoff becomes a per-row `CASE` (`retention_days = 0` → never eligible; the NULL comparison excludes the row). A daily cron job deployed by Ansible invokes both commands, closing the scheduling debt — without it the policy is theater on fresh deployments.
 
 **VIP class default, materialized at grant time.** A new runtime settings key `vip_retention_days` (value shape `{"days": …}`, generalizing the settings table beyond `{"enabled": …}` from the [grant-strategy MRFC](../implemented/2026-08-23-github-login-vip-grant-strategy.md)) holds the class default. Whenever a user is granted VIP — the manual `PATCH /admin/users/:id/vip` or the GitHub-login auto-grant strategy — and their retention is still inherit, the class default is written onto the user in the same act. Revoking VIP keeps the materialized value: an honorific demotion must never expose two years of data to the 7-day sweep. `scope:"vip"` bulk writes remain for one-shot realignment of the existing VIP population.
 
@@ -60,8 +60,9 @@ User-facing visibility of one's own retention (a badge on /posts) is deliberatel
 - testcontainers coverage: explicit forever, explicit N, inherit, global `retention_days = 0`, and history rows orphaned by user deletion (SET NULL) falling back to the global window.
 - Grant-time materialization fires on both grant paths and is a no-op when the user already carries a value; revocation leaves the value untouched; a third grant path cannot land without meeting the hook (test-level enforcement).
 - Bulk endpoint: ids and `scope:"vip"` both write per-user values, respect the 200 cap, and produce one audit entry; impact endpoint returns correct counts for single, multi, and vip scopes.
-- The Ansible playbook deploys the daily timer on a scratch host and both prune runs are observable in logs; failures surface, not silence.
+- The Ansible playbook deploys the daily cron job on a scratch host and both prune runs are observable in logs; failures surface, not silence.
 - Admin flows (single, multi via bulk-select, VIP align, shorten-with-impact) verified with Playwright against the dev stack; shorten confirm blocks when deletion impact > 0; i18n keys present in all four locale files.
+- Every UI surface in this design carries screenshot evidence in the delivery PR: retention column and bulk-select mode, the shared dialog (all three segments plus the day input), the shorten-with-impact confirm, and the VIP policy bar.
 
 ## Risks
 

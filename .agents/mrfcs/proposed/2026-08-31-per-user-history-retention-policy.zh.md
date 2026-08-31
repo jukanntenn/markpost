@@ -22,7 +22,7 @@ markpost 的保留策略是一刀切的：`[post] retention_days`（默认 7，0
 
 生效 cutoff 按行推导：posts 用 `created_at < now() − COALESCE(用户覆盖值, 全局)`；delivery_history 相同但走 `LEFT JOIN`——被 `ON DELETE SET NULL` 孤立的历史行回落全局窗口（匿名行带不了个人策略）。全局默认留在 config.toml：改它是部署级的重量，不是运营动作。
 
-**prune 命令保形，换谓词。** 两个 CLI 保留 `--dry-run`/`--batch-size`、批量子查询 LIMIT 循环（[delivery 队列 MRFC](../implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)）与按 QID 的渲染缓存清理；单点 cutoff 变为按行的 `CASE`（`retention_days = 0` → 永不入选；NULL 比较把行排除）。Ansible 部署一个每日 systemd timer 调用两个命令，顺手关掉调度欠账——没有它，策略在新部署上是空转的表演。
+**prune 命令保形，换谓词。** 两个 CLI 保留 `--dry-run`/`--batch-size`、批量子查询 LIMIT 循环（[delivery 队列 MRFC](../implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)）与按 QID 的渲染缓存清理；单点 cutoff 变为按行的 `CASE`（`retention_days = 0` → 永不入选；NULL 比较把行排除）。Ansible 部署一个每日 cron job 调用两个命令，顺手关掉调度欠账——没有它，策略在新部署上是空转的表演。
 
 **VIP 类默认值，授予时物化。** 新的运行时 settings 键 `vip_retention_days`（值形状 `{"days": …}`，把 settings 表从[授予策略 MRFC](../implemented/2026-08-23-github-login-vip-grant-strategy.zh.md)的 `{"enabled": …}` 泛化）持有类默认。任何路径授予 VIP——手动 `PATCH /admin/users/:id/vip` 或 GitHub 登录自动授予——只要该用户仍是继承态，就在同一动作里把类默认写到用户行上。撤销 VIP **保留**已落列的值：荣誉降级绝不能把两年的数据暴露给 7 天清扫。`scope:"vip"` 批量写入保留，用于对存量 VIP 做一次性对齐。
 
@@ -60,8 +60,9 @@ markpost 的保留策略是一刀切的：`[post] retention_days`（默认 7，0
 - testcontainers 覆盖：显式永久、显式 N 天、继承、全局 `retention_days = 0`、用户删除（SET NULL）孤立的历史行回落全局窗口。
 - 授予时物化在两条授予路径上都触发、用户已有值时为无操作；撤销不碰已落列的值；第三条授予路径不经过钩子就无法落地（测试级强制）。
 - 批量端点：ids 与 `scope:"vip"` 都逐用户写值、遵守 200 上限、只产出一条审计；impact 端点对单用户、多选、vip 范围返回正确计数。
-- Ansible playbook 在临时主机上部署每日 timer，两次 prune 在日志中可观测；失败可见，不静默。
+- Ansible playbook 在临时主机上部署每日 cron job，两次 prune 在日志中可观测；失败可见，不静默。
 - admin 流程（单用户、批量选择、VIP 对齐、带影响数的缩短）用 Playwright 对 dev 栈验证；删除影响 > 0 时缩短确认拦截；i18n 键齐备于全部四个语言文件。
+- 本设计的全部 UI 界面在交付 PR 中附截图验收证据：保留策略列与批量选择模式、共用对话框（三段各态加天数输入）、缩短窗口的影响数确认、VIP 策略栏。
 
 ## Risks
 

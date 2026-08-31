@@ -46,7 +46,7 @@ export class DeliveryPage {
   }
 
   get channelKeywordsInput(): Locator {
-    return this.dialog.getByPlaceholder("mark, post");
+    return this.dialog.getByPlaceholder("error, warning & !debug");
   }
 
   async submitCreate() {

@@ -169,6 +169,17 @@ All admin endpoints require JWT authentication + the Admin role.
 | Method | Path                       | Auth      | Description                |
 | ------ | -------------------------- | --------- | -------------------------- |
 | GET    | `/admin/users`             | JWT+Admin | List all users             |
+| GET    | `/admin/users/:id`         | JWT+Admin | User detail                |
+| POST   | `/admin/users`             | JWT+Admin | Create a user              |
+| PATCH  | `/admin/users/:id/role`    | JWT+Admin | Set role                   |
+| PATCH  | `/admin/users/:id/active`  | JWT+Admin | Enable/disable             |
+| PATCH  | `/admin/users/:id/vip`     | JWT+Admin | Set VIP honorific          |
+| PATCH  | `/admin/users/:id/retention` | JWT+Admin | Set one user's history retention policy |
+| POST   | `/admin/users/retention/bulk` | JWT+Admin | Bulk-set retention for explicit ids or every VIP user |
+| POST   | `/admin/retention/impact`  | JWT+Admin | Preview deletion impact of a candidate policy |
+| GET    | `/admin/retention/defaults` | JWT+Admin | Global retention fallback windows |
+| GET    | `/admin/settings`          | JWT+Admin | List runtime settings      |
+| PUT    | `/admin/settings/:key`     | JWT+Admin | Upsert one runtime setting |
 | GET    | `/admin/posts`             | JWT+Admin | List all posts             |
 | DELETE | `/admin/posts/:id`         | JWT+Admin | Delete any post            |
 | GET    | `/admin/delivery/channels` | JWT+Admin | List all delivery channels |

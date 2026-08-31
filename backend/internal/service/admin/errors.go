@@ -34,4 +34,20 @@ var (
 		HTTP:    400,
 		Message: &i18n.Message{ID: "error.unknown_setting", Other: "Unknown setting key"},
 	}
+
+	// ErrSettingValueShape rejects a settings write whose payload does not
+	// match the key's value shape ({"enabled"} vs {"days"}).
+	ErrSettingValueShape = &service.ErrCode{
+		Value:   "invalid_setting_value",
+		HTTP:    400,
+		Message: &i18n.Message{ID: "error.invalid_setting_value", Other: "Value does not match the setting key"},
+	}
+
+	// ErrRetentionDays rejects a retention policy outside 0–3650 (0 = keep
+	// forever; MRFC 2026-08-31-per-user-history-retention-policy).
+	ErrRetentionDays = &service.ErrCode{
+		Value:   "invalid_retention_days",
+		HTTP:    400,
+		Message: &i18n.Message{ID: "error.invalid_retention_days", Other: "Retention days must be 0 (forever) through 3650"},
+	}
 )

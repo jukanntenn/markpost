@@ -301,6 +301,7 @@ type AdminUserItem struct {
 	Role            string     `json:"role"`
 	IsActive        bool       `json:"is_active"`
 	VIP             bool       `json:"vip"`
+	RetentionDays   *int       `json:"retention_days"`
 	PostKey         string     `json:"post_key"`
 	LastLoginAt     *time.Time `json:"last_login_at"`
 	CreatedAt       time.Time  `json:"created_at"`
@@ -317,6 +318,7 @@ func newAdminUserItem(u user.User) AdminUserItem {
 		Role:            string(u.Role),
 		IsActive:        u.IsActive,
 		VIP:             u.VIP,
+		RetentionDays:   u.RetentionDays,
 		PostKey:         u.PostKey,
 		LastLoginAt:     u.LastLoginAt,
 		CreatedAt:       u.CreatedAt,

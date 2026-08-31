@@ -592,6 +592,98 @@ const docTemplate = `{
                 ]
             }
         },
+        "/api/v1/admin/retention/defaults": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Report the global retention fallback windows (admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.RetentionDefaultsResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/retention/impact": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Preview the deletion impact of a candidate retention policy (admin)",
+                "parameters": [
+                    {
+                        "description": "Targets and candidate policy",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AdminRetentionImpactRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.RetentionImpactResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/admin/sessions/{token_id}": {
             "delete": {
                 "produces": [
@@ -697,7 +789,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Setting key (v1: vip)",
+                        "description": "Setting key (vip, vip_retention_days)",
                         "name": "key",
                         "in": "path",
                         "required": true
@@ -865,6 +957,62 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/v1.AdminUserItem"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/retention/bulk": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Bulk-set history retention for explicit users or all VIP users (admin)",
+                "parameters": [
+                    {
+                        "description": "Targets and policy",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AdminBulkSetRetentionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.AdminBulkSetRetentionResponse"
                         }
                     },
                     "400": {
@@ -1089,6 +1237,75 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/v1.AdminResetPasswordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/users/{id}/retention": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Set a user's history retention policy (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Retention policy (null=inherit, 0=forever, 1-3650=N days)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.AdminSetUserRetentionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/v1.AdminUserItem"
                         }
                     },
                     "400": {
@@ -2409,6 +2626,28 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "admin.RetentionDefaultsResult": {
+            "type": "object",
+            "properties": {
+                "post_retention_days": {
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.RetentionImpactResult": {
+            "type": "object",
+            "properties": {
+                "history_to_delete": {
+                    "type": "integer"
+                },
+                "posts_to_delete": {
+                    "type": "integer"
+                },
+                "users_affected": {
+                    "type": "integer"
+                }
+            }
+        },
         "apierr.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -2543,6 +2782,10 @@ const docTemplate = `{
         "settings.SettingValue": {
             "type": "object",
             "properties": {
+                "days": {
+                    "description": "Days carries the vip_retention_days value: nil follows the global\ndefault, 0 keeps forever, 1–3650 keeps N days.",
+                    "type": "integer"
+                },
                 "enabled": {
                     "type": "boolean"
                 }
@@ -2564,6 +2807,37 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.AdminBulkSetRetentionRequest": {
+            "type": "object",
+            "properties": {
+                "retention_days": {
+                    "type": "integer",
+                    "maximum": 3650,
+                    "minimum": 0
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": [
+                        "vip"
+                    ]
+                },
+                "user_ids": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "v1.AdminBulkSetRetentionResponse": {
+            "type": "object",
+            "properties": {
+                "updated": {
                     "type": "integer"
                 }
             }
@@ -2663,6 +2937,29 @@ const docTemplate = `{
                 }
             }
         },
+        "v1.AdminRetentionImpactRequest": {
+            "type": "object",
+            "properties": {
+                "retention_days": {
+                    "type": "integer",
+                    "maximum": 3650,
+                    "minimum": 0
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": [
+                        "vip"
+                    ]
+                },
+                "user_ids": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "v1.AdminSetChannelEnabledRequest": {
             "type": "object",
             "properties": {
@@ -2674,6 +2971,11 @@ const docTemplate = `{
         "v1.AdminSetSettingRequest": {
             "type": "object",
             "properties": {
+                "days": {
+                    "type": "integer",
+                    "maximum": 3650,
+                    "minimum": 0
+                },
                 "enabled": {
                     "type": "boolean"
                 }
@@ -2684,6 +2986,16 @@ const docTemplate = `{
             "properties": {
                 "active": {
                     "type": "boolean"
+                }
+            }
+        },
+        "v1.AdminSetUserRetentionRequest": {
+            "type": "object",
+            "properties": {
+                "retention_days": {
+                    "type": "integer",
+                    "maximum": 3650,
+                    "minimum": 0
                 }
             }
         },
@@ -2801,6 +3113,9 @@ const docTemplate = `{
                 },
                 "post_key": {
                     "type": "string"
+                },
+                "retention_days": {
+                    "type": "integer"
                 },
                 "role": {
                     "type": "string"

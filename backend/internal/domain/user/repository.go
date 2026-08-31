@@ -28,7 +28,21 @@ type Repository interface {
 	SetRole(ctx context.Context, userID int, role Role) error
 	SetActive(ctx context.Context, userID int, active bool) error
 	// SetUserVIP writes the durable VIP honorific (MRFC 2026-08-23-user-vip-flag).
-	SetUserVIP(ctx context.Context, userID int, vip bool) error
+	// retentionIfUnset materializes the VIP-class retention default onto the
+	// user in the same statement, but only while the user still inherits
+	// (NULL) — an explicit policy survives grant and revoke alike (MRFC
+	// 2026-08-31-per-user-history-retention-policy); nil never writes.
+	SetUserVIP(ctx context.Context, userID int, vip bool, retentionIfUnset *int) error
+	// SetUserRetention writes one user's retention policy (nil = inherit).
+	SetUserRetention(ctx context.Context, userID int, days *int) error
+	// SetUserRetentionBatch writes the policy onto explicit user ids,
+	// returning the affected row count.
+	SetUserRetentionBatch(ctx context.Context, userIDs []int, days *int) (int64, error)
+	// SetVIPUsersRetention writes the policy onto every VIP user (bulk
+	// realignment), returning the affected row count.
+	SetVIPUsersRetention(ctx context.Context, days *int) (int64, error)
+	// CountVIP counts users carrying the VIP flag (bulk preview).
+	CountVIP(ctx context.Context) (int64, error)
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	GetAll(ctx context.Context, offset, limit int) ([]User, error)
 	// Search returns users whose username matches the LIKE pattern (admin user

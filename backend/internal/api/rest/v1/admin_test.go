@@ -325,7 +325,19 @@ func setupAdminHandlerWithMutators(t *testing.T) (*admin.Service, user.Repositor
 	)
 	svc.SetUserMutator(concreteUserRepo)
 	svc.SetChannelMutator(channelRepo)
+	svc.SetSettingsStore(infra.NewSettingsRepository(db))
+	svc.SetRetentionCounters(postRepo, historyExpiryCounterForTest{attemptRepo}, 7, 168*time.Hour)
 	return svc, userRepo, channelRepo
+}
+
+// historyExpiryCounterForTest adapts the history counter like main.go's
+// historyExpiryCounter.
+type historyExpiryCounterForTest struct {
+	repo delivery.AttemptRepository
+}
+
+func (h historyExpiryCounterForTest) CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error) {
+	return h.repo.CountHistoryExpiringForUsers(ctx, userIDs, vipOnly, cutoff)
 }
 
 func TestAdminCreateUser_Success(t *testing.T) {

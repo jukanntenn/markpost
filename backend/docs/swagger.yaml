@@ -1,5 +1,19 @@
 basePath: /
 definitions:
+  admin.RetentionDefaultsResult:
+    properties:
+      post_retention_days:
+        type: integer
+    type: object
+  admin.RetentionImpactResult:
+    properties:
+      history_to_delete:
+        type: integer
+      posts_to_delete:
+        type: integer
+      users_affected:
+        type: integer
+    type: object
   apierr.ErrorResponse:
     properties:
       code:
@@ -88,6 +102,11 @@ definitions:
     type: object
   settings.SettingValue:
     properties:
+      days:
+        description: |-
+          Days carries the vip_retention_days value: nil follows the global
+          default, 0 keeps forever, 1–3650 keeps N days.
+        type: integer
       enabled:
         type: boolean
     type: object
@@ -102,6 +121,27 @@ definitions:
       revoked:
         type: boolean
       user_id:
+        type: integer
+    type: object
+  v1.AdminBulkSetRetentionRequest:
+    properties:
+      retention_days:
+        maximum: 3650
+        minimum: 0
+        type: integer
+      scope:
+        enum:
+        - vip
+        type: string
+      user_ids:
+        items:
+          type: integer
+        maxItems: 200
+        type: array
+    type: object
+  v1.AdminBulkSetRetentionResponse:
+    properties:
+      updated:
         type: integer
     type: object
   v1.AdminChannelItem:
@@ -167,6 +207,22 @@ definitions:
       password:
         type: string
     type: object
+  v1.AdminRetentionImpactRequest:
+    properties:
+      retention_days:
+        maximum: 3650
+        minimum: 0
+        type: integer
+      scope:
+        enum:
+        - vip
+        type: string
+      user_ids:
+        items:
+          type: integer
+        maxItems: 200
+        type: array
+    type: object
   v1.AdminSetChannelEnabledRequest:
     properties:
       enabled:
@@ -174,6 +230,10 @@ definitions:
     type: object
   v1.AdminSetSettingRequest:
     properties:
+      days:
+        maximum: 3650
+        minimum: 0
+        type: integer
       enabled:
         type: boolean
     type: object
@@ -181,6 +241,13 @@ definitions:
     properties:
       active:
         type: boolean
+    type: object
+  v1.AdminSetUserRetentionRequest:
+    properties:
+      retention_days:
+        maximum: 3650
+        minimum: 0
+        type: integer
     type: object
   v1.AdminSetUserRoleRequest:
     properties:
@@ -257,6 +324,8 @@ definitions:
         type: string
       post_key:
         type: string
+      retention_days:
+        type: integer
       role:
         type: string
       username:
@@ -1006,6 +1075,63 @@ paths:
       summary: Delete any post (admin)
       tags:
       - admin
+  /api/v1/admin/retention/defaults:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.RetentionDefaultsResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Report the global retention fallback windows (admin)
+      tags:
+      - admin
+  /api/v1/admin/retention/impact:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Targets and candidate policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AdminRetentionImpactRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.RetentionImpactResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview the deletion impact of a candidate retention policy (admin)
+      tags:
+      - admin
   /api/v1/admin/sessions/{token_id}:
     delete:
       parameters:
@@ -1067,7 +1193,7 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: 'Setting key (v1: vip)'
+      - description: Setting key (vip, vip_retention_days)
         in: path
         name: key
         required: true
@@ -1341,6 +1467,50 @@ paths:
       summary: Reset a user's password (admin) — system generates a temporary
       tags:
       - admin
+  /api/v1/admin/users/{id}/retention:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Retention policy (null=inherit, 0=forever, 1-3650=N days)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AdminSetUserRetentionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.AdminUserItem'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set a user's history retention policy (admin)
+      tags:
+      - admin
   /api/v1/admin/users/{id}/role:
     patch:
       consumes:
@@ -1493,6 +1663,41 @@ paths:
       security:
       - BearerAuth: []
       summary: Set a user's VIP status (admin)
+      tags:
+      - admin
+  /api/v1/admin/users/retention/bulk:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Targets and policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/v1.AdminBulkSetRetentionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.AdminBulkSetRetentionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk-set history retention for explicit users or all VIP users (admin)
       tags:
       - admin
   /api/v1/auth/change-password:

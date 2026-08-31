@@ -33,6 +33,10 @@ type AdminService interface {
 	ResetUserPassword(ctx context.Context, userID int) (string, error)
 	SetUserActive(ctx context.Context, actorID, userID int, active bool) error
 	SetUserVIP(ctx context.Context, userID int, vip bool) error
+	SetUserRetention(ctx context.Context, userID int, days *int) (*user.User, error)
+	BulkSetUserRetention(ctx context.Context, userIDs []int, scope string, days *int) (int64, error)
+	RetentionImpact(ctx context.Context, userIDs []int, scope string, days *int) (*adminsvc.RetentionImpactResult, error)
+	RetentionDefaults(ctx context.Context) (*adminsvc.RetentionDefaultsResult, error)
 	DeleteUser(ctx context.Context, actorID, userID int) (int64, error)
 	GetUserByID(ctx context.Context, userID int) (*user.User, error)
 	CreateChannel(ctx context.Context, channel *delivery.Channel) error
@@ -878,9 +882,12 @@ func newAdminSettingItem(s settings.Setting) AdminSettingItem {
 }
 
 // AdminSetSettingRequest represents the request body for upserting one
-// runtime setting.
+// runtime setting. The vip key owns {"enabled"}; vip_retention_days owns
+// {"days"} (null/absent = follow the global config). The service rejects a
+// payload in the wrong shape for the key.
 type AdminSetSettingRequest struct {
-	Enabled bool `json:"enabled"`
+	Enabled *bool `json:"enabled"`
+	Days    *int  `json:"days" binding:"omitempty,min=0,max=3650"`
 }
 
 // AdminGetSettings godoc
@@ -913,7 +920,7 @@ func AdminGetSettings(adminSvc AdminService) gin.HandlerFunc {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param key path string true "Setting key (v1: vip)"
+// @Param key path string true "Setting key (vip, vip_retention_days)"
 // @Param body body AdminSetSettingRequest true "Setting value"
 // @Success 200 {object} v1.AdminSettingListResponse
 // @Failure 400 {object} apierr.ErrorResponse
@@ -929,7 +936,11 @@ func AdminSetSetting(adminSvc AdminService) gin.HandlerFunc {
 			return
 		}
 
-		if err := adminSvc.SetSetting(c.Request.Context(), currentUserID(c), key, settings.SettingValue{Enabled: req.Enabled}); err != nil {
+		value := settings.SettingValue{Days: req.Days}
+		if req.Enabled != nil {
+			value.Enabled = *req.Enabled
+		}
+		if err := adminSvc.SetSetting(c.Request.Context(), currentUserID(c), key, value); err != nil {
 			respondError(c, err)
 			return
 		}
@@ -953,6 +964,186 @@ func AdminSetSetting(adminSvc AdminService) gin.HandlerFunc {
 			items = append(items, newAdminSettingItem(s))
 		}
 		c.JSON(http.StatusOK, AdminSettingListResponse{Items: items})
+	}
+}
+
+// AdminSetUserRetentionRequest represents the request body for setting one
+// user's retention policy: null clears to inherit, 0 keeps forever, 1-3650
+// keeps N days.
+type AdminSetUserRetentionRequest struct {
+	RetentionDays *int `json:"retention_days" binding:"omitempty,min=0,max=3650"`
+}
+
+// AdminSetUserRetention godoc
+// @Summary Set a user's history retention policy (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "User ID"
+// @Param body body AdminSetUserRetentionRequest true "Retention policy (null=inherit, 0=forever, 1-3650=N days)"
+// @Success 200 {object} v1.AdminUserItem
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Failure 404 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/{id}/retention [patch]
+func AdminSetUserRetention(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, err := parseIDParam(c, "id")
+		if err != nil {
+			return
+		}
+
+		var req AdminSetUserRetentionRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+
+		before, err := adminSvc.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		updated, err := adminSvc.SetUserRetention(c.Request.Context(), userID, req.RetentionDays)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "user.set_retention",
+			TargetType: "user",
+			TargetID:   strconv.Itoa(userID),
+			Metadata:   map[string]any{"from": retentionAuditValue(before.RetentionDays), "to": retentionAuditValue(req.RetentionDays)},
+			IP:         c.ClientIP(),
+		})
+
+		c.JSON(http.StatusOK, newAdminUserItem(*updated))
+	}
+}
+
+func retentionAuditValue(days *int) any {
+	if days == nil {
+		return nil
+	}
+	return *days
+}
+
+// AdminBulkSetRetentionRequest targets explicit user ids (max 200) or every
+// VIP user (scope "vip") with one policy value.
+type AdminBulkSetRetentionRequest struct {
+	UserIDs       []int  `json:"user_ids" binding:"omitempty,max=200,dive,gt=0"`
+	Scope         string `json:"scope" binding:"omitempty,oneof=vip"`
+	RetentionDays *int   `json:"retention_days" binding:"omitempty,min=0,max=3650"`
+}
+
+// AdminBulkSetRetentionResponse reports how many users the bulk write touched.
+type AdminBulkSetRetentionResponse struct {
+	Updated int64 `json:"updated"`
+}
+
+// AdminBulkSetRetention godoc
+// @Summary Bulk-set history retention for explicit users or all VIP users (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body AdminBulkSetRetentionRequest true "Targets and policy"
+// @Success 200 {object} v1.AdminBulkSetRetentionResponse
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/users/retention/bulk [post]
+func AdminBulkSetRetention(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req AdminBulkSetRetentionRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+		if req.Scope != "vip" && len(req.UserIDs) == 0 {
+			respondError(c, service.New(service.ErrValidation, "provide user_ids or scope=vip"))
+			return
+		}
+
+		updated, err := adminSvc.BulkSetUserRetention(c.Request.Context(), req.UserIDs, req.Scope, req.RetentionDays)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+
+		_ = adminSvc.RecordAudit(c.Request.Context(), audit.Entry{
+			ActorID:    currentUserID(c),
+			Action:     "user.set_retention_bulk",
+			TargetType: "user",
+			TargetID:   req.Scope,
+			Metadata:   map[string]any{"scope": req.Scope, "users": len(req.UserIDs), "updated": updated, "to": retentionAuditValue(req.RetentionDays)},
+			IP:         c.ClientIP(),
+		})
+
+		c.JSON(http.StatusOK, AdminBulkSetRetentionResponse{Updated: updated})
+	}
+}
+
+// AdminRetentionImpactRequest previews the deletion a candidate policy would
+// cause for explicit user ids or every VIP user.
+type AdminRetentionImpactRequest struct {
+	UserIDs       []int  `json:"user_ids" binding:"omitempty,max=200,dive,gt=0"`
+	Scope         string `json:"scope" binding:"omitempty,oneof=vip"`
+	RetentionDays *int   `json:"retention_days" binding:"omitempty,min=0,max=3650"`
+}
+
+// AdminRetentionImpact godoc
+// @Summary Preview the deletion impact of a candidate retention policy (admin)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param body body AdminRetentionImpactRequest true "Targets and candidate policy"
+// @Success 200 {object} admin.RetentionImpactResult
+// @Failure 400 {object} apierr.ErrorResponse
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/retention/impact [post]
+func AdminRetentionImpact(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req AdminRetentionImpactRequest
+		if !bindJSON(c, &req) {
+			return
+		}
+		if req.Scope != "vip" && len(req.UserIDs) == 0 {
+			respondError(c, service.New(service.ErrValidation, "provide user_ids or scope=vip"))
+			return
+		}
+
+		impact, err := adminSvc.RetentionImpact(c.Request.Context(), req.UserIDs, req.Scope, req.RetentionDays)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, impact)
+	}
+}
+
+// AdminRetentionDefaults godoc
+// @Summary Report the global retention fallback windows (admin)
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} admin.RetentionDefaultsResult
+// @Failure 401 {object} apierr.ErrorResponse
+// @Failure 403 {object} apierr.ErrorResponse
+// @Router /api/v1/admin/retention/defaults [get]
+func AdminRetentionDefaults(adminSvc AdminService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defaults, err := adminSvc.RetentionDefaults(c.Request.Context())
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, defaults)
 	}
 }
 

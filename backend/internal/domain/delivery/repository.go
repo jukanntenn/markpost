@@ -52,6 +52,10 @@ type AttemptRepository interface {
 	PruneHistory(ctx context.Context, retention time.Duration, batchSize int) (int64, error)
 	// CountHistoryExpired counts the rows PruneHistory would delete (dry-run).
 	CountHistoryExpired(ctx context.Context, retention time.Duration) (int64, error)
+	// CountHistoryExpiringForUsers counts delivery_history rows of the
+	// targeted users past the cutoff (retention impact preview); nil cutoff
+	// matches nothing, vipOnly targets every VIP user instead of explicit ids.
+	CountHistoryExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error)
 	// ListHistory returns delivery history (newest first), paginated, with the
 	// post title/qid, channel name, and username JOINed at read time. filter
 	// scopes the result: OwnerID > 0 limits to one user (NULL user_id rows are

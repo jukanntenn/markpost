@@ -196,8 +196,53 @@ func (r *UserRepository) SetActive(ctx context.Context, userID int, active bool)
 }
 
 // SetUserVIP writes the durable VIP honorific (MRFC 2026-08-23-user-vip-flag).
-func (r *UserRepository) SetUserVIP(ctx context.Context, userID int, vip bool) error {
-	return updateByID[user.User](ctx, r.db, userID, map[string]any{"vip": vip}, "SetUserVIP")
+// The COALESCE materializes retentionIfUnset only while the user still
+// inherits (NULL), so an explicit policy survives grant and revoke alike.
+func (r *UserRepository) SetUserVIP(ctx context.Context, userID int, vip bool, retentionIfUnset *int) error {
+	result := r.db.WithContext(ctx).Model(&user.User{}).Where("id = ?", userID).Updates(map[string]any{
+		"vip":            vip,
+		"retention_days": gorm.Expr("COALESCE(retention_days, ?)", retentionIfUnset),
+	})
+	if result.Error != nil {
+		return fmt.Errorf("SetUserVIP: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("SetUserVIP: %w", domain.ErrNotFound)
+	}
+	return nil
+}
+
+// SetUserRetention writes one user's retention policy (nil = inherit).
+func (r *UserRepository) SetUserRetention(ctx context.Context, userID int, days *int) error {
+	return updateByID[user.User](ctx, r.db, userID, map[string]any{"retention_days": days}, "SetUserRetention")
+}
+
+// SetUserRetentionBatch writes the policy onto explicit user ids.
+func (r *UserRepository) SetUserRetentionBatch(ctx context.Context, userIDs []int, days *int) (int64, error) {
+	if len(userIDs) == 0 {
+		return 0, nil
+	}
+	result := r.db.WithContext(ctx).Model(&user.User{}).Where("id IN ?", userIDs).
+		Update("retention_days", days)
+	if result.Error != nil {
+		return 0, fmt.Errorf("SetUserRetentionBatch: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// SetVIPUsersRetention writes the policy onto every VIP user.
+func (r *UserRepository) SetVIPUsersRetention(ctx context.Context, days *int) (int64, error) {
+	result := r.db.WithContext(ctx).Model(&user.User{}).Where("vip = ?", true).
+		Update("retention_days", days)
+	if result.Error != nil {
+		return 0, fmt.Errorf("SetVIPUsersRetention: %w", result.Error)
+	}
+	return result.RowsAffected, nil
+}
+
+// CountVIP counts users carrying the VIP flag.
+func (r *UserRepository) CountVIP(ctx context.Context) (int64, error) {
+	return countQuery(ctx, r.db.Model(&user.User{}).Where("vip = ?", true), "CountVIP")
 }
 
 // DeleteByID deletes a user by their ID.

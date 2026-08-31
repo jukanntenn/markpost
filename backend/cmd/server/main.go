@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"markpost/internal/domain/delivery"
+
 	"markpost/cmd"
 	_ "markpost/docs"
 	v1 "markpost/internal/api/rest/v1"
@@ -279,6 +281,16 @@ func main() {
 	}
 }
 
+// historyExpiryCounter adapts the AttemptRepository's history-shaped expiry
+// counter to the admin service's RetentionCounter port.
+type historyExpiryCounter struct {
+	repo delivery.AttemptRepository
+}
+
+func (h historyExpiryCounter) CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error) {
+	return h.repo.CountHistoryExpiringForUsers(ctx, userIDs, vipOnly, cutoff)
+}
+
 func serve(configPath string) {
 	if err := config.Load(configPath); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -395,6 +407,10 @@ func serve(configPath string) {
 	adminSvc.SetUserMutator(userRepo)
 	adminSvc.SetChannelMutator(deliveryRepo)
 	adminSvc.SetSettingsStore(settingsRepo)
+	// Retention impact previews need raw post/history expiry counters and the
+	// global fallback windows mirrored from config (MRFC
+	// 2026-08-31-per-user-history-retention-policy).
+	adminSvc.SetRetentionCounters(postRepo, historyExpiryCounter{attemptRepo}, cfg.Post.RetentionDays, cfg.Delivery.HistoryRetention)
 
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery

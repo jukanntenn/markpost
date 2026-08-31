@@ -209,6 +209,17 @@ Base path: `/api/v1`
 | Method | Path                       | Auth      | Description      |
 | ------ | -------------------------- | --------- | ---------------- |
 | GET    | `/admin/users`             | JWT+Admin | 获取全部用户列表 |
+| GET    | `/admin/users/:id`         | JWT+Admin | 用户详情         |
+| POST   | `/admin/users`             | JWT+Admin | 创建用户         |
+| PATCH  | `/admin/users/:id/role`    | JWT+Admin | 设置角色         |
+| PATCH  | `/admin/users/:id/active`  | JWT+Admin | 启用/禁用        |
+| PATCH  | `/admin/users/:id/vip`     | JWT+Admin | 设置 VIP 荣誉标记 |
+| PATCH  | `/admin/users/:id/retention` | JWT+Admin | 设置单个用户的历史保留策略 |
+| POST   | `/admin/users/retention/bulk` | JWT+Admin | 为显式 id 列表或全体 VIP 用户批量设置保留策略 |
+| POST   | `/admin/retention/impact`  | JWT+Admin | 预览候选策略的删除影响 |
+| GET    | `/admin/retention/defaults` | JWT+Admin | 全局保留回退窗口 |
+| GET    | `/admin/settings`          | JWT+Admin | 列出运行时设置   |
+| PUT    | `/admin/settings/:key`     | JWT+Admin | upsert 一条运行时设置 |
 | GET    | `/admin/posts`             | JWT+Admin | 获取全部文章列表 |
 | DELETE | `/admin/posts/:id`         | JWT+Admin | 删除任意文章     |
 | GET    | `/admin/delivery/channels` | JWT+Admin | 获取全部投递渠道 |

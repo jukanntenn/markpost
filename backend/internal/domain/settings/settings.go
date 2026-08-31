@@ -13,10 +13,18 @@ import (
 // enabled so the strategy launches on.
 const KeyVIP = "vip"
 
+// KeyVIPRetention names the VIP-class retention default materialized onto a
+// user at grant time (MRFC 2026-08-31-per-user-history-retention-policy).
+const KeyVIPRetention = "vip_retention_days"
+
 // SettingValue is the JSONB payload of a settings row. v1 carries a single
-// enabled switch; future strategies extend the struct rather than the schema.
+// enabled switch; the vip_retention_days strategy extends the struct with a
+// Days pointer — the schema stays untouched, each key reads the shape it owns.
 type SettingValue struct {
 	Enabled bool `json:"enabled"`
+	// Days carries the vip_retention_days value: nil follows the global
+	// default, 0 keeps forever, 1–3650 keeps N days.
+	Days *int `json:"days,omitempty"`
 }
 
 // Value serializes for the jsonb column. A string (not []byte) is returned:

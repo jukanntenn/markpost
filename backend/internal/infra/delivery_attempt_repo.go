@@ -214,6 +214,30 @@ const expiredHistoryPredicate = `h.created_at < CASE
     ELSE ?
 END`
 
+// CountHistoryExpiringForUsers counts delivery_history rows of the targeted
+// users past the cutoff (retention impact preview). A nil cutoff (candidate =
+// keep forever) matches nothing. vipOnly targets every VIP user instead of
+// explicit ids.
+func (r *AttemptRepository) CountHistoryExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error) {
+	if cutoff == nil {
+		return 0, nil
+	}
+	q := r.db.WithContext(ctx).Model(&delivery.History{}).Where("created_at < ?", *cutoff)
+	if vipOnly {
+		q = q.Where("user_id IN (SELECT id FROM users WHERE vip = TRUE)")
+	} else {
+		if len(userIDs) == 0 {
+			return 0, nil
+		}
+		q = q.Where("user_id IN ?", userIDs)
+	}
+	var count int64
+	if err := q.Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("AttemptRepository.CountHistoryExpiringForUsers: %w", err)
+	}
+	return count, nil
+}
+
 // CountHistoryExpired counts the rows PruneHistory would delete (dry-run).
 func (r *AttemptRepository) CountHistoryExpired(ctx context.Context, retention time.Duration) (int64, error) {
 	var count int64

@@ -34,6 +34,69 @@ func setupAdminSettings(t *testing.T) (*adminsvc.Service, settings.Repository) {
 	return svc, settingsRepo
 }
 
+func TestAdminSettingsVIPRetentionDays(t *testing.T) {
+	actor := &user.User{ID: 1, Role: user.RoleAdmin}
+	putSetting := func(t *testing.T, svc *adminsvc.Service, key, body string) *httptest.ResponseRecorder {
+		t.Helper()
+		router := newTestEngine()
+		router.PUT("/admin/settings/:key", func(c *gin.Context) {
+			c.Set("user", actor)
+			c.Next()
+		}, AdminSetSetting(svc))
+		req := httptest.NewRequest(http.MethodPut, "/admin/settings/"+key, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
+
+	t.Run("accepts the days shape and echoes it", func(t *testing.T) {
+		svc, repo := setupAdminSettings(t)
+		w := putSetting(t, svc, settings.KeyVIPRetention, `{"days":30}`)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+		got, err := repo.Get(t.Context(), settings.KeyVIPRetention)
+		if err != nil || got.Value.Days == nil || *got.Value.Days != 30 {
+			t.Errorf("persisted value = %+v err=%v, want days=30", got.Value, err)
+		}
+	})
+
+	t.Run("clears back to follow-global with null days", func(t *testing.T) {
+		svc, repo := setupAdminSettings(t)
+		w := putSetting(t, svc, settings.KeyVIPRetention, `{"days":null}`)
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d, body: %s", w.Code, w.Body.String())
+		}
+		got, _ := repo.Get(t.Context(), settings.KeyVIPRetention)
+		if got.Value.Days != nil {
+			t.Errorf("persisted days = %v, want nil", *got.Value.Days)
+		}
+	})
+
+	t.Run("rejects the enabled shape on the days key", func(t *testing.T) {
+		svc, _ := setupAdminSettings(t)
+		w := putSetting(t, svc, settings.KeyVIPRetention, `{"enabled":true}`)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 invalid_setting_value, got %d, body: %s", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "invalid_setting_value") {
+			t.Errorf("expected invalid_setting_value code, body: %s", w.Body.String())
+		}
+	})
+
+	t.Run("rejects the days shape on the vip switch key", func(t *testing.T) {
+		svc, _ := setupAdminSettings(t)
+		w := putSetting(t, svc, settings.KeyVIP, `{"days":5}`)
+		if w.Code != http.StatusBadRequest {
+			t.Fatalf("expected 400 invalid_setting_value, got %d, body: %s", w.Code, w.Body.String())
+		}
+		if !strings.Contains(w.Body.String(), "invalid_setting_value") {
+			t.Errorf("expected invalid_setting_value code, body: %s", w.Body.String())
+		}
+	})
+}
+
 func TestAdminSettings(t *testing.T) {
 	actor := &user.User{ID: 1, Role: user.RoleAdmin}
 

@@ -40,11 +40,17 @@ type User struct {
 	// VIP is the durable per-user honorific granted by the GitHub-login
 	// strategy and admin-manageable afterwards; it carries no authority
 	// (MRFC 2026-08-23-user-vip-flag).
-	VIP          bool       `json:"vip" gorm:"column:vip;not null;default:false"`
-	LastLoginAt  *time.Time `json:"last_login_at"`
-	TokenVersion int64      `json:"-" gorm:"not null;default:0"`
-	CreatedAt    time.Time  `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt    time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
+	VIP bool `json:"vip" gorm:"column:vip;not null;default:false"`
+	// RetentionDays is the per-user history retention policy (MRFC
+	// 2026-08-31-per-user-history-retention-policy): nil inherits each
+	// table's global config, 0 keeps forever (reusing [post]
+	// retention_days' 0 = never encoding), 1–3650 keeps N days. One value
+	// drives both the posts and delivery_history prune windows.
+	RetentionDays *int       `json:"retention_days" gorm:"column:retention_days"`
+	LastLoginAt   *time.Time `json:"last_login_at"`
+	TokenVersion  int64      `json:"-" gorm:"not null;default:0"`
+	CreatedAt     time.Time  `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt     time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
 }
 
 // IsAdmin returns true if the user has the admin role.

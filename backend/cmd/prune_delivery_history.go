@@ -34,7 +34,11 @@ func RunPruneDeliveryHistory(configPath string, dryRun bool, batchSize int) erro
 	retention := cfg.Delivery.HistoryRetention
 
 	if dryRun {
-		fmt.Printf("Dry run: delivery_history rows older than %s would be deleted\n", retention)
+		count, err := attemptRepo.CountHistoryExpired(context.Background(), retention)
+		if err != nil {
+			return fmt.Errorf("failed to count expired delivery history: %w", err)
+		}
+		fmt.Printf("Dry run: %d delivery_history rows past their effective retention would be deleted\n", count)
 		return nil
 	}
 

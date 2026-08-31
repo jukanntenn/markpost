@@ -135,16 +135,17 @@ func (r *PostRepository) DeleteByQID(ctx context.Context, qid string, ownerID in
 	return deleteWhere[post.Post](ctx, q)
 }
 
-// PruneExpired deletes expired posts based on retention days. It returns the
+// PruneExpired deletes expired posts based on retention days. retentionDays is
+// the global fallback; a user's retention_days overrides it per row (0 = keep
+// forever, MRFC 2026-08-31-per-user-history-retention-policy). It returns the
 // QIDs of the deleted posts so the caller can drop their origin render-cache
 // entries. It does not issue CDN purges — stale delivery of already-expired
 // ephemeral content is harmless, and prune volume can be large.
 func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, batchSize int) ([]string, error) {
-	expiredBefore := time.Now().AddDate(0, 0, -retentionDays)
 	var pruned []string
 
 	for {
-		rows, err := r.getQIDsBefore(ctx, expiredBefore, batchSize)
+		rows, err := r.getQIDsExpired(ctx, retentionDays, batchSize)
 		if err != nil {
 			return pruned, fmt.Errorf("PruneExpired: %w", err)
 		}
@@ -174,10 +175,39 @@ func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, ba
 	return pruned, nil
 }
 
-// CountExpired counts expired posts based on retention days.
+// CountExpired counts expired posts based on retention days (per-user
+// retention_days overrides the global fallback, same predicate as PruneExpired).
 func (r *PostRepository) CountExpired(ctx context.Context, retentionDays int) (int64, error) {
-	expiredBefore := time.Now().AddDate(0, 0, -retentionDays)
-	return countQuery(ctx, r.db.Model(&post.Post{}).Where("created_at < ?", expiredBefore), "CountExpired")
+	var count int64
+	if err := r.db.WithContext(ctx).
+		Raw("SELECT COUNT(*) FROM posts p JOIN users u ON u.id = p.user_id WHERE "+expiredPostsPredicate,
+			globalCutoffArg(retentionDays)).
+		Scan(&count).Error; err != nil {
+		return 0, fmt.Errorf("CountExpired: %w", err)
+	}
+	return count, nil
+}
+
+// expiredPostsPredicate is the per-row expiry predicate shared by PruneExpired
+// and CountExpired. The cutoff is derived per row: an explicit user
+// retention_days wins (0 = forever → the NULL cutoff excludes the row via the
+// NULL comparison), otherwise the global fallback applies — and a global 0
+// (never expire) passes a NULL cutoff too, excluding every inheriting row.
+// posts.user_id is NOT NULL with ON DELETE CASCADE, so the JOIN always resolves.
+const expiredPostsPredicate = `p.created_at < CASE
+    WHEN u.retention_days = 0 THEN NULL
+    WHEN u.retention_days IS NOT NULL THEN now() - make_interval(days => u.retention_days)
+    ELSE ?
+END`
+
+// globalCutoffArg returns the fallback cutoff for inherit rows: now minus
+// retentionDays, or nil (a NULL that excludes every such row) when the global
+// config says never expire.
+func globalCutoffArg(retentionDays int) any {
+	if retentionDays == 0 {
+		return nil
+	}
+	return time.Now().AddDate(0, 0, -retentionDays)
 }
 
 type expiredRow struct {
@@ -185,18 +215,14 @@ type expiredRow struct {
 	QID string `gorm:"column:qid"`
 }
 
-func (r *PostRepository) getQIDsBefore(ctx context.Context, before time.Time, limit int) ([]expiredRow, error) {
+func (r *PostRepository) getQIDsExpired(ctx context.Context, retentionDays, limit int) ([]expiredRow, error) {
 	var rows []expiredRow
 
-	queryBuilder := r.db.WithContext(ctx).Model(&post.Post{}).
-		Select("id, qid").
-		Where("created_at < ?", before)
-	if limit > 0 {
-		queryBuilder = queryBuilder.Limit(limit)
-	}
-
-	if err := queryBuilder.Scan(&rows).Error; err != nil {
-		return nil, fmt.Errorf("getQIDsBefore: %w", err)
+	sql := `SELECT p.id, p.qid FROM posts p JOIN users u ON u.id = p.user_id
+	        WHERE ` + expiredPostsPredicate + `
+	        ORDER BY p.created_at LIMIT ?`
+	if err := r.db.WithContext(ctx).Raw(sql, globalCutoffArg(retentionDays), limit).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("getQIDsExpired: %w", err)
 	}
 
 	return rows, nil

@@ -45,9 +45,13 @@ type AttemptRepository interface {
 	// observability.
 	CountByStatus(ctx context.Context) (map[Status]int64, error)
 	// PruneHistory deletes delivery_history rows older than the retention
-	// window in batches of batchSize, returning the total deleted. It uses the
-	// portable subquery-LIMIT form.
+	// window in batches of batchSize, returning the total deleted. retention is
+	// the global fallback; a user's retention_days overrides it per row (0 =
+	// keep forever), and anonymous rows (user_id NULL) use the global window.
+	// It uses the portable subquery-LIMIT form.
 	PruneHistory(ctx context.Context, retention time.Duration, batchSize int) (int64, error)
+	// CountHistoryExpired counts the rows PruneHistory would delete (dry-run).
+	CountHistoryExpired(ctx context.Context, retention time.Duration) (int64, error)
 	// ListHistory returns delivery history (newest first), paginated, with the
 	// post title/qid, channel name, and username JOINed at read time. filter
 	// scopes the result: OwnerID > 0 limits to one user (NULL user_id rows are

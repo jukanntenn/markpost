@@ -10,7 +10,7 @@ description: >
 
 # Release Process
 
-Safe release workflow for markpost. Every step validates before proceeding; failures report the problem + suggestion then STOP — never auto-fix.
+Safe release workflow for markpost on the development loop's rails: the version bump lands through a `release/**` pull request — `main` accepts nothing else — and the tag pushed after that merge triggers publication. Every step validates before proceeding; failures report the problem + suggestion then STOP — never auto-fix.
 
 ## Prerequisites
 
@@ -18,6 +18,7 @@ Verify clean tree and identify current state:
 
 ```bash
 git status                         # must be clean
+git fetch origin && git status -sb # must not be behind origin/main
 grep '"version"' frontend/package.json  # current version (field "version": "X.Y.Z")
 git describe --tags --abbrev=0 2>/dev/null || echo "NO_TAGS"  # last tag (may not exist yet)
 ```
@@ -39,9 +40,9 @@ Fail → report which check failed (lint/test/build) + the specific violations, 
 
 ### Step 2: Version Bump
 
-1. Show commits since last tag (or since initial commit if no tags):
+1. Show commits since last tag (or since initial commit if no tags) — skip merge commits, they carry no change information:
    ```bash
-   git log --oneline <last_tag_or_initial>..HEAD
+   git log --oneline --no-merges <last_tag_or_initial>..HEAD
    ```
 2. **Determine version number:**
    - If the user provided a version number → **validate it:**
@@ -64,7 +65,7 @@ Fail → report which check failed (lint/test/build) + the specific violations, 
 
 ### Step 3: Update CHANGELOG
 
-1. Derive changes from `git log --oneline <last_tag_or_initial>..HEAD`
+1. Derive changes from `git log --oneline --no-merges <last_tag_or_initial>..HEAD`
 2. If `CHANGELOG.md` does not exist yet, create it with header:
    ```
    # Changelog
@@ -117,7 +118,7 @@ Steps 1–4 complete:
 - CHANGELOG: updated
 - READMEs: verified consistent
 
-Ready to commit and publish? Confirm to continue.
+Ready to open the release pull request? Confirm to continue.
 ```
 
 Do NOT proceed until the user gives a **clear affirmative response** (e.g. ok / 确认 / yes / 行 / 好的 / LGTM / 没问题 / 可以 / proceed / confirm). If the user objects or requests changes, address them and re-present the updated summary.
@@ -126,7 +127,7 @@ Do NOT proceed until the user gives a **clear affirmative response** (e.g. ok / 
 
 ---
 
-## Steps 5–8: Commit & Publish Phase
+## Steps 5–9: Landing & Publish Phase
 
 ### Step 5: Verify Release Workflows
 
@@ -154,42 +155,91 @@ cat .github/workflows/docker-publish.yml
 
 If either file is missing or incomplete → report, explain what's expected, and ask user to confirm before continuing.
 
-### Step 6: Commit
+### Step 6: Release Branch + Commit
 
 ```bash
+git switch main && git pull --ff-only   # the release cuts from current main
+git switch -c release/vX.Y.Z            # prerelease: release/vX.Y.Z-rc.N (hyphen required)
 git add frontend/package.json CHANGELOG.md
 git commit -m "chore: release vX.Y.Z"
 ```
 
 Verify: `git log --oneline -1` shows the commit, `git status` is clean. Hook failure → report output, STOP. Never `--no-verify`.
 
-### Step 7: Tag
+The branch name is load-bearing: `policy.py` exempts exactly `release/**` head branches from the issue-policy intake checks, so a release cut from any other branch name fails the required `Issue policy` check and can never merge.
+
+### Step 7: Open the Pull Request
+
+Follow the loop's machine-account rule for every GitHub operation: the release PR is machine-authored, so the maintainer's approving review is its gate — a maintainer-authored PR deadlocks on include-administrators (nobody approves their own pull request, and approval belongs to the human alone).
 
 ```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"            # stable
-git tag -a vX.Y.Z-rc.N -m "Release vX.Y.Z-rc.N"  # prerelease (hyphen required)
+git push -u origin release/vX.Y.Z
+gh pr create --base main --title "chore: release vX.Y.Z" --body "$(cat <<'EOF'
+关联 Issue：（无 —— release PR，走 issue-policy 的 release/** 豁免）
+
+**Ask-first 项**：无
+
+<details>
+<summary>变更与验证</summary>
+
+- 变更：版本号 X.Y.Z（frontend/package.json）+ CHANGELOG 的 [X.Y.Z] 条目
+- 验证：prek run --all-files 与 pre-push 阶段全绿；README 双语一致性已核对
+- 合并后将为 main 上的合并提交打 tag vX.Y.Z 并推送，该 tag 触发 release.yml 与 docker-publish.yml 发布
+</details>
+EOF
+)"
+gh pr edit <number> --add-reviewer jukanntenn
 ```
 
-Verify: `git tag -l "vX.Y.Z"` returns exactly the tag. If tag already exists → report, STOP.
+No `area/*` label and no issue reference — bare by design; the `release/**` head branch carries the exemption. Record the PR number for the steps below.
 
-### Step 8: Push
+The PR approval is the delivery gate AND the consent to publish: merging is followed mechanically by the tag push (Step 9), so the reviewer approves both at once — no separate publish confirmation exists.
 
-Confirm with user first — **destructive, visible to others**:
+### PAUSE — Human Approval Gate
+
+Wait for the maintainer's approving review; gates are asynchronous and the session may end here. Any later session resumes at Step 8 when triage finds the `release/**` PR approved and green.
+
+### Step 8: Preflight, Merge, Cleanup
+
+Fetch live state; never trust an earlier report:
 
 ```bash
-git push && git push --tags
+gh pr view <number> --json state,isDraft,reviewDecision,statusCheckRollup,mergeStateStatus
 ```
+
+Require ALL: open, non-draft, `reviewDecision: APPROVED`, every check green (the five `* conclusion` checks + `Issue policy`), no unresolved change requests. Anything less → report, STOP.
+
+```bash
+gh pr merge <number> --merge   # a merge commit — the repository's only merge method
+```
+
+Verify `gh pr view <number> --json state,mergedAt` reports `MERGED` — a queued request is not a landed one. Then clean up:
+
+```bash
+gh pr list --state open --base release/vX.Y.Z --json number --jq length   # must print 0
+git push origin --delete release/vX.Y.Z
+git switch main && git branch -D release/vX.Y.Z
+```
+
+### Step 9: Tag & Publish
+
+```bash
+git switch main && git pull --ff-only   # HEAD is now the release merge commit
+git tag -a vX.Y.Z -m "Release vX.Y.Z"   # prerelease: vX.Y.Z-rc.N (hyphen required)
+git tag -l "vX.Y.Z"                     # must return exactly the tag; exists already → report, STOP
+git push origin vX.Y.Z
+```
+
+Tag the merge commit on `main`, never a pre-merge branch head — the tag publishes what the delivery gate accepted. The tag push — not any branch push — is what triggers both workflows; the PR approval already covers it, so no further pause. Rejected push → report error, STOP. Never force push.
 
 Then provide monitoring URLs:
 
 - GitHub Release: `https://github.com/jukanntenn/markpost/actions/workflows/release.yml`
 - Docker publish: `https://github.com/jukanntenn/markpost/actions/workflows/docker-publish.yml`
 
-Rejected → report error, STOP. Never force push.
-
 ---
 
-## Step 9: Post-Release Verification
+## Step 10: Post-Release Verification
 
 Provide user with:
 
@@ -202,7 +252,7 @@ Provide user with:
    no `v` prefix); `latest` must also have moved, but ONLY for stable releases
    → `https://hub.docker.com/r/jukanntenn/markpost/tags`
 4. **Version checklist**: confirm `frontend/package.json` shows X.Y.Z
-5. **Rollback options**:
-   - Delete the tag: `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`
-   - Edit or delete the GitHub Release manually via the web UI
-   - If commit hasn't been pushed yet, `git reset --soft HEAD~1` to undo the release commit
+5. **Rollback options** (one per stage):
+   - PR open, not merged: close the PR, `git push origin --delete release/vX.Y.Z`, delete the local branch — nothing landed.
+   - Merged, not yet tagged: revert the merge commit through a pull request — `main` is protected, no direct pushes.
+   - Tagged: delete the tag `git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`, and edit or delete the GitHub Release manually via the web UI.

@@ -20,7 +20,9 @@ default_install_hook_types = ["pre-commit", "pre-push", "commit-msg"]
 [[repos]]
 repo = "builtin"
 hooks = [
-  { id = "check-yaml" },
+  # ansible-vault files use !vault tags — valid Ansible, unparsable as plain
+  # YAML; newer prek check-yaml builds reject them, so they are excluded.
+  { id = "check-yaml", exclude = "^devops/ansible/group_vars/[^/]+/vault\\.yml$" },
   { id = "check-toml" },
   { id = "check-json" },
   { id = "check-merge-conflict" },

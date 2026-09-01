@@ -49,3 +49,14 @@ app_dirs:
   - "{{ app_path }}"
   - "{{ app_path }}/data"
   - "{{ app_path }}/certs"
+
+# Beszel metrics agent (the hub is ops-managed on a separate server; this repo
+# automates only the agent — see docs/monitoring.md for the split). The deploy
+# installs the agent only when beszel_hub_url is defined, mirroring the
+# heartbeat's setup-order contract: add beszel_hub_url (the hub's /beszel/agent
+# WebSocket URL) and beszel_agent_key (the hub's PUBLIC key, not a secret —
+# shown when adding a system in the hub) once the hub exists; removing the
+# vars does not uninstall. Pin deliberately: bump only after reviewing the
+# release notes.
+beszel_agent_version: "0.18.8"
+beszel_agent_image: "henrygd/beszel-agent:{{ beszel_agent_version }}"

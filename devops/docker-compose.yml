@@ -59,6 +59,10 @@ services:
       - FRONTEND_PORT=3034
       - BACKEND_URL=http://backend:7330
       - NEXT_TELEMETRY_DISABLED=1
+      # pnpm runs non-interactive here (dev.py starts detached): without CI it
+      # aborts a needed node_modules purge with ERR_PNPM_ABORTED_REMOVE_
+      # MODULES_DIR_NO_TTY.
+      - CI=true
     ports:
       - "3034:3034"
     volumes:

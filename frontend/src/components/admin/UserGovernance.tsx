@@ -50,10 +50,12 @@ export function UserActionsMenu({
   user,
   onOpenDetail,
   onAction,
+  onSetRetention,
 }: {
   user: AdminUser
   onOpenDetail: (user: AdminUser) => void
   onAction: (action: PendingAction) => void
+  onSetRetention?: (user: AdminUser) => void
 }) {
   const t = useTranslations('admin.users')
   const tRole = useTranslations('admin')
@@ -98,6 +100,11 @@ export function UserActionsMenu({
         <Menu.Item onClick={() => onAction({ kind: 'setVip', to: !user.vip })}>
           {user.vip ? t('vip.revokeVip') : t('vip.grantVip')}
         </Menu.Item>
+        {onSetRetention && (
+          <Menu.Item onClick={() => onSetRetention(user)}>
+            {t('retention.setAction')}
+          </Menu.Item>
+        )}
         <Menu.Item onClick={() => onAction({ kind: 'reset' })}>
           {t('resetPassword')}
         </Menu.Item>

@@ -5,6 +5,8 @@ import type {
   AdminResetPasswordResponse,
   AdminStatsResponse,
   AdminSettingsResponse,
+  RetentionImpact,
+  RetentionDefaults,
 } from '@/types/users'
 import type { AdminPostsResponse } from '@/types/posts'
 import type {
@@ -60,7 +62,10 @@ export const adminApi = {
       json: { vip },
     }),
 
-  // Runtime settings (v1: the github-login VIP strategy switch, key "vip").
+  // Runtime settings: the github-login VIP strategy switch (key "vip", the
+  // {"enabled"} shape) and the VIP-class retention default (key
+  // "vip_retention_days", the {"days"} shape; null = follow the global
+  // config).
   listSettings: () => request<AdminSettingsResponse>('/api/v1/admin/settings'),
 
   updateSetting: (key: string, enabled: boolean) =>
@@ -68,6 +73,40 @@ export const adminApi = {
       method: 'PUT',
       json: { enabled },
     }),
+
+  updateSettingDays: (key: string, days: number | null) =>
+    request<AdminSettingsResponse>(`/api/v1/admin/settings/${key}`, {
+      method: 'PUT',
+      json: { days },
+    }),
+
+  // MRFC 2026-08-31-per-user-history-retention-policy.
+  setUserRetention: (id: number, retentionDays: number | null) =>
+    request<AdminUser>(`/api/v1/admin/users/${id}/retention`, {
+      method: 'PATCH',
+      json: { retention_days: retentionDays },
+    }),
+
+  bulkSetRetention: (
+    target: { user_ids: number[] } | { scope: 'vip' },
+    retentionDays: number | null,
+  ) =>
+    request<{ updated: number }>('/api/v1/admin/users/retention/bulk', {
+      method: 'POST',
+      json: { ...target, retention_days: retentionDays },
+    }),
+
+  retentionImpact: (
+    target: { user_ids: number[] } | { scope: 'vip' },
+    retentionDays: number | null,
+  ) =>
+    request<RetentionImpact>('/api/v1/admin/retention/impact', {
+      method: 'POST',
+      json: { ...target, retention_days: retentionDays },
+    }),
+
+  retentionDefaults: () =>
+    request<RetentionDefaults>('/api/v1/admin/retention/defaults'),
 
   deleteUser: (id: number) =>
     request<void>(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),

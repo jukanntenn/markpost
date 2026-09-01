@@ -1,0 +1,20 @@
+# Beszel agent — host and container metrics for the markpost VPS. The hub is a
+# separate ops-managed server; this compose is the repo-owned half (see
+# docs/monitoring.md). Rendered by deploy.yml only when beszel_hub_url is
+# defined, so the deploy stays green until the hub exists and the vars are set.
+services:
+  beszel-agent:
+    image: {{ beszel_agent_image }}
+    container_name: beszel-agent
+    restart: unless-stopped
+    # Host network: the agent reads host-level counters directly. Its only
+    # remote traffic is the outbound WebSocket to HUB_URL — nothing inbound.
+    network_mode: host
+    volumes:
+      # Read-only: limits mutation, not visibility — container stats only.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      PORT: "45876"
+      # The hub's public key — not a secret (group_vars/production/vars.yml).
+      KEY: "{{ beszel_agent_key }}"
+      HUB_URL: "{{ beszel_hub_url }}"

@@ -2,7 +2,7 @@
 
 English | [中文](monitoring.zh.md)
 
-markpost's availability is monitored by a self-hosted [uptime-kuma](https://github.com/louislam/uptime-kuma) instance probing production and staging from outside, plus a reverse heartbeat from the production host. Alerts go to Feishu (primary) and email (fallback). This runbook owns the monitor inventory, notification setup, alert policy, and the heartbeat's deploy/remove procedures.
+markpost's availability is monitored by a self-hosted [uptime-kuma](https://github.com/louislam/uptime-kuma) instance probing production and staging from outside, plus a reverse heartbeat from the production host; a Beszel agent on the origin reports host and container metrics to an off-site hub. Alerts go to Feishu (primary) and email (fallback). This runbook owns the monitor inventory, notification setup, alert policy, and the heartbeat's deploy/remove procedures.
 
 <a id="probe-model"></a>
 
@@ -70,14 +70,45 @@ The deploy tasks in [`deploy.yml`](../devops/ansible/deploy.yml) install the scr
 
 Removal is manual (the deploy never uninstalls): delete `/etc/supervisor/conf.d/markpost-heartbeat.conf`, then `sudo supervisorctl reread && sudo supervisorctl update`, and delete the vault variable.
 
+<a id="host-metrics"></a>
+
+## Host metrics (Beszel)
+
+The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a hub on a separate ops-managed server. Design record: [host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.md) and [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.md).
+
+**Agent (repo-automated, production only).** A one-service compose project at `~/docker/beszel-agent`, rendered from [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2): pinned `henrygd/beszel-agent`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network plus per-container stats for `markpost` and `markpost-postgres`, and reaches the hub by outbound WebSocket only — the firewall opens nothing.
+
+**Hub (ops-owned, outside this repo).** Deploy per [beszel.dev](https://beszel.dev) (docker compose, embedded SQLite) on its own server behind TLS. Add a system for ttyo there and copy the public key it shows.
+
+**Alerts.** Dual warning/critical thresholds on the hub; suggested starting points, tuned after a week of curves:
+
+| Metric                     | warning / critical |
+| -------------------------- | ------------------ |
+| Disk usage                 | 80% / 90%          |
+| Memory                     | 80% / 92%          |
+| CPU                        | 85% / 95%          |
+| System status (agent down) | — / any            |
+
+Notifications go to the same Feishu channel as kuma (shoutrrr `lark://` URL configured on the hub).
+
+**Setup order.**
+
+1. Ops: bring the hub up on its server, add a system, copy the public key.
+2. Set `beszel_hub_url` (the hub's `/beszel/agent` WebSocket URL) and `beszel_agent_key` (the public key — not a secret) in `devops/ansible/group_vars/production/vars.yml`.
+3. `ansible-playbook devops/ansible/deploy.yml -e target=production` — the deploy installs the agent only once both vars exist.
+4. Verify: `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` shows the agent running, and the hub's system page shows live data.
+
+Removal is manual (the deploy never uninstalls): `docker compose -f ~/docker/beszel-agent/docker-compose.yml down`, delete `~/docker/beszel-agent`, delete the two vars.
+
 <a id="alert-triage"></a>
 
 ## Alert triage
 
-| Red monitors                           | Meaning                                          | First action                                                  |
-| -------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------- |
-| user path + readiness + heartbeat      | Total origin outage                              | SSH to ttyo; `docker compose ps`, container logs              |
-| user path + readiness, heartbeat green | Cloudflare / edge path failure; origin alive     | Cloudflare dashboard; origin is fine                          |
-| user path only                         | Static export or CDN cache issue                 | Compare `/` vs `/api/v1/ready` by curl; check the release     |
-| readiness (503) + heartbeat `down`     | Database failure                                 | `docker compose logs postgres`; disk space                    |
-| heartbeat only                         | Heartbeat loop, supervisor, or kuma reachability | `sudo supervisorctl status markpost-heartbeat`; heartbeat log |
+| Red monitors                           | Meaning                                          | First action                                                                      |
+| -------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| user path + readiness + heartbeat      | Total origin outage                              | SSH to ttyo; `docker compose ps`, container logs                                  |
+| user path + readiness, heartbeat green | Cloudflare / edge path failure; origin alive     | Cloudflare dashboard; origin is fine                                              |
+| user path only                         | Static export or CDN cache issue                 | Compare `/` vs `/api/v1/ready` by curl; check the release                         |
+| readiness (503) + heartbeat `down`     | Database failure                                 | `docker compose logs postgres`; disk space                                        |
+| heartbeat only                         | Heartbeat loop, supervisor, or kuma reachability | `sudo supervisorctl status markpost-heartbeat`; heartbeat log                     |
+| Beszel agent offline (via Feishu)      | ttyo alive but agent/route/hub trouble           | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`; hub reachability |

@@ -12,6 +12,11 @@ compose_file: "{{ app_path }}/docker-compose.yml"
 config_file: "{{ app_path }}/config.toml"
 caddyfile: "{{ app_path }}/Caddyfile"
 
+# Beszel metrics agent — its own compose project, a sibling of the app, so
+# monitoring and app deploys stay independent (production only; see
+# docs/monitoring.md and the Beszel topology MRFC).
+beszel_agent_path: "{{ apps_path }}/beszel-agent"
+
 # Internal ports are identical across every environment:
 #   - Go backend listens on 7330 (server.port default, never published).
 #   - Caddy listens on 2053 inside the container and is the only published port.

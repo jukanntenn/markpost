@@ -181,6 +181,38 @@
       when: env == 'production' and kuma_heartbeat_url is defined
       notify: Update markpost heartbeat supervisor program
 
+    # Host metrics agent (production only): the Beszel agent in its own compose
+    # project, a sibling of the app. The hub lives on a separate ops-managed
+    # server — the repo automates only this half. Guarded on beszel_hub_url
+    # (a plain group_vars value added once the hub exists), mirroring the
+    # heartbeat's setup-order contract; removing the var does not uninstall.
+    - name: Ensure beszel-agent directory exists
+      ansible.builtin.file:
+        path: "{{ beszel_agent_path }}"
+        state: directory
+        mode: "0755"
+      when: env == 'production' and beszel_hub_url is defined
+
+    - name: Template beszel-agent compose
+      ansible.builtin.template:
+        src: beszel-agent-compose.yml.j2
+        dest: "{{ beszel_agent_path }}/docker-compose.yml"
+        mode: "0644"
+      when: env == 'production' and beszel_hub_url is defined
+
+    - name: Pull beszel-agent image
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ beszel_agent_path }}"
+      when: env == 'production' and beszel_hub_url is defined
+
+    - name: Start beszel-agent and wait until running
+      community.docker.docker_compose_v2:
+        project_src: "{{ beszel_agent_path }}"
+        state: present
+        wait: true
+        wait_timeout: 120
+      when: env == 'production' and beszel_hub_url is defined
+
     # Post-deploy verification from the controller, through the URL real
     # visitors use (LAN IP / tunnel / Cloudflare). Compose's wait only proves
     # the container healthcheck passes inside the container; this also catches

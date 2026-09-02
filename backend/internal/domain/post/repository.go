@@ -29,4 +29,8 @@ type Repository interface {
 	DeleteByQID(ctx context.Context, qid string, ownerID int) (int64, error)
 	PruneExpired(ctx context.Context, retentionDays int, batchSize int) ([]string, error)
 	CountExpired(ctx context.Context, retentionDays int) (int64, error)
+	// CountExpiringForUsers counts posts of the targeted users past the
+	// cutoff (retention impact preview); nil cutoff matches nothing, vipOnly
+	// targets every VIP user instead of explicit ids.
+	CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error)
 }

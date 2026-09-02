@@ -628,6 +628,17 @@
           "enabled": "VIP 策略已开启",
           "disabled": "VIP 策略已关闭"
         }
+      },
+      "retention": {
+        "column": "保留策略",
+        "selectMode": "批量选择",
+        "selectAll": "全选本页",
+        "inheritWithDefault": "默认 · {n} 天",
+        "selected": "已选 {n} 位用户",
+        "setPolicy": "设置保留策略",
+        "exitSelect": "退出选择",
+        "setAction": "保留策略…",
+        "setLink": "设置…"
       }
     },
     "userDialog": {
@@ -718,6 +729,51 @@
       "emptyFiltered": "没有匹配的投递记录",
       "error": "加载失败",
       "total": "共 {n} 条"
+    },
+    "retention": {
+      "title": "设置保留策略",
+      "subtitle": "对象：{target}",
+      "subtitleSingle": "对象：{name}，当前：",
+      "targets": {
+        "bulk": "已选 {n} 位用户",
+        "vip": "全体 VIP 用户（{n} 位）"
+      },
+      "segments": {
+        "inherit": "继承全局默认",
+        "forever": "永久保存",
+        "days": "保留 N 天"
+      },
+      "presetDays": "{n} 天",
+      "daysInputLabel": "保留天数",
+      "daysUnit": "天",
+      "value": {
+        "inherit": "默认",
+        "forever": "永久",
+        "days": "{n} 天"
+      },
+      "checking": "正在检查影响…",
+      "confirmSet": "确认设置",
+      "confirmDelete": "确认删除",
+      "impact": {
+        "title": "保留窗口缩短，以下数据将在下次清理时删除：",
+        "counts": "{posts} 篇文章 · {history} 条投递记录",
+        "typeConfirm": "输入 DELETE 以确认"
+      },
+      "toasts": {
+        "applied": "已为 {n} 位用户设置保留策略"
+      },
+      "vipPolicy": {
+        "classDefault": "新 VIP 保留策略",
+        "followGlobal": "跟随全局",
+        "forever": "永久",
+        "nDays": "N 天",
+        "daysUnit": "天",
+        "applyAll": "应用到全部 VIP 用户（{n} 位）",
+        "applyAllLoading": "应用到全部 VIP 用户",
+        "toasts": {
+          "saved": "VIP 保留策略已保存"
+        }
+      }
     }
   },
   "forbidden": {

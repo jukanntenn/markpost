@@ -175,6 +175,25 @@ func (r *PostRepository) PruneExpired(ctx context.Context, retentionDays int, ba
 	return pruned, nil
 }
 
+// CountExpiringForUsers counts posts of the targeted users past the cutoff
+// (retention impact preview). A nil cutoff (candidate = keep forever) matches
+// nothing. vipOnly targets every VIP user instead of explicit ids.
+func (r *PostRepository) CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error) {
+	if cutoff == nil {
+		return 0, nil
+	}
+	q := r.db.Model(&post.Post{}).Where("created_at < ?", *cutoff)
+	if vipOnly {
+		q = q.Where("user_id IN (SELECT id FROM users WHERE vip = TRUE)")
+	} else {
+		if len(userIDs) == 0 {
+			return 0, nil
+		}
+		q = q.Where("user_id IN ?", userIDs)
+	}
+	return countQuery(ctx, q, "CountExpiringForUsers")
+}
+
 // CountExpired counts expired posts based on retention days (per-user
 // retention_days overrides the global fallback, same predicate as PruneExpired).
 func (r *PostRepository) CountExpired(ctx context.Context, retentionDays int) (int64, error) {

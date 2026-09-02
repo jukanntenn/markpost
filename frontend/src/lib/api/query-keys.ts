@@ -38,6 +38,9 @@ export const deliveryKeys = {
 export const adminKeys = {
   all: () => ['admin'] as const,
   settings: () => [...adminKeys.all(), 'settings'] as const,
+  retention: {
+    defaults: () => [...adminKeys.all(), 'retention', 'defaults'] as const,
+  },
   users: {
     all: () => [...adminKeys.all(), 'users'] as const,
     list: (page: number, search?: string) =>

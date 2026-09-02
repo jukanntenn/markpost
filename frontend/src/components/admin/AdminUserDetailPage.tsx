@@ -22,6 +22,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatusBadge } from './AdminUsersPage'
 import { UserGovernanceDialogs, type PendingAction } from './UserGovernance'
+import { RetentionDialog, RetentionPolicyText } from './RetentionDialog'
 import { auditActionText } from '@/lib/audit-action-text'
 
 // D3.2 用户详情页（/admin/users?id=，静态导出约束）：资料 + 治理操作
@@ -39,6 +40,7 @@ export function AdminUserDetailPage() {
 
   const userId = Number.parseInt(searchParams.get('id') ?? '', 10)
   const [action, setAction] = useState<PendingAction | null>(null)
+  const [retentionOpen, setRetentionOpen] = useState(false)
 
   const userQuery = useQuery({
     queryKey: adminKeys.users.detail(userId),
@@ -226,6 +228,19 @@ export function AdminUserDetailPage() {
                   />
                   <ProfileRow label={tUsers('detail.vip')} value="">
                     {user.vip ? <VipBadge /> : <span>—</span>}
+                  </ProfileRow>
+                  <ProfileRow label={tUsers('retention.column')}>
+                    <span className="flex items-center gap-2">
+                      <RetentionPolicyText days={user.retention_days} />
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setRetentionOpen(true)}
+                        data-testid="detail-set-retention"
+                      >
+                        {tUsers('retention.setLink')}
+                      </button>
+                    </span>
                   </ProfileRow>
                   <ProfileRow
                     label={t('lastLoginAt')}
@@ -458,6 +473,19 @@ export function AdminUserDetailPage() {
           user={user}
           action={action}
           onClose={() => setAction(null)}
+        />
+      )}
+
+      {retentionOpen && user && (
+        <RetentionDialog
+          target={{
+            kind: 'user',
+            id: user.id,
+            username: user.username,
+            current: user.retention_days,
+          }}
+          open={retentionOpen}
+          onOpenChange={setRetentionOpen}
         />
       )}
     </div>

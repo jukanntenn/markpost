@@ -19,6 +19,10 @@ func (failingVIPStrategy) VIPStrategyEnabled(context.Context) (bool, error) {
 	return false, errStrategyRead
 }
 
+func (failingVIPStrategy) VIPRetentionDays(context.Context) (*int, error) {
+	return nil, errStrategyRead
+}
+
 // TestGrantVIPForGitHubLogin covers the grant strategy semantics (MRFC
 // 2026-08-23-github-login-vip-grant-strategy): grant while enabled, no write
 // in either direction while disabled, fail toward not-granting on a read
@@ -65,7 +69,7 @@ func TestGrantVIPForGitHubLogin(t *testing.T) {
 	t.Run("skips the write for an already-vip user", func(t *testing.T) {
 		f := setup(t)
 		u, _ := f.users.Create(ctx, "vip@example.com", "vipuser", "pass")
-		if err := f.users.SetUserVIP(ctx, u.ID, true); err != nil {
+		if err := f.users.SetUserVIP(ctx, u.ID, true, nil); err != nil {
 			t.Fatalf("seed vip: %v", err)
 		}
 		u.VIP = true
@@ -88,7 +92,7 @@ func TestGrantVIPForGitHubLogin(t *testing.T) {
 			t.Error("expected no grant while disabled")
 		}
 
-		if err := f.users.SetUserVIP(ctx, plain.ID, true); err != nil {
+		if err := f.users.SetUserVIP(ctx, plain.ID, true, nil); err != nil {
 			t.Fatalf("seed vip: %v", err)
 		}
 		plain.VIP = true

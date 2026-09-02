@@ -628,6 +628,17 @@
           "enabled": "VIP strategy enabled",
           "disabled": "VIP strategy disabled"
         }
+      },
+      "retention": {
+        "column": "Retention",
+        "selectMode": "Bulk select",
+        "selectAll": "Select all on this page",
+        "inheritWithDefault": "Default · {n} days",
+        "selected": "{n} selected",
+        "setPolicy": "Set retention",
+        "exitSelect": "Exit selection",
+        "setAction": "Retention…",
+        "setLink": "Set…"
       }
     },
     "userDialog": {
@@ -718,6 +729,51 @@
       "emptyFiltered": "No deliveries match your filters",
       "error": "Failed to load",
       "total": "{n} total"
+    },
+    "retention": {
+      "title": "Set retention policy",
+      "subtitle": "Target: {target}",
+      "subtitleSingle": "Target: {name}, current:",
+      "targets": {
+        "bulk": "{n} selected users",
+        "vip": "every VIP user ({n})"
+      },
+      "segments": {
+        "inherit": "Inherit default",
+        "forever": "Keep forever",
+        "days": "Keep N days"
+      },
+      "presetDays": "{n} days",
+      "daysInputLabel": "Retention days",
+      "daysUnit": "days",
+      "value": {
+        "inherit": "Default",
+        "forever": "Forever",
+        "days": "{n} days"
+      },
+      "checking": "Checking impact…",
+      "confirmSet": "Apply",
+      "confirmDelete": "Confirm deletion",
+      "impact": {
+        "title": "Shortening the window deletes the following at the next sweep:",
+        "counts": "{posts} posts · {history} delivery history rows",
+        "typeConfirm": "Type DELETE to confirm"
+      },
+      "toasts": {
+        "applied": "Retention policy applied to {n} user(s)"
+      },
+      "vipPolicy": {
+        "classDefault": "New-VIP retention default",
+        "followGlobal": "Follow global",
+        "forever": "Forever",
+        "nDays": "N days",
+        "daysUnit": "days",
+        "applyAll": "Apply to all VIP users ({n})",
+        "applyAllLoading": "Apply to all VIP users",
+        "toasts": {
+          "saved": "VIP retention default saved"
+        }
+      }
     }
   },
   "forbidden": {

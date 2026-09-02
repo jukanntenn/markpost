@@ -53,6 +53,9 @@ func (noopOAuthStateStore) Consume(string) (oauthStateEntry, bool) {
 // settings repository in the composition root.
 type VIPStrategyChecker interface {
 	VIPStrategyEnabled(ctx context.Context) (bool, error)
+	// VIPRetentionDays is the class default materialized onto a user at
+	// grant time (nil = follow the global config).
+	VIPRetentionDays(ctx context.Context) (*int, error)
 }
 
 // Service handles authentication operations including OAuth, JWT token management,
@@ -185,7 +188,15 @@ func (s *Service) grantVIPForGitHubLogin(ctx context.Context, u *user.User) {
 	if !enabled || u.VIP {
 		return
 	}
-	if err := s.users.SetUserVIP(ctx, u.ID, true); err != nil {
+	days, derr := s.vipStrategy.VIPRetentionDays(ctx)
+	if derr != nil && !errors.Is(derr, domain.ErrNotFound) {
+		slog.Error("vip retention default read failed; skipping grant", "error", derr, "user_id", u.ID)
+		return
+	}
+	if errors.Is(derr, domain.ErrNotFound) {
+		days = nil
+	}
+	if err := s.users.SetUserVIP(ctx, u.ID, true, days); err != nil {
 		slog.Error("vip grant write failed", "error", err, "user_id", u.ID)
 		return
 	}

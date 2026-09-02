@@ -62,3 +62,14 @@ func (r *SettingsRepository) VIPStrategyEnabled(ctx context.Context) (bool, erro
 	}
 	return s.Value.Enabled, nil
 }
+
+// VIPRetentionDays returns the VIP-class retention default. domain.ErrNotFound
+// means no row exists; a row with nil Days means no default set — callers map
+// both to "follow the global config".
+func (r *SettingsRepository) VIPRetentionDays(ctx context.Context) (*int, error) {
+	s, err := r.Get(ctx, settings.KeyVIPRetention)
+	if err != nil {
+		return nil, err
+	}
+	return s.Value.Days, nil
+}

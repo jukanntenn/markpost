@@ -85,6 +85,11 @@ export const postKeyKeys = {
   current: () => [...postKeyKeys.all()] as const,
 }
 
+export const meKeys = {
+  all: () => ['me'] as const,
+  retention: () => [...meKeys.all(), 'retention'] as const,
+}
+
 export const sessionsKeys = {
   all: () => ['auth', 'sessions'] as const,
   current: () => [...sessionsKeys.all()] as const,

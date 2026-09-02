@@ -39,6 +39,7 @@ import (
 	"markpost/internal/service/admin"
 	"markpost/internal/service/auth"
 	deliverysvc "markpost/internal/service/delivery"
+	"markpost/internal/service/me"
 	postsvc "markpost/internal/service/post"
 
 	"github.com/gin-contrib/cors"
@@ -412,6 +413,10 @@ func serve(configPath string) {
 	// 2026-08-31-per-user-history-retention-policy).
 	adminSvc.SetRetentionCounters(postRepo, historyExpiryCounter{attemptRepo}, cfg.Post.RetentionDays, cfg.Delivery.HistoryRetention)
 
+	// Self-scoped reads resolve against the same global fallback windows the
+	// prune sweeps use (MRFC 2026-09-02-user-facing-retention-visibility).
+	meSvc := me.NewService(cfg.Post.RetentionDays, cfg.Delivery.HistoryRetention)
+
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
 	// (observability.md §初始化装配).
@@ -444,7 +449,7 @@ func serve(configPath string) {
 	UseCors(r)
 
 	slog.Info("initializing rate limiting")
-	SetupRoutes(r, deliverySvc, adminSvc, sqlDB)
+	SetupRoutes(r, deliverySvc, adminSvc, meSvc, sqlDB)
 
 	listenAddr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	slog.Info("server starting", "addr", listenAddr)
@@ -506,7 +511,7 @@ func logTimezoneSelfCheck(cfgTimezone string, db *gorm.DB) {
 }
 
 // SetupRoutes configures all API routes for the application.
-func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service, sqlDB *sql.DB) {
+func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admin.Service, meSvc *me.Service, sqlDB *sql.DB) {
 	cfg := config.Get()
 
 	// Three independent rate limiters, each scoped to a route class and keyed on
@@ -546,6 +551,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	{
 		jwtAuth.GET("/post-key", v1.QueryPostKey(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
+		jwtAuth.GET("/me/retention", v1.MeRetention(meSvc))
 
 		// L3: authenticated state changes keyed on user_id (from JWT). Reads
 		// (GET) stay outside the limiter so listing does not consume the write

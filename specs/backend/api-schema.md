@@ -98,6 +98,16 @@ Password policy: minimum 8 characters, maximum 72 characters, no complexity requ
 
 ---
 
+---
+
+## Me
+
+| Method | Path            | Auth | Description                             |
+| ------ | --------------- | ---- | --------------------------------------- |
+| GET    | `/me/retention` | JWT  | The caller's effective retention policy |
+
+**Response**: `{ posts_days, history_days }` — each `0` (keep forever) or a whole-day count; an explicit per-user override drives both numbers, an inherit resolves each table's own global window.
+
 ## Posts
 
 | Method | Path         | Auth | Description                    |

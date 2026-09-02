@@ -10,6 +10,7 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { relativeTime } from '@/utils/relative-time'
 import { formatToLocalTime } from '@/utils/time'
 import { useLocaleContext } from '@/components/providers/LocaleProvider'
+import { RetentionHint } from '@/components/me/RetentionHint'
 import { PageHeading } from '@/components/ui/page-heading'
 import { ListState } from '@/components/ui/list-state'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -99,6 +100,8 @@ export function DeliveryHistoryPage() {
       >
         {t('title')}
       </PageHeading>
+
+      <RetentionHint kind="history" />
 
       {/* 筛选（URL 同步，切筛选重置 page=1） */}
       <div className="flex flex-wrap items-center gap-3">

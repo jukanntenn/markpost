@@ -42,6 +42,11 @@ export const handlers = [
     return HttpResponse.json<PostKeyResponse>(mockPostKey)
   }),
 
+  // Default /me/retention: the inherit resolution under default globals.
+  http.get('/api/v1/me/retention', () =>
+    HttpResponse.json({ posts_days: 7, history_days: 7 }),
+  ),
+
   http.get('/api/v1/posts', ({ request }) => {
     const url = new URL(request.url)
     const page = url.searchParams.get('page')

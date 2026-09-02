@@ -8,6 +8,7 @@ import { DEFAULT_PAGE_SIZE } from '@/lib/constants'
 import { useUrlQueryState } from '@/hooks/useUrlQueryState'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { PostListItemRow } from './PostListItemRow'
+import { RetentionHint } from '@/components/me/RetentionHint'
 import { ListState } from '@/components/ui/list-state'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Card, CardContent } from '@/components/ui/card'
@@ -58,6 +59,8 @@ export function PostsPage() {
       >
         {t('title')}
       </PageHeading>
+
+      <RetentionHint kind="posts" />
 
       <div className="mb-4">
         <SearchInput

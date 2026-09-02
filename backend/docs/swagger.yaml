@@ -100,6 +100,13 @@ definitions:
       pending:
         type: integer
     type: object
+  me.RetentionResult:
+    properties:
+      history_days:
+        type: integer
+      posts_days:
+        type: integer
+    type: object
   settings.SettingValue:
     properties:
       days:
@@ -2125,6 +2132,24 @@ paths:
       summary: Health check
       tags:
       - health
+  /api/v1/me/retention:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/me.RetentionResult'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Report the caller's effective retention policy
+      tags:
+      - me
   /api/v1/oauth/login:
     post:
       consumes:

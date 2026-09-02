@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"time"
 
+	"markpost/internal/domain/delivery"
+
 	"markpost/cmd"
 	_ "markpost/docs"
 	v1 "markpost/internal/api/rest/v1"
@@ -279,6 +281,16 @@ func main() {
 	}
 }
 
+// historyExpiryCounter adapts the AttemptRepository's history-shaped expiry
+// counter to the admin service's RetentionCounter port.
+type historyExpiryCounter struct {
+	repo delivery.AttemptRepository
+}
+
+func (h historyExpiryCounter) CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error) {
+	return h.repo.CountHistoryExpiringForUsers(ctx, userIDs, vipOnly, cutoff)
+}
+
 func serve(configPath string) {
 	if err := config.Load(configPath); err != nil {
 		log.Fatalf("Failed to load config: %v", err)
@@ -395,6 +407,10 @@ func serve(configPath string) {
 	adminSvc.SetUserMutator(userRepo)
 	adminSvc.SetChannelMutator(deliveryRepo)
 	adminSvc.SetSettingsStore(settingsRepo)
+	// Retention impact previews need raw post/history expiry counters and the
+	// global fallback windows mirrored from config (MRFC
+	// 2026-08-31-per-user-history-retention-policy).
+	adminSvc.SetRetentionCounters(postRepo, historyExpiryCounter{attemptRepo}, cfg.Post.RetentionDays, cfg.Delivery.HistoryRetention)
 
 	// gin.New (not gin.Default): we install otelgin for HTTP spans and our own
 	// Fallback panic recovery, replacing gin's built-in Logger/Recovery
@@ -569,6 +585,10 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 			adminGroup.POST("/users/:id/password", middleware.RateLimitByUserID(l3Write), v1.AdminResetUserPassword(adminSvc))
 			adminGroup.PATCH("/users/:id/active", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserActive(adminSvc))
 			adminGroup.PATCH("/users/:id/vip", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserVIP(adminSvc))
+			adminGroup.PATCH("/users/:id/retention", middleware.RateLimitByUserID(l3Write), v1.AdminSetUserRetention(adminSvc))
+			adminGroup.POST("/users/retention/bulk", middleware.RateLimitByUserID(l3Write), v1.AdminBulkSetRetention(adminSvc))
+			adminGroup.POST("/retention/impact", v1.AdminRetentionImpact(adminSvc))
+			adminGroup.GET("/retention/defaults", v1.AdminRetentionDefaults(adminSvc))
 			adminGroup.DELETE("/users/:id", middleware.RateLimitByUserID(l3Write), v1.AdminDeleteUser(adminSvc))
 			adminGroup.GET("/users/:id/sessions", v1.AdminListSessions(adminSvc))
 			adminGroup.DELETE("/users/:id/sessions", middleware.RateLimitByUserID(l3Write), v1.AdminRevokeUserSessions(adminSvc))

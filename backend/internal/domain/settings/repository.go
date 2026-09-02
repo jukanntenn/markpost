@@ -15,4 +15,7 @@ type Repository interface {
 	// is on. It doubles as the auth service's read port; callers decide how
 	// to degrade when it errors (the login path fails toward not-granting).
 	VIPStrategyEnabled(ctx context.Context) (bool, error)
+	// VIPRetentionDays returns the VIP-class retention default (nil = follow
+	// the global config), or nil with no error when the key has no row.
+	VIPRetentionDays(ctx context.Context) (*int, error)
 }

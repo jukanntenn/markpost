@@ -428,7 +428,7 @@ func TestUserRepository_SetUserVIP(t *testing.T) {
 	}
 
 	t.Run("grants vip", func(t *testing.T) {
-		if err := repo.SetUserVIP(ctx, u.ID, true); err != nil {
+		if err := repo.SetUserVIP(ctx, u.ID, true, nil); err != nil {
 			t.Fatalf("SetUserVIP(true): %v", err)
 		}
 		got, _ := repo.GetByID(ctx, u.ID)
@@ -438,7 +438,7 @@ func TestUserRepository_SetUserVIP(t *testing.T) {
 	})
 
 	t.Run("revokes vip", func(t *testing.T) {
-		if err := repo.SetUserVIP(ctx, u.ID, false); err != nil {
+		if err := repo.SetUserVIP(ctx, u.ID, false, nil); err != nil {
 			t.Fatalf("SetUserVIP(false): %v", err)
 		}
 		got, _ := repo.GetByID(ctx, u.ID)
@@ -448,7 +448,7 @@ func TestUserRepository_SetUserVIP(t *testing.T) {
 	})
 
 	t.Run("returns not found for nonexistent user", func(t *testing.T) {
-		err := repo.SetUserVIP(ctx, 99999, true)
+		err := repo.SetUserVIP(ctx, 99999, true, nil)
 		if err == nil {
 			t.Fatal("expected error for nonexistent user")
 		}

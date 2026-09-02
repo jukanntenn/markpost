@@ -20,6 +20,12 @@ import (
 	"markpost/pkg/utils"
 )
 
+// RetentionCounter counts the rows a candidate retention window would delete
+// (impact preview), for posts and delivery_history alike.
+type RetentionCounter interface {
+	CountExpiringForUsers(ctx context.Context, userIDs []int, vipOnly bool, cutoff *time.Time) (int64, error)
+}
+
 // UserLister defines the interface for retrieving users.
 type UserLister interface {
 	GetAll(ctx context.Context, offset, limit int) ([]user.User, error)
@@ -29,6 +35,7 @@ type UserLister interface {
 	CountByRole(ctx context.Context, role user.Role) (int64, error)
 	CountBanned(ctx context.Context) (int64, error)
 	CountSince(ctx context.Context, since time.Time) (int64, error)
+	CountVIP(ctx context.Context) (int64, error)
 }
 
 // UserMutator defines the interface for modifying users.
@@ -38,7 +45,10 @@ type UserMutator interface {
 	SetRole(ctx context.Context, userID int, role user.Role) error
 	SetPassword(ctx context.Context, userID int, password string) error
 	SetActive(ctx context.Context, userID int, active bool) error
-	SetUserVIP(ctx context.Context, userID int, vip bool) error
+	SetUserVIP(ctx context.Context, userID int, vip bool, retentionIfUnset *int) error
+	SetUserRetention(ctx context.Context, userID int, days *int) error
+	SetUserRetentionBatch(ctx context.Context, userIDs []int, days *int) (int64, error)
+	SetVIPUsersRetention(ctx context.Context, days *int) (int64, error)
 	DeleteByID(ctx context.Context, userID int) (int64, error)
 	// BumpTokenVersion increments token_version — the single primitive behind
 	// instant invalidation of all of a user's tokens (C2.6).
@@ -98,6 +108,8 @@ type AuditRecorder interface {
 type SettingsStore interface {
 	GetAll(ctx context.Context) ([]settings.Setting, error)
 	Set(ctx context.Context, key string, value settings.SettingValue, updatedBy int) error
+	// VIPRetentionDays is the class default materialized at grant time.
+	VIPRetentionDays(ctx context.Context) (*int, error)
 }
 
 // Service provides admin-level business logic.
@@ -111,6 +123,13 @@ type Service struct {
 	sessionLister  SessionLister
 	auditRecorder  AuditRecorder
 	settingsStore  SettingsStore
+
+	postExpiryCounter    RetentionCounter
+	historyExpiryCounter RetentionCounter
+	// Global fallbacks mirrored from config for impact previews and the
+	// defaults endpoint: the effective window of an inherit (nil) policy.
+	globalPostRetentionDays int
+	globalHistoryRetention  time.Duration
 }
 
 // NewService creates a new admin Service instance.
@@ -145,6 +164,15 @@ func (s *Service) SetChannelMutator(mutator ChannelMutator) {
 // SetSettingsStore sets the runtime settings store.
 func (s *Service) SetSettingsStore(store SettingsStore) {
 	s.settingsStore = store
+}
+
+// SetRetentionCounters wires the posts and delivery_history impact counters
+// (retention preview) plus the global fallback windows mirrored from config.
+func (s *Service) SetRetentionCounters(posts, history RetentionCounter, globalPostRetentionDays int, globalHistoryRetention time.Duration) {
+	s.postExpiryCounter = posts
+	s.historyExpiryCounter = history
+	s.globalPostRetentionDays = globalPostRetentionDays
+	s.globalHistoryRetention = globalHistoryRetention
 }
 
 // RecordAudit records an admin write operation for audit purposes.
@@ -292,10 +320,162 @@ func (s *Service) SetUserVIP(ctx context.Context, userID int, vip bool) error {
 	if _, err := s.userMutator.GetByID(ctx, userID); err != nil {
 		return service.WrapNotFoundOrInternal(err, "user not found", "get user failed")
 	}
-	if err := s.userMutator.SetUserVIP(ctx, userID, vip); err != nil {
+	// Grant-time materialization: a VIP still inheriting takes the class
+	// default in the same statement; an explicit policy survives untouched.
+	var classDefault *int
+	if vip {
+		days, err := s.settingsStore.VIPRetentionDays(ctx)
+		if err != nil && !errors.Is(err, domain.ErrNotFound) {
+			return service.Wrap(service.ErrInternal, "read vip retention default failed", err)
+		}
+		if errors.Is(err, domain.ErrNotFound) {
+			days = nil
+		}
+		classDefault = days
+	}
+	if err := s.userMutator.SetUserVIP(ctx, userID, vip, classDefault); err != nil {
 		return service.Wrap(service.ErrInternal, "set vip failed", err)
 	}
 	return nil
+}
+
+// MaxRetentionDays bounds an explicit retention policy (10 years); 0 means
+// keep forever, mirroring [post] retention_days' encoding (MRFC
+// 2026-08-31-per-user-history-retention-policy).
+const MaxRetentionDays = 3650
+
+func validateRetentionDays(days *int) error {
+	if days != nil && (*days < 0 || *days > MaxRetentionDays) {
+		return service.New(ErrRetentionDays, fmt.Sprintf("retention days %d out of range", *days))
+	}
+	return nil
+}
+
+// SetUserRetention writes one user's retention policy (nil = inherit) and
+// returns the updated user. The handler records the user.set_retention audit.
+func (s *Service) SetUserRetention(ctx context.Context, userID int, days *int) (*user.User, error) {
+	if err := validateRetentionDays(days); err != nil {
+		return nil, err
+	}
+	if _, err := s.userMutator.GetByID(ctx, userID); err != nil {
+		return nil, service.WrapNotFoundOrInternal(err, "user not found", "get user failed")
+	}
+	if err := s.userMutator.SetUserRetention(ctx, userID, days); err != nil {
+		return nil, service.Wrap(service.ErrInternal, "set retention failed", err)
+	}
+	return s.userMutator.GetByID(ctx, userID)
+}
+
+// BulkSetUserRetention writes the policy onto explicit user ids (scope "") or
+// every VIP user (scope "vip"), returning the affected count. The handler
+// records the single user.set_retention_bulk audit entry.
+func (s *Service) BulkSetUserRetention(ctx context.Context, userIDs []int, scope string, days *int) (int64, error) {
+	if err := validateRetentionDays(days); err != nil {
+		return 0, err
+	}
+	if scope == "vip" {
+		updated, err := s.userMutator.SetVIPUsersRetention(ctx, days)
+		if err != nil {
+			return 0, service.Wrap(service.ErrInternal, "bulk set retention failed", err)
+		}
+		return updated, nil
+	}
+	if len(userIDs) == 0 {
+		return 0, service.New(ErrRetentionDays, "no target users")
+	}
+	updated, err := s.userMutator.SetUserRetentionBatch(ctx, userIDs, days)
+	if err != nil {
+		return 0, service.Wrap(service.ErrInternal, "bulk set retention failed", err)
+	}
+	return updated, nil
+}
+
+// RetentionImpactResult is the deletion preview for a candidate policy.
+type RetentionImpactResult struct {
+	UsersAffected   int64 `json:"users_affected"`
+	PostsToDelete   int64 `json:"posts_to_delete"`
+	HistoryToDelete int64 `json:"history_to_delete"`
+}
+
+// RetentionImpact previews what a candidate policy would delete at the next
+// sweep for explicit user ids or every VIP user. A candidate of nil resolves
+// against each table's global fallback; 0 (forever) matches nothing.
+func (s *Service) RetentionImpact(ctx context.Context, userIDs []int, scope string, days *int) (*RetentionImpactResult, error) {
+	if err := validateRetentionDays(days); err != nil {
+		return nil, err
+	}
+	vipOnly := scope == "vip"
+	if !vipOnly && len(userIDs) == 0 {
+		return nil, service.New(ErrRetentionDays, "no target users")
+	}
+
+	postCutoff := s.candidateCutoff(days, s.globalPostRetentionDays)
+	historyCutoff := s.candidateCutoffDuration(days, s.globalHistoryRetention)
+
+	out := &RetentionImpactResult{}
+	if vipOnly {
+		n, err := s.userLister.CountVIP(ctx)
+		if err != nil {
+			return nil, service.Wrap(service.ErrInternal, "count vip users failed", err)
+		}
+		out.UsersAffected = n
+	} else {
+		out.UsersAffected = int64(len(userIDs))
+	}
+	if s.postExpiryCounter != nil {
+		n, err := s.postExpiryCounter.CountExpiringForUsers(ctx, userIDs, vipOnly, postCutoff)
+		if err != nil {
+			return nil, service.Wrap(service.ErrInternal, "count expiring posts failed", err)
+		}
+		out.PostsToDelete = n
+	}
+	if s.historyExpiryCounter != nil {
+		n, err := s.historyExpiryCounter.CountExpiringForUsers(ctx, userIDs, vipOnly, historyCutoff)
+		if err != nil {
+			return nil, service.Wrap(service.ErrInternal, "count expiring history failed", err)
+		}
+		out.HistoryToDelete = n
+	}
+	return out, nil
+}
+
+// candidateCutoff maps a candidate policy to a posts cutoff: nil inherits the
+// global fallback, 0 (forever) becomes a nil cutoff that matches nothing.
+func (s *Service) candidateCutoff(days *int, globalDays int) *time.Time {
+	effective := globalDays
+	if days != nil {
+		effective = *days
+	}
+	if effective == 0 {
+		return nil
+	}
+	cutoff := time.Now().AddDate(0, 0, -effective)
+	return &cutoff
+}
+
+// candidateCutoffDuration is candidateCutoff for the duration-shaped history
+// global fallback.
+func (s *Service) candidateCutoffDuration(days *int, globalRetention time.Duration) *time.Time {
+	if days != nil {
+		if *days == 0 {
+			return nil
+		}
+		cutoff := time.Now().AddDate(0, 0, -*days)
+		return &cutoff
+	}
+	cutoff := time.Now().Add(-globalRetention)
+	return &cutoff
+}
+
+// RetentionDefaults reports the global fallback windows so the admin UI can
+// render the effective value of inherit policies.
+func (s *Service) RetentionDefaults(ctx context.Context) (*RetentionDefaultsResult, error) {
+	return &RetentionDefaultsResult{PostRetentionDays: s.globalPostRetentionDays}, nil
+}
+
+// RetentionDefaultsResult is the global retention configuration surface.
+type RetentionDefaultsResult struct {
+	PostRetentionDays int `json:"post_retention_days"`
 }
 
 // DeleteUser deletes a user (admin operation) with the self-delete and
@@ -488,7 +668,24 @@ func (s *Service) GetSettings(ctx context.Context) ([]settings.Setting, error) {
 // SetSetting upserts one runtime setting (admin operation). v1 admits only
 // the seeded keys — an unknown key is a client error, not a silent new row.
 func (s *Service) SetSetting(ctx context.Context, actorID int, key string, value settings.SettingValue) error {
-	if key != settings.KeyVIP {
+	switch key {
+	case settings.KeyVIP:
+		// The switch key owns the {"enabled"} shape; a stray days payload
+		// would silently no-op, so it is rejected instead.
+		if value.Days != nil {
+			return service.New(ErrSettingValueShape, "vip takes {\"enabled\"}, not days")
+		}
+	case settings.KeyVIPRetention:
+		// The class default owns the {"days"} shape; days nil = follow the
+		// global config (clearing the class default). A stray enabled payload
+		// would silently no-op, so it is rejected instead.
+		if value.Enabled {
+			return service.New(ErrSettingValueShape, "vip_retention_days takes {\"days\"}, not enabled")
+		}
+		if value.Days != nil && (*value.Days < 0 || *value.Days > MaxRetentionDays) {
+			return service.New(ErrRetentionDays, fmt.Sprintf("days %d out of range", *value.Days))
+		}
+	default:
 		return service.New(ErrUnknownSetting, fmt.Sprintf("unknown setting key %q", key))
 	}
 	if err := s.settingsStore.Set(ctx, key, value, actorID); err != nil {

@@ -172,7 +172,11 @@ func (r *AttemptRepository) CountByStatus(ctx context.Context) (map[delivery.Sta
 }
 
 // PruneHistory deletes delivery_history rows older than the retention window
-// in batches of batchSize, returning the total deleted. It uses the
+// in batches of batchSize, returning the total deleted. retention is the
+// global fallback; a user's retention_days overrides it per row (0 = keep
+// forever, MRFC 2026-08-31-per-user-history-retention-policy). Rows orphaned by
+// user deletion (user_id NULL via ON DELETE SET NULL) carry no personal policy
+// and fall back to the global window — hence the LEFT JOIN. It uses the
 // subquery-LIMIT form (bare DELETE ... LIMIT is a PostgreSQL syntax error).
 func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Duration, batchSize int) (int64, error) {
 	if batchSize <= 0 {
@@ -183,8 +187,11 @@ func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Dur
 	var total int64
 	for {
 		sql := `DELETE FROM delivery_history WHERE id IN (
-		            SELECT id FROM delivery_history WHERE created_at < ? ORDER BY created_at LIMIT ?
-		        )`
+			            SELECT h.id FROM delivery_history h
+			            LEFT JOIN users u ON u.id = h.user_id
+			            WHERE ` + expiredHistoryPredicate + `
+			            ORDER BY h.created_at LIMIT ?
+			        )`
 		result := r.db.WithContext(ctx).Exec(sql, cutoff, batchSize)
 		if result.Error != nil {
 			return total, fmt.Errorf("AttemptRepository.PruneHistory: %w", result.Error)
@@ -195,6 +202,28 @@ func (r *AttemptRepository) PruneHistory(ctx context.Context, retention time.Dur
 		}
 	}
 	return total, nil
+}
+
+// expiredHistoryPredicate is the per-row expiry predicate shared by PruneHistory
+// and CountHistoryExpired: an explicit user retention_days wins (0 = forever →
+// the NULL cutoff excludes the row via the NULL comparison), otherwise the
+// global cutoff applies to inherit rows and to anonymous rows alike.
+const expiredHistoryPredicate = `h.created_at < CASE
+    WHEN u.retention_days = 0 THEN NULL
+    WHEN u.retention_days IS NOT NULL THEN now() - make_interval(days => u.retention_days)
+    ELSE ?
+END`
+
+// CountHistoryExpired counts the rows PruneHistory would delete (dry-run).
+func (r *AttemptRepository) CountHistoryExpired(ctx context.Context, retention time.Duration) (int64, error) {
+	var count int64
+	cutoff := time.Now().Add(-retention)
+	if err := r.db.WithContext(ctx).
+		Raw("SELECT COUNT(*) FROM delivery_history h LEFT JOIN users u ON u.id = h.user_id WHERE "+expiredHistoryPredicate, cutoff).
+		Scan(&count).Error; err != nil {
+		return 0, fmt.Errorf("AttemptRepository.CountHistoryExpired: %w", err)
+	}
+	return count, nil
 }
 
 // ListHistory returns delivery history (newest first), paginated, with the post

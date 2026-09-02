@@ -61,22 +61,25 @@ erDiagram
 
 定义于 `internal/domain/user/user.go`。存储用户账户，同时支持密码认证与 GitHub OAuth 认证。
 
-| Go 字段           | 数据库列            | 类型                   | 可空 | 默认值   | 约束   | 说明                                 |
-| ----------------- | ------------------- | ---------------------- | ---- | -------- | ------ | ------------------------------------ |
-| `ID`              | `id`                | integer auto-increment | 否   | —        | PK     | 主键                                 |
-| `Email`           | `email`             | varchar                | 否   | —        | unique | 用户邮箱地址                         |
-| `Username`        | `username`          | varchar                | 否   | —        | unique | 登录用的唯一用户名                   |
-| `Name`            | `name`              | varchar                | 是   | —        | —      | 显示名                               |
-| `Password`        | `password_hash`     | varchar                | 是   | —        | —      | Bcrypt 哈希密码；OAuth-only 用户为空 |
-| `AvatarURL`       | `avatar_url`        | varchar                | 是   | —        | —      | 个人头像 URL，通常来自 GitHub        |
-| `PostKey`         | `post_key`          | varchar                | 否   | —        | unique | 供外部工具创建文章的 API key         |
-| `GitHubID`        | `github_id`         | bigint                 | 是   | —        | unique | OAuth 绑定用的 GitHub 用户 ID        |
-| `Role`            | `role`              | varchar                | 否   | `'user'` | —      | 用户角色。取值：`'admin'`、`'user'`  |
-| `IsActive`        | `is_active`         | boolean                | 否   | `true`   | —      | 账户是否启用                         |
-| `IsEmailVerified` | `is_email_verified` | boolean                | 否   | `false`  | —      | 邮箱是否已验证                       |
-| `LastLoginAt`     | `last_login_at`     | timestamp              | 是   | —        | —      | 最近一次成功登录的时间戳             |
-| `CreatedAt`       | `created_at`        | timestamp              | 否   | `now()`  | —      | 记录创建时间（自动）                 |
-| `UpdatedAt`       | `updated_at`        | timestamp              | 否   | `now()`  | —      | 记录最后更新时间（自动）             |
+| Go 字段           | 数据库列            | 类型                   | 可空 | 默认值   | 约束   | 说明                                                                                                                                                         |
+| ----------------- | ------------------- | ---------------------- | ---- | -------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ID`              | `id`                | integer auto-increment | 否   | —        | PK     | 主键                                                                                                                                                         |
+| `Email`           | `email`             | varchar                | 否   | —        | unique | 用户邮箱地址                                                                                                                                                 |
+| `Username`        | `username`          | varchar                | 否   | —        | unique | 登录用的唯一用户名                                                                                                                                           |
+| `Name`            | `name`              | varchar                | 是   | —        | —      | 显示名                                                                                                                                                       |
+| `Password`        | `password_hash`     | varchar                | 是   | —        | —      | Bcrypt 哈希密码；OAuth-only 用户为空                                                                                                                         |
+| `AvatarURL`       | `avatar_url`        | varchar                | 是   | —        | —      | 个人头像 URL，通常来自 GitHub                                                                                                                                |
+| `PostKey`         | `post_key`          | varchar                | 否   | —        | unique | 供外部工具创建文章的 API key                                                                                                                                 |
+| `GitHubID`        | `github_id`         | bigint                 | 是   | —        | unique | OAuth 绑定用的 GitHub 用户 ID                                                                                                                                |
+| `Role`            | `role`              | varchar                | 否   | `'user'` | —      | 用户角色。取值：`'admin'`、`'user'`                                                                                                                          |
+| `IsActive`        | `is_active`         | boolean                | 否   | `true`   | —      | 账户是否启用                                                                                                                                                 |
+| `IsEmailVerified` | `is_email_verified` | boolean                | 否   | `false`  | —      | 邮箱是否已验证                                                                                                                                               |
+| `VIP`             | `vip`               | boolean                | 否   | `false`  | —      | 持久的用户荣誉标记（迁移 `000008_user_vip`）                                                                                                                 |
+| `RetentionDays`   | `retention_days`    | integer                | 是   | —        | —      | 按用户历史保留策略（迁移 `000010_user_retention`）：NULL 继承各表全局配置，0 永久保存，1–3650 保留 N 天——一个值同时驱动 posts 与 delivery_history 的清理窗口 |
+| `LastLoginAt`     | `last_login_at`     | timestamp              | 是   | —        | —      | 最近一次成功登录的时间戳                                                                                                                                     |
+| `TokenVersion`    | `token_version`     | bigint                 | 否   | `0`      | —      | 强制下线用的令牌失效纪元                                                                                                                                     |
+| `CreatedAt`       | `created_at`        | timestamp              | 否   | `now()`  | —      | 记录创建时间（自动）                                                                                                                                         |
+| `UpdatedAt`       | `updated_at`        | timestamp              | 否   | `now()`  | —      | 记录最后更新时间（自动）                                                                                                                                     |
 
 <a id="posts"></a>
 

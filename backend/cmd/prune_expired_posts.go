@@ -32,7 +32,7 @@ func RunPruneExpiredPosts(configPath string, dryRun bool, batchSize int) error {
 			return fmt.Errorf("failed to count expired posts: %w", err)
 		}
 
-		fmt.Printf("Dry run: %d posts older than %d days would be deleted\n", count, retentionDays)
+		fmt.Printf("Dry run: %d posts past their effective retention would be deleted\n", count)
 		return nil
 	}
 

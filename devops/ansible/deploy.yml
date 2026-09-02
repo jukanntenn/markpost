@@ -181,6 +181,23 @@
       when: env == 'production' and kuma_heartbeat_url is defined
       notify: Update markpost heartbeat supervisor program
 
+    # Daily retention sweep (all environments): cron invokes both prune
+    # subcommands in a throwaway container against the running compose project;
+    # per-user retention_days and the global config both apply (MRFC
+    # 2026-08-31-per-user-history-retention-policy). Output lands in
+    # prune-retention.log under app_path so sweeps and failures are observable.
+    - name: Install retention prune script
+      ansible.builtin.copy:
+        src: prune-retention.sh
+        dest: "{{ app_path }}/prune-retention.sh"
+        mode: "0750"
+
+    - name: Schedule daily retention prune
+      ansible.builtin.cron:
+        name: markpost-retention-prune
+        hour: "4"
+        minute: "15"
+        job: "{{ app_path }}/prune-retention.sh {{ app_path }} >> {{ app_path }}/prune-retention.log 2>&1"
     # Host metrics agent (production only): the Beszel agent in its own compose
     # project, a sibling of the app. The hub lives on a separate ops-managed
     # server — the repo automates only this half. Guarded on beszel_hub_url

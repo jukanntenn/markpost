@@ -2265,6 +2265,36 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/me/retention": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "me"
+                ],
+                "summary": "Report the caller's effective retention policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/me.RetentionResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apierr.ErrorResponse"
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/v1/oauth/login": {
             "post": {
                 "consumes": [
@@ -2775,6 +2805,17 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "pending": {
+                    "type": "integer"
+                }
+            }
+        },
+        "me.RetentionResult": {
+            "type": "object",
+            "properties": {
+                "history_days": {
+                    "type": "integer"
+                },
+                "posts_days": {
                     "type": "integer"
                 }
             }

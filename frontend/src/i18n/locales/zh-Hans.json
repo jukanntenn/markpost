@@ -126,6 +126,12 @@
       "timeout": "GitHub 登录超时，请重试"
     }
   },
+  "me": {
+    "retention": {
+      "forever": "数据将永久保留",
+      "days": "数据保留 {n} 天，到期后自动清除"
+    }
+  },
   "dashboard": {
     "welcome": "欢迎，{name}",
     "pipeline": {

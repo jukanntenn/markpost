@@ -68,6 +68,13 @@ export interface RetentionDefaults {
   post_retention_days: number
 }
 
+// The caller's effective retention policy (0 = keep forever), resolved
+// server-side from the per-user override and the global fallback windows.
+export interface MeRetention {
+  posts_days: number
+  history_days: number
+}
+
 export interface AdminSettingsResponse {
   items: AdminSettingItem[]
 }

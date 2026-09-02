@@ -126,6 +126,12 @@
       "timeout": "GitHub sign-in timed out. Please try again."
     }
   },
+  "me": {
+    "retention": {
+      "forever": "Data is kept permanently",
+      "days": "Data is kept for {n} days, then removed automatically"
+    }
+  },
   "dashboard": {
     "welcome": "Welcome, {name}",
     "pipeline": {

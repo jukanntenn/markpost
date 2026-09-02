@@ -120,6 +120,18 @@ Base path: `/api/v1`
 
 ---
 
+---
+
+<a id="me"></a>
+
+## Me
+
+| Method | Path            | Auth | Description              |
+| ------ | --------------- | ---- | ------------------------ |
+| GET    | `/me/retention` | JWT  | 当前调用者的生效保留策略 |
+
+**Response**: `{ posts_days, history_days }` —— 每项为 `0`（永久保留）或整天数；显式按用户覆盖同时决定两个数字，继承则各自回落所在表的全局窗口。
+
 <a id="posts"></a>
 
 ## 文章

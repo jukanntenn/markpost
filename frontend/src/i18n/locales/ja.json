@@ -126,6 +126,12 @@
       "timeout": "GitHub ログインがタイムアウトしました。もう一度お試しください。"
     }
   },
+  "me": {
+    "retention": {
+      "forever": "データは永久に保持されます",
+      "days": "データは {n} 日間保持され、期限が来ると自動的に削除されます"
+    }
+  },
   "dashboard": {
     "welcome": "ようこそ、{name}",
     "pipeline": {

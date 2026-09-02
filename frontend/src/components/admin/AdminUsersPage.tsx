@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useQuery } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { PlusIcon, UsersIcon } from 'lucide-react'
+import { ListChecksIcon, PlusIcon, UsersIcon, XIcon } from 'lucide-react'
 import { adminApi, adminKeys } from '@/lib/api'
 import { useUrlQueryState } from '@/hooks/useUrlQueryState'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
@@ -27,7 +27,12 @@ import {
 import { relativeTime } from '@/utils/relative-time'
 import { useLocaleContext } from '@/components/providers/LocaleProvider'
 import { AdminUserDialog } from './AdminUserDialog'
-import { VipStrategyToggle } from './VipStrategyToggle'
+import { VipPolicyBar } from './VipPolicyBar'
+import {
+  RetentionDialog,
+  RetentionPolicyText,
+  type RetentionTarget,
+} from './RetentionDialog'
 import {
   UserActionsMenu,
   UserGovernanceDialogs,
@@ -52,12 +57,22 @@ export function AdminUsersPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [action, setAction] = useState<PendingAction | null>(null)
   const [actionUser, setActionUser] = useState<AdminUser | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [retentionTarget, setRetentionTarget] =
+    useState<RetentionTarget | null>(null)
   const router = useRouter()
 
   const query = useQuery({
     queryKey: adminKeys.users.list(page, debouncedSearch),
     queryFn: () => adminApi.listUsers(page, debouncedSearch),
     staleTime: 30_000,
+  })
+
+  const defaultsQuery = useQuery({
+    queryKey: adminKeys.retention.defaults(),
+    queryFn: () => adminApi.retentionDefaults(),
+    staleTime: 60_000,
   })
 
   const users = query.data?.items ?? []
@@ -69,7 +84,17 @@ export function AdminUsersPage() {
       <PageHeading
         actions={
           <div className="flex items-center gap-3">
-            <VipStrategyToggle />
+            <Button
+              variant={selectMode ? 'secondary' : 'outline'}
+              onClick={() => {
+                setSelectMode((v) => !v)
+                setSelected(new Set())
+              }}
+              data-testid="bulk-select-toggle"
+            >
+              <ListChecksIcon className="mr-1 size-4" />
+              {tUsers('retention.selectMode')}
+            </Button>
             <Button onClick={() => setCreateOpen(true)}>
               <PlusIcon className="mr-1 size-4" />
               {tUsers('addUser')}
@@ -79,6 +104,8 @@ export function AdminUsersPage() {
       >
         {tUsers('title')}
       </PageHeading>
+
+      <VipPolicyBar />
 
       <div className="mb-4">
         <SearchInput
@@ -117,10 +144,31 @@ export function AdminUsersPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                {selectMode && (
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      aria-label={tUsers('retention.selectAll')}
+                      checked={
+                        users.length > 0 &&
+                        users.every((u) => selected.has(u.id))
+                      }
+                      onChange={(e) =>
+                        setSelected(
+                          e.target.checked
+                            ? new Set(users.map((u) => u.id))
+                            : new Set(),
+                        )
+                      }
+                      data-testid="select-all"
+                    />
+                  </TableHead>
+                )}
                 <TableHead>{t('id')}</TableHead>
                 <TableHead>{t('username')}</TableHead>
                 <TableHead>{t('role')}</TableHead>
                 <TableHead>{t('status.normal')}</TableHead>
+                <TableHead>{tUsers('retention.column')}</TableHead>
                 <TableHead>{t('createdAt')}</TableHead>
                 <TableHead className="w-32 text-right">
                   {tUsers('actions')}
@@ -129,7 +177,23 @@ export function AdminUsersPage() {
             </TableHeader>
             <TableBody>
               {users.map((u) => (
-                <TableRow key={u.id}>
+                <TableRow key={u.id} data-user-id={u.id}>
+                  {selectMode && (
+                    <TableCell className="w-10">
+                      <input
+                        type="checkbox"
+                        aria-label={u.username}
+                        checked={selected.has(u.id)}
+                        onChange={(e) => {
+                          const next = new Set(selected)
+                          if (e.target.checked) next.add(u.id)
+                          else next.delete(u.id)
+                          setSelected(next)
+                        }}
+                        data-testid={`select-user-${u.id}`}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="text-sm text-muted-foreground">
                     {u.id}
                   </TableCell>
@@ -152,6 +216,29 @@ export function AdminUsersPage() {
                   <TableCell>
                     <StatusBadge active={u.is_active} />
                   </TableCell>
+                  <TableCell
+                    className={
+                      u.retention_days === null
+                        ? 'text-sm text-muted-foreground'
+                        : 'text-sm font-medium'
+                    }
+                  >
+                    {u.retention_days === null ? (
+                      defaultsQuery.data ? (
+                        tUsers('retention.inheritWithDefault', {
+                          n: defaultsQuery.data.post_retention_days,
+                        })
+                      ) : (
+                        tUsers('retention.column')
+                      )
+                    ) : u.retention_days === 0 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600">
+                        <RetentionPolicyText days={u.retention_days} />
+                      </span>
+                    ) : (
+                      <RetentionPolicyText days={u.retention_days} />
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {relativeTime(u.created_at, locale)}
                   </TableCell>
@@ -165,6 +252,14 @@ export function AdminUsersPage() {
                         setActionUser(u)
                         setAction(a)
                       }}
+                      onSetRetention={(target) =>
+                        setRetentionTarget({
+                          kind: 'user',
+                          id: target.id,
+                          username: target.username,
+                          current: target.retention_days,
+                        })
+                      }
                     />
                   </TableCell>
                 </TableRow>
@@ -179,6 +274,19 @@ export function AdminUsersPage() {
             <li key={u.id} className="rounded-lg border bg-card p-4">
               <div className="flex items-center justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-1.5">
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      aria-label={u.username}
+                      checked={selected.has(u.id)}
+                      onChange={(e) => {
+                        const next = new Set(selected)
+                        if (e.target.checked) next.add(u.id)
+                        else next.delete(u.id)
+                        setSelected(next)
+                      }}
+                    />
+                  )}
                   <a
                     href={`/admin/users?id=${u.id}`}
                     className="min-w-0 truncate font-semibold hover:underline"
@@ -193,7 +301,9 @@ export function AdminUsersPage() {
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {t('id')} {u.id} · {t('createdAt')}{' '}
-                {relativeTime(u.created_at, locale)}
+                {relativeTime(u.created_at, locale)} ·{' '}
+                {tUsers('retention.column')}{' '}
+                <RetentionPolicyText days={u.retention_days} />
               </p>
               <div className="mt-2 flex items-center justify-between">
                 <StatusBadge active={u.is_active} />
@@ -218,6 +328,49 @@ export function AdminUsersPage() {
           totalLabel={(n) => t('total', { n })}
         />
       </ListState>
+
+      {selectMode && selected.size > 0 && (
+        <div
+          className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border bg-background px-4 py-2 shadow-lg"
+          data-testid="bulk-action-bar"
+        >
+          <span className="text-sm text-muted-foreground">
+            {tUsers('retention.selected', { n: selected.size })}
+          </span>
+          <Button
+            size="sm"
+            onClick={() =>
+              setRetentionTarget({
+                kind: 'bulk',
+                userIds: [...selected],
+                count: selected.size,
+              })
+            }
+            data-testid="bulk-set-retention"
+          >
+            {tUsers('retention.setPolicy')}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={tUsers('retention.exitSelect')}
+            onClick={() => {
+              setSelectMode(false)
+              setSelected(new Set())
+            }}
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
+      )}
+
+      {retentionTarget && (
+        <RetentionDialog
+          target={retentionTarget}
+          open={retentionTarget !== null}
+          onOpenChange={(v) => !v && setRetentionTarget(null)}
+        />
+      )}
 
       {createOpen && (
         <AdminUserDialog open={createOpen} onOpenChange={setCreateOpen} />

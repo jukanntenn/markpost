@@ -13,6 +13,10 @@ export interface AdminUser {
   role: UserRole
   is_active: boolean
   vip: boolean
+  // Per-user history retention policy (MRFC
+  // 2026-08-31-per-user-history-retention-policy): null = inherit the global
+  // default, 0 = keep forever, 1-3650 = keep N days.
+  retention_days: number | null
   post_key: string
   last_login_at: string | null
   created_at: string
@@ -45,9 +49,23 @@ export interface AdminStatsResponse {
 // GitHub-login VIP strategy switch under key "vip".
 export interface AdminSettingItem {
   key: string
-  value: { enabled: boolean }
+  // The vip key owns {enabled}; vip_retention_days owns {days}
+  // (null/absent = follow the global config).
+  value: { enabled: boolean; days?: number | null }
   updated_by: number | null
   updated_at: string
+}
+
+// Deletion preview for a candidate retention policy (confirm dialog data).
+export interface RetentionImpact {
+  users_affected: number
+  posts_to_delete: number
+  history_to_delete: number
+}
+
+// Global fallback windows mirrored from config (renders the inherit value).
+export interface RetentionDefaults {
+  post_retention_days: number
 }
 
 export interface AdminSettingsResponse {

@@ -628,6 +628,17 @@
           "enabled": "VIP 戦略を有効にしました",
           "disabled": "VIP 戦略を無効にしました"
         }
+      },
+      "retention": {
+        "column": "保持ポリシー",
+        "selectMode": "一括選択",
+        "selectAll": "このページを全選択",
+        "inheritWithDefault": "既定 · {n} 日",
+        "selected": "{n} 件選択中",
+        "setPolicy": "保持ポリシーを設定",
+        "exitSelect": "選択を終了",
+        "setAction": "保持ポリシー…",
+        "setLink": "設定…"
       }
     },
     "userDialog": {
@@ -718,6 +729,51 @@
       "emptyFiltered": "条件に一致する配信履歴はありません",
       "error": "読み込みに失敗しました",
       "total": "全 {n} 件"
+    },
+    "retention": {
+      "title": "保持ポリシーを設定",
+      "subtitle": "対象：{target}",
+      "subtitleSingle": "対象：{name}、現在：",
+      "targets": {
+        "bulk": "選択した {n} ユーザー",
+        "vip": "全 VIP ユーザー（{n} 名）"
+      },
+      "segments": {
+        "inherit": "既定に従う",
+        "forever": "無期限",
+        "days": "N 日間保持"
+      },
+      "presetDays": "{n} 日",
+      "daysInputLabel": "保持日数",
+      "daysUnit": "日",
+      "value": {
+        "inherit": "既定",
+        "forever": "無期限",
+        "days": "{n} 日"
+      },
+      "checking": "影響を確認中…",
+      "confirmSet": "適用",
+      "confirmDelete": "削除を確定",
+      "impact": {
+        "title": "保持期間の短縮により、次回のクリーンアップで削除されます：",
+        "counts": "記事 {posts} 件 · 配信履歴 {history} 件",
+        "typeConfirm": "確認のため DELETE と入力"
+      },
+      "toasts": {
+        "applied": "{n} ユーザーに保持ポリシーを適用しました"
+      },
+      "vipPolicy": {
+        "classDefault": "新規 VIP の保持ポリシー",
+        "followGlobal": "既定に従う",
+        "forever": "無期限",
+        "nDays": "N 日",
+        "daysUnit": "日",
+        "applyAll": "全 VIP ユーザーに適用（{n} 名）",
+        "applyAllLoading": "全 VIP ユーザーに適用",
+        "toasts": {
+          "saved": "VIP 保持ポリシーを保存しました"
+        }
+      }
     }
   },
   "forbidden": {

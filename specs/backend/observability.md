@@ -159,17 +159,25 @@ OTel semantic conventions (semconv), dot-separated like `http.server.request.dur
 
 The metrics adopted today, extended as needed:
 
-| Layer    | Metric                               | Type      | Labels                 | Purpose                                                  |
-| -------- | ------------------------------------ | --------- | ---------------------- | -------------------------------------------------------- |
-| HTTP     | `http.server.request.duration`       | histogram | method, path, status   | Per-endpoint performance (otelgin automatic + additions) |
-| HTTP     | `http.server.active_requests`        | gauge     | —                      | In-flight request count                                  |
-| Business | `markpost.posts.created_total`       | counter   | —                      | Posts created                                            |
-| Business | `markpost.auth.login_total`          | counter   | result=success/failure | Login success / failure distribution                     |
-| Business | `markpost.auth.token_refresh_total`  | counter   | —                      | Token refresh count                                      |
-| Business | `markpost.delivery.pending`          | gauge     | —                      | Pending dispatch count                                   |
-| Business | `markpost.delivery.dispatched_total` | counter   | —                      | Dispatched count                                         |
-| Business | `markpost.delivery.failed_total`     | counter   | reason                 | Dispatch failures (by reason)                            |
-| System   | runtime metrics                      | —         | —                      | OTel Go runtime auto-collection (goroutines, GC, memory) |
+| Layer    | Metric                               | Type      | Labels         | Purpose                                                        |
+| -------- | ------------------------------------ | --------- | -------------- | -------------------------------------------------------------- |
+| HTTP     | `http.server.request.duration`       | histogram | method, path, status | Per-endpoint performance (otelgin automatic + additions) |
+| HTTP     | `http.server.active_requests`        | gauge     | —              | In-flight request count                                        |
+| Business | `markpost.posts.created_total`       | counter   | —              | Posts created                                                  |
+| Business | `markpost.auth.login_success_total`  | counter   | —              | Successful logins                                              |
+| Business | `markpost.auth.login_failure_total`  | counter   | —              | Failed logins                                                  |
+| Business | `markpost.auth.token_refresh_total`  | counter   | —              | Token refresh count                                            |
+| Business | `markpost.delivery.pending`          | gauge     | —              | Pending dispatch count                                         |
+| Business | `markpost.delivery.dispatched_total` | counter   | —              | Dispatched count                                               |
+| Business | `markpost.delivery.failed_total`     | counter   | error_category | Dispatch failures (by reason)                                  |
+| Business | `markpost.render_cache.hit_total`    | counter   | —              | Render requests served from the render cache                   |
+| Business | `markpost.render_cache.miss_total`   | counter   | —              | Render requests that missed and entered the singleflight path  |
+| Business | `markpost.cdn.purge_success_total`   | counter   | —              | CDN cache-tag purges completed (HTTP < 300)                    |
+| Business | `markpost.cdn.purge_failure_total`   | counter   | —              | CDN purge attempts failed (marshal/build/transport/HTTP ≥ 300) |
+| Business | `markpost.cdn.purge_skipped_total`   | counter   | —              | CDN purges not attempted (no-op purger/unconfigured)           |
+| System   | runtime metrics                      | —         | —              | OTel Go runtime auto-collection (goroutines, GC, memory)       |
+
+The five render-cache/CDN-purge counters are attribute-free — one series per outcome, hit rate and purge attempts derivable by aggregation (decision record: [the cache/purge observability MRFC](../../.agents/mrfcs/implemented/2026-09-03-cache-purge-observability.md); reading them against `CF-Cache-Status`: [`caching.md`](./caching.md)).
 
 ### Log correlation fields
 

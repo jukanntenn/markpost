@@ -1,0 +1,1073 @@
+[
+  {
+    "name": "admin_bulk_set_retention",
+    "description": "Apply one retention policy to many users at once (admin): explicit user_ids (max 200) or scope=\"vip\" for every VIP user. Run admin_retention_impact first to preview the deletions.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: bulk set retention"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "retention_days": {
+          "description": "null/omit = inherit global default, 0 = keep forever, 1-3650 = keep N days",
+          "type": ["null", "integer"]
+        },
+        "scope": {
+          "description": "\"vip\" targets every VIP user",
+          "type": "string"
+        },
+        "user_ids": {
+          "description": "explicit user ids (max 200); omit when scope=vip",
+          "items": {
+            "type": "integer"
+          },
+          "type": ["null", "array"]
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_create_channel",
+    "description": "Create a delivery channel owned by an arbitrary user (admin). configuration is a kind-specific JSON object string (see create_channel).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: create channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration": {
+          "description": "kind-specific JSON object as a string, e.g. {\"webhook_url\": \"https://...\"}",
+          "type": "string"
+        },
+        "keywords": {
+          "description": "comma-separated keyword filter (empty = all posts)",
+          "type": "string"
+        },
+        "kind": {
+          "description": "channel kind, e.g. feishu, slack, or custom webhook",
+          "type": "string"
+        },
+        "name": {
+          "description": "human-readable channel name",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "the owning user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id", "kind", "name", "configuration"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_create_user",
+    "description": "Create a user (admin) with username and password (email optional). Returns the new user's profile.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: create user"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "description": "optional email address",
+          "type": "string"
+        },
+        "password": {
+          "description": "the new user's initial password (min 8, max 72 characters)",
+          "type": "string"
+        },
+        "username": {
+          "description": "the new user's login name",
+          "type": "string"
+        }
+      },
+      "required": ["username", "password"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_delete_channel",
+    "description": "Delete any delivery channel across users (admin). Destructive.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: delete channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "channel_id": {
+          "description": "the channel's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["channel_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_delete_post",
+    "description": "Delete any post by QID regardless of owner (admin). Destructive and irreversible.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: delete post"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "qid": {
+          "description": "the post's QID (short id from create_post or list_posts)",
+          "type": "string"
+        }
+      },
+      "required": ["qid"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_delete_user",
+    "description": "Delete a user and their data (admin). Destructive and irreversible.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: delete user"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_get_delivery_stats",
+    "description": "Get the site-wide delivery trend (admin): per-day delivered/failed counts over a window (default 7 days, up to 365).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: site delivery stats"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "description": "trend window in days, 1-365 (default 7)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_get_retention_defaults",
+    "description": "Report the instance's global retention fallback windows (admin): posts and delivery-history defaults applied when a user has no override.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: retention defaults"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_get_settings",
+    "description": "List the instance's runtime settings (admin): the vip feature flag and vip_retention_days override.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: get settings"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_get_stats",
+    "description": "Get the admin dashboard counters — total users, posts, channels, delivery history — with 7-day deltas.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: dashboard stats"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_get_user",
+    "description": "Get one user's admin profile (admin) by id, including their post key and retention settings.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: get user"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_audit_logs",
+    "description": "List audit log entries (admin), paginated, filterable by actor_id, action, target_type, target_id, and RFC3339 since/until. The response carries action-count facets.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list audit logs"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "description": "filter by action, e.g. user.create, post.delete",
+          "type": "string"
+        },
+        "actor_id": {
+          "description": "filter by acting user id",
+          "type": "integer"
+        },
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "since": {
+          "description": "RFC3339 lower bound, e.g. 2026-01-01T00:00:00Z",
+          "type": "string"
+        },
+        "target_id": {
+          "description": "filter by target id",
+          "type": "string"
+        },
+        "target_type": {
+          "description": "filter by target type (user, post, channel, setting)",
+          "type": "string"
+        },
+        "until": {
+          "description": "RFC3339 upper bound",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_channels",
+    "description": "List delivery channels across all users (admin), paginated with owner information.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list channels"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_delivery_history",
+    "description": "List delivery history across all users (admin), paginated; filter by user_id, channel_id, status (delivered/failed/expired), and error_category.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list delivery history"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "channel_id": {
+          "description": "filter by channel id",
+          "type": "integer"
+        },
+        "error_category": {
+          "description": "card_rejected, upstream_client_error, upstream_server_error, upstream_business_error, network, or internal",
+          "type": "string"
+        },
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "status": {
+          "description": "delivered, failed, or expired",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "filter by owner user id",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_locked_channels",
+    "description": "List channels flagged for persistent delivery failures (admin) — the lockdown queue.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list locked channels"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_posts",
+    "description": "List posts across all users (admin), paginated, with search and username filters.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list posts"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "search": {
+          "description": "title/body search substring",
+          "type": "string"
+        },
+        "username": {
+          "description": "filter by owner username",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_user_sessions",
+    "description": "List a user's sessions (admin) by user id.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list user sessions"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_list_users",
+    "description": "List all users (admin), paginated, with username substring search. Items include role, active/VIP flags, retention override, and last login.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: list users"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "search": {
+          "description": "username substring search",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_reset_user_password",
+    "description": "Reset a user's password (admin). A temporary password is generated server-side and returned exactly once — surface it to the operator immediately.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: reset user password"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_retention_impact",
+    "description": "Preview (read-only, no writes) how many posts and delivery-history rows a candidate retention policy would delete, for explicit user ids or every VIP user (admin).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Admin: retention impact preview"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "retention_days": {
+          "description": "null/omit = inherit global default, 0 = keep forever, 1-3650 = keep N days",
+          "type": ["null", "integer"]
+        },
+        "scope": {
+          "description": "\"vip\" targets every VIP user",
+          "type": "string"
+        },
+        "user_ids": {
+          "description": "explicit user ids (max 200); omit when scope=vip",
+          "items": {
+            "type": "integer"
+          },
+          "type": ["null", "array"]
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_revoke_session",
+    "description": "Revoke a single session by token id (admin), across all users.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: revoke session"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "token_id": {
+          "description": "session (refresh token) id from list_my_sessions",
+          "type": "integer"
+        }
+      },
+      "required": ["token_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_revoke_user_sessions",
+    "description": "Revoke every session of a user (admin), forcing re-login everywhere.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: revoke user sessions"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_channel_enabled",
+    "description": "Enable or disable any delivery channel across users (admin).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set channel enabled"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "channel_id": {
+          "description": "the channel's numeric id",
+          "type": "integer"
+        },
+        "enabled": {
+          "description": "true to enable, false to disable",
+          "type": "boolean"
+        }
+      },
+      "required": ["channel_id", "enabled"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_setting",
+    "description": "Upsert one runtime setting (admin). Key \"vip\" takes {\"enabled\": bool}; key \"vip_retention_days\" takes {\"days\": 0-3650}. Returns the full settings list.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set setting"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "description": "for key vip_retention_days: 0-3650 (null = follow global config)",
+          "type": ["null", "integer"]
+        },
+        "enabled": {
+          "description": "for key vip: the feature flag value",
+          "type": ["null", "boolean"]
+        },
+        "key": {
+          "description": "setting key: vip or vip_retention_days",
+          "type": "string"
+        }
+      },
+      "required": ["key"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_user_active",
+    "description": "Activate or deactivate a user (admin). Deactivated users cannot log in.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set user active"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        },
+        "value": {
+          "description": "the new flag value",
+          "type": "boolean"
+        }
+      },
+      "required": ["user_id", "value"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_user_retention",
+    "description": "Set one user's retention policy (admin): days = null to inherit the global default, 0 to keep forever, 1-3650 to keep N days.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set user retention"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "retention_days": {
+          "description": "null/omit = inherit global default, 0 = keep forever, 1-3650 = keep N days",
+          "type": ["null", "integer"]
+        },
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id", "retention_days"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_user_role",
+    "description": "Set a user's role (admin): \"admin\" or \"user\".",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set user role"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "description": "\"admin\" or \"user\"",
+          "type": "string"
+        },
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        }
+      },
+      "required": ["user_id", "role"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "admin_set_user_vip",
+    "description": "Set a user's VIP flag (admin). VIP users follow the vip_retention_days policy when they have no personal override.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Admin: set user VIP"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "user_id": {
+          "description": "the user's numeric id",
+          "type": "integer"
+        },
+        "value": {
+          "description": "the new flag value",
+          "type": "boolean"
+        }
+      },
+      "required": ["user_id", "value"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "change_my_password",
+    "description": "Change the caller's password. This server's session continues seamlessly (the response contains a fresh token pair, which the server adopts automatically). Destructive to other password-based logins.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Change my password"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "current_password": {
+          "description": "the current password (may be empty for OAuth-only accounts without a local password)",
+          "type": "string"
+        },
+        "new_password": {
+          "description": "the new password (min 8, max 72 characters)",
+          "type": "string"
+        }
+      },
+      "required": ["current_password", "new_password"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "create_channel",
+    "description": "Create a delivery channel for the current user. configuration is a kind-specific JSON object — feishu takes {\"webhook_url\": \"...\", \"card_link_url\": \"...\"}; the exact fields depend on the kind. keywords is a comma-separated filter: only posts matching at least one keyword are delivered (empty = all posts).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Create delivery channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration": {
+          "description": "kind-specific JSON object as a string, e.g. {\"webhook_url\": \"https://...\"}",
+          "type": "string"
+        },
+        "keywords": {
+          "description": "comma-separated keywords; only posts matching at least one are delivered (empty = all posts)",
+          "type": "string"
+        },
+        "kind": {
+          "description": "channel kind, e.g. feishu, slack, or custom webhook",
+          "type": "string"
+        },
+        "name": {
+          "description": "human-readable channel name",
+          "type": "string"
+        }
+      },
+      "required": ["kind", "name", "configuration"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "create_post",
+    "description": "Publish a new markdown post on the markpost instance. Returns the post id and its public URL. The post is delivered to the user's enabled delivery channels according to their keyword filters.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Create post"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "description": "the post body in Markdown",
+          "type": "string"
+        },
+        "title": {
+          "description": "the post title",
+          "type": "string"
+        }
+      },
+      "required": ["title", "body"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "delete_channel",
+    "description": "Delete one of the current user's delivery channels by id. Delivery history is preserved but the channel stops receiving posts. Destructive.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Delete delivery channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "channel id from list_channels",
+          "type": "integer"
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "delete_post",
+    "description": "Delete one of the current user's posts by its QID (the short id from create_post / list_posts). The public URL stops resolving immediately. Destructive and irreversible.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Delete post"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "qid": {
+          "description": "the post's QID (short id from create_post or list_posts)",
+          "type": "string"
+        }
+      },
+      "required": ["qid"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_delivery_stats",
+    "description": "Get the user's delivery counters for today plus a per-day delivered/failed trend (default last 7 days, up to 365).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Get delivery stats"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "days": {
+          "description": "trend window in days, 1-365 (default 7)",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_my_retention",
+    "description": "Report the caller's effective data retention: how many days posts and delivery history are kept (0 = kept forever). Reflects per-user overrides and the instance's global defaults.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Get my retention"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "get_post",
+    "description": "Fetch a post's markdown source by its QID. Returns '# \u003ctitle\u003e' followed by the body — the authoritative content, not the rendered HTML.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "Get post"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "qid": {
+          "description": "the post's QID (short id from create_post or list_posts)",
+          "type": "string"
+        }
+      },
+      "required": ["qid"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_channels",
+    "description": "List the current user's delivery channels. Each channel has a kind (e.g. feishu, slack, custom webhook), a name, enabled flag, kind-specific configuration, and a keyword filter — posts whose body matches the keywords are forwarded to that channel.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List delivery channels"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_delivery_history",
+    "description": "List the user's delivery attempts, newest first, with terminal status (delivered/failed/expired), last error, and error category. Filterable by channel and status; paginated.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List delivery history"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "channel_id": {
+          "description": "filter by delivery channel id",
+          "type": "integer"
+        },
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "status": {
+          "description": "filter by terminal status: delivered, failed, or expired",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_latest_deliveries",
+    "description": "List the single most recent delivery attempt per channel — the quickest health overview of all channels.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List latest deliveries"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_my_sessions",
+    "description": "List the caller's active sessions (refresh tokens), including the one this MCP server holds.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List my sessions"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_pending_deliveries",
+    "description": "List the user's in-flight delivery attempts (queued or retrying).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List pending deliveries"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "list_posts",
+    "description": "List the current user's posts, newest first. Optional title/body search substring. Paginated ({items, total, page, limit, total_pages}); each item carries id (QID), title, and created_at.",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": true,
+      "title": "List posts"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "description": "items per page, at most 100 (default 20)",
+          "type": "integer"
+        },
+        "page": {
+          "description": "page number, 1-based (default 1)",
+          "type": "integer"
+        },
+        "search": {
+          "description": "substring matched against title and body",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  {
+    "name": "revoke_my_other_sessions",
+    "description": "Revoke all of the caller's sessions except the one this MCP server currently holds — a logout-everywhere-else operation.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Revoke my other sessions"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "revoke_my_session",
+    "description": "Revoke one of the caller's sessions by its token id (from list_my_sessions). If it is this server's own session, the next tool call transparently re-authenticates. Destructive to that session.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Revoke my session"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "token_id": {
+          "description": "session (refresh token) id from list_my_sessions",
+          "type": "integer"
+        }
+      },
+      "required": ["token_id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "rotate_post_key",
+    "description": "Rotate the caller's post key (the credential used by create_post). The previous key stops working immediately; the new one is returned. Existing publish integrations must be updated. Destructive.",
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Rotate post key"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  {
+    "name": "test_channel",
+    "description": "Send a test message to one of the current user's delivery channels to verify its configuration end-to-end. The upstream webhook is actually called.",
+    "annotations": {
+      "idempotentHint": false,
+      "openWorldHint": true,
+      "readOnlyHint": false,
+      "title": "Test delivery channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "channel id from list_channels",
+          "type": "integer"
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    }
+  },
+  {
+    "name": "update_channel",
+    "description": "Partially update one of the current user's delivery channels by id — only the provided fields change (kind, name, configuration, keywords, enabled).",
+    "annotations": {
+      "idempotentHint": false,
+      "readOnlyHint": false,
+      "title": "Update delivery channel"
+    },
+    "input_schema": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration": {
+          "description": "new kind-specific JSON object as a string",
+          "type": "string"
+        },
+        "enabled": {
+          "description": "enable or disable the channel",
+          "type": ["null", "boolean"]
+        },
+        "id": {
+          "description": "channel id from list_channels",
+          "type": "integer"
+        },
+        "keywords": {
+          "description": "new comma-separated keyword filter",
+          "type": "string"
+        },
+        "kind": {
+          "description": "new channel kind",
+          "type": "string"
+        },
+        "name": {
+          "description": "new channel name",
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "type": "object"
+    }
+  }
+]

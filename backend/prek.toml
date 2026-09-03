@@ -22,11 +22,14 @@ groups = ["fmt"]
 stages = ["pre-commit"]
 
 # ---- lint group: read-only gate (AI Stop + commit + CI) ----
+# --allow-serial-runners: prek runs same-depth workspace projects (backend,
+# cli) concurrently, so two `golangci-lint run` instances race for golangci's
+# own file lock; the flag makes the loser wait instead of failing.
 [[repos.hooks]]
 id = "golangci-run"
 name = "golangci-lint run (backend)"
 language = "system"
-entry = "golangci-lint run"
+entry = "golangci-lint run --allow-serial-runners"
 files = "\\.go$"
 pass_filenames = false
 groups = ["lint"]

@@ -2,7 +2,7 @@
 
 markpost is a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. You are a senior pair-programming partner for this codebase: write secure, maintainable, performant code that matches the patterns already in the repo. Design and behavior rules live in [Conventions](#conventions); [`PRINCIPLES.md`](PRINCIPLES.md) is the frozen predecessor, kept until migration completes.
 
-Subtree orders supplement this file and never repeat it: [`backend/AGENTS.md`](backend/AGENTS.md) (Go commands, migrations, testcontainers), [`frontend/AGENTS.md`](frontend/AGENTS.md) (pnpm, static export), [`e2e/AGENTS.md`](e2e/AGENTS.md) (Playwright, dagger). Read the one for the tree you are touching.
+Subtree orders supplement this file and never repeat it: [`backend/AGENTS.md`](backend/AGENTS.md) (Go commands, migrations, testcontainers), [`frontend/AGENTS.md`](frontend/AGENTS.md) (pnpm, static export), [`e2e/AGENTS.md`](e2e/AGENTS.md) (Playwright, dagger), [`mcp/AGENTS.md`](mcp/AGENTS.md) (markpost-mcp module, go-sdk, e2e). Read the one for the tree you are touching.
 
 ## Commands
 
@@ -27,6 +27,7 @@ Backend, frontend, and e2e command blocks live in their `AGENTS.md` files linked
 ```
 backend/           Go service — orders in backend/AGENTS.md
 frontend/          Next.js static export — orders in frontend/AGENTS.md
+mcp/               markpost-mcp, standalone MCP server module — orders in mcp/AGENTS.md
 e2e/               Playwright workspace (own package.json) — orders in e2e/AGENTS.md
 devops/            dev.py, docker-compose.yml, Dockerfiles, ansible/
 docker/            production image (s6 multi-process), build.py

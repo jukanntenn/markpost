@@ -3,5 +3,6 @@
   "backend/AGENTS.md": 500,
   "frontend/AGENTS.md": 300,
   "e2e/AGENTS.md": 150,
-  "docs/AGENTS.md": 600
+  "docs/AGENTS.md": 600,
+  "mcp/AGENTS.md": 350
 }

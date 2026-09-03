@@ -54,3 +54,11 @@
 | [testing.zh.md](./frontend/testing.zh.md)           | Vitest + MSW 单元测试、Playwright E2E 测试、测试设置与工具                                                                                                                                         |
 | [routes.zh.md](./frontend/routes.zh.md)             | 前端路由表（/auth/callback OAuth 回调）、声明式守卫架构（AuthGate + Public/Protected/AdminRoute + route-configs 纯函数）、安全边界声明（客户端守卫仅是 UX；安全在后端）、水合处理                  |
 | [i18n.zh.md](./frontend/i18n.zh.md)                 | 纯客户端 next-intl（无 getRequestConfig/plugin）、BCP 47 四语言（en/zh-Hans/zh-Hant/ja）、locale 文件命名、语言检测（localStorage + 浏览器语言）、到后端的 Accept-Language header、手工维护的 JSON |
+
+<a id="mcp-specs"></a>
+
+## MCP 规格
+
+| 文件                                       | 何时阅读                                                                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [mcp-server.zh.md](./mcp/mcp-server.zh.md) | markpost-mcp 设计：包装 REST API 的独立 Go module（黄金参考 github-mcp-server、官方 go-sdk v1.7.0）、四个工具集（47 个工具、admin 按需开启、只读模式）、凭据登录与刷新轮换、stdio/无状态 http 双传输、三层测试与发布产物 |

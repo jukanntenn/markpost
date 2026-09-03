@@ -19,6 +19,7 @@ Thumbs.db
 !.env.example
 
 # === Global binary artifacts ===
+/cli/markpost
 *.exe
 *.dll
 *.so

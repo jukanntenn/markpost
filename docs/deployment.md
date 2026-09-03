@@ -87,7 +87,7 @@ python3 docker/build.py --push
 ansible-playbook devops/ansible/deploy.yml          # dev (fn) is the default target
 ```
 
-The playbook ends with a post-deploy verification (see §5): it polls `/api/v1/health` through the public URL and checks `/api/v1/version` against the deploying checkout's `git describe` — a mismatch means the container is still running the old image.
+The playbook ends with a post-deploy verification (see §5): it polls `/api/v1/health` through the public URL and checks `/api/v1/version` against the deploying checkout's computed version string (`scripts/build_version.py`) — a mismatch means the container is still running the old image.
 
 ### Schema updates
 
@@ -248,15 +248,15 @@ ansible-playbook devops/ansible/deploy.yml -e target=production
 
 ### Environment variable matrix
 
-| Variable           | dev                                      | staging                          | production                     |
-| ------------------ | ---------------------------------------- | -------------------------------- | ------------------------------ |
-| `image`            | `192.168.5.50:5000/markpost:main`        | `jukanntenn/markpost:<pinned>`   | `jukanntenn/markpost:<pinned>` |
-| `expected_version` | `git describe` of the deploying checkout | `<pinned git tag>`               | `<pinned git tag>`             |
-| `host_port`        | `8089`                                   | `8089`                           | `2053`                         |
-| `tls_profile`      | `http`                                   | `http` (tunnel terminates HTTPS) | `origin` (CF Full strict)      |
-| `public_url`       | `http://192.168.5.200:8089`              | `https://markpost.bytehome.fun`  | `https://markpost.cc`          |
-| `debug`            | `true`                                   | `false`                          | `false`                        |
-| `cloudflare_cidrs` | _(unset)_                                | _(unset)_                        | CF CIDR list                   |
+| Variable           | dev                                                  | staging                          | production                     |
+| ------------------ | ---------------------------------------------------- | -------------------------------- | ------------------------------ |
+| `image`            | `192.168.5.50:5000/markpost:main`                    | `jukanntenn/markpost:<pinned>`   | `jukanntenn/markpost:<pinned>` |
+| `expected_version` | `scripts/build_version.py` of the deploying checkout | `<pinned git tag>`               | `<pinned git tag>`             |
+| `host_port`        | `8089`                                               | `8089`                           | `2053`                         |
+| `tls_profile`      | `http`                                               | `http` (tunnel terminates HTTPS) | `origin` (CF Full strict)      |
+| `public_url`       | `http://192.168.5.200:8089`                          | `https://markpost.bytehome.fun`  | `https://markpost.cc`          |
+| `debug`            | `true`                                               | `false`                          | `false`                        |
+| `cloudflare_cidrs` | _(unset)_                                            | _(unset)_                        | CF CIDR list                   |
 
 staging and production pin the same version (`markpost_version` in their group_vars): staging is the promotion gate, so the artifact validated there must be byte-identical to what production runs.
 
@@ -265,7 +265,7 @@ staging and production pin the same version (`markpost_version` in their group_v
 The playbook's final task runs `scripts/check_deploy.py` from the controller:
 
 1. Polls `{public_url}/api/v1/health` until `{"status": "ok"}` (5s interval, 120s timeout) — through the path real visitors use (LAN for dev, tunnel for staging, Cloudflare edge for production), so a broken port/Caddy/edge path fails the deploy even though the container itself is healthy.
-2. Compares `{public_url}/api/v1/version` against the expected version: the deploying checkout's `git describe` for dev (`main`-tag deploys), or the pinned git tag for staging/production. This catches a container that is up but still running the previous image.
+2. Compares `{public_url}/api/v1/version` against the expected version: the deploying checkout's `scripts/build_version.py` output for dev (`main`-tag deploys), or the pinned git tag for staging/production. This catches a container that is up but still running the previous image.
 
 On failure, check `docker compose logs markpost` on the host. There is no automatic rollback — migrations have usually already run by the time the app is up, so the recovery path is fix-forward and redeploy.
 

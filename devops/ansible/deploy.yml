@@ -235,8 +235,12 @@
     # the container healthcheck passes inside the container; this also catches
     # a broken published port, Caddy config, or edge path — and the version
     # check catches a healthy container still running the previous image.
+    # Expected version uses the shared computation (scripts/build_version.py),
+    # the same call docker/build.py makes at image build — the dev check only
+    # means something if both sides agree byte-for-byte, including the
+    # content-sensitive dirty suffix (MRFC 2026-09-03-dirty-tree-image-version-string).
     - name: Record expected version from the deploying checkout (dev)
-      ansible.builtin.command: git describe --tags --always --dirty
+      ansible.builtin.command: python3 {{ playbook_dir }}/../../scripts/build_version.py
       args:
         chdir: "{{ playbook_dir }}/../.."
       delegate_to: localhost

@@ -90,6 +90,16 @@ entry = "python3 scripts/prek_patch_audit_test.py"
 files = "^scripts/prek_patch_audit"
 pass_filenames = false
 
+# Same pattern for the shared image version-string computation (called by
+# docker/build.py and the deploy playbook's dev check).
+[[repos.hooks]]
+id = "build-version-tests"
+name = "build version unit tests"
+language = "system"
+entry = "python3 scripts/build_version_test.py"
+files = "^scripts/build_version"
+pass_filenames = false
+
 # ---- fmt group: root-level formatters (non-frontend, non-agent-dir) ----
 # prettier resolves through frontend's pinned install (CI installs pnpm and
 # frontend deps but no toolchain-level prettier; a bare `prettier` entry

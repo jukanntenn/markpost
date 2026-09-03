@@ -8,11 +8,10 @@
 # `generated: lax` setting, so they are exempt without an exclude here.
 #
 # golangci-lint hooks point GOLANGCI_LINT_CACHE at a per-tree directory:
-# prek's workspace scheduler runs sibling projects (backend and mcp)
-# concurrently and golangci-lint flocks its cache dir exclusively, so sharing
-# the default user-level cache lets independent hooks race into "parallel
-# golangci-lint is running" (exit 3). Separate caches, separate locks — same
-# isolation as mcp/prek.toml.
+# prek's workspace scheduler runs the backend and mcp golangci hooks
+# concurrently, and while the /tmp/golangci-lint.lock conflict is allowed
+# away (run.allow-parallel-runners in .golangci.yml), the analysis caches
+# still should not write over each other — separate trees, separate caches.
 
 [[repos]]
 repo = "local"

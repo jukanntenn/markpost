@@ -8,6 +8,11 @@ version: "2"
 run:
   timeout: 5m
   tests: true
+  # prek's workspace scheduler runs the backend and mcp golangci hooks
+  # concurrently; they live in separate trees with separate caches, so the
+  # /tmp/golangci-lint.lock mutual exclusion (5s timeout, then "parallel
+  # golangci-lint is running") is a false conflict — allow the parallel run.
+  allow-parallel-runners: true
 
 linters:
   default: standard

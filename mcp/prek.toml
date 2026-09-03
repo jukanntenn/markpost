@@ -1,6 +1,12 @@
 # mcp project — Go hooks for the markpost-mcp module (cwd=mcp/, where its
 # go.mod lives). Mirrors backend/prek.toml: workspace mode strips the mcp/
 # prefix so golangci-lint receives project-relative paths.
+#
+# golangci-lint hooks point GOLANGCI_LINT_CACHE at a per-tree directory:
+# prek's workspace scheduler runs sibling projects (backend and mcp)
+# concurrently, and golangci-lint flocks its cache dir exclusively — sharing
+# the default user-level cache makes the two hooks race ("parallel
+# golangci-lint is running", exit 3). Separate caches, separate locks.
 
 [[repos]]
 repo = "local"
@@ -10,7 +16,8 @@ repo = "local"
 id = "golangci-fmt"
 name = "golangci-lint fmt (mcp)"
 language = "system"
-entry = "golangci-lint fmt"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint fmt"
+shell = "bash"
 files = "\\.go$"
 pass_filenames = true
 groups = ["fmt"]
@@ -21,7 +28,8 @@ stages = ["pre-commit"]
 id = "golangci-run"
 name = "golangci-lint run (mcp)"
 language = "system"
-entry = "golangci-lint run"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint run"
+shell = "bash"
 files = "\\.go$"
 pass_filenames = false
 groups = ["lint"]

@@ -18,6 +18,7 @@ jobs:
     outputs:
       backend: ${{ steps.f.outputs.backend }}
       frontend: ${{ steps.f.outputs.frontend }}
+      mcp: ${{ steps.f.outputs.mcp }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: f
@@ -31,6 +32,12 @@ jobs:
               - '.github/workflows/test.yml'
             frontend:
               - 'frontend/**'
+              - '.github/workflows/test.yml'
+            # The mcp e2e suite builds ../backend from source, so backend
+            # changes exercise it too.
+            mcp:
+              - 'mcp/**'
+              - 'backend/**'
               - '.github/workflows/test.yml'
 
   test-backend:
@@ -87,6 +94,24 @@ jobs:
           path: frontend/coverage/
           retention-days: 14
 
+  test-mcp:
+    needs: changes
+    if: needs.changes.outputs.mcp == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+          cache-dependency-path: mcp/go.sum
+      # -race mirrors test-backend. The e2e tag suite starts a postgres
+      # testcontainer and drives a real backend built from ../backend, so it
+      # needs the docker socket (present on hosted runners).
+      - name: Test
+        working-directory: mcp
+        run: go test -race ./... && go test -race --tags e2e ./e2e
+
   # Stable per-workflow verdict for branch protection's required checks
   # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
   # runs past skips and failures, skipped jobs count as success.
@@ -94,7 +119,7 @@ jobs:
     # Distinct check name so branch protection's required-check picker is
     # unambiguous (five bare "conclusion" names are not selectable apart).
     name: Test conclusion
-    needs: [changes, test-backend, test-frontend]
+    needs: [changes, test-backend, test-frontend, test-mcp]
     if: always()
     runs-on: ubuntu-latest
     steps:

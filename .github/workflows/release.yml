@@ -48,3 +48,46 @@ jobs:
           draft: false
           prerelease: ${{ steps.semver.outputs.prerelease == 'true' }}
           make_latest: ${{ steps.semver.outputs.prerelease == 'false' }}
+
+  # markpost-mcp release binaries: one tarball per GOOS/GOARCH, cross-compiled
+  # from a single ubuntu runner (CGO disabled, so no cgo cross-toolchains are
+  # needed). Windows ships a .zip. Attached to the release created above.
+  mcp-binaries:
+    name: markpost-mcp binaries (${{ matrix.goos }}/${{ matrix.goarch }})
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+          cache-dependency-path: mcp/go.sum
+      - name: Build
+        working-directory: mcp
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          go build -ldflags="-w -s -X main.version=${VERSION}" -o "markpost-mcp-${GOOS}-${GOARCH}" ./cmd/markpost-mcp
+          if [ "${GOOS}" = windows ]; then
+            mv "markpost-mcp-${GOOS}-${GOARCH}" "markpost-mcp.exe"
+            zip "markpost-mcp-${GOOS}-${GOARCH}.zip" markpost-mcp.exe
+          else
+            tar czf "markpost-mcp-${GOOS}-${GOARCH}.tar.gz" "markpost-mcp-${GOOS}-${GOARCH}"
+          fi
+      - name: Attach to release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: mcp/markpost-mcp-*

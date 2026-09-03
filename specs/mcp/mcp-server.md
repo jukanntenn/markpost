@@ -2,7 +2,7 @@
 
 English | [中文](mcp-server.zh.md)
 
-This document specifies `markpost-mcp`: the standalone MCP (Model Context Protocol) server that exposes a running markpost instance to AI agents. It is a terminal design reference; the decision rationale lives in [the MCP server MRFC](../../.agents/mrfcs/proposed/2026-09-03-mcp-server.md).
+This document specifies `markpost-mcp`: the standalone MCP (Model Context Protocol) server that exposes a running markpost instance to AI agents. It is a terminal design reference; the decision rationale lives in [the MCP server MRFC](../../.agents/mrfcs/implemented/2026-09-03-mcp-server.md).
 
 ## 1. Architecture
 

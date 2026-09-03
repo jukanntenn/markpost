@@ -2,6 +2,7 @@
 """Unit tests for the shared version-string computation (stdlib unittest)."""
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -14,9 +15,18 @@ SCRIPT = Path(__file__).with_name("build_version.py")
 DIRTY_SUFFIX = re.compile(r"^v0\.0\.1-dirty\.[0-9a-f]{8}$")
 
 
+# Scratch-repo subprocesses must not inherit the outer repository's git env:
+# when prek runs this suite from a git hook it exports GIT_DIR/GIT_WORK_TREE/
+# GIT_INDEX_FILE, which override git's -C and route the scratch repo's
+# add/commit straight into the real repository's index.
+def clean_env() -> dict[str, str]:
+    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+
 def git(repo: Path, *args: str) -> None:
     subprocess.run(
-        ["git", "-C", str(repo), *args], check=True, capture_output=True
+        ["git", "-C", str(repo), *args], check=True, capture_output=True,
+        env=clean_env(),
     )
 
 
@@ -26,6 +36,7 @@ def version(repo: Path) -> str:
         check=True,
         capture_output=True,
         text=True,
+        env=clean_env(),
     )
     return result.stdout.strip()
 

@@ -117,5 +117,5 @@ scripts/
 backend/data/
 backend/devops/
 **/next-env.d.ts
-# mcp per-tree golangci-lint cache (see mcp/prek.toml)
-mcp/.golangci-cache/
+# per-tree golangci-lint caches (see backend/prek.toml)
+**/.golangci-cache

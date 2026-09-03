@@ -6,6 +6,13 @@
 # Not declared orphan: root builtins (trailing-whitespace, check-yaml, ...)
 # still cover backend files; golangci-lint skips generated *.go via its own
 # `generated: lax` setting, so they are exempt without an exclude here.
+#
+# golangci-lint hooks point GOLANGCI_LINT_CACHE at a per-tree directory:
+# prek's workspace scheduler runs sibling projects (backend and mcp)
+# concurrently and golangci-lint flocks its cache dir exclusively, so sharing
+# the default user-level cache lets independent hooks race into "parallel
+# golangci-lint is running" (exit 3). Separate caches, separate locks — same
+# isolation as mcp/prek.toml.
 
 [[repos]]
 repo = "local"
@@ -15,7 +22,8 @@ repo = "local"
 id = "golangci-fmt"
 name = "golangci-lint fmt (backend)"
 language = "system"
-entry = "golangci-lint fmt"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint fmt"
+shell = "bash"
 files = "\\.go$"
 pass_filenames = true
 groups = ["fmt"]
@@ -26,7 +34,8 @@ stages = ["pre-commit"]
 id = "golangci-run"
 name = "golangci-lint run (backend)"
 language = "system"
-entry = "golangci-lint run"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint run"
+shell = "bash"
 files = "\\.go$"
 pass_filenames = false
 groups = ["lint"]

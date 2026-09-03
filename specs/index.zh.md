@@ -42,6 +42,14 @@
 | [disaster-recovery.zh.md](./backend/disaster-recovery.zh.md)   | 单实例韧性姿态：当前备份现状、故障/恢复矩阵、源站宕机期间 CDN 读路径存活、成本                                                                                                                                                                         |
 | [cloudflare.zh.md](./backend/cloudflare.zh.md)                 | 三种部署模式（SaaS / 自托管 / homelab）、Cloudflare 接入（Full strict + Origin CA）、缓存行为、缓存标签清除契约、免费档限制，以及 XFF/受信代理的客户端 IP 设计                                                                                         |
 
+<a id="cli-specs"></a>
+
+## CLI 规格
+
+| 文件                     | 何时阅读                                                                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [cli.zh.md](./cli.zh.md) | 独立客户端 `markpost`（`cli/`）：命令集、会话与配置解析（config.toml + MARKPOST_* 环境变量）、401 自动刷新、agent 检测、输出规则与退出码、测试分层 |
+
 <a id="frontend-specs"></a>
 
 ## 前端规格

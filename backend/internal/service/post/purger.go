@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -25,10 +25,26 @@ type Purger interface {
 	PurgePost(ctx context.Context, qid string)
 }
 
-// noopPurger does nothing. Used when Cloudflare is not configured.
-type noopPurger struct{}
+// PurgeMetrics is the subset of the observability instruments the purger
+// records. One counter per outcome (no attributes), so a purge attempt is
+// derivable as success + failure and "skipped" always means "not attempted"
+// (MRFC 2026-09-03-cache-purge-observability).
+type PurgeMetrics interface {
+	IncCDNPurgeSuccess(ctx context.Context)
+	IncCDNPurgeFailure(ctx context.Context)
+	IncCDNPurgeSkipped(ctx context.Context)
+}
 
-func (noopPurger) PurgePost(_ context.Context, _ string) {}
+// noopPurger does nothing but count the skip. Used when Cloudflare is not
+// configured: the CDN copy falls back to natural TTL expiry, so a steadily
+// climbing skip counter is the expected steady state there, not a fault.
+type noopPurger struct{ metrics PurgeMetrics }
+
+func (p noopPurger) PurgePost(ctx context.Context, _ string) {
+	if p.metrics != nil {
+		p.metrics.IncCDNPurgeSkipped(ctx)
+	}
+}
 
 // cloudflarePurger issues a cache-tag purge against the Cloudflare API. The
 // tag post-<qid> is set on every HTML/raw response by the RenderPost handler,
@@ -38,31 +54,41 @@ type cloudflarePurger struct {
 	zoneID   string
 	client   *http.Client
 	endpoint string
+	metrics  PurgeMetrics
 }
 
-func newCloudflarePurger(cfg config.CloudflareConfig) *cloudflarePurger {
+func newCloudflarePurger(cfg config.CloudflareConfig, metrics PurgeMetrics) *cloudflarePurger {
+	if metrics == nil {
+		metrics = noopMetrics{}
+	}
 	return &cloudflarePurger{
 		apiToken: cfg.APIToken,
 		zoneID:   cfg.ZoneID,
 		client:   &http.Client{Timeout: 10 * time.Second},
 		endpoint: fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/purge_cache", cfg.ZoneID),
+		metrics:  metrics,
 	}
 }
 
 func (p *cloudflarePurger) PurgePost(ctx context.Context, qid string) {
 	if p.apiToken == "" || p.zoneID == "" {
+		if p.metrics != nil {
+			p.metrics.IncCDNPurgeSkipped(ctx)
+		}
 		return
 	}
 	tag := "post-" + sanitizeCacheTag(qid)
 	body, err := json.Marshal(map[string][]string{"tags": {tag}})
 	if err != nil {
-		log.Printf("cdn purge: marshal body for qid %q: %v", qid, err)
+		slog.WarnContext(ctx, "cdn purge: marshal body failed", "qid", qid, "error", err)
+		p.metrics.IncCDNPurgeFailure(ctx)
 		return
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint, bytes.NewReader(body))
 	if err != nil {
-		log.Printf("cdn purge: build request for qid %q: %v", qid, err)
+		slog.WarnContext(ctx, "cdn purge: build request failed", "qid", qid, "error", err)
+		p.metrics.IncCDNPurgeFailure(ctx)
 		return
 	}
 	req.Header.Set("Authorization", "Bearer "+p.apiToken)
@@ -70,13 +96,17 @@ func (p *cloudflarePurger) PurgePost(ctx context.Context, qid string) {
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		log.Printf("cdn purge: request for qid %q failed: %v", qid, err)
+		slog.WarnContext(ctx, "cdn purge: request failed", "qid", qid, "error", err)
+		p.metrics.IncCDNPurgeFailure(ctx)
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode >= 300 {
-		log.Printf("cdn purge: qid %q returned HTTP %d", qid, resp.StatusCode)
+		slog.WarnContext(ctx, "cdn purge: unexpected status", "qid", qid, "status", resp.StatusCode)
+		p.metrics.IncCDNPurgeFailure(ctx)
+		return
 	}
+	p.metrics.IncCDNPurgeSuccess(ctx)
 }
 
 // sanitizeCacheTag strips characters that could break the JSON body or allow
@@ -91,11 +121,12 @@ func sanitizeCacheTag(qid string) string {
 }
 
 // newPurger builds the CDN purger from config: a Cloudflare purger when both an
-// API token and zone ID are configured, otherwise a no-op.
-func newPurger() Purger {
+// API token and zone ID are configured, otherwise a no-op. Both record their
+// outcome through the given recorder (nil degrades to a no-op recorder).
+func newPurger(metrics PurgeMetrics) Purger {
 	cfg := config.Get().Cloudflare
 	if cfg.APIToken == "" || cfg.ZoneID == "" {
-		return noopPurger{}
+		return noopPurger{metrics: metrics}
 	}
-	return newCloudflarePurger(cfg)
+	return newCloudflarePurger(cfg, metrics)
 }

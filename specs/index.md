@@ -38,6 +38,12 @@ English | [中文](index.zh.md)
 | [disaster-recovery.md](./backend/disaster-recovery.md)   | Single-instance resilience posture: current backup reality, the failure/recovery matrix, CDN read-path survival during origin outage, and cost                                                                                                                                                                                                      |
 | [cloudflare.md](./backend/cloudflare.md)                 | Three deployment modes (SaaS / self-hosted / homelab), Cloudflare onboarding (Full strict + Origin CA), cache behavior, cache-tag purge contract, free-tier limits, and the XFF/trusted-proxy client-IP design                                                                                                                                      |
 
+## CLI Specs
+
+| File               | When to Read                                                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [cli.md](./cli.md) | The standalone `markpost` client (`cli/`): command set, session/config resolution (config.toml + MARKPOST_* env), 401 auto-refresh, agent detection, output rules and exit codes, testing tiers |
+
 ## Frontend Specs
 
 | File                                          | When to Read                                                                                                                                                                                                                                                             |

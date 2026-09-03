@@ -19,6 +19,7 @@ jobs:
       backend: ${{ steps.f.outputs.backend }}
       frontend: ${{ steps.f.outputs.frontend }}
       mcp: ${{ steps.f.outputs.mcp }}
+      cli: ${{ steps.f.outputs.cli }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: f
@@ -38,6 +39,8 @@ jobs:
             mcp:
               - 'mcp/**'
               - 'backend/**'
+            cli:
+              - 'cli/**'
               - '.github/workflows/test.yml'
 
   test-backend:
@@ -112,6 +115,31 @@ jobs:
         working-directory: mcp
         run: go test -race ./... && go test -race --tags e2e ./e2e
 
+  # CLI unit tests need no Docker (internal/testserver is an httptest fake);
+  # acceptance tests run against a live server and stay a local/dev concern.
+  # -race matches the cli/prek.toml pre-push hook.
+  test-cli:
+    needs: changes
+    if: needs.changes.outputs.cli == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26"
+          cache: true
+          cache-dependency-path: cli/go.sum
+      - name: Test
+        working-directory: cli
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cli-coverage
+          path: cli/coverage.out
+          retention-days: 14
+
   # Stable per-workflow verdict for branch protection's required checks
   # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
   # runs past skips and failures, skipped jobs count as success.
@@ -119,7 +147,7 @@ jobs:
     # Distinct check name so branch protection's required-check picker is
     # unambiguous (five bare "conclusion" names are not selectable apart).
     name: Test conclusion
-    needs: [changes, test-backend, test-frontend, test-mcp]
+    needs: [changes, test-backend, test-frontend, test-mcp, test-cli]
     if: always()
     runs-on: ubuntu-latest
     steps:

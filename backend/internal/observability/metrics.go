@@ -21,6 +21,11 @@ type Metrics struct {
 	DeliveryPending    metric.Int64UpDownCounter
 	DeliveryDispatched metric.Int64Counter
 	DeliveryFailed     metric.Int64Counter
+	RenderCacheHit     metric.Int64Counter
+	RenderCacheMiss    metric.Int64Counter
+	CDNPurgeSuccess    metric.Int64Counter
+	CDNPurgeFailure    metric.Int64Counter
+	CDNPurgeSkipped    metric.Int64Counter
 }
 
 // meterName is the Meter used for all markpost business metrics.
@@ -39,6 +44,11 @@ func NewMetrics() *Metrics {
 	deliveryPending, _ := m.Int64UpDownCounter("markpost.delivery.pending", metric.WithDescription("Pending delivery attempts"))
 	deliveryDispatched, _ := m.Int64Counter("markpost.delivery.dispatched_total", metric.WithDescription("Deliveries dispatched"))
 	deliveryFailed, _ := m.Int64Counter("markpost.delivery.failed_total", metric.WithDescription("Deliveries failed"))
+	renderCacheHit, _ := m.Int64Counter("markpost.render_cache.hit_total", metric.WithDescription("Render requests served from the render cache"))
+	renderCacheMiss, _ := m.Int64Counter("markpost.render_cache.miss_total", metric.WithDescription("Render requests that missed the render cache"))
+	cdnPurgeSuccess, _ := m.Int64Counter("markpost.cdn.purge_success_total", metric.WithDescription("Successful CDN cache-tag purges"))
+	cdnPurgeFailure, _ := m.Int64Counter("markpost.cdn.purge_failure_total", metric.WithDescription("Failed CDN cache-tag purges"))
+	cdnPurgeSkipped, _ := m.Int64Counter("markpost.cdn.purge_skipped_total", metric.WithDescription("Skipped CDN cache-tag purges"))
 	registerRuntimeMetrics(m)
 	return &Metrics{
 		PostsCreated:       postsCreated,
@@ -48,6 +58,11 @@ func NewMetrics() *Metrics {
 		DeliveryPending:    deliveryPending,
 		DeliveryDispatched: deliveryDispatched,
 		DeliveryFailed:     deliveryFailed,
+		RenderCacheHit:     renderCacheHit,
+		RenderCacheMiss:    renderCacheMiss,
+		CDNPurgeSuccess:    cdnPurgeSuccess,
+		CDNPurgeFailure:    cdnPurgeFailure,
+		CDNPurgeSkipped:    cdnPurgeSkipped,
 	}
 }
 

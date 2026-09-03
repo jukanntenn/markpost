@@ -27,16 +27,27 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// Metrics is the subset of the observability instruments the post service
-// records. Implementations are typically *observability.Metrics; a nil value
-// (noopMetrics) makes metrics opt-in so existing callers and tests are unchanged.
+// Metrics is the subset of the observability instruments the post service and
+// its CDN purger record. Implementations are typically *observability.Metrics;
+// a nil value (noopMetrics) makes metrics opt-in so existing callers and tests
+// are unchanged.
 type Metrics interface {
 	IncPostsCreated(ctx context.Context)
+	IncRenderCacheHit(ctx context.Context)
+	IncRenderCacheMiss(ctx context.Context)
+	IncCDNPurgeSuccess(ctx context.Context)
+	IncCDNPurgeFailure(ctx context.Context)
+	IncCDNPurgeSkipped(ctx context.Context)
 }
 
 type noopMetrics struct{}
 
-func (noopMetrics) IncPostsCreated(context.Context) {}
+func (noopMetrics) IncPostsCreated(context.Context)    {}
+func (noopMetrics) IncRenderCacheHit(context.Context)  {}
+func (noopMetrics) IncRenderCacheMiss(context.Context) {}
+func (noopMetrics) IncCDNPurgeSuccess(context.Context) {}
+func (noopMetrics) IncCDNPurgeFailure(context.Context) {}
+func (noopMetrics) IncCDNPurgeSkipped(context.Context) {}
 
 // Service provides post-related business logic.
 type Service struct {
@@ -87,13 +98,15 @@ func NewService(postRepo post.Repository, delivery post.DeliveryEnqueuer, opts .
 		minifier:  newHTMLMinifier(),
 		delivery:  delivery,
 		cache:     newRenderCache(),
-		purger:    newPurger(),
 		metrics:   noopMetrics{},
 		loggerVal: slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(s)
 	}
+	// The purger records its outcome counters through the same recorder as the
+	// service, so it must be built after the options have injected the metrics.
+	s.purger = newPurger(s.metrics)
 	return s
 }
 
@@ -197,6 +210,16 @@ func (s *Service) logger() *slog.Logger {
 	return s.loggerVal
 }
 
+// recorder returns the injected metrics, defaulting to the no-op recorder when
+// unset (e.g. tests that build a Service struct literal directly), so the
+// instrumented render paths never nil-deref.
+func (s *Service) recorder() Metrics {
+	if s.metrics == nil {
+		return noopMetrics{}
+	}
+	return s.metrics
+}
+
 func (s *Service) getPostByQID(ctx context.Context, qid string) (*post.Post, error) {
 	p, err := s.postRepo.GetByQID(ctx, qid)
 	if err != nil {
@@ -242,9 +265,17 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, etag string, createdAt time.Time, err error) {
 	key := cacheKey(qid, "html")
 
+	// Counted at the request decision point, not inside the cache
+	// implementation: the singleflight re-check performs a second Get on every
+	// cold miss and would inflate the miss count (MRFC
+	// 2026-09-03-cache-purge-observability). A miss means "entered the
+	// singleflight path", even when the rare re-check race later finds the
+	// leader's entry.
 	if v, ok := s.cache.Get(key); ok {
+		s.recorder().IncRenderCacheHit(ctx)
 		return v.title, v.body, v.etag, v.createdAt, nil
 	}
+	s.recorder().IncRenderCacheMiss(ctx)
 
 	v, err, _ := s.group.Do(key, func() (any, error) {
 		if cached, ok := s.cache.Get(key); ok {
@@ -302,9 +333,13 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 func (s *Service) GetPostMarkdown(ctx context.Context, qid string) (title, body, etag string, createdAt time.Time, err error) {
 	key := cacheKey(qid, "raw")
 
+	// Same accounting contract as RenderPostHTML; both variants share the
+	// counters (no variant attribute).
 	if v, ok := s.cache.Get(key); ok {
+		s.recorder().IncRenderCacheHit(ctx)
 		return v.title, v.body, v.etag, v.createdAt, nil
 	}
+	s.recorder().IncRenderCacheMiss(ctx)
 
 	v, err, _ := s.group.Do(key, func() (any, error) {
 		if cached, ok := s.cache.Get(key); ok {

@@ -167,6 +167,12 @@ Cloudflare 免费版是承重选择：不限量带宽（预计约 7.8 TB/月的�
 
 **清除是尽力而为且异步的。** 删除 handler 同步移除源站渲染缓存条目（必须），随后经 `Purger` 接口（`internal/service/post/purger.go`）在后台 goroutine 上排队 Cloudflare 清除调用：配置了 `[cloudflare] api_token` + `zone_id` 时是 `cloudflarePurger`，否则是 `noopPurger`（无 Cloudflare 的自托管 —— CDN 副本退回自然 TTL 到期）。QID 在进入 JSON 负载前经净化（`sanitizeCacheTag`）；失败被记录并吞掉，不做重试。主动删除因此是**源站即时、CDN 近即时（通常 <150 ms）、浏览器至多 5 分钟陈旧**（`max-age=300`）。
 
+<a id="reading-origin-cache-metrics-against-cf-cache-status"></a>
+
+### 对照 `CF-Cache-Status` 解读源站缓存指标
+
+源站将 `markpost.render_cache.hit_total`/`miss_total` 与 `markpost.cdn.purge_*` 计数器导出到 metrics 文件（[observability.zh.md](./observability.zh.md)）；Cloudflare 在每个响应里以 `CF-Cache-Status` 报告边缘侧的视图。二者描述不同层级，不可混为一谈：边缘吸收了绝大多数读流量（见 _Request-flow walkthrough_ 一节），因此健康稳态是**高源站命中率叠加小源站请求量**——边缘 `HIT` 根本不会到达源站。`MISS` 或 `EXPIRED` 表示某个 POP 回源了，此时源站自身的命中/未命中才决定是否发生渲染；`DYNAMIC`/`BYPASS` 标记边缘不缓存的流量（`no-store` 的 API 组、认证页）。删除侧：`purge_skipped_total` 独自增长是无 Cloudflare 自托管的预期图景；purge `success` 之后该 post 下次被取时边缘出现 `MISS`/`EXPIRED`，即是删除传播到边缘。
+
 <a id="deletion-and-invalidation"></a>
 
 ## 删除与失效

@@ -113,10 +113,10 @@ POST /auth/refresh { refresh_token }
 
 The `refresh_tokens` table carries a `revoked` boolean column (added by a versioned migration, default false) plus a nullable `revoked_at` timestamp that every revocation write stamps (added by a versioned migration):
 
-| Column       | Type        | Default | Meaning                                                        |
-| ------------ | ----------- | ------- | -------------------------------------------------------------- |
-| `revoked`    | bool        | false   | true marks the token revoked (reuse detection)                 |
-| `revoked_at` | timestamptz | NULL    | when the revocation happened (drives the §2.5 grace window)    |
+| Column       | Type        | Default | Meaning                                                     |
+| ------------ | ----------- | ------- | ----------------------------------------------------------- |
+| `revoked`    | bool        | false   | true marks the token revoked (reuse detection)              |
+| `revoked_at` | timestamptz | NULL    | when the revocation happened (drives the §2.5 grace window) |
 
 Revocation writes `UPDATE SET revoked = true, revoked_at = now()` in place of a physical `DELETE`, retaining the revocation record that reuse detection needs. `revoked_at IS NULL` marks rows revoked before the column existed — they take the strict path (§2.5).
 

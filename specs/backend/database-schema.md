@@ -95,14 +95,15 @@ Defined in `internal/domain/user/token.go`. Stores hashed refresh tokens for JWT
 
 Explicit table name: `refresh_tokens`.
 
-| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints | Description                                                                                                           |
-| ----------- | ------------ | --------------------- | -------- | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
-| `ID`        | `id`         | bigint auto-increment | no       | —       | PK          | Primary key                                                                                                           |
-| `UserID`    | `user_id`    | integer               | no       | —       | index       | Owning user (no FK constraint; cleanup handled at application level)                                                  |
-| `TokenHash` | `token_hash` | varchar               | no       | —       | unique      | SHA256 hash of the refresh token                                                                                      |
-| `Revoked`   | `revoked`    | boolean               | no       | `false` | —           | Revocation flag. `true` marks a revoked token (for refresh-token theft reuse detection; see [auth.md](../auth.md) §2) |
-| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | —           | Token expiration time                                                                                                 |
-| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —           | Record creation time (auto)                                                                                           |
+| Go Field    | DB Column    | Type                  | Nullable | Default | Constraints | Description                                                                                                                 |
+| ----------- | ------------ | --------------------- | -------- | ------- | ----------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `ID`        | `id`         | bigint auto-increment | no       | —       | PK          | Primary key                                                                                                                 |
+| `UserID`    | `user_id`    | integer               | no       | —       | index       | Owning user (no FK constraint; cleanup handled at application level)                                                        |
+| `TokenHash` | `token_hash` | varchar               | no       | —       | unique      | SHA256 hash of the refresh token                                                                                            |
+| `Revoked`   | `revoked`    | boolean               | no       | `false` | —           | Revocation flag. `true` marks a revoked token (for refresh-token theft reuse detection; see [auth.md](../auth.md) §2)       |
+| `RevokedAt` | `revoked_at` | timestamptz           | yes      | —       | —           | When the revocation happened (drives the rotation grace window, see [auth.md](../auth.md) §2.5); NULL takes the strict path |
+| `ExpiresAt` | `expires_at` | timestamp             | no       | —       | —           | Token expiration time                                                                                                       |
+| `CreatedAt` | `created_at` | timestamp             | no       | `now()` | —           | Record creation time (auto)                                                                                                 |
 
 ### `token_blacklist`
 
@@ -141,7 +142,7 @@ All tables use auto-increment integer primary keys. Business tables (`users`, `p
 
 ### 2. Timestamps
 
-Business tables include both `created_at` and `updated_at` with GORM auto-population (`autoCreateTime` / `autoUpdateTime`). Write-once tables (`refresh_tokens`, `token_blacklist`) only have `created_at` — their records are never modified after creation.
+Business tables include both `created_at` and `updated_at` with GORM auto-population (`autoCreateTime` / `autoUpdateTime`). Write-once tables (`token_blacklist`) only have `created_at` — their records are never modified after creation. `refresh_tokens` rows are written once at creation and modified only by their soft revocation (`revoked`, `revoked_at`).
 
 ### 3. No Soft Delete
 

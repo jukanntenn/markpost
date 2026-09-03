@@ -117,6 +117,15 @@ func (s *Service) WithUserURL(url string) *Service {
 // 10-minute window covers the user completing GitHub authorization. auth.md §3.5.
 const oauthStateTTL = 10 * time.Minute
 
+// refreshGraceWindow is how long a replay of a freshly rotated refresh token
+// stays a rotation race instead of theft: rejected, but without family
+// revocation (auth.md §2.5). A tab that crashes between the server-side
+// rotation and its localStorage persist would otherwise log the user out on
+// every device. Under reject-without-revocation an in-window replay mints
+// nothing, so the window's theft value is zero and 30 s — the WorkOS default —
+// is all coverage cost.
+const refreshGraceWindow = 30 * time.Second
+
 // GenerateGitHubAuthURL generates a GitHub OAuth authorization URL with a PKCE
 // code challenge and stores the state→verifier entry for one-time consumption
 // on callback. Returns (url, state). See auth.md §3.2.
@@ -297,12 +306,21 @@ func (s *Service) LoginWithEmail(ctx context.Context, username, password string)
 	return s.completeLogin(ctx, u)
 }
 
+// withinGraceWindow reports whether the token's revocation is young enough
+// for a replay to be treated as a rotation race rather than theft. Rows
+// revoked before the revoked_at column existed (NULL) take the strict path.
+func withinGraceWindow(rt *user.RefreshToken) bool {
+	return rt.RevokedAt != nil && time.Since(*rt.RevokedAt) <= refreshGraceWindow
+}
+
 // RefreshToken validates a refresh token, performs one-time rotation with
 // token-theft reuse detection (auth.md §2), and issues a new token pair.
 //
-// A resubmitted already-revoked token is treated as theft: every refresh
-// token for its user is revoked and the request is rejected. A valid (active)
-// token is revoked and a fresh pair is issued.
+// A resubmitted already-revoked token is judged by how long ago it was
+// revoked: within refreshGraceWindow it is a rotation race — the request is
+// rejected but the user's other tokens survive; past it, it is theft — every
+// refresh token for the user is revoked and the request is rejected. A valid
+// (active) token is revoked and a fresh pair is issued.
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.User, *JWTTokenPair, error) {
 	tokenHash := utils.HashToken(refreshToken)
 
@@ -310,11 +328,16 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			// Not active — check whether it was revoked. A revoked token being
-			// resubmitted is the reuse/theft signal: revoke everything for the
-			// user and reject. We can only detect theft if we can still tie the
-			// hash to a user; IsRefreshTokenRevoked reads the row to get it.
+			// resubmitted is the reuse signal: theft past the grace window
+			// (revoke everything for the user), a tolerated race within it. We
+			// can only tell them apart if we can still tie the hash to a row;
+			// GetRevokedRefreshToken reads it for UserID and RevokedAt.
 			if revoked, rErr := s.tokens.IsRefreshTokenRevoked(ctx, tokenHash); rErr == nil && revoked {
 				if rt, gErr := s.tokens.GetRevokedRefreshToken(ctx, tokenHash); gErr == nil {
+					if withinGraceWindow(rt) {
+						slog.Info("refresh token replay within grace window", "token_hash", tokenHash, "user_id", rt.UserID)
+						return nil, nil, service.New(ErrInvalidToken, "refresh token replay within grace window")
+					}
 					_ = s.tokens.RevokeAllByUserID(ctx, rt.UserID)
 				}
 				slog.Warn("refresh token reuse detected", "token_hash", tokenHash)

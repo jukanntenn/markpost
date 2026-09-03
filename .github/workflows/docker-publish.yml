@@ -131,3 +131,112 @@ jobs:
             -t jukanntenn/markpost:latest \
             jukanntenn/markpost:latest-amd64 \
             jukanntenn/markpost:latest-arm64
+
+  # markpost-mcp image: same tag semantics and native multi-arch strategy as
+  # the main image, one image name (jukanntenn/markpost-mcp).
+  mcp_single_arch:
+    name: Build & push markpost-mcp (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve tags
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          DOCKER_TAG=${TAG#v}
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            STABLE=true
+          else
+            STABLE=false
+          fi
+          {
+            echo "TAG=$TAG"
+            echo "DOCKER_TAG=$DOCKER_TAG"
+            echo "STABLE=$STABLE"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: jukanntenn/markpost-mcp
+
+      - name: Build & push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: mcp/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: |
+            jukanntenn/markpost-mcp:${{ env.DOCKER_TAG }}-${{ matrix.arch }}
+            ${{ env.STABLE == 'true' && format('jukanntenn/markpost-mcp:latest-{0}', matrix.arch) || '' }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ env.TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+
+  mcp_manifests:
+    name: Create markpost-mcp multi-arch manifests
+    needs: [mcp_single_arch]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          DOCKER_TAG=${TAG#v}
+          if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            STABLE=true
+          else
+            STABLE=false
+          fi
+          {
+            echo "DOCKER_TAG=$DOCKER_TAG"
+            echo "STABLE=$STABLE"
+          } >> "$GITHUB_ENV"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create & push manifest (version tag)
+        run: |
+          docker buildx imagetools create \
+            -t "jukanntenn/markpost-mcp:${DOCKER_TAG}" \
+            "jukanntenn/markpost-mcp:${DOCKER_TAG}-amd64" \
+            "jukanntenn/markpost-mcp:${DOCKER_TAG}-arm64"
+
+      - name: Create & push manifest (latest)
+        if: ${{ env.STABLE == 'true' }}
+        run: |
+          docker buildx imagetools create \
+            -t jukanntenn/markpost-mcp:latest \
+            jukanntenn/markpost-mcp:latest-amd64 \
+            jukanntenn/markpost-mcp:latest-arm64

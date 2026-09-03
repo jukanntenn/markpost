@@ -69,3 +69,6 @@ htmlcov/
 test-results/
 
 *.local.toml
+
+# per-tree golangci-lint caches (backend/mcp prek hooks isolate lockable caches; see backend/prek.toml)
+.golangci-cache/

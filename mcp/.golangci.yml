@@ -1,5 +1,6 @@
-# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
-# golangci-lint configuration
+# golangci-lint configuration for the markpost-mcp module. Mirrors
+# backend/.golangci.yml (same linter set and strictness) with the module's
+# own local prefix.
 # Documentation: https://golangci-lint.run/usage/configuration/
 
 version: "2"
@@ -18,7 +19,6 @@ linters:
   enable:
     - revive
     - bodyclose
-    - rowserrcheck
     - nilnil
     - noctx
     - contextcheck
@@ -36,10 +36,6 @@ linters:
       confidence: 0.8
 
   exclusions:
-    # "lax" reliably skips swag's docs.go header (which doesn't match the
-    # strict "^// Code generated ... DO NOT EDIT.$" regex due to its
-    # "Package docs" prefix and missing trailing period).
-    generated: lax
     rules:
       - path: _test\.go
         linters: [noctx, contextcheck]
@@ -50,7 +46,7 @@ formatters:
     - goimports
   settings:
     goimports:
-      local-prefixes: ["markpost"]
+      local-prefixes: ["github.com/jukanntenn/markpost/mcp"]
 
 issues:
   max-issues-per-linter: 0

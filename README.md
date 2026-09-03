@@ -19,6 +19,7 @@ English | [简体中文](README.zh.md)
 - ✍️ **Markdown Publishing** — Upload via a single `POST` request, get back a rendered HTML page with a unique URL
 - 🌐 **Web Dashboard** — Manage posts, view analytics, and configure delivery channels
 - 📬 **Delivery Channels** — Forward posts to webhooks (Feishu, Slack, custom) with keyword filtering
+- 🤖 **MCP Server** — Let AI agents publish and manage posts via the standalone [markpost-mcp](docs/mcp.md)
 - 🏠 **Self-Hosted** — Single Docker Compose stack, runs anywhere with PostgreSQL
 
 ## Quick Start

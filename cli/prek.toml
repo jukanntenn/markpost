@@ -1,0 +1,57 @@
+# cli project — Go hooks that must run with cwd=cli/ (where go.mod lives).
+# Workspace mode strips the cli/ prefix so golangci-lint receives
+# project-relative paths, enabling fast per-file formatting via
+# `prek run --group fmt --files <path>`.
+#
+# No generated files in this tree, so there is no generate-check gate; root
+# builtins (trailing-whitespace, check-yaml, ...) still cover cli files.
+
+[[repos]]
+repo = "local"
+
+# ---- fmt group: mutating formatters (AI post-edit + commit) ----
+[[repos.hooks]]
+id = "golangci-fmt"
+name = "golangci-lint fmt (cli)"
+language = "system"
+entry = "golangci-lint fmt"
+files = "\\.go$"
+pass_filenames = true
+groups = ["fmt"]
+stages = ["pre-commit"]
+
+# ---- lint group: read-only gate (AI Stop + commit + CI) ----
+# --allow-serial-runners: prek runs same-depth workspace projects (backend,
+# cli) concurrently, so two `golangci-lint run` instances race for golangci's
+# own file lock; the flag makes the loser wait instead of failing.
+[[repos.hooks]]
+id = "golangci-run"
+name = "golangci-lint run (cli)"
+language = "system"
+entry = "golangci-lint run --allow-serial-runners"
+files = "\\.go$"
+pass_filenames = false
+groups = ["lint"]
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "golangci-config-verify"
+name = "golangci-lint config verify (cli)"
+language = "system"
+entry = "golangci-lint config verify"
+files = "^\\.golangci\\.yml$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- pre-push: tests (mirrors CI test.yml's test-cli job exactly) ----
+# go build first because go test skips compile-only failures in packages
+# without test files (cmd/markpost); -race matches CI's -race flag.
+[[repos.hooks]]
+id = "cli-build-and-test"
+name = "go build + go test -race (cli, pre-push)"
+language = "system"
+entry = "go build ./... && go test -race ./..."
+shell = "bash"
+files = "\\.go$"
+pass_filenames = false
+stages = ["pre-push"]

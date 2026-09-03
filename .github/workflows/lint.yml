@@ -50,9 +50,11 @@ jobs:
         with:
           go-version: "1.26"
           cache: true
-          cache-dependency-path: backend/go.sum
+          cache-dependency-path: |
+            backend/go.sum
+            cli/go.sum
 
-      # Install golangci-lint (prek's backend hooks call it directly).
+      # Install golangci-lint (prek's backend + cli hooks call it directly).
       - uses: golangci/golangci-lint-action@d583c34f0599d37dbac4a198b9c83201be380893 # v9.3.0
         with:
           version: v2.12.2

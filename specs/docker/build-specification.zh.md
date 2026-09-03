@@ -133,6 +133,18 @@ pnpm 通过 `corepack enable` 激活，而非 `npm install -g pnpm`。确切的 
 | buildx 插件可用      | `docker buildx version`                | Exit 2 |
 | 构建器支持目标平台   | `docker buildx inspect`                | Exit 2 |
 | 异构架构已注册 QEMU  | `/proc/sys/fs/binfmt_misc/qemu-<arch>` | Exit 2 |
+| 版本串可解析         | `scripts/build_version.py`             | Exit 2 |
+
+<a id="version-string"></a>
+
+### 版本串
+
+`VERSION` build-arg —— 经 `-X main.version` 烘焙进 Go 二进制、由 `/api/v1/version` 上报 —— 由 `scripts/build_version.py` 计算；它是与部署 playbook 的 dev 版本检查（`devops/ansible/deploy.yml`）共享的唯一实现：
+
+- **干净树：** `git describe --tags --always`。发布镜像由 CI 从干净的 tag checkout 构建，因此发布版本串就是 tag 本身。
+- **脏树：** `<describe>-dirty.<8 hex>` —— 基底提交加工作区增量的确定性摘要（tracked diff 与未跟踪且未 ignore 文件的内容）。同提交、不同内容的两场脏构建互不相等；重建完全相同的树会复现同一字符串。部署检查因此对重建镜像放行、对构建后编辑过的 checkout 失败（MRFC 2026-09-03-dirty-tree-image-version-string）。
+
+版本解析失败以退出码 2 结束（环境检查失败）。无提交的仓库烘焙 `dev`。
 
 <a id="cli-flags"></a>
 

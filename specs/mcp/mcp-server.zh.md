@@ -2,7 +2,7 @@
 
 English | [中文](mcp-server.md)
 
-本文档定义 `markpost-mcp`：把运行中的 markpost 实例暴露给 AI agent 的独立 MCP（Model Context Protocol）服务器。它是终态设计参考；决策依据见 [MCP server MRFC](../../.agents/mrfcs/proposed/2026-09-03-mcp-server.zh.md)。
+本文档定义 `markpost-mcp`：把运行中的 markpost 实例暴露给 AI agent 的独立 MCP（Model Context Protocol）服务器。它是终态设计参考；决策依据见 [MCP server MRFC](../../.agents/mrfcs/implemented/2026-09-03-mcp-server.zh.md)。
 
 <a id="architecture"></a>
 

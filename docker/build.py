@@ -17,6 +17,8 @@ Environment requirements (not auto-resolved):
   - Docker buildx plugin available
   - Active buildx builder supporting target platforms
   - QEMU binfmt registered for foreign architectures (cross-platform builds)
+  - Git repository with at least one commit (version-string resolution via
+    scripts/build_version.py; a repository without commits bakes "dev")
 
 Exit codes:
   0 - Success
@@ -310,18 +312,24 @@ def main():
     dockerfile_path = os.path.join(project_root, DOCKERFILE)
     context_path = os.path.join(project_root, BUILD_CONTEXT)
 
-    # Resolve the version string baked into the Go binary (git describe).
-    # Falls back to the short commit hash when there are no tags, then "dev".
-    version = "dev"
-    try:
-        desc = subprocess.check_output(
-            ["git", "describe", "--tags", "--always", "--dirty"],
-            cwd=project_root, text=True, stderr=subprocess.DEVNULL,
-        ).strip()
-        if desc:
-            version = desc
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass
+    # Resolve the version string baked into the Go binary via the shared
+    # computation (scripts/build_version.py — the deploy playbook's dev check
+    # calls the same script, so both sides must agree byte-for-byte). "dev"
+    # for a repository without commits stays the script's own fallback; any
+    # other failure stops the build rather than baking an ambiguous string.
+    version_script = os.path.join(project_root, "scripts", "build_version.py")
+    version_result = subprocess.run(
+        [sys.executable, version_script, "--repo", project_root],
+        capture_output=True,
+        text=True,
+    )
+    if version_result.returncode != 0 or not version_result.stdout.strip():
+        env_error(
+            "Failed to compute the image version string.",
+            f"Ran: {sys.executable} {version_script} --repo {project_root}\n"
+            f"      {version_result.stderr.strip()}",
+        )
+    version = version_result.stdout.strip()
 
     all_tags = resolve_tags(args)
     full_image_names = []

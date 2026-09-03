@@ -101,7 +101,7 @@ python3 docker/build.py --push
 ansible-playbook devops/ansible/deploy.yml          # dev (fn) is the default target
 ```
 
-playbook 以部署后验证收尾（见 §5）：它经公开 URL 轮询 `/api/v1/health`，并用 `/api/v1/version` 对照部署检出区的 `git describe` —— 不匹配意味着容器仍在运行旧镜像。
+playbook 以部署后验证收尾（见 §5）：它经公开 URL 轮询 `/api/v1/health`，并用 `/api/v1/version` 对照部署检出区计算出的版本串（`scripts/build_version.py`）—— 不匹配意味着容器仍在运行旧镜像。
 
 <a id="schema-updates"></a>
 
@@ -288,15 +288,15 @@ ansible-playbook devops/ansible/deploy.yml -e target=production
 
 ### 环境变量矩阵
 
-| 变量               | dev                               | staging                         | production                     |
-| ------------------ | --------------------------------- | ------------------------------- | ------------------------------ |
-| `image`            | `192.168.5.50:5000/markpost:main` | `jukanntenn/markpost:<pinned>`  | `jukanntenn/markpost:<pinned>` |
-| `expected_version` | 部署检出区的 `git describe`       | `<pinned git tag>`              | `<pinned git tag>`             |
-| `host_port`        | `8089`                            | `8089`                          | `2053`                         |
-| `tls_profile`      | `http`                            | `http`（隧道终结 HTTPS）        | `origin`（CF Full strict）     |
-| `public_url`       | `http://192.168.5.200:8089`       | `https://markpost.bytehome.fun` | `https://markpost.cc`          |
-| `debug`            | `true`                            | `false`                         | `false`                        |
-| `cloudflare_cidrs` | _（未设）_                        | _（未设）_                      | CF CIDR 列表                   |
+| 变量               | dev                                          | staging                         | production                     |
+| ------------------ | -------------------------------------------- | ------------------------------- | ------------------------------ |
+| `image`            | `192.168.5.50:5000/markpost:main`            | `jukanntenn/markpost:<pinned>`  | `jukanntenn/markpost:<pinned>` |
+| `expected_version` | 部署检出区的 `scripts/build_version.py` 输出 | `<pinned git tag>`              | `<pinned git tag>`             |
+| `host_port`        | `8089`                                       | `8089`                          | `2053`                         |
+| `tls_profile`      | `http`                                       | `http`（隧道终结 HTTPS）        | `origin`（CF Full strict）     |
+| `public_url`       | `http://192.168.5.200:8089`                  | `https://markpost.bytehome.fun` | `https://markpost.cc`          |
+| `debug`            | `true`                                       | `false`                         | `false`                        |
+| `cloudflare_cidrs` | _（未设）_                                   | _（未设）_                      | CF CIDR 列表                   |
 
 staging 与 production 钉住同一版本（各自 group_vars 的 `markpost_version`）：staging 是晋级闸门，在那里验证过的产物必须与生产运行的逐字节相同。
 
@@ -307,7 +307,7 @@ staging 与 production 钉住同一版本（各自 group_vars 的 `markpost_vers
 playbook 的最终任务从控制机运行 `scripts/check_deploy.py`：
 
 1. 轮询 `{public_url}/api/v1/health` 直到 `{"status": "ok"}`（5 秒间隔，120 秒超时） —— 走真实访客的路径（dev 走局域网、staging 走隧道、production 走 Cloudflare 边缘），因此端口/Caddy/边缘路径损坏会让部署失败，即便容器本身健康。
-2. 将 `{public_url}/api/v1/version` 与期望版本比对：dev 用部署检出区的 `git describe`（`main` 标签部署），staging/production 用钉住的 git 标签。这抓住"容器起来了但还在跑上一个镜像"。
+2. 将 `{public_url}/api/v1/version` 与期望版本比对：dev 用部署检出区的 `scripts/build_version.py` 输出（`main` 标签部署），staging/production 用钉住的 git 标签。这抓住"容器起来了但还在跑上一个镜像"。
 
 失败时在宿主机查 `docker compose logs markpost`。没有自动回滚 —— 应用起来时迁移通常已运行，恢复路径是向前修复并重新部署。
 

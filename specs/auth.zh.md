@@ -127,19 +127,20 @@ POST /auth/refresh { refresh_token }
 
 ### 2.2 软标记吊销（revoked 字段）
 
-`refresh_tokens` 表带有 `revoked` bool 字段（通过 versioned migration 添加，默认 false）：
+`refresh_tokens` 表带有 `revoked` bool 字段（通过 versioned migration 添加，默认 false），以及可空的 `revoked_at` 时间戳（同样由 versioned migration 添加，每次吊销写入都会落时间）：
 
-| 字段      | 类型 | 默认  | 说明                                |
-| --------- | ---- | ----- | ----------------------------------- |
-| `revoked` | bool | false | true 表示令牌已吊销（用于重用检测） |
+| 字段         | 类型        | 默认  | 说明                                     |
+| ------------ | ----------- | ----- | ---------------------------------------- |
+| `revoked`    | bool        | false | true 表示令牌已吊销（用于重用检测）      |
+| `revoked_at` | timestamptz | NULL  | 吊销发生时间（驱动 §2.5 的宽限窗口判定） |
 
-吊销操作写 `UPDATE SET revoked = true`，不做物理 `DELETE`——保留的吊销记录使重用检测成为可能。
+吊销操作写 `UPDATE SET revoked = true, revoked_at = now()`，不做物理 `DELETE`——保留的吊销记录使重用检测成为可能。`revoked_at IS NULL` 表示该列存在之前就已吊销的行——它们走严格路径（§2.5）。
 
 <a id="23-token-theft-reuse-detection"></a>
 
 ### 2.3 令牌盗用重用检测
 
-当一个**已吊销**（`revoked=true`）的刷新令牌被再次提交时，判定为令牌被盗用，立即吊销该用户的**所有**刷新令牌：
+当一个**已吊销**（`revoked=true`）的刷新令牌被再次提交时，吊销距今多久决定裁决：在轮换宽限窗口（§2.5）之内视为竞态——拒绝但家族保留——超出窗口则判定为令牌被盗用，立即吊销该用户的**所有**刷新令牌：
 
 ```go
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
@@ -148,11 +149,17 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
     // 1. Look up a live token (revoked = false)
     record, err := s.tokens.GetRefreshToken(ctx, tokenHash) // WHERE revoked = false
     if err == domain.ErrNotFound {
-        // 2. Is it a revoked token (revoked = true)? → reuse → theft
+        // 2. Is it a revoked token (revoked = true)?
         revoked, err := s.tokens.IsRefreshTokenRevoked(ctx, tokenHash) // WHERE revoked = true
         if revoked {
+            rt, _ := s.tokens.GetRevokedRefreshToken(ctx, tokenHash)
+            if withinGraceWindow(rt) { // revoked within the last 30s
+                // rotation race (e.g. a tab crashed mid-persist):
+                // reject, keep the family
+                return service.New(service.ErrInvalidToken, "refresh token replay within grace window")
+            }
             // token theft: revoke every refresh token of this user
-            s.tokens.RevokeAllByUserID(ctx, record.UserID)
+            s.tokens.RevokeAllByUserID(ctx, rt.UserID)
             return service.New(service.ErrInvalidToken, "refresh token reuse detected")
         }
         return service.New(service.ErrInvalidToken, "invalid refresh token")
@@ -170,8 +177,17 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
 
 - `GetRefreshToken`：`WHERE token_hash = ? AND revoked = false`（只返回有效令牌）
 - `IsRefreshTokenRevoked`：`WHERE token_hash = ? AND revoked = true`（重用检测）
-- `RevokeAllByUserID`：`UPDATE refresh_tokens SET revoked = true WHERE user_id = ? AND revoked = false`（盗用后全吊销）
+- `GetRevokedRefreshToken`：`WHERE token_hash = ? AND revoked = true`（返回整行，供读取 `user_id` 与 `revoked_at`）
+- `RevokeRefreshToken` / `RevokeAllByUserID` / `RevokeRefreshTokenByID`：`UPDATE ... SET revoked = true, revoked_at = now()`（吊销落时间戳）
 - 过期 + revoked 的行仍可正常 prune 清理
+
+<a id="25-rotation-grace-window"></a>
+
+### 2.5 轮换宽限窗口
+
+轮换存在一个前端互斥（`refresh-lock.ts`）封不住的残余竞态：标签页调用 `/auth/refresh`，后端完成轮换（旧令牌吊销、后继令牌存于服务端），标签页却在把后继写回 localStorage 之前死掉。localStorage 为所有标签页共享，因此下一次重放——同级标签页的 401 驱动刷新、或崩溃标签页的重载——提交的是一枚已被吊销的令牌。若无进一步区分，该重放会被判为盗窃并吊销该用户的全部刷新令牌：一次客户端崩溃等于在所有设备上登出。
+
+宽限窗口对"年轻的吊销"重新分类。重放一枚在最近 **30 秒**内（`refreshGraceWindow`，auth 服务内常量）被吊销的令牌时，请求以 401 `ErrInvalidToken` 拒绝，但该用户其余刷新令牌一个不动；崩溃设备重新认证，其他会话全部幸存。重放超出窗口被吊销的令牌——或 `revoked_at IS NULL` 的行——维持 §2.3 的严格行为。每一次重放，无论窗口内外，都被检测并拒绝（RFC 9700 §4.14.2 的检测要求继续满足）；窗口内被推迟的只是吊销反应，且窗口内重放造不出任何凭证，窃取者一无所获。窗口内重放以 info 级别记录令牌哈希，与盗窃告警相区分。
 
 ---
 

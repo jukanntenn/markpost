@@ -6,15 +6,20 @@ import "time"
 // RefreshToken represents a refresh token entity. Records are created and
 // soft-revoked (Revoked=true) rather than deleted, so a reused (already-revoked)
 // token can be distinguished from a never-existed one — the signal for
-// token-theft detection. See auth.md §2.2-2.3. Expired+revoked rows are pruned
+// token-theft detection. See auth.md §2.2-2.5. Expired+revoked rows are pruned
 // by periodic cleanup.
 type RefreshToken struct {
-	ID        int64     `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserID    int       `json:"user_id" gorm:"not null;index"`
-	TokenHash string    `json:"-" gorm:"unique;not null"`
-	Revoked   bool      `json:"revoked" gorm:"not null;default:false"`
-	ExpiresAt time.Time `json:"expires_at" gorm:"not null"`
-	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	ID        int64  `json:"id" gorm:"primaryKey;autoIncrement"`
+	UserID    int    `json:"user_id" gorm:"not null;index"`
+	TokenHash string `json:"-" gorm:"unique;not null"`
+	Revoked   bool   `json:"revoked" gorm:"not null;default:false"`
+	// RevokedAt stamps when the soft revocation happened (MRFC
+	// 2026-09-03-refresh-token-rotation-grace-window): a replay of a token
+	// revoked within the grace window is a rotation race, not theft. NULL
+	// (rows revoked before the column existed) takes the strict path.
+	RevokedAt *time.Time `json:"-"`
+	ExpiresAt time.Time  `json:"expires_at" gorm:"not null"`
+	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
 }
 
 // TableName returns the table name for RefreshToken.

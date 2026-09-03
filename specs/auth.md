@@ -109,19 +109,20 @@ POST /auth/refresh { refresh_token }
   → issue a new access + refresh token pair
 ```
 
-### 2.2 Soft-marker revocation (the revoked column)
+### 2.2 Soft-marker revocation (the revoked columns)
 
-The `refresh_tokens` table carries a `revoked` boolean column (added by a versioned migration, default false):
+The `refresh_tokens` table carries a `revoked` boolean column (added by a versioned migration, default false) plus a nullable `revoked_at` timestamp that every revocation write stamps (added by a versioned migration):
 
-| Column    | Type | Default | Meaning                                        |
-| --------- | ---- | ------- | ---------------------------------------------- |
-| `revoked` | bool | false   | true marks the token revoked (reuse detection) |
+| Column       | Type        | Default | Meaning                                                     |
+| ------------ | ----------- | ------- | ----------------------------------------------------------- |
+| `revoked`    | bool        | false   | true marks the token revoked (reuse detection)              |
+| `revoked_at` | timestamptz | NULL    | when the revocation happened (drives the §2.5 grace window) |
 
-Revocation writes `UPDATE SET revoked = true` in place of a physical `DELETE`, retaining the revocation record that reuse detection needs.
+Revocation writes `UPDATE SET revoked = true, revoked_at = now()` in place of a physical `DELETE`, retaining the revocation record that reuse detection needs. `revoked_at IS NULL` marks rows revoked before the column existed — they take the strict path (§2.5).
 
 ### 2.3 Token theft reuse detection
 
-When a refresh token that is **already revoked** (`revoked = true`) is submitted again, the token is judged stolen and **every** refresh token of that user is revoked immediately:
+When a refresh token that is **already revoked** (`revoked = true`) is submitted again, how long ago it was revoked decides the verdict: within the rotation grace window (§2.5) the replay is a race — rejected, family intact — and past it the token is judged stolen and **every** refresh token of that user is revoked immediately:
 
 ```go
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
@@ -130,11 +131,17 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
     // 1. Look up a live token (revoked = false)
     record, err := s.tokens.GetRefreshToken(ctx, tokenHash) // WHERE revoked = false
     if err == domain.ErrNotFound {
-        // 2. Is it a revoked token (revoked = true)? → reuse → theft
+        // 2. Is it a revoked token (revoked = true)?
         revoked, err := s.tokens.IsRefreshTokenRevoked(ctx, tokenHash) // WHERE revoked = true
         if revoked {
+            rt, _ := s.tokens.GetRevokedRefreshToken(ctx, tokenHash)
+            if withinGraceWindow(rt) { // revoked within the last 30s
+                // rotation race (e.g. a tab crashed mid-persist):
+                // reject, keep the family
+                return service.New(service.ErrInvalidToken, "refresh token replay within grace window")
+            }
             // token theft: revoke every refresh token of this user
-            s.tokens.RevokeAllByUserID(ctx, record.UserID)
+            s.tokens.RevokeAllByUserID(ctx, rt.UserID)
             return service.New(service.ErrInvalidToken, "refresh token reuse detected")
         }
         return service.New(service.ErrInvalidToken, "invalid refresh token")
@@ -150,8 +157,15 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) error {
 
 - `GetRefreshToken`: `WHERE token_hash = ? AND revoked = false` (returns live tokens only)
 - `IsRefreshTokenRevoked`: `WHERE token_hash = ? AND revoked = true` (reuse detection)
-- `RevokeAllByUserID`: `UPDATE refresh_tokens SET revoked = true WHERE user_id = ? AND revoked = false` (revoke everything after theft)
+- `GetRevokedRefreshToken`: `WHERE token_hash = ? AND revoked = true` (returns the row for its `user_id` and `revoked_at`)
+- `RevokeRefreshToken` / `RevokeAllByUserID` / `RevokeRefreshTokenByID`: `UPDATE ... SET revoked = true, revoked_at = now()` (revocation stamps the time)
 - Expired and revoked rows are still reclaimed by the regular prune
+
+### 2.5 Rotation grace window
+
+Rotation has a residual race the frontend mutex (`refresh-lock.ts`) cannot close: a tab calls `/auth/refresh`, the backend rotates (old token revoked, successor stored server-side), and the tab dies before persisting the successor to localStorage. Every tab shares localStorage, so the next replay — a sibling's 401-driven refresh or the crashed tab's reload — submits an already-revoked token. Without further distinction that replay was judged theft and revoked every refresh token of the user: one client crash logged the user out on all devices.
+
+The grace window re-classifies young revocations. A replay of a token revoked within the last **30 seconds** (`refreshGraceWindow`, a constant in the auth service) is rejected with 401 `ErrInvalidToken` but leaves the user's other refresh tokens untouched; the crashed device re-authenticates while all other sessions survive. Replays of tokens revoked past the window — or with `revoked_at IS NULL` — keep the strict §2.3 behavior. Every replay, inside or outside the window, is detected and rejected (RFC 9700 §4.14.2's detection requirement stays satisfied); only the revocation reaction is deferred inside the window, and an in-window replay mints nothing, so it yields an attacker no credential. The in-window replay is logged at info with the token hash, distinct from the theft warning.
 
 ---
 

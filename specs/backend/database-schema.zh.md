@@ -111,6 +111,7 @@ erDiagram
 | `UserID`    | `user_id`    | integer               | 否   | —       | index  | 归属用户（无 FK 约束；清理由应用层处理）                                                |
 | `TokenHash` | `token_hash` | varchar               | 否   | —       | unique | 刷新令牌的 SHA256 哈希                                                                  |
 | `Revoked`   | `revoked`    | boolean               | 否   | `false` | —      | 吊销标记。`true` 表示已吊销（用于刷新令牌盗窃重用检测，见 [auth.md](../auth.zh.md) §2） |
+| `RevokedAt` | `revoked_at` | timestamptz           | 是   | —       | —      | 吊销发生时间（驱动轮换宽限窗口判定，见 [auth.md](../auth.zh.md) §2.5）；NULL 走严格路径 |
 | `ExpiresAt` | `expires_at` | timestamp             | 否   | —       | —      | 令牌过期时间                                                                            |
 | `CreatedAt` | `created_at` | timestamp             | 否   | `now()` | —      | 记录创建时间（自动）                                                                    |
 
@@ -161,7 +162,7 @@ erDiagram
 
 ### 2. 时间戳
 
-业务表同时含 `created_at` 与 `updated_at`，由 GORM 自动填充（`autoCreateTime` / `autoUpdateTime`）。只写表（`refresh_tokens`、`token_blacklist`）只有 `created_at`——其记录创建后永不修改。
+业务表同时含 `created_at` 与 `updated_at`，由 GORM 自动填充（`autoCreateTime` / `autoUpdateTime`）。只写表（`token_blacklist`）只有 `created_at`——其记录创建后永不修改。`refresh_tokens` 的行创建时写一次，之后仅被软吊销修改（`revoked`、`revoked_at`）。
 
 <a id="3-no-soft-delete"></a>
 

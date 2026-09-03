@@ -9,6 +9,8 @@ import (
 	"markpost/internal/infra"
 	"markpost/internal/service"
 	"markpost/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 func setupAuthService(t *testing.T) (*Service, user.Repository, user.TokenRepository) {
@@ -168,15 +170,16 @@ func TestService_RefreshToken(t *testing.T) {
 		}
 	})
 
-	t.Run("reuse of a rotated token revokes every session", func(t *testing.T) {
+	t.Run("replay within the grace window rejects but keeps the family", func(t *testing.T) {
 		svc, userRepo, _ := setupAuthService(t)
 		ctx := context.Background()
 
 		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
 		_, pair1, _ := svc.LoginWithEmail(ctx, "testuser", "password")
 
-		// A second client (e.g. another browser tab holding a stale copy)
-		// replaying the already-consumed token is treated as theft.
+		// The crash scenario: a tab rotated the pair server-side but died
+		// before persisting the successor, so localStorage (and sibling tabs)
+		// still hold the already-consumed token (auth.md §2.5).
 		_, pair2, err := svc.RefreshToken(ctx, pair1.RefreshToken)
 		if err != nil {
 			t.Fatalf("first refresh should rotate: %v", err)
@@ -184,7 +187,7 @@ func TestService_RefreshToken(t *testing.T) {
 
 		_, _, err = svc.RefreshToken(ctx, pair1.RefreshToken)
 		if err == nil {
-			t.Fatal("expected reuse to be rejected")
+			t.Fatal("expected the stale replay to be rejected")
 		}
 		se, ok := service.AsError(err)
 		if !ok {
@@ -194,11 +197,76 @@ func TestService_RefreshToken(t *testing.T) {
 			t.Errorf("expected code %q, got %q", ErrInvalidToken.Value, se.Code.Value)
 		}
 
-		// Reuse detection revokes the whole family: the fresh pair from the
-		// legitimate rotation dies with it.
-		_, _, err = svc.RefreshToken(ctx, pair2.RefreshToken)
-		if err == nil {
-			t.Fatal("expected family revocation to kill the successor pair")
+		// The family survives: the successor pair from the legitimate
+		// rotation still refreshes.
+		if _, _, err := svc.RefreshToken(ctx, pair2.RefreshToken); err != nil {
+			t.Errorf("expected the successor pair to survive the in-window replay: %v", err)
+		}
+	})
+
+	t.Run("replay just inside the window keeps the family, just outside revokes it", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		userRepo := infra.NewUserRepository(db, 16)
+		tokenRepo := infra.NewTokenRepository(db)
+		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "inside@example.com", "inside", "password")
+		_, _ = userRepo.Create(ctx, "outside@example.com", "outside", "password")
+		_, insideStale, _ := svc.LoginWithEmail(ctx, "inside", "password")
+		_, outsideStale, _ := svc.LoginWithEmail(ctx, "outside", "password")
+		_, insideLive, _ := svc.RefreshToken(ctx, insideStale.RefreshToken)
+		_, outsideLive, _ := svc.RefreshToken(ctx, outsideStale.RefreshToken)
+
+		// Backdate the two revocations around the 30 s boundary.
+		if err := db.Model(&user.RefreshToken{}).Where("token_hash = ?", utils.HashToken(insideStale.RefreshToken)).
+			Update("revoked_at", time.Now().Add(-29*time.Second)).Error; err != nil {
+			t.Fatalf("backdate inside: %v", err)
+		}
+		if err := db.Model(&user.RefreshToken{}).Where("token_hash = ?", utils.HashToken(outsideStale.RefreshToken)).
+			Update("revoked_at", time.Now().Add(-31*time.Second)).Error; err != nil {
+			t.Fatalf("backdate outside: %v", err)
+		}
+
+		if _, _, err := svc.RefreshToken(ctx, insideStale.RefreshToken); err == nil {
+			t.Fatal("expected the inside-window replay to be rejected")
+		}
+		if _, _, err := svc.RefreshToken(ctx, insideLive.RefreshToken); err != nil {
+			t.Errorf("expected the inside-window family to survive: %v", err)
+		}
+
+		if _, _, err := svc.RefreshToken(ctx, outsideStale.RefreshToken); err == nil {
+			t.Fatal("expected the outside-window replay to be rejected")
+		}
+		if _, _, err := svc.RefreshToken(ctx, outsideLive.RefreshToken); err == nil {
+			t.Error("expected the outside-window replay to revoke the family")
+		}
+	})
+
+	t.Run("replay of a legacy revoked row without a timestamp revokes the family", func(t *testing.T) {
+		db := infra.SetupTestDB(t)
+		userRepo := infra.NewUserRepository(db, 16)
+		tokenRepo := infra.NewTokenRepository(db)
+		jwtSvc := NewJWTService("test-access-secret-key-min-32-chars!!", "test-refresh-secret-key-min-32-chars!!", time.Hour, time.Hour*24)
+		svc := NewService(userRepo, tokenRepo, nil, jwtSvc, "markpost", "testpassword")
+		ctx := context.Background()
+
+		_, _ = userRepo.Create(ctx, "test@example.com", "testuser", "password")
+		_, stale, _ := svc.LoginWithEmail(ctx, "testuser", "password")
+		_, live, _ := svc.RefreshToken(ctx, stale.RefreshToken)
+
+		// A row revoked before the revoked_at column existed carries NULL.
+		if err := db.Model(&user.RefreshToken{}).Where("token_hash = ?", utils.HashToken(stale.RefreshToken)).
+			Update("revoked_at", gorm.Expr("NULL")).Error; err != nil {
+			t.Fatalf("clear revoked_at: %v", err)
+		}
+
+		if _, _, err := svc.RefreshToken(ctx, stale.RefreshToken); err == nil {
+			t.Fatal("expected the legacy replay to be rejected")
+		}
+		if _, _, err := svc.RefreshToken(ctx, live.RefreshToken); err == nil {
+			t.Error("expected the legacy replay to revoke the family")
 		}
 	})
 

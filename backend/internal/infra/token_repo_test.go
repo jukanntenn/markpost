@@ -73,6 +73,10 @@ func TestTokenRepository_RevokeRefreshToken(t *testing.T) {
 	if rt.UserID != 1 {
 		t.Errorf("user_id = %d, want 1", rt.UserID)
 	}
+	// The revocation is timestamped — the grace window reads it (auth.md §2.5).
+	if rt.RevokedAt == nil {
+		t.Error("expected revoked_at to be stamped")
+	}
 }
 
 func TestTokenRepository_RevokeAllByUserID(t *testing.T) {
@@ -98,6 +102,17 @@ func TestTokenRepository_RevokeAllByUserID(t *testing.T) {
 	// User 2's token is untouched.
 	if _, err := repo.GetRefreshToken(ctx, "hash3"); err != nil {
 		t.Errorf("expected hash3 to still be active: %v", err)
+	}
+
+	// Every revoked row carries the revocation timestamp (auth.md §2.5).
+	revokedRows, err := repo.ListByUserID(ctx, 1)
+	if err != nil {
+		t.Fatalf("ListByUserID: %v", err)
+	}
+	for _, rt := range revokedRows {
+		if rt.RevokedAt == nil {
+			t.Errorf("expected revoked_at stamped on %s", rt.TokenHash)
+		}
 	}
 }
 

@@ -78,13 +78,14 @@ func (r *TokenRepository) GetRevokedRefreshToken(ctx context.Context, tokenHash 
 	return t, nil
 }
 
-// RevokeRefreshToken soft-revokes a single refresh token (sets revoked=true),
-// preserving the row for reuse detection instead of deleting it.
+// RevokeRefreshToken soft-revokes a single refresh token (sets revoked=true
+// and stamps revoked_at), preserving the row for reuse detection instead of
+// deleting it.
 func (r *TokenRepository) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
 	result := r.db.WithContext(ctx).
 		Model(&user.RefreshToken{}).
 		Where("token_hash = ? AND revoked = ?", tokenHash, false).
-		Update("revoked", true)
+		Updates(map[string]any{"revoked": true, "revoked_at": time.Now()})
 	if result.Error != nil {
 		return fmt.Errorf("RevokeRefreshToken: %w", result.Error)
 	}
@@ -97,7 +98,7 @@ func (r *TokenRepository) RevokeAllByUserID(ctx context.Context, userID int) err
 	result := r.db.WithContext(ctx).
 		Model(&user.RefreshToken{}).
 		Where("user_id = ? AND revoked = ?", userID, false).
-		Update("revoked", true)
+		Updates(map[string]any{"revoked": true, "revoked_at": time.Now()})
 	if result.Error != nil {
 		return fmt.Errorf("RevokeAllByUserID: %w", result.Error)
 	}
@@ -115,7 +116,7 @@ func (r *TokenRepository) RevokeRefreshTokenByID(ctx context.Context, tokenID, u
 	if userID > 0 {
 		q = q.Where("user_id = ?", userID)
 	}
-	result := q.Update("revoked", true)
+	result := q.Updates(map[string]any{"revoked": true, "revoked_at": time.Now()})
 	if result.Error != nil {
 		return fmt.Errorf("RevokeRefreshTokenByID: %w", result.Error)
 	}

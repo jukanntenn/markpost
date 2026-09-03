@@ -1,0 +1,60 @@
+# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
+# golangci-lint configuration
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - revive
+    - bodyclose
+    - nilnil
+    - noctx
+    - contextcheck
+    - errorlint
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+      # A CLI's writes to its own stdout/stderr are unactionable (a failed
+      # pipe kills the process anyway); gh disables errcheck entirely for
+      # this reason. We keep errcheck and exempt the print helpers instead.
+      exclude-functions:
+        - fmt.Print
+        - fmt.Printf
+        - fmt.Println
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+    staticcheck:
+      checks: ["all"]
+
+    revive:
+      confidence: 0.8
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes: ["markpost/cli"]
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+output:
+  formats:
+    text:
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true

@@ -203,23 +203,23 @@ r.Use(otelgin.Middleware("markpost"))
 
 暂采纳以下指标，后续按需扩展：
 
-| 层   | 指标                                 | 类型      | 标签           | 说明                                              |
-| ---- | ------------------------------------ | --------- | -------------- | ------------------------------------------------- |
-| HTTP | `http.server.request.duration`       | histogram | method, path, status | 接口级性能（otelgin 自动 + 补充）                 |
-| HTTP | `http.server.active_requests`        | gauge     | —              | 当前在途请求数                                    |
-| 业务 | `markpost.posts.created_total`       | counter   | —              | 投稿创建数                                        |
-| 业务 | `markpost.auth.login_success_total`  | counter   | —              | 登录成功数                                        |
-| 业务 | `markpost.auth.login_failure_total`  | counter   | —              | 登录失败数                                        |
-| 业务 | `markpost.auth.token_refresh_total`  | counter   | —              | token 刷新次数                                    |
-| 业务 | `markpost.delivery.pending`          | gauge     | —              | 待派发数                                          |
-| 业务 | `markpost.delivery.dispatched_total` | counter   | —              | 已派发数                                          |
-| 业务 | `markpost.delivery.failed_total`     | counter   | error_category | 派发失败数（按原因）                              |
-| 业务 | `markpost.render_cache.hit_total`    | counter   | —              | 渲染请求由渲染缓存直接服务                        |
-| 业务 | `markpost.render_cache.miss_total`   | counter   | —              | 渲染请求未命中，进入 singleflight 路径            |
-| 业务 | `markpost.cdn.purge_success_total`   | counter   | —              | CDN cache-tag purge 以 HTTP < 300 完成            |
-| 业务 | `markpost.cdn.purge_failure_total`   | counter   | —              | CDN purge 尝试失败（marshal/构造/传输/HTTP ≥ 300）|
-| 业务 | `markpost.cdn.purge_skipped_total`   | counter   | —              | CDN purge 未发起（no-op purger/未配置）           |
-| 系统 | runtime metrics                      | —         | —              | OTel Go runtime 自动采集（goroutine 数、GC、mem） |
+| 层   | 指标                                 | 类型      | 标签                 | 说明                                               |
+| ---- | ------------------------------------ | --------- | -------------------- | -------------------------------------------------- |
+| HTTP | `http.server.request.duration`       | histogram | method, path, status | 接口级性能（otelgin 自动 + 补充）                  |
+| HTTP | `http.server.active_requests`        | gauge     | —                    | 当前在途请求数                                     |
+| 业务 | `markpost.posts.created_total`       | counter   | —                    | 投稿创建数                                         |
+| 业务 | `markpost.auth.login_success_total`  | counter   | —                    | 登录成功数                                         |
+| 业务 | `markpost.auth.login_failure_total`  | counter   | —                    | 登录失败数                                         |
+| 业务 | `markpost.auth.token_refresh_total`  | counter   | —                    | token 刷新次数                                     |
+| 业务 | `markpost.delivery.pending`          | gauge     | —                    | 待派发数                                           |
+| 业务 | `markpost.delivery.dispatched_total` | counter   | —                    | 已派发数                                           |
+| 业务 | `markpost.delivery.failed_total`     | counter   | error_category       | 派发失败数（按原因）                               |
+| 业务 | `markpost.render_cache.hit_total`    | counter   | —                    | 渲染请求由渲染缓存直接服务                         |
+| 业务 | `markpost.render_cache.miss_total`   | counter   | —                    | 渲染请求未命中，进入 singleflight 路径             |
+| 业务 | `markpost.cdn.purge_success_total`   | counter   | —                    | CDN cache-tag purge 以 HTTP < 300 完成             |
+| 业务 | `markpost.cdn.purge_failure_total`   | counter   | —                    | CDN purge 尝试失败（marshal/构造/传输/HTTP ≥ 300） |
+| 业务 | `markpost.cdn.purge_skipped_total`   | counter   | —                    | CDN purge 未发起（no-op purger/未配置）            |
+| 系统 | runtime metrics                      | —         | —                    | OTel Go runtime 自动采集（goroutine 数、GC、mem）  |
 
 五个渲染缓存/CDN purge 计数器不带属性——每个结果一条时间序列，命中率与 purge 尝试次数由聚合推得（决策记录：[缓存/purge 可观测性 MRFC](../../.agents/mrfcs/implemented/2026-09-03-cache-purge-observability.zh.md)；对照 `CF-Cache-Status` 的解读：[`caching.zh.md`](./caching.zh.md)）。
 

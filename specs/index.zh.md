@@ -42,6 +42,14 @@
 | [disaster-recovery.zh.md](./backend/disaster-recovery.zh.md)   | 单实例韧性姿态：当前备份现状、故障/恢复矩阵、源站宕机期间 CDN 读路径存活、成本                                                                                                                                                                         |
 | [cloudflare.zh.md](./backend/cloudflare.zh.md)                 | 三种部署模式（SaaS / 自托管 / homelab）、Cloudflare 接入（Full strict + Origin CA）、缓存行为、缓存标签清除契约、免费档限制，以及 XFF/受信代理的客户端 IP 设计                                                                                         |
 
+<a id="cli-specs"></a>
+
+## CLI 规格
+
+| 文件                     | 何时阅读                                                                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [cli.zh.md](./cli.zh.md) | 独立客户端 `markpost`（`cli/`）：命令集、会话与配置解析（config.toml + MARKPOST_* 环境变量）、401 自动刷新、agent 检测、输出规则与退出码、测试分层 |
+
 <a id="frontend-specs"></a>
 
 ## 前端规格
@@ -54,3 +62,11 @@
 | [testing.zh.md](./frontend/testing.zh.md)           | Vitest + MSW 单元测试、Playwright E2E 测试、测试设置与工具                                                                                                                                         |
 | [routes.zh.md](./frontend/routes.zh.md)             | 前端路由表（/auth/callback OAuth 回调）、声明式守卫架构（AuthGate + Public/Protected/AdminRoute + route-configs 纯函数）、安全边界声明（客户端守卫仅是 UX；安全在后端）、水合处理                  |
 | [i18n.zh.md](./frontend/i18n.zh.md)                 | 纯客户端 next-intl（无 getRequestConfig/plugin）、BCP 47 四语言（en/zh-Hans/zh-Hant/ja）、locale 文件命名、语言检测（localStorage + 浏览器语言）、到后端的 Accept-Language header、手工维护的 JSON |
+
+<a id="mcp-specs"></a>
+
+## MCP 规格
+
+| 文件                                       | 何时阅读                                                                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [mcp-server.zh.md](./mcp/mcp-server.zh.md) | markpost-mcp 设计：包装 REST API 的独立 Go module（黄金参考 github-mcp-server、官方 go-sdk v1.7.0）、四个工具集（47 个工具、admin 按需开启、只读模式）、凭据登录与刷新轮换、stdio/无状态 http 双传输、三层测试与发布产物 |

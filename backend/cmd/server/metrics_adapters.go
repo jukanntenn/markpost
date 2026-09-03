@@ -31,3 +31,18 @@ type postMetrics struct{ m *observability.Metrics }
 func (p *postMetrics) IncPostsCreated(ctx context.Context) {
 	p.m.PostsCreated.Add(ctx, 1)
 }
+func (p *postMetrics) IncRenderCacheHit(ctx context.Context) {
+	p.m.RenderCacheHit.Add(ctx, 1)
+}
+func (p *postMetrics) IncRenderCacheMiss(ctx context.Context) {
+	p.m.RenderCacheMiss.Add(ctx, 1)
+}
+func (p *postMetrics) IncCDNPurgeSuccess(ctx context.Context) {
+	p.m.CDNPurgeSuccess.Add(ctx, 1)
+}
+func (p *postMetrics) IncCDNPurgeFailure(ctx context.Context) {
+	p.m.CDNPurgeFailure.Add(ctx, 1)
+}
+func (p *postMetrics) IncCDNPurgeSkipped(ctx context.Context) {
+	p.m.CDNPurgeSkipped.Add(ctx, 1)
+}

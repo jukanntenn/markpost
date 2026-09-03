@@ -1,0 +1,58 @@
+# mcp project — Go hooks for the markpost-mcp module (cwd=mcp/, where its
+# go.mod lives). Mirrors backend/prek.toml: workspace mode strips the mcp/
+# prefix so golangci-lint receives project-relative paths.
+#
+# golangci-lint hooks point GOLANGCI_LINT_CACHE at a per-tree directory:
+# prek's workspace scheduler runs the backend and mcp golangci hooks
+# concurrently, and while the /tmp/golangci-lint.lock conflict is allowed
+# away (run.allow-parallel-runners in .golangci.yml), the analysis caches
+# still should not write over each other — separate trees, separate caches.
+
+[[repos]]
+repo = "local"
+
+# ---- fmt group: mutating formatters (AI post-edit + commit) ----
+[[repos.hooks]]
+id = "golangci-fmt"
+name = "golangci-lint fmt (mcp)"
+language = "system"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint fmt"
+shell = "bash"
+files = "\\.go$"
+pass_filenames = true
+groups = ["fmt"]
+stages = ["pre-commit"]
+
+# ---- lint group: read-only gate (AI Stop + commit + CI) ----
+[[repos.hooks]]
+id = "golangci-run"
+name = "golangci-lint run (mcp)"
+language = "system"
+entry = "GOLANGCI_LINT_CACHE=\"$PWD/.golangci-cache\" golangci-lint run"
+shell = "bash"
+files = "\\.go$"
+pass_filenames = false
+groups = ["lint"]
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "golangci-config-verify"
+name = "golangci-lint config verify (mcp)"
+language = "system"
+entry = "golangci-lint config verify"
+files = "^\\.golangci\\.yml$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+# ---- pre-push: tests (mirrors CI test.yml exactly) ----
+# Unit tests plus the e2e tag (CI's test-mcp job runs the same pair). `go
+# build` first so compile-only failures in packages without tests surface.
+[[repos.hooks]]
+id = "mcp-build-and-test"
+name = "go build + go test -race + e2e (mcp, pre-push)"
+language = "system"
+entry = "go build ./... && go test -race ./... && go test -race --tags e2e ./e2e"
+shell = "bash"
+files = "\\.go$"
+pass_filenames = false
+stages = ["pre-push"]

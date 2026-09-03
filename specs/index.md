@@ -38,6 +38,12 @@ English | [中文](index.zh.md)
 | [disaster-recovery.md](./backend/disaster-recovery.md)   | Single-instance resilience posture: current backup reality, the failure/recovery matrix, CDN read-path survival during origin outage, and cost                                                                                                                                                                                                      |
 | [cloudflare.md](./backend/cloudflare.md)                 | Three deployment modes (SaaS / self-hosted / homelab), Cloudflare onboarding (Full strict + Origin CA), cache behavior, cache-tag purge contract, free-tier limits, and the XFF/trusted-proxy client-IP design                                                                                                                                      |
 
+## CLI Specs
+
+| File               | When to Read                                                                                                                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [cli.md](./cli.md) | The standalone `markpost` client (`cli/`): command set, session/config resolution (config.toml + MARKPOST_* env), 401 auto-refresh, agent detection, output rules and exit codes, testing tiers |
+
 ## Frontend Specs
 
 | File                                          | When to Read                                                                                                                                                                                                                                                             |
@@ -48,3 +54,9 @@ English | [中文](index.zh.md)
 | [testing.md](./frontend/testing.md)           | Unit tests with Vitest and MSW, E2E tests with Playwright, test setup and utilities                                                                                                                                                                                      |
 | [routes.md](./frontend/routes.md)             | Frontend route table (/auth/callback OAuth callback), declarative guard architecture (AuthGate + Public/Protected/AdminRoute + route-configs pure functions), security boundary statement (client guards are UX only; security lives in the backend), hydration handling |
 | [i18n.md](./frontend/i18n.md)                 | Pure-client next-intl (no getRequestConfig/plugin), BCP 47 four locales (en/zh-Hans/zh-Hant/ja), locale file naming, language detection (localStorage + navigator.language), Accept-Language header to backend, manually maintained JSON                                 |
+
+## MCP Specs
+
+| File                                 | When to Read                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [mcp-server.md](./mcp/mcp-server.md) | markpost-mcp design: standalone Go module wrapping the REST API (golden reference: github-mcp-server, official go-sdk v1.7.0), the four toolsets (47 tools, admin opt-in, read-only mode), credential auth with refresh rotation, stdio/stateless-http transports, three-tier testing, and release artifacts |

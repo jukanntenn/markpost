@@ -1,7 +1,9 @@
 {
-  "AGENTS.md": 800,
+  "AGENTS.md": 820,
   "backend/AGENTS.md": 500,
   "frontend/AGENTS.md": 300,
   "e2e/AGENTS.md": 150,
-  "docs/AGENTS.md": 600
+  "docs/AGENTS.md": 600,
+  "cli/AGENTS.md": 300,
+  "mcp/AGENTS.md": 350
 }

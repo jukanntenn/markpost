@@ -19,6 +19,7 @@
 - ✍️ **Markdown 发布** — 通过一个 `POST` 请求上传 Markdown，即可获得带唯一 URL 的渲染 HTML 页面
 - 🌐 **Web 控制台** — 管理文章、查看统计、配置推送通道
 - 📬 **推送通道** — 将文章转发至 Webhook（飞书、Slack、自定义），支持关键词过滤
+- 🤖 **MCP Server** — 通过独立的 [markpost-mcp](docs/mcp.zh.md) 让 AI agent 发布与管理文章
 - 🏠 **自托管** — 单个 Docker Compose 栈，支持 PostgreSQL，随处运行
 
 ## 快速开始

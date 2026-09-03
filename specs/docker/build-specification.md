@@ -107,6 +107,16 @@ The following checks run before any build starts:
 | buildx plugin available                   | `docker buildx version`                | Exit 2  |
 | Builder supports target platforms         | `docker buildx inspect`                | Exit 2  |
 | QEMU registered for foreign architectures | `/proc/sys/fs/binfmt_misc/qemu-<arch>` | Exit 2  |
+| Version string resolvable                 | `scripts/build_version.py`             | Exit 2  |
+
+### Version String
+
+The `VERSION` build-arg — baked into the Go binary via `-X main.version` and reported at `/api/v1/version` — is computed by `scripts/build_version.py`, the single home shared with the deploy playbook's dev version check (`devops/ansible/deploy.yml`):
+
+- **Clean tree:** `git describe --tags --always`. Release images are CI builds from clean tag checkouts, so a release string is exactly the tag.
+- **Dirty tree:** `<describe>-dirty.<8 hex>` — a deterministic digest of the base commit plus the working-tree delta (the tracked diff and the contents of untracked non-ignored files). Two dirty builds of the same commit with different content compare unequal; rebuilding an identical tree reproduces the string. The deploy check therefore passes for a rebuilt image and fails when the checkout was edited after the build (MRFC 2026-09-03-dirty-tree-image-version-string).
+
+Version-resolution failure exits 2 (environment check failure). A repository without commits bakes `dev`.
 
 ### CLI Flags
 

@@ -1,0 +1,61 @@
+# golangci-lint configuration for the markpost-mcp module. Mirrors
+# backend/.golangci.yml (same linter set and strictness) with the module's
+# own local prefix.
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # prek's workspace scheduler runs the backend and mcp golangci hooks
+  # concurrently; they live in separate trees with separate caches, so the
+  # /tmp/golangci-lint.lock mutual exclusion (5s timeout, then "parallel
+  # golangci-lint is running") is a false conflict — allow the parallel run.
+  allow-parallel-runners: true
+
+linters:
+  default: standard
+  enable:
+    - revive
+    - bodyclose
+    - nilnil
+    - noctx
+    - contextcheck
+    - errorlint
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: false
+
+    staticcheck:
+      checks: ["all"]
+
+    revive:
+      confidence: 0.8
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [noctx, contextcheck]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes: ["github.com/jukanntenn/markpost/mcp"]
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+output:
+  formats:
+    text:
+      colors: true
+      print-issued-lines: true
+      print-linter-name: true

@@ -1,8 +1,8 @@
 # AGENTS.md
 
-markpost is a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, deployed as a single multi-arch Docker image. You are a senior pair-programming partner for this codebase: write secure, maintainable, performant code that matches the patterns already in the repo. Design and behavior rules live in [Conventions](#conventions); [`PRINCIPLES.md`](PRINCIPLES.md) is the frozen predecessor, kept until migration completes.
+markpost is a Go (Gin/GORM) backend and a Next.js 16 + React 19 frontend, shipped as multi-arch Docker images. You are a senior pair-programming partner for this codebase: write secure, maintainable, performant code that matches the patterns already in the repo. Design and behavior rules live in [Conventions](#conventions); [`PRINCIPLES.md`](PRINCIPLES.md) is the frozen predecessor, kept until migration completes.
 
-Subtree orders supplement this file and never repeat it: [`backend/AGENTS.md`](backend/AGENTS.md) (Go commands, migrations, testcontainers), [`frontend/AGENTS.md`](frontend/AGENTS.md) (pnpm, static export), [`e2e/AGENTS.md`](e2e/AGENTS.md) (Playwright, dagger). Read the one for the tree you are touching.
+Subtree orders supplement this file and never repeat it: [`backend/AGENTS.md`](backend/AGENTS.md) (Go commands, migrations, testcontainers), [`frontend/AGENTS.md`](frontend/AGENTS.md) (pnpm, static export), [`cli/AGENTS.md`](cli/AGENTS.md) (standalone client module), [`e2e/AGENTS.md`](e2e/AGENTS.md) (Playwright, dagger), [`mcp/AGENTS.md`](mcp/AGENTS.md) (markpost-mcp, go-sdk, e2e). Read the one for the tree you are touching.
 
 ## Commands
 
@@ -19,7 +19,7 @@ Backend, frontend, and e2e command blocks live in their `AGENTS.md` files linked
 - **Frontend**: Next.js 16 (`output: "export"` static export), React 19, TypeScript, Tailwind CSS 4, Zustand, TanStack Query, next-intl, @base-ui/react, Prettier
 - **Backend**: Go 1.26, Gin, GORM, JWT, Swagger (swag), Viper, OpenTelemetry
 - **Database**: PostgreSQL 17 (the only supported database)
-- **Testing**: Vitest (frontend unit), testcontainers-go + postgres (backend), Playwright chromium (e2e)
+- **Testing**: Vitest (frontend unit), testcontainers-go + postgres (backend), Playwright chromium (e2e), httptest fake + tag-gated acceptance (cli)
 - **Tooling**: golangci-lint v2 (lint+format), prek (pre-commit), air (Go hot reload)
 
 ## Project Structure
@@ -27,6 +27,11 @@ Backend, frontend, and e2e command blocks live in their `AGENTS.md` files linked
 ```
 backend/           Go service — orders in backend/AGENTS.md
 frontend/          Next.js static export — orders in frontend/AGENTS.md
+backend/           Go service — orders in backend/AGENTS.md
+frontend/          Next.js static export — orders in frontend/AGENTS.md
+cli/               standalone markpost client (own Go module) — orders in cli/AGENTS.md
+mcp/               standalone markpost-mcp MCP server — orders in mcp/AGENTS.md
+e2e/               Playwright workspace (own package.json) — orders in e2e/AGENTS.md
 e2e/               Playwright workspace (own package.json) — orders in e2e/AGENTS.md
 devops/            dev.py, docker-compose.yml, Dockerfiles, ansible/
 docker/            production image (s6 multi-process), build.py

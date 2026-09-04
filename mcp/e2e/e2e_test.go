@@ -13,6 +13,7 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -45,8 +46,21 @@ func TestMarkpostMCPEndToEnd(t *testing.T) {
 	serverBin := buildBinary(t, "../../backend", "./cmd/server", "markpost-server")
 	mcpBin := buildBinary(t, "..", "./cmd/markpost-mcp", "markpost-mcp")
 
-	runBackend(t, serverBin, dsn, "migrate", "up")
-	runBackend(t, serverBin, dsn, "seed-users", "--count", "1", "--prefix", adminUser, "--password", adminPassword, "--channels", "0")
+	// Retry migrations: Docker Desktop on WSL2 can briefly reset connections
+	// right after the container starts, even though the port is reachable
+	// (backend/internal/infra/testdb.go retries for the same reason).
+	var migrateErr error
+	for range 60 {
+		migrateErr = runBackend(t, serverBin, dsn, "migrate", "up")
+		if migrateErr == nil {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+	require.NoError(t, migrateErr)
+	require.NoError(t, runBackend(t, serverBin, dsn,
+		"seed-users", "--count", "1", "--prefix", adminUser,
+		"--password", adminPassword, "--channels", "0"))
 	promoteToAdmin(t, ctx, pg)
 
 	baseURL := startBackend(t, serverBin, dsn)
@@ -190,13 +204,15 @@ func backendEnv(dsn string) []string {
 
 // runBackend runs a one-shot backend CLI subcommand in a clean cwd (the
 // worktree's backend/config.toml must not leak into the e2e server).
-func runBackend(t *testing.T, bin, dsn string, args ...string) {
-	t.Helper()
+func runBackend(t *testing.T, bin, dsn string, args ...string) error {
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = t.TempDir()
 	cmd.Env = append(os.Environ(), backendEnv(dsn)...)
 	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "%s: %s", args, out)
+	if err != nil {
+		return fmt.Errorf("%s: %s", args, out)
+	}
+	return nil
 }
 
 // promoteToAdmin flips the seeded user's role — the CLI seeds regular users,

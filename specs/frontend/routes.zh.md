@@ -30,9 +30,10 @@ OAuth 流程用同页重定向，唯一的回调路由就是这个 `/auth/callba
 
 着陆页是纯静态营销页（`components/landing/`），无守卫、无数据请求。行为约定：
 
-- 未登录：Masthead 右上为描边样式的「登录」；Hero 与 Colophon 的主 CTA 为「开始使用」→ `/login`。
+- 未登录：Masthead 右上为描边样式的「登录」；Hero 与收尾区的主 CTA 为「开始使用」→ `/login`。
 - 已登录（`useAuthReady` 水合后判定，不强制跳转、无闪烁重定向）：按钮文案变为「打开控制台」→ `/dashboard`。
-- 页面结构：Masthead（§00）→ Hero 对开页（§01）→ 原理（§02）→ 产物（§03）→ 投递（§04）→ 开源（§05）→ Colophon 页脚（§06）。每节 = 一个主张 + 一件物证 + 可验证的事实；§03 的文章页物证复刻 `backend/templates/post.html` 的冷色 slate 样式，与 Ember 暖色纸面刻意保持材质差异。
+- 页面结构：Masthead（§00）→ Hero 对开页（§01）→ 原理（§02）→ 产物（§03）→ 投递（§04）→ 开源（§05）→ 站点 footer（§06）。每节 = 一个主张 + 一件物证 + 可验证的事实；§03 的文章页物证复刻 `backend/templates/post.html` 的冷色 slate 样式，与 Ember 暖色纸面刻意保持材质差异。
+- 站点 footer（`SiteFooter.tsx`）以收尾 CTA 开场，其下是品牌区（logo + 一句话）与「资源」（文档、问题反馈）、「项目」（GitHub、Docker Hub、MIT License）两列链接，底条为版权 · 许可 · 版本号（`package.json` 经 `@/lib/site` 暴露的 `APP_VERSION`）· 排印说明。应用壳（`AppShell.tsx`）带 slim footer（运行版本 + 文档/GitHub 链接）；auth 页无 footer。
 - 文案全部走 `landing.*` 命名空间（en / zh-Hans / zh-Hant / ja），物证中的示例文章（`landing.sample.*`）在 hero、§03、§04 之间共享同一篇，保持叙事连贯。
 
 <a id="guard-architecture"></a>

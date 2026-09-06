@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl'
 import { ArrowDownIcon, ArrowRightIcon, ArrowUpRightIcon } from 'lucide-react'
 import { useAuthReady } from '@/hooks/useAuthReady'
 import { buttonClass } from '@/components/ui/button'
-import { LANDING_CONTAINER, REPO_URL } from './links'
+import { LANDING_CONTAINER } from './links'
+import { REPO_URL } from '@/lib/site'
 import { PostPageArtifact } from './PostPageArtifact'
 
 // §01 Hero 对开页：标题自证源码（可见的「#」用 muted 灰 Fira Code，

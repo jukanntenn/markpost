@@ -826,6 +826,9 @@
       "internal": "Could not change password. Please try again later."
     }
   },
+  "footer": {
+    "docs": "Docs"
+  },
   "landing": {
     "meta": {
       "title": "Markpost — Self-hosted Markdown publishing"
@@ -928,7 +931,11 @@
       "docs": "Docs",
       "dockerHub": "Docker Hub",
       "typeset": "Typeset in Playfair Display · Source Sans 3 · Fira Code · Ember Studio palette",
-      "copyright": "© {year} markpost · MIT License"
+      "copyright": "© {year} markpost · MIT License",
+      "tagline": "Self-hosted Markdown publishing",
+      "resources": "Resources",
+      "project": "Project",
+      "issues": "Feedback"
     },
     "sample": {
       "postTitle": "Weekly Notes #7",

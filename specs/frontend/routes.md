@@ -26,9 +26,10 @@ The OAuth flow uses a same-page redirect with this single `/auth/callback` route
 
 The landing page is a purely static marketing page (`components/landing/`) with no guard and no data requests. Behavior:
 
-- Signed out: the Masthead shows an outlined "Sign in" at the top right; the primary CTA in the Hero and the Colophon is "Get started" → `/login`.
+- Signed out: the Masthead shows an outlined "Sign in" at the top right; the primary CTA in the Hero and the closing section is "Get started" → `/login`.
 - Signed in (decided once `useAuthReady` has hydrated; no forced redirect, no flashing redirect): the buttons read "Open the console" → `/dashboard`.
-- Page structure: Masthead (§00) → Hero spread (§01) → Principles (§02) → Artifacts (§03) → Delivery (§04) → Open source (§05) → Colophon footer (§06). Each section = one claim + one exhibit + a verifiable fact; the §03 post-page exhibit recreates the cool slate styling of `backend/templates/post.html`, deliberately keeping a material contrast with the warm Ember paper.
+- Page structure: Masthead (§00) → Hero spread (§01) → Principles (§02) → Artifacts (§03) → Delivery (§04) → Open source (§05) → site footer (§06). Each section = one claim + one exhibit + a verifiable fact; the §03 post-page exhibit recreates the cool slate styling of `backend/templates/post.html`, deliberately keeping a material contrast with the warm Ember paper.
+- The site footer (`SiteFooter.tsx`) opens with the closing CTA, then a brand block (logo + tagline) beside "Resources" (docs, issue feedback) and "Project" (GitHub, Docker Hub, MIT License) link columns, and a bottom bar with copyright, license, the release version (`APP_VERSION` from `package.json` via `@/lib/site`), and the typeset colophon line. The app shell (`AppShell.tsx`) carries a slim footer with the running version and docs/GitHub links; auth pages have no footer.
 - All copy lives in the `landing.*` namespace (en / zh-Hans / zh-Hant / ja); the sample post in the exhibits (`landing.sample.*`) is one shared post across the hero, §03, and §04, keeping the narrative coherent.
 
 ## Guard Architecture

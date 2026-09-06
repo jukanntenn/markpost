@@ -826,6 +826,9 @@
       "internal": "修改密码失败，请稍后重试"
     }
   },
+  "footer": {
+    "docs": "文档"
+  },
   "landing": {
     "meta": {
       "title": "Markpost — 自托管 Markdown 发布服务"
@@ -928,7 +931,11 @@
       "docs": "文档",
       "dockerHub": "Docker Hub",
       "typeset": "本页排印：Playfair Display · Source Sans 3 · Fira Code · Ember Studio 色板",
-      "copyright": "© {year} markpost · MIT License"
+      "copyright": "© {year} markpost · MIT License",
+      "tagline": "自托管 Markdown 发布服务",
+      "resources": "资源",
+      "project": "项目",
+      "issues": "问题反馈"
     },
     "sample": {
       "postTitle": "每周进展 #7",

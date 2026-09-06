@@ -826,6 +826,9 @@
       "internal": "變更密碼失敗，請稍後重試"
     }
   },
+  "footer": {
+    "docs": "文件"
+  },
   "landing": {
     "meta": {
       "title": "Markpost — 自架 Markdown 發布服務"
@@ -928,7 +931,11 @@
       "docs": "文件",
       "dockerHub": "Docker Hub",
       "typeset": "本頁排印：Playfair Display · Source Sans 3 · Fira Code · Ember Studio 色板",
-      "copyright": "© {year} markpost · MIT License"
+      "copyright": "© {year} markpost · MIT License",
+      "tagline": "自架 Markdown 發布服務",
+      "resources": "資源",
+      "project": "專案",
+      "issues": "問題回饋"
     },
     "sample": {
       "postTitle": "每週進展 #7",

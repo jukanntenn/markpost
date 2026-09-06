@@ -8,11 +8,11 @@ import { WorkflowSection } from './WorkflowSection'
 import { PageSection } from './PageSection'
 import { DeliverySection } from './DeliverySection'
 import { OpenSourceSection } from './OpenSourceSection'
-import { ColophonFooter } from './ColophonFooter'
+import { SiteFooter } from './SiteFooter'
 
 // 着陆页：六个元素（Masthead / Hero / 原理 / 产物 / 投递 / 开源）+
-// Colophon 页脚。每节 = 一个主张 + 一件物证 + 一行可验证的事实，
-// 详见 specs/frontend/routes.md 与 landing 各节组件。
+// 站点 footer（收尾 CTA + 品牌区/链接列/底条）。每节 = 一个主张 +
+// 一件物证 + 一行可验证的事实，详见 specs/frontend/routes.md 与 landing 各节组件。
 export function LandingPage() {
   const t = useTranslations('landing')
   const tNav = useTranslations('navigation')
@@ -36,7 +36,7 @@ export function LandingPage() {
           <OpenSourceSection />
         </div>
       </main>
-      <ColophonFooter />
+      <SiteFooter />
     </div>
   )
 }

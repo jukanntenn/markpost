@@ -11,7 +11,8 @@ import { useLocaleContext } from '@/components/providers/LocaleProvider'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button, buttonClass } from '@/components/ui/button'
 import { Menu } from '@/components/ui/menu'
-import { LANDING_CONTAINER, REPO_URL, DOCS_URL } from './links'
+import { LANDING_CONTAINER } from './links'
+import { REPO_URL, DOCS_URL } from '@/lib/site'
 
 // §00 Masthead：复用应用壳的铬件（56px 高、滚动后 1px hairline + backdrop-blur，
 // design.md Elevation 的明文规定）。唯一的主 CTA 留给 Hero，这里用描边样式。

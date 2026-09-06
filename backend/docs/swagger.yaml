@@ -2134,6 +2134,24 @@ paths:
       summary: Health check
       tags:
       - health
+  /api/v1/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apierr.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Report the caller's own profile
+      tags:
+      - me
   /api/v1/me/retention:
     get:
       produces:

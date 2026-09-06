@@ -12,7 +12,7 @@ vip 既已入库（[标志 MRFC](2026-08-23-user-vip-flag.zh.md)）、又由策�
 
 徽章是仓库自有 `Badge`（`frontend/src/components/ui/badge.tsx`，`variant="accent"`）封装成的 `VipBadge`（`frontend/src/components/ui/vip-badge.tsx`），文案为语言无关的 `VIP`，紧贴用户名之后渲染于四处：仪表盘欢迎语（`DashboardPage`）、应用外壳用户菜单（`AppShell`）、管理端用户列表与用户详情页；非 VIP 用户看不到任何多余之物。公开帖子页维持在外——那里不渲染作者用户名。
 
-逐用户管理是 `PATCH /api/v1/admin/users/:id/vip`，体 `{"vip": <bool>}`，端到端镜像 `/active` 端点：管理 REST 层的 handler 带审计动作 `user.set_vip`（值为元数据）、响应 `AdminUserItem`，`UserMutator` 端口之后的 service `SetUserVIP`，经 `updateByID` 的仓库 setter。与 `/active` 的两处刻意偏离：不设自我操作守卫（管理员设置自己的 vip 不破坏任何不变量）、不 bump `token_version`（vip 不进任何 claim；逐请求重读整行使翻转即刻可见）。管理 UI 把该动作加进逐行治理菜单（`UserGovernance`），沿用同一确认对话框与失效刷新范式，对自己也开放。
+逐用户管理是 `PATCH /api/v1/admin/users/:id/vip`，体 `{"vip": <bool>}`，端到端镜像 `/active` 端点：管理 REST 层的 handler 带审计动作 `user.set_vip`（值为元数据）、响应 `AdminUserItem`，`UserMutator` 端口之后的 service `SetUserVIP`，经 `updateByID` 的仓库 setter。与 `/active` 的两处刻意偏离：不设自我操作守卫（管理员设置自己的 vip 不破坏任何不变量）、不 bump `token_version`（vip 不进任何 claim；逐请求重读整行使服务端每次读取都是新值——客户端如何跟上见 2026-09-05 修订）。管理 UI 把该动作加进逐行治理菜单（`UserGovernance`），沿用同一确认对话框与失效刷新范式，对自己也开放。
 
 策略开关是管理端用户列表页头部的一个开关（`AdminUsersPage` 里的 `VipStrategyToggle`），调用 `PUT /admin/settings/vip`——v1 不做独立设置页。四份 locale 文件同步携带治理字符串、开关标签与审计叙事（`admin.users.vip*`、`admin.users.vipStrategy.*`、`admin.audit.action.user.vipGrant/vipRevoke`、`admin.audit.action.setting.*`）；`audit-action-text` 映射两个新动作；MSW handler 覆盖新端点。
 
@@ -31,3 +31,7 @@ vip 既已入库（[标志 MRFC](2026-08-23-user-vip-flag.zh.md)）、又由策�
 ## Consequences
 
 VIP 用户在欢迎语与用户菜单自己的用户名旁看到标记，管理员在同一屏看到并驱动每个用户的 vip 与策略开关；两个杠杆都有带本地化叙事的审计。代价：四语言同步靠手工（实施层逐键列出，评审者能一眼对 diff 四个文件）；徽章会诱使范围向「意味着什么」蔓延——若 vip 将来授予权限，那次变更自带新 MRFC，在那之前文案保持纯荣誉。开关寄放在用户列表页使它视觉上与管理耦合；在它仍是唯一策略时可接受，第二个策略进入 `settings` 时重议。验证方式：handler 测试覆盖授予/撤销/404；前端套件覆盖徽章渲染与开关；新端点的 swagger 已再生成。
+
+## 2026-09-05 修订
+
+上文的「即刻可见」只对服务端成立。前端把登录时的 `user` 快照持久化在 local storage，没有任何代码路径重读它，因此被授予 vip 的用户即使刷新页面也看不到徽章——只有完整重新登录才能跟上。修复从两端闭合这一缺口：`GET /api/v1/me`（并入[保留可见性 MRFC](2026-09-02-user-facing-retention-visibility.zh.md) 开辟的 `/me` 命名空间）直接序列化中间件新近重读的用户行，`useProfileSync` 在每次整页加载时重新拉取并覆盖存储的快照——徽章在用户下一次刷新时出现。同一条读取路径也让所有管理端可变的资料字段（角色、封禁状态）将来不再依赖重新登录，而不只 vip。

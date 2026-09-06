@@ -87,6 +87,7 @@ export const postKeyKeys = {
 
 export const meKeys = {
   all: () => ['me'] as const,
+  profile: () => [...meKeys.all(), 'profile'] as const,
   retention: () => [...meKeys.all(), 'retention'] as const,
 }
 

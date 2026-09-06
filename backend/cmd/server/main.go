@@ -551,6 +551,7 @@ func SetupRoutes(r *gin.Engine, deliverySvc *deliverysvc.Service, adminSvc *admi
 	{
 		jwtAuth.GET("/post-key", v1.QueryPostKey(authSvc))
 		jwtAuth.GET("/posts", v1.PostsList(postSvc))
+		jwtAuth.GET("/me", v1.MeProfile())
 		jwtAuth.GET("/me/retention", v1.MeRetention(meSvc))
 
 		// L3: authenticated state changes keyed on user_id (from JWT). Reads

@@ -14,6 +14,7 @@ import {
   UserIcon,
 } from 'lucide-react'
 import { useAuthReady } from '@/hooks/useAuthReady'
+import { useProfileSync } from '@/hooks/useProfileSync'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/lib/api'
 import { toastManager } from '@/stores/toast'
@@ -35,6 +36,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const { isAuthenticated, isAdmin } = useAuthReady()
+  // 管理端改动（vip/封禁等）落库后，登录快照不会自己更新：每次整页加载
+  // 拉一次 /me 覆盖本地快照。
+  useProfileSync()
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)

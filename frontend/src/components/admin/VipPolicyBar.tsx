@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { UsersIcon } from 'lucide-react'
@@ -22,6 +22,11 @@ export function VipPolicyBar() {
   const queryClient = useQueryClient()
   const [alignOpen, setAlignOpen] = useState(false)
   const [days, setDays] = useState('')
+  // The N-days option must be selectable before any value exists to save:
+  // the radio states below derive from the saved server value, so picking
+  // "N 天" from follow-global/forever tracks here until a value is committed.
+  const [daysSelected, setDaysSelected] = useState(false)
+  const daysInputRef = useRef<HTMLInputElement>(null)
 
   const settingsQuery = useQuery({
     queryKey: adminKeys.settings(),
@@ -43,6 +48,8 @@ export function VipPolicyBar() {
     (s) => s.key === 'vip_retention_days',
   )
   const classDays = classSetting?.value.days ?? null
+  const daysSaved = classDays !== null && classDays > 0
+  const daysActive = daysSelected || daysSaved
 
   const save = useMutation({
     mutationFn: (value: number | null) =>
@@ -61,9 +68,14 @@ export function VipPolicyBar() {
   const daysValid =
     Number.isFinite(parsedDays) && parsedDays >= 1 && parsedDays <= 3650
 
+  // Focus lands after the selection re-render mounts the input; focusing in
+  // the click handler itself would run before the element exists.
+  useEffect(() => {
+    if (daysSelected) daysInputRef.current?.focus()
+  }, [daysSelected])
+
   function commit(next: number | null) {
     if (next !== null && (next < 0 || next > 3650)) return
-    if (next !== null && next > 0 && !daysValid && String(next) !== days) return
     save.mutate(next)
   }
 
@@ -85,9 +97,9 @@ export function VipPolicyBar() {
         >
           {(
             [
-              [classDays === null, '', t('followGlobal')],
-              [classDays === 0, '0', t('forever')],
-              [classDays !== null && classDays > 0, 'days', t('nDays')],
+              [!daysActive && classDays === null, '', t('followGlobal')],
+              [!daysActive && classDays === 0, '0', t('forever')],
+              [daysActive, 'days', t('nDays')],
             ] as const
           ).map(([active, value, label]) => (
             <button
@@ -102,25 +114,41 @@ export function VipPolicyBar() {
                   : 'text-muted-foreground hover:text-foreground')
               }
               onClick={() => {
-                if (value === '') commit(null)
-                else if (value === '0') commit(0)
-                else if (daysValid) commit(parsedDays)
-                else if (classDays && classDays > 0) commit(classDays)
+                if (value === '') {
+                  setDaysSelected(false)
+                  commit(null)
+                } else if (value === '0') {
+                  setDaysSelected(false)
+                  commit(0)
+                } else {
+                  setDaysSelected(true)
+                  if (daysValid) commit(parsedDays)
+                }
               }}
             >
               {label}
             </button>
           ))}
         </div>
-        {classDays !== null && classDays > 0 && (
+        {daysActive && (
           <span className="flex items-center gap-1">
             <Input
+              ref={daysInputRef}
               type="number"
               min={1}
               max={3650}
-              value={days || String(classDays)}
+              value={days || (daysSaved ? String(classDays) : '')}
+              placeholder="30"
               onChange={(e) => setDays(e.target.value)}
-              onBlur={() => daysValid && save.mutate(parsedDays)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+              }}
+              onBlur={() => {
+                if (daysValid) save.mutate(parsedDays)
+                // Leaving the field without a committable value drops the
+                // unsaved selection back to the persisted state.
+                else setDaysSelected(false)
+              }}
               className="h-7 w-20"
               aria-label={t('nDays')}
               data-testid="vip-class-days-input"

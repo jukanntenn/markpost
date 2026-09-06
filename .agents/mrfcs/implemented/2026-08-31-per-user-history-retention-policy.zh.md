@@ -59,3 +59,7 @@ markpost 的保留策略是一刀切的：`[post] retention_days`（默认 7，0
 换来的是：运营可以按用户、按批次、按 VIP 类承诺保留策略，授予钩子自维持，admin 列表显示生效值，每次缩短都有删除计数闸门；prune 任务真的被调度了，策略在新部署上是真实生效的。验证：testcontainers 覆盖显式永久、显式 N 天、缩短在下次清扫生效、继承、全局 0、被孤立的历史行回落全局窗口；授予时物化在两条授予路径上断言（继承者取得类默认、显式值在授予与撤销中幸存、撤销保留它）；bulk/impact/defaults 端点在 handler 层覆盖；admin 界面以 Playwright 截图验证——[`01` 保留策略列](./2026-08-31-per-user-history-retention-policy/01-users-retention-column.png)、[`02` 批量选择模式](./2026-08-31-per-user-history-retention-policy/02-bulk-select-mode.png)、[`03` 共用对话框](./2026-08-31-per-user-history-retention-policy/03-retention-dialog.png)、[`04` 天数输入](./2026-08-31-per-user-history-retention-policy/04-dialog-days-expanded.png)、[`05` 缩短窗口的影响确认](./2026-08-31-per-user-history-retention-policy/05-shorten-impact-confirm.png)、[`06` VIP 策略栏](./2026-08-31-per-user-history-retention-policy/06-vip-policy-bar.png)、[`07` VIP 对齐](./2026-08-31-per-user-history-retention-policy/07-vip-apply-all-dialog.png)、[`08` 详情行](./2026-08-31-per-user-history-retention-policy/08-user-detail-row.png)；i18n 键齐备于全部四个语言文件。
 
 代价与遗留风险：缩短保留是下一次清扫时的不可逆删除——UI 用影响数与确认拦截，持 token 的 admin 绕过对话框（有审计；admin 信任边界）；策略设置前已被清扫的数据无法复活；settings 值形状从 `{"enabled"}` 泛化到含 `{"days"}`（错误形状双向 400 拒绝）；物化把保留策略耦合进授予路径——第三条授予路径必须汇入同一钩子（今天由两条路径共同调用的服务层接缝保证）；按行 `CASE` cutoff 让 prune SQL 比单时间戳比较更重——在约 0.12 次写/秒的量级下是噪声，且批量化本就限定了锁范围。
+
+## 2026-09-05 修订
+
+策略栏的 N 天段在尚无正数类默认值时是个死点击：单选按钮的选中态完全由持久化值派生，天数输入框也只在已有正数值时渲染，因此从「跟随全局」或「永久」点击「N 天」什么都不会发生——输入框不出现、不发起写入（`commit` 里的一道守卫还把已存值回退分支也堵死了）。策略栏现在本地跟踪选中态：点选 N 天即显示并聚焦输入框，键入的值在失焦或回车时保存，未输入有效值就失焦则回落到持久化状态。由 `VipPolicyBar.test.tsx` 覆盖。

@@ -313,6 +313,8 @@ definitions:
     type: object
   v1.AdminUserItem:
     properties:
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:

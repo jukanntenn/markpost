@@ -40,6 +40,8 @@ import {
 } from './UserGovernance'
 import type { AdminUser } from '@/types/users'
 import { VipBadge } from '@/components/ui/vip-badge'
+import { GithubBadge } from '@/components/ui/github-badge'
+import { UserAvatar } from '@/components/ui/user-avatar'
 
 // D3.1 用户列表：搜索（debounce 300ms）+ 状态 badge + 详情入口 + ⋮ 快捷操作。
 export function AdminUsersPage() {
@@ -199,12 +201,17 @@ export function AdminUsersPage() {
                   </TableCell>
                   <TableCell className="font-medium">
                     <span className="inline-flex items-center gap-1.5">
+                      <UserAvatar
+                        username={u.username}
+                        avatarUrl={u.avatar_url}
+                      />
                       <a
                         href={`/admin/users?id=${u.id}`}
                         className="hover:underline"
                       >
                         {u.username}
                       </a>
+                      {u.github_id && <GithubBadge />}
                       {u.vip && <VipBadge />}
                     </span>
                   </TableCell>
@@ -287,12 +294,14 @@ export function AdminUsersPage() {
                       }}
                     />
                   )}
+                  <UserAvatar username={u.username} avatarUrl={u.avatar_url} />
                   <a
                     href={`/admin/users?id=${u.id}`}
                     className="min-w-0 truncate font-semibold hover:underline"
                   >
                     {u.username}
                   </a>
+                  {u.github_id && <GithubBadge />}
                   {u.vip && <VipBadge />}
                 </span>
                 <Badge variant={u.role === 'admin' ? 'default' : 'outline'}>

@@ -3128,6 +3128,9 @@ const docTemplate = `{
         "v1.AdminUserItem": {
             "type": "object",
             "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },

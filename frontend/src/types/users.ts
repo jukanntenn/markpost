@@ -10,6 +10,8 @@ export interface AdminUser {
   email: string
   is_email_verified: boolean
   github_id: number | null
+  // Set only for users created via GitHub OAuth (the GitHub avatar).
+  avatar_url: string | null
   role: UserRole
   is_active: boolean
   vip: boolean

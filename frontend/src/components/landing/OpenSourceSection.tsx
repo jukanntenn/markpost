@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl'
 import { ArrowUpRightIcon } from 'lucide-react'
-import { LANDING_CONTAINER, DOCS_URL } from './links'
+import { LANDING_CONTAINER } from './links'
+import { DOCS_URL } from '@/lib/site'
 import { SectionHeading } from './SectionHeading'
 
 // §05 开源：信任背书而非部署教程——三行 compose 是物证，规格表只列

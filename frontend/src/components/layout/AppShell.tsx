@@ -14,6 +14,7 @@ import {
   UserIcon,
 } from 'lucide-react'
 import { useAuthReady } from '@/hooks/useAuthReady'
+import { useProfileSync } from '@/hooks/useProfileSync'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/lib/api'
 import { toastManager } from '@/stores/toast'
@@ -23,6 +24,7 @@ import { Menu } from '@/components/ui/menu'
 import { VipBadge } from '@/components/ui/vip-badge'
 import { SidebarNav } from '@/components/layout/SidebarNav'
 import { MobileSidebar } from '@/components/layout/MobileSidebar'
+import { APP_VERSION, DOCS_URL, REPO_URL } from '@/lib/site'
 
 // A2.5 统一应用壳：顶栏退化为全局工具栏（无主导航），所有用户走侧栏，
 // 侧栏内容随角色变化。桌面 sticky 侧栏 + 移动 Dialog Sheet 消费同一导航树。
@@ -32,9 +34,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations('navigation')
   const tCommon = useTranslations('common')
   const tNetwork = useTranslations('network')
+  const tFooter = useTranslations('footer')
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const { isAuthenticated, isAdmin } = useAuthReady()
+  // 管理端改动（vip/封禁等）落库后，登录快照不会自己更新：每次整页加载
+  // 拉一次 /me 覆盖本地快照。
+  useProfileSync()
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -77,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-svh">
+    <div className="flex min-h-svh flex-col">
       <a href="#main-content" className="skip-link">
         {t('aria.skipToContent')}
       </a>
@@ -159,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-(--container-max)">
+      <div className="mx-auto flex w-full max-w-(--container-max) flex-1">
         <aside className="sticky top-(--header-height) hidden h-[calc(100svh-var(--header-height))] w-64 shrink-0 border-r border-sidebar-border lg:block">
           <div className="h-full overflow-y-auto px-3 py-6">
             <SidebarNav />
@@ -173,6 +179,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+
+      {/* 底部 slim footer：自托管实例的运行版本 + 文档/源码入口，
+          容器与顶栏对齐（design.md 页面容器约束）。 */}
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-(--container-max) flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-caption text-muted-foreground md:px-6 lg:px-8">
+          <span>markpost v{APP_VERSION}</span>
+          <nav aria-label={tFooter('docs')} className="flex items-center gap-4">
+            <a
+              href={DOCS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              {tFooter('docs')}
+            </a>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="underline-offset-4 hover:text-foreground hover:underline"
+            >
+              GitHub
+            </a>
+          </nav>
+        </div>
+      </footer>
 
       <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
     </div>

@@ -17,6 +17,7 @@ import { safeNext } from '@/utils/safe-next'
 import { toastManager } from '@/stores/toast'
 import { FormAlert } from '@/components/ui/form-alert'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -261,7 +262,14 @@ export default function LoginPage() {
                   className="w-full"
                   disabled={isSubmitting || processingRef.current}
                 >
-                  {isSubmitting ? t('signingIn') : t('loginButton')}
+                  {isSubmitting ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Spinner className="size-4" />
+                      {t('signingIn')}
+                    </span>
+                  ) : (
+                    t('loginButton')
+                  )}
                 </Button>
               </div>
             </Form>
@@ -281,6 +289,7 @@ export default function LoginPage() {
             >
               {loadingGitHub ? (
                 <span className="inline-flex items-center gap-2">
+                  <Spinner className="size-4" />
                   {t('processingGitHubLogin')}
                 </span>
               ) : (

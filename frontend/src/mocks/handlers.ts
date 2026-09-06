@@ -42,6 +42,20 @@ export const handlers = [
     return HttpResponse.json<PostKeyResponse>(mockPostKey)
   }),
 
+  // Default /me: a plain non-VIP user matching the seeded session's shape.
+  http.get('/api/v1/me', () =>
+    HttpResponse.json({
+      id: 1,
+      email: 'admin@example.com',
+      username: 'admin',
+      name: 'Admin',
+      role: 'admin',
+      is_active: true,
+      is_email_verified: true,
+      vip: false,
+    }),
+  ),
+
   // Default /me/retention: the inherit resolution under default globals.
   http.get('/api/v1/me/retention', () =>
     HttpResponse.json({ posts_days: 7, history_days: 7 }),

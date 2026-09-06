@@ -13,6 +13,9 @@ export interface AuthState {
 
   setAuth: (token: string, user: User, refreshToken?: string) => void
   setTokens: (token: string, refreshToken: string) => void
+  // Re-syncs the profile snapshot (vip, role, ban state) without touching the
+  // session tokens — consumed by the /me profile poll.
+  setUser: (user: User) => void
   logout: () => void
   markSessionExpired: () => void
   clearSessionExpired: () => void
@@ -40,6 +43,8 @@ export const useAuthStore = create<AuthState>()(
 
       setTokens: (token, refreshToken) =>
         set({ token, refreshToken, sessionExpired: false }),
+
+      setUser: (user) => set({ user }),
 
       logout: () => set({ token: null, refreshToken: null, user: null }),
 

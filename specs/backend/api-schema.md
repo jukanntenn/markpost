@@ -104,9 +104,12 @@ Password policy: minimum 8 characters, maximum 72 characters, no complexity requ
 
 | Method | Path            | Auth | Description                             |
 | ------ | --------------- | ---- | --------------------------------------- |
+| GET    | `/me`           | JWT  | The caller's own profile                |
 | GET    | `/me/retention` | JWT  | The caller's effective retention policy |
 
-**Response**: `{ posts_days, history_days }` — each `0` (keep forever) or a whole-day count; an explicit per-user override drives both numbers, an inherit resolves each table's own global window.
+**Response** (`/me`): the `user` object of the login response (`{ id, email, username, name, avatar_url, role, is_active, is_email_verified, vip }`), serialized from the row the auth middleware reloads each request — admin-side changes (vip, role, ban state) are visible on the client's next profile fetch, not only after re-login.
+
+**Response** (`/me/retention`): `{ posts_days, history_days }` — each `0` (keep forever) or a whole-day count; an explicit per-user override drives both numbers, an inherit resolves each table's own global window.
 
 ## Posts
 

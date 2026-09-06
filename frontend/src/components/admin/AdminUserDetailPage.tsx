@@ -16,6 +16,8 @@ import { useLocaleContext } from '@/components/providers/LocaleProvider'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { VipBadge } from '@/components/ui/vip-badge'
+import { GithubBadge } from '@/components/ui/github-badge'
+import { UserAvatar } from '@/components/ui/user-avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ListState } from '@/components/ui/list-state'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -159,9 +161,15 @@ export function AdminUserDetailPage() {
         {user && (
           <>
             <header className="flex flex-wrap items-center gap-3">
+              <UserAvatar
+                username={user.username}
+                avatarUrl={user.avatar_url}
+                className="size-12 text-lg"
+              />
               <h1 className="min-w-0 flex-1 font-display text-headline font-bold tracking-tight">
                 {user.username}
               </h1>
+              {user.github_id && <GithubBadge />}
               <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
                 {user.role === 'admin' ? t('roleAdmin') : t('roleUser')}
               </Badge>
@@ -206,14 +214,20 @@ export function AdminUserDetailPage() {
                       </Badge>
                     )}
                   </ProfileRow>
-                  <ProfileRow
-                    label={t('githubId')}
-                    value={
-                      user.github_id
-                        ? tUsers('detail.githubLinked', { id: user.github_id })
-                        : tUsers('detail.githubUnbound')
-                    }
-                  />
+                  <ProfileRow label={t('githubId')}>
+                    <span className="inline-flex items-center justify-end gap-1.5">
+                      {user.github_id ? (
+                        <>
+                          <GithubBadge />
+                          {tUsers('detail.githubLinked', {
+                            id: user.github_id,
+                          })}
+                        </>
+                      ) : (
+                        tUsers('detail.githubUnbound')
+                      )}
+                    </span>
+                  </ProfileRow>
                   <ProfileRow
                     label={t('role')}
                     value={

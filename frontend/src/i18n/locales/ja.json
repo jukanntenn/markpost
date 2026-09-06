@@ -826,6 +826,9 @@
       "internal": "パスワードを変更できませんでした。しばらくしてから再試行してください。"
     }
   },
+  "footer": {
+    "docs": "ドキュメント"
+  },
   "landing": {
     "meta": {
       "title": "Markpost — セルフホストの Markdown 公開サービス"
@@ -928,7 +931,11 @@
       "docs": "ドキュメント",
       "dockerHub": "Docker Hub",
       "typeset": "このページの組版：Playfair Display · Source Sans 3 · Fira Code · Ember Studio パレット",
-      "copyright": "© {year} markpost · MIT License"
+      "copyright": "© {year} markpost · MIT License",
+      "tagline": "セルフホストの Markdown パブリッシング",
+      "resources": "リソース",
+      "project": "プロジェクト",
+      "issues": "フィードバック"
     },
     "sample": {
       "postTitle": "週報 #7",

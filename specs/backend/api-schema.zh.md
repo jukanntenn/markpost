@@ -128,9 +128,12 @@ Base path: `/api/v1`
 
 | Method | Path            | Auth | Description              |
 | ------ | --------------- | ---- | ------------------------ |
+| GET    | `/me`           | JWT  | 当前调用者自己的资料     |
 | GET    | `/me/retention` | JWT  | 当前调用者的生效保留策略 |
 
-**Response**: `{ posts_days, history_days }` —— 每项为 `0`（永久保留）或整天数；显式按用户覆盖同时决定两个数字，继承则各自回落所在表的全局窗口。
+**Response**（`/me`）：登录响应中的 `user` 对象（`{ id, email, username, name, avatar_url, role, is_active, is_email_verified, vip }`），直接序列化自 auth 中间件每请求重读的用户行 —— 管理端改动（vip、角色、封禁状态）在客户端下次拉取资料时即可见，无需重新登录。
+
+**Response**（`/me/retention`）：`{ posts_days, history_days }` —— 每项为 `0`（永久保留）或整天数；显式按用户覆盖同时决定两个数字，继承则各自回落所在表的全局窗口。
 
 <a id="posts"></a>
 

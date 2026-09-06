@@ -298,6 +298,7 @@ type AdminUserItem struct {
 	Email           string     `json:"email"`
 	IsEmailVerified bool       `json:"is_email_verified"`
 	GitHubID        *int64     `json:"github_id"`
+	AvatarURL       *string    `json:"avatar_url"`
 	Role            string     `json:"role"`
 	IsActive        bool       `json:"is_active"`
 	VIP             bool       `json:"vip"`
@@ -315,6 +316,7 @@ func newAdminUserItem(u user.User) AdminUserItem {
 		Email:           u.Email,
 		IsEmailVerified: u.IsEmailVerified,
 		GitHubID:        u.GitHubID,
+		AvatarURL:       u.AvatarURL,
 		Role:            string(u.Role),
 		IsActive:        u.IsActive,
 		VIP:             u.VIP,

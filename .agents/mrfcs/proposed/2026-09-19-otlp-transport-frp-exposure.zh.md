@@ -10,6 +10,8 @@ Status: proposed
 
 ## Proposal
 
+先定范围：**frp 是外部运维管控的服务——本项目不部署任何 frp 组件、不写任何 frp 配置**（本层 review 的范围裁定）。仓库侧交付物是生产方配置（markpost 的 OTLP 环境变量）、caddy 站点路由（本仓库经 ansible 管理 Caddyfile）、以及交付给外部中继运维方的接口需求；下文所有 frp 侧属性都是"我们要求并验证"之物，而非"我们配置"之物。
+
 端到端链路：
 
 ```
@@ -20,12 +22,12 @@ markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost,
                                                                    otelcol-contrib ─► stores
 ```
 
-- **公网暴露面**（全部在 vps2）：caddy `:80`/`:443` + frps 控制端口 `:7000`（token 认证、`transport.tls.force = true`）。frps 代理端口绑定回环（`proxyBindAddr = "127.0.0.1"`），任何 frp 代理都不能被公网独立触达。NAS 零入站连接——frpc 只向外拨。
+- **公网暴露面**（全部在 vps2）：caddy `:80`/`:443` 由仓库配置；frps 控制端口 `:7000`（token 认证、`transport.tls.force = true`）与 frps 代理端口的回环绑定（`proxyBindAddr = "127.0.0.1"`）是对外部中继的接口需求——本方要求并黑盒验证，由外部运维配置。NAS 零入站连接——frpc 只向外拨。
 - **两个 caddy 站点**：`grafana.<域名>` 面向运营人员（Grafana 自有账号体系，关闭匿名访问）；`otlp.<域名>` 面向生产方，用 `remote_ip` 白名单持有生产方 IP（当前仅 vps1；未来每个业务系统加一行）。
 - **Collector 认证**：otelcol-contrib 的 `bearertokenauth` 扩展守卫 OTLP receiver；每个业务系统持有独立静态 token，collector 按 token 身份强制打 `service.name` 标签，生产方无法伪造其他业务的遥测。认证从第一天就强制——端点公网可达，这就是真正的门，不是纵深冗余。
-- **带宽保护**：SDK 侧 gzip 与批量；frp 代理级 `transport.bandwidthLimit` 限制 otlp 代理（初始 512KB/s）。markpost 单服务遥测压缩后每天几 MB，远低于 3Mbps 中继——但封顶保证遥测永远饿不死 Grafana 及 vps2 上的其他流量。
+- **带宽保护**：SDK 侧 gzip 与批量由仓库负责；frp 代理级 `transport.bandwidthLimit` 限制 otlp 代理（初始 512KB/s）向外部中继运维方提请。markpost 单服务遥测压缩后每天几 MB，远低于 3Mbps 中继——但封顶保证遥测永远饿不死 Grafana 及 vps2 上的其他流量。
 - **降级行为**：vps2 或隧道不可用时，OTel SDK 批量重试后丢弃。vps1 本地 `app-*.jsonl` 双写（由[观测栈 MRFC](./2026-09-19-otlp-observability-stack.zh.md) 承担）保留事件现场；失明的是可视化，不是服务。
-- 三个触点的配置样稿（markpost 环境变量、caddy 站点、frpc 代理块）随实施栈落地。
+- 配置仅随实施栈覆盖仓库侧触点：markpost 环境变量与 caddy 站点。frpc 代理块与 frps 设置转为交付外部中继运维方的接口需求文档——含"其 frpc 容器须加入共享外部 docker 网络，使 `localIP = "collector"` 按名字解析到 collector"这一要求。
 
 ## Alternatives considered
 
@@ -39,10 +41,10 @@ markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost,
 
 ## Acceptance criteria
 
-- 公网监听精确为：vps2 `:80`/`:443`（caddy）与 `:7000`（frps 控制，token + `transport.tls.force`）；无其他；frps 代理端口仅回环；NAS 零入站。
+- 中继接口需求写入交付文档（frps 控制 token + `transport.tls.force`、代理端口回环绑定、otlp 代理限速、frpc 接入共享 docker 网络），可观测处黑盒验证：`otlp` 站点拒绝非白名单 IP；collector 拒绝无认证 OTLP。NAS 零入站连接。
 - `otlp` 站点拒绝非白名单 IP；collector 拒绝无认证 OTLP；token 身份映射到存储遥测的 `service.name`。
 - 公网段无明文：浏览器→caddy 与 markpost→caddy 走 TLS；frps→frpc 走 `useEncryption`。
-- otlp 代理限速生效；遥测满流时 Grafana 仍可用。
+- otlp 代理限速（与外部运维商定的接口需求）；遥测满流时 Grafana 仍可用。
 - 隧道中断优雅降级：SDK 重试后丢弃；事件现场保留在 vps1 本地 `app-*.jsonl`。
 
 ## Risks
@@ -51,3 +53,4 @@ markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost,
 - **域名与 DNS**：两个站点需要 DNS 名字与证书（caddy ACME）；换域名会触及所有生产方的 endpoint 配置。
 - **caddy 配置错误是新的单点暴露面**：设计按"失效即关闭"——白名单失守时 collector 认证依然生效——且验收条件对两层分别验证。
 - **vps2 是共享单点**：它宕机只致可视化失明，不影响服务；该窗口内由本地崩溃通道日志覆盖事件取证。
+- **中继的外部变更管控**：caddy 路由归仓库，frps/frpc 不归——接口变更（代理端口、限速、网络接入）需经外部运维方，文档化的配置可能与实际漂移。缓解：交付文档写明必需属性，验收检查验证外部可观测项（403/401 行为），无论配置出自谁手。

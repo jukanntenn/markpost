@@ -34,3 +34,12 @@ debug: false
 app_dirs:
   - "{{ app_path }}"
   - "{{ app_path }}/data"
+
+# DR backup repository on Backblaze B2 — staging's own bucket, so promotion-
+# gate backups never mix with production's (MRFC
+# 2026-07-09-wal-archival-disaster-recovery). Same setup-order contract as
+# production: create the bucket + no-delete key first (docs/backup.md), vault
+# the pair as b2_repo_key_id / b2_repo_app_key, then deploy.
+b2_s3_endpoint: s3.us-west-004.backblazeb2.com
+b2_s3_region: us-west-004
+b2_bucket: markpost-backups-staging

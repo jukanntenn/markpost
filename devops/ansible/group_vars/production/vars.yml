@@ -50,6 +50,17 @@ app_dirs:
   - "{{ app_path }}/data"
   - "{{ app_path }}/certs"
 
+# DR backup repository on Backblaze B2 (MRFC
+# 2026-07-09-wal-archival-disaster-recovery). Non-secret knobs only. The whole
+# archival tier — derived postgres image, archival GUCs, pgbackrest config —
+# activates only when the vault defines b2_repo_key_id / b2_repo_app_key, the
+# same setup-order contract as the heartbeat: create the bucket + no-delete
+# application key first (docs/backup.md), vault the key pair, then deploy.
+# Removing the vault vars does not uninstall.
+b2_s3_endpoint: s3.us-west-004.backblazeb2.com
+b2_s3_region: us-west-004
+b2_bucket: markpost-backups
+
 # Beszel metrics agent (the hub is ops-managed on a separate server; this repo
 # automates only the agent — see docs/monitoring.md for the split). The deploy
 # installs the agent only when beszel_hub_url is defined, mirroring the

@@ -53,15 +53,40 @@ services:
     restart: always
 
   postgres:
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+    # WAL archival tier (MRFC 2026-07-09-wal-archival-disaster-recovery):
+    # derived image carries the pgbackrest client so archive_command runs in
+    # this container. Compose builds it from the app dir (postgres-archival
+    # .Dockerfile, copied by the playbook); it exists nowhere in any registry,
+    # so the explicit pull task scopes down to the markpost service.
+    image: {{ app_name }}-postgres-archival:17
+    build:
+      context: .
+      dockerfile: postgres-archival.Dockerfile
+{% else %}
     image: postgres:17-alpine
+{% endif %}
     container_name: {{ app_name }}-postgres
     environment:
       - POSTGRES_DB={{ postgres_db }}
       - POSTGRES_USER={{ postgres_user }}
       - POSTGRES_PASSWORD={{ db_password }}
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+      # B2 credentials for pgbackrest (vault): env-injected so the config file
+      # bind-mounted below stays non-secret and 0644-readable.
+      - PGBACKREST_REPO1_S3_KEY={{ b2_repo_key_id }}
+      - PGBACKREST_REPO1_S3_KEY_SECRET={{ b2_repo_app_key }}
+{% endif %}
     # The 5 tuned GUCs layer on top of the image default postgresql.conf. The
     # socket dir stays at the image default /var/run/postgresql so the
     # entrypoint owns its perms; the app connects via the shared volume.
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+    # The 3 archival GUCs (MRFC 2026-07-09-wal-archival-disaster-recovery)
+    # follow: archive_mode needs the postmaster restart this recreate already
+    # is, and archive_timeout=300 forces a segment switch every 5 minutes so
+    # RPO stays ≤5 min at ~0.12 writes/second (segments are near-empty and
+    # compress to KBs). No replica, so wal_level stays at its default replica.
+{% endif %}
     command:
       - postgres
       - -c
@@ -74,9 +99,21 @@ services:
       - maintenance_work_mem=128MB
       - -c
       - synchronous_commit=off
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+      - -c
+      - archive_mode=on
+      - -c
+      - "archive_command=pgbackrest --stanza=markpost archive-push %p"
+      - -c
+      - archive_timeout=300
+{% endif %}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - postgres-socket:/var/run/postgresql
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+      - {{ pgbackrest_conf }}:/etc/pgbackrest/pgbackrest.conf:ro
+      - pgbackrest-spool:/var/spool/pgbackrest
+{% endif %}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h /var/run/postgresql -U {{ postgres_user }}"]
       interval: 10s
@@ -92,3 +129,8 @@ services:
 volumes:
   pgdata:
   postgres-socket:
+{% if env in ['staging', 'production'] and b2_repo_key_id is defined %}
+  # pgbackrest spool shared between archive_command (sync/async push status)
+  # and backup/restore runs inside the postgres container.
+  pgbackrest-spool:
+{% endif %}

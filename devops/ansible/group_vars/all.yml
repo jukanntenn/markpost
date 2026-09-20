@@ -17,8 +17,9 @@ caddyfile: "{{ app_path }}/Caddyfile"
 # docs/monitoring.md and the Beszel topology MRFC).
 beszel_agent_path: "{{ apps_path }}/beszel-agent"
 
-# DR backup (pgBackRest, production only, activated by vaulting the B2 key
-# pair — MRFC 2026-07-09-wal-archival-disaster-recovery). The playbook copies
+# DR backup (pgBackRest, staging + production — each activated by vaulting
+# its B2 key pair; MRFC 2026-07-09-wal-archival-disaster-recovery). The
+# playbook copies
 # the Dockerfile and templates the config into the app dir; the compose file
 # bind-mounts both into the postgres container.
 pgbackrest_conf: "{{ app_path }}/pgbackrest.conf"

@@ -116,9 +116,17 @@ SCENARIOS = {
     },
     # The archival tier active: exercises the compose branch that swaps in the
     # derived postgres image, the archival GUCs, and the spool volume (guard:
-    # vaulted b2_repo_key_id defined).
+    # vaulted b2_repo_key_id defined). Staging rehearses the same shape as the
+    # promotion gate, so it renders the archival branch too.
     "production (archival vault active)": {
         "env": "production",
+        "public_url": "https://markpost.example.com",
+        "pgbackrest_conf": "/home/deploy/docker/markpost/pgbackrest.conf",
+        "b2_repo_key_id": "keyid",
+        "b2_repo_app_key": "appkey",
+    },
+    "staging (archival vault active)": {
+        "env": "staging",
         "public_url": "https://markpost.example.com",
         "pgbackrest_conf": "/home/deploy/docker/markpost/pgbackrest.conf",
         "b2_repo_key_id": "keyid",

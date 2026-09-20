@@ -108,9 +108,11 @@
     - name: Flush gateway handlers before the traffic flip
       ansible.builtin.meta: flush_handlers
 
-    # WAL archival tier (production only, MRFC
-    # 2026-07-09-wal-archival-disaster-recovery). Guarded on the vaulted B2 key
-    # id, mirroring the heartbeat's setup-order contract: create the bucket and
+    # WAL archival tier (staging + production, MRFC
+    # 2026-07-09-wal-archival-disaster-recovery) — staging is the promotion
+    # gate and must rehearse the production shape, each environment against
+    # its own bucket and vault pair. Guarded on the vaulted B2 key id,
+    # mirroring the heartbeat's setup-order contract: create the bucket and
     # the no-delete application key first (docs/backup.md), vault the pair,
     # then deploy. Removing the vault vars does not uninstall.
     - name: Copy postgres archival Dockerfile
@@ -118,14 +120,14 @@
         src: postgres-archival.Dockerfile
         dest: "{{ pgbackrest_dockerfile }}"
         mode: "0644"
-      when: env == 'production' and b2_repo_key_id is defined
+      when: env in ['staging', 'production'] and b2_repo_key_id is defined
 
     - name: Template pgBackRest configuration
       ansible.builtin.template:
         src: pgbackrest.conf.j2
         dest: "{{ pgbackrest_conf }}"
         mode: "0644"
-      when: env == 'production' and b2_repo_key_id is defined
+      when: env in ['staging', 'production'] and b2_repo_key_id is defined
 
     # Scheduled backup operations (same guard as the provisioning above): the
     # scripts run against the running compose project, carry no secrets, and
@@ -209,7 +211,7 @@
         # With the archival tier active the postgres image is compose-built
         # locally and exists in no registry, so the pull scopes down to the
         # one registry-backed service; otherwise pull everything as before.
-        services: "{{ ['markpost'] if env == 'production' and b2_repo_key_id is defined else omit }}"
+        services: "{{ ['markpost'] if env in ['staging', 'production'] and b2_repo_key_id is defined else omit }}"
 
     - name: Start postgres and wait until it is healthy
       community.docker.docker_compose_v2:

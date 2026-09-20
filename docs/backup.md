@@ -20,9 +20,9 @@ Operating guide for markpost's disaster-recovery backups: pgBackRest WAL archiva
 One pair per environment — production below, staging the same against `group_vars/staging/vault.yml` with that bucket's key:
 
 ```sh
-ansible-vault encrypt_string --vault-id markpost-prod@avpm-client --stdin-name b2_repo_key_id \
+ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_key_id \
     >> devops/ansible/group_vars/production/vault.yml
-ansible-vault encrypt_string --vault-id markpost-prod@avpm-client --stdin-name b2_repo_app_key \
+ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_app_key \
     >> devops/ansible/group_vars/production/vault.yml
 ```
 

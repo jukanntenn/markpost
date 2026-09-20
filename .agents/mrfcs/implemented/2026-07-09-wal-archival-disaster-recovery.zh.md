@@ -1,6 +1,6 @@
 # MRFC: WAL-archival disaster recovery to B2
 
-Status: proposed
+Status: implemented
 
 [English](2026-07-09-wal-archival-disaster-recovery.md) | 中文
 
@@ -8,17 +8,14 @@ Status: proposed
 
 markpost 以单实例运行：一台 VPS、一个 Postgres 容器、无副本。服务器宕机或宿主丢失数据，一切皆失 —— 部署管线完全没有安排任何备份。数据是按用户保留策略管理的瞬时内容（全局默认 7 天；VIP 子集可无限保留，见[保留策略 MRFC](../implemented/2026-08-31-per-user-history-retention-policy.zh.md)），写入约 0.12 次/秒；而 VPS 上行链路约 3 Mbps —— 出站字节正是[缓存规格](../../../specs/backend/caching.zh.md)已经围绕设计的约束瓶颈。因此恢复设计必须相称：以最小成本换最小损失，备份流量按**新增写入**而非存量数据定尺，且不带副本运维的复杂度。
 
-## Proposal
+## Decision
 
-采用**WAL 归档到对象存储**作为 DR 架构，并从第一天起就部署在 **pgBackRest** 这一档：每月全量基础备份 + 每日增量上传 **Backblaze B2**，持续 WAL 归档（`archive_timeout=300`，RPO ≤ 5 分钟），恢复时 PITR。按现实的 ~1 GB 数据量，日传输 ~0.1–0.2 GB —— 不足 3 Mbps 链路的 1% —— 因为传输量随写入缩放；而任何重复的全量 dump 都是每跑一遍就重传整个语料。
+DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、按环境经 vault 激活（`b2_repo_key_id` —— staging 与生产各一对、各对着自己的桶，因为 staging 是晋升门；与心跳、Beszel 代理共享的设置顺序契约；规程见 [`docs/backup.md`](../../../docs/backup.zh.md)）：
 
-三件事把这个档补圆：
-
-- **格式多样性。** 每日一份压缩 `pg_dump`（业务谷段、限速上传、保留 14 天），逻辑转储不受会打断 PITR 链的基础镜像或页级损坏影响。
-- **不可变性。** B2 桶开版本化，上传密钥无删除权限，过期由服务端生命周期规则执行 —— 失陷的主机只能新增备份，不能删除它们。
-- **可观测、常演练。** 每日 `pgbackrest check` 加"久无新备份"滞后探测推送到既有 uptime-kuma；`pg_wal` 磁盘余量告警（见 Risks）；每月在临时容器里自动恢复演练一次，断言行数与抽样。
-
-供给是在既有 Ansible 管理实例上的运维者工作；任何东西都不落进应用代码。
+- 每月全量基础备份加每日增量，都在 postgres 容器内运行 —— 该镜像由 `postgres-archival.Dockerfile` 本地构建（postgres:17-alpine + Alpine 的 `pgbackrest` 包，因为官方 pgbackrest 镜像是 glibc，进不了 musl）。持续 WAL 归档依托 `archive_mode=on` / `archive_command` / `archive_timeout=300`，把 RPO 界定在 ≤ 5 分钟写入。
+- 每日一份逻辑 `pg_dump`（03:30 UTC，zstd，rclone 限速 2 MB/s，B2 生命周期 14 天过期）提供格式多样性，兜底会打断 PITR 链的基础镜像或页级损坏。
+- 备份不可变：桶版本化，上传密钥无删除能力，过期由服务端执行 —— 失陷的主机只能新增备份，不能删除它们。
+- 失败被观测：每日 `pgbackrest check` 加 26 小时新鲜度探测加 `pg_wal` 增长绊线（128 段 / 2 GB）把判定推送到 uptime-kuma；每月 cron 演练在临时容器内恢复并断言行数落在 RPO 界内。
 
 | 属性                 | pgBackRest WAL 归档（选定）                        | 每小时 pg_dump 起步（拒绝）                        | 在线流式副本（拒绝）                                |
 | -------------------- | -------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------- |
@@ -36,16 +33,8 @@ markpost 以单实例运行：一台 VPS、一个 Postgres 容器、无副本。
 
 **用 Cloudflare R2 替代 B2。** 备份写多读少：B2 存储便宜 3 倍（$0.005 对 $0.015/GB/月），一次性的恢复出口流量可忽略。B2 还把备份留在 Cloudflare 伞外，一个失陷的 Cloudflare 账号无法同时删掉在线路径与备份。在 R2 免费层放第二份**副本**作为账号多样性加固曾被提出，暂未决定。
 
-**用 `wal-g` 替代 pgBackRest。** 两者都是主流并讲 B2 实现的 S3 API；pgBackRest 专精 Postgres，带页级增量、保留管理与 `check` 往返校验。2026-04 的维护者更替（见 Risks）削弱了"社区更强"的常规定调；若赞助联盟停滞，wal-g 仍是即插即用的后备。
+**用 `wal-g` 替代 pgBackRest。** 两者都是主流并讲 B2 实现的 S3 API；pgBackRest 专精 Postgres，带页级增量、保留管理与 `check` 往返校验。2026-04 的维护者更替（见 Consequences）削弱了"社区更强"的常规定调；若赞助联盟停滞，wal-g 仍是即插即用的后备。
 
-## Acceptance criteria
+## Consequences
 
-- pgBackRest —— 每月全量、每日增量、`archive_timeout=300` 的持续 WAL 归档到 B2 —— 在生产实例上无人值守运行；失败可观测（每日 `pgbackrest check` + 滞后探测 → uptime-kuma；`pg_wal` 磁盘余量告警）。
-- 备份不可变：版本化桶、无删除权限的上传密钥、过期由服务端生命周期规则执行。
-- 每日谷段、限速的逻辑 dump（保留 14 天）作为格式多样性层运行。
-- 存在一套成文的恢复流程 —— 写明 ~30–45 分钟 RTO 背后的 3 Mbps 恢复下载前提 —— 且每月由临时容器内的自动演练执行，带行数与抽样断言。
-- 启用遵循安全顺序：归档 GUC → 一次计划内 Postgres 重启 → 立即做首次全量（没有基础备份的 WAL 累积不可用）。
-
-## Risks
-
-归档停滞会撑满 `pg_wal`：Postgres 不能回收未成功归档的段，B2 或凭据的长期中断会让磁盘持续增长直至写路径死亡。`archive-push-queue-max` 背压、check/滞后告警与 40 GB 盘的余量监控提供以天计的处置窗口。pgBackRest 自身刚经历维护者更替 —— 2026-04-27 被唯一维护者归档，2026-05-19 起由付费赞助联盟（Percona、AWS、Supabase 等）接管，v2.59.1（2026-08-17）为当前版本 —— 且仓库格式 MIT、对象自存于 B2，即使项目停滞，既有备份仍可被任何旧版本二进制恢复。B2 仍是外部依赖，有自己的故障画像（罕见；多副本）。WAL 尾巴把损失界定在 ≤ 5 分钟的写入（约 36 次提交，外加[调优规格](../../../specs/backend/postgres-tuning.zh.md)已接受的 `synchronous_commit=off` ~600 ms 窗口）；而在本提案实现之前，实例完全在没有自动备份的状态下运行 —— 当前状态姿态记录在 [`specs/backend/disaster-recovery.md`](../../../specs/backend/disaster-recovery.zh.md)。
+这笔取舍买到的是：RPO ≤ 5 分钟，占用 3 Mbps 链路不足 1%，成本 ≤ $0.10/月，且传输量随写入缩放 —— 到设计上限 ~15 GB 时同一设计仍然装得下（每月全量变大，日流仍是 ~MB 级），而任何重复的全量 dump 装不下。它付出的代价是：激活随一次计划内 postgres 重启（`archive_mode` 是 postmaster 上下文）；本地构建的派生镜像由我们维护（Alpine 包更新随基础镜像重建到来）；归档停滞会撑满 `pg_wal` 直至写路径死亡 —— 依次以 `archive-push-queue-max=1GiB` 背压、每日 check/新鲜度告警、`pg_wal` 绊线和 40 GB 盘上按天计的余量缓解。恢复路径由每月演练执行，而非假设。pgBackRest 自身刚经历维护者更替 —— 2026-04-27 被唯一维护者归档，2026-05-19 起由付费赞助联盟（Percona、AWS、Supabase 等）接管 —— 仓库格式 MIT、对象自存于 B2，即使项目停滞，既有备份仍可被任何旧版本二进制恢复。损失界定：WAL 尾巴外加[调优规格](../../../specs/backend/postgres-tuning.zh.md)已接受的 `synchronous_commit=off` ~600 ms 窗口。运行时激活 —— 建桶、无删除键、生命周期规则、vault 密钥对、首次 stanza-create + 全量 —— 是运维者工作，记录在 [`docs/backup.md`](../../../docs/backup.zh.md)；当前态势见 [`specs/backend/disaster-recovery.md`](../../../specs/backend/disaster-recovery.zh.md)。

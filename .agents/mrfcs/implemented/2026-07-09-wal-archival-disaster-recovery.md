@@ -10,7 +10,7 @@ markpost runs as a single instance: one VPS, one Postgres container, no replica.
 
 ## Decision
 
-The DR tier is **pgBackRest WAL archival to Backblaze B2**, provisioned by the deploy pipeline and activated by the vault (`b2_repo_key_id` — the setup-order contract shared with the heartbeat and Beszel agent; procedures in [`docs/backup.md`](../../../docs/backup.md)):
+The DR tier is **pgBackRest WAL archival to Backblaze B2**, provisioned by the deploy pipeline and activated per environment by the vault (`b2_repo_key_id` — staging and production each, against their own bucket, since staging is the promotion gate; the setup-order contract shared with the heartbeat and Beszel agent; procedures in [`docs/backup.md`](../../../docs/backup.md)):
 
 - Monthly full base backups plus daily incrementals, both run inside the postgres container — its image builds locally from `postgres-archival.Dockerfile` (postgres:17-alpine + the Alpine `pgbackrest` package, because the official pgbackrest image is glibc and cannot enter musl). Continuous WAL archival rides `archive_mode=on` / `archive_command` / `archive_timeout=300`, bounding RPO at ≤ 5 minutes of writes.
 - A daily logical `pg_dump` (03:30 UTC, zstd, rclone rate-limited to 2 MB/s, 14-day expiry via B2 lifecycle) provides format diversity against base-image or page-level corruption that would break the PITR chain.

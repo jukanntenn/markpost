@@ -18,7 +18,7 @@ Unbounded pools under concurrent reads exhaust Postgres connections; 25 open / 1
 
 ## Server GUCs
 
-Five GUCs are applied as `-c` flags on the postgres service command (layering overrides on the image's initdb-generated `postgresql.conf`), in the production Ansible template (`devops/ansible/templates/docker-compose.yml.j2`) and — via `command: postgres -c ...` — in the dev compose (`devops/docker-compose.yml`). Three more (the archival GUCs, production-only, appended by the same template when the vault activates the backup tier) follow:
+Five GUCs are applied as `-c` flags on the postgres service command (layering overrides on the image's initdb-generated `postgresql.conf`), in the production Ansible template (`devops/ansible/templates/docker-compose.yml.j2`) and — via `command: postgres -c ...` — in the dev compose (`devops/docker-compose.yml`). Three more (the archival GUCs, staging + production, appended by the same template when the vault activates the backup tier) follow:
 
 | GUC                    | Value                                          | Why                                                                                                                                                                                 |
 | ---------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

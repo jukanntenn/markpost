@@ -10,7 +10,7 @@ markpost 以单实例运行：一台 VPS、一个 Postgres 容器、无副本。
 
 ## Decision
 
-DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、经 vault 激活（`b2_repo_key_id` —— 与心跳、Beszel 代理共享的设置顺序契约；规程见 [`docs/backup.md`](../../../docs/backup.zh.md)）：
+DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、按环境经 vault 激活（`b2_repo_key_id` —— staging 与生产各一对、各对着自己的桶，因为 staging 是晋升门；与心跳、Beszel 代理共享的设置顺序契约；规程见 [`docs/backup.md`](../../../docs/backup.zh.md)）：
 
 - 每月全量基础备份加每日增量，都在 postgres 容器内运行 —— 该镜像由 `postgres-archival.Dockerfile` 本地构建（postgres:17-alpine + Alpine 的 `pgbackrest` 包，因为官方 pgbackrest 镜像是 glibc，进不了 musl）。持续 WAL 归档依托 `archive_mode=on` / `archive_command` / `archive_timeout=300`，把 RPO 界定在 ≤ 5 分钟写入。
 - 每日一份逻辑 `pg_dump`（03:30 UTC，zstd，rclone 限速 2 MB/s，B2 生命周期 14 天过期）提供格式多样性，兜底会打断 PITR 链的基础镜像或页级损坏。

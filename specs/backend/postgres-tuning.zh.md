@@ -22,7 +22,7 @@ sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 ## 服务器 GUC
 
-五个 GUC 以 postgres 服务命令上的 `-c` 标志施加（在镜像 initdb 生成的 `postgresql.conf` 之上分层覆盖），落在生产 Ansible 模板（`devops/ansible/templates/docker-compose.yml.j2`），并经 `command: postgres -c ...` 落在开发 compose（`devops/docker-compose.yml`）。另有三个（归档 GUC，仅生产、由同一模板在 vault 激活备份档位时追加）：
+五个 GUC 以 postgres 服务命令上的 `-c` 标志施加（在镜像 initdb 生成的 `postgresql.conf` 之上分层覆盖），落在生产 Ansible 模板（`devops/ansible/templates/docker-compose.yml.j2`），并经 `command: postgres -c ...` 落在开发 compose（`devops/docker-compose.yml`）。另有三个（归档 GUC，staging 与生产、由同一模板在 vault 激活备份档位时追加）：
 
 | GUC                    | 取值                                           | 缘由                                                                                                                                   |
 | ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |

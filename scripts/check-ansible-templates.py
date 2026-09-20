@@ -71,6 +71,12 @@ BASE_VARS = {
     "beszel_agent_image": "henrygd/beszel-agent:0.0.0",
     "beszel_agent_key": "ssh-ed25519-AAAAC3Nzatest-render-key",
     "beszel_hub_url": "https://beszel.example.com/beszel/agent",
+    # Same contract for the pgBackRest archival config: the deploy tasks and
+    # compose guard on the vaulted b2_repo_key_id, the templates assume the
+    # non-secret repo knobs exist (group_vars/production).
+    "b2_s3_endpoint": "s3.us-west-004.backblazeb2.com",
+    "b2_s3_region": "us-west-004",
+    "b2_bucket": "markpost-backups",
 }
 
 SCENARIOS = {
@@ -104,6 +110,16 @@ SCENARIOS = {
         "env": "staging",
         "github_client_id": "cid",
         "github_client_secret": "secret",
+    },
+    # The archival tier active: exercises the compose branch that swaps in the
+    # derived postgres image, the archival GUCs, and the spool volume (guard:
+    # vaulted b2_repo_key_id defined).
+    "production (archival vault active)": {
+        "env": "production",
+        "public_url": "https://markpost.example.com",
+        "pgbackrest_conf": "/home/deploy/docker/markpost/pgbackrest.conf",
+        "b2_repo_key_id": "keyid",
+        "b2_repo_app_key": "appkey",
     },
 }
 
@@ -154,6 +170,28 @@ def check_compose(doc: dict, scenario: dict, fail) -> None:
     for name in ("markpost", "postgres"):
         if "logging" not in doc["services"][name]:
             fail(f"service {name} has no logging cap")
+    if scenario.get("b2_repo_key_id"):
+        # Archival branch (MRFC 2026-07-09-wal-archival-disaster-recovery): the
+        # postgres service must swap to the locally-built derived image, gain
+        # the archival GUCs, and declare the spool volume.
+        pg = doc["services"]["postgres"]
+        if "build" not in pg:
+            fail("archival branch must build the derived postgres image")
+        cmd = pg["command"]
+        if not any("archive_mode=on" in c for c in cmd):
+            fail("archive_mode=on missing from postgres command")
+        if not any("archive_timeout=300" in c for c in cmd):
+            fail("archive_timeout=300 missing from postgres command")
+        if not any("archive_command=pgbackrest" in c for c in cmd):
+            fail("archive_command missing from postgres command")
+        if "pgbackrest-spool" not in doc.get("volumes", {}):
+            fail("pgbackrest-spool volume missing")
+    else:
+        pg = doc["services"]["postgres"]
+        if "build" in pg:
+            fail("archival build leaked into a non-archival render")
+        if any(str(c).startswith("archive_") for c in pg["command"]):
+            fail("archival GUCs leaked into a non-archival render")
 
 
 def parse_ini(text: str) -> dict:
@@ -179,10 +217,26 @@ def check_heartbeat_conf(doc: dict, scenario: dict, fail) -> None:
         fail("environment= must carry KUMA_HEARTBEAT_URL for the heartbeat")
 
 
+def check_pgbackrest_conf(doc: dict, scenario: dict, fail) -> None:
+    if "markpost" not in doc:
+        fail("stanza section [markpost] missing")
+        return
+    if doc["markpost"].get("pg1-path") != "/var/lib/postgresql/data":
+        fail("[markpost] pg1-path must match the compose pgdata volume mount")
+    if doc["markpost"].get("pg1-socket-path") != "/var/run/postgresql":
+        fail("[markpost] pg1-socket-path must match the shared socket volume")
+    if "archive-push-queue-max" not in doc["global"]:
+        # Backpressure is the mitigation for the archive-stall disk-full failure
+        # mode (MRFC 2026-07-09-wal-archival-disaster-recovery Risks); a conf
+        # that lost it would look fine until pg_wal filled the disk.
+        fail("[global] archive-push-queue-max missing")
+
+
 CHECKS = {
     "config.toml.j2": (tomllib.loads, check_config),
     "docker-compose.yml.j2": (yaml.safe_load, check_compose),
     "markpost-heartbeat.conf.j2": (parse_ini, check_heartbeat_conf),
+    "pgbackrest.conf.j2": (parse_ini, check_pgbackrest_conf),
 }
 
 

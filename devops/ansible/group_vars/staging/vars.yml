@@ -44,6 +44,7 @@ otel_service_name: "markpost-staging"
 otel_otlp_endpoint: "https://otlp.bytehome.fun"
 # otel_otlp_token lives in this env's vault.yml (user-provided).
 
+
 # DR backup repository on Backblaze B2 — staging's own bucket, so promotion-
 # gate backups never mix with production's (MRFC
 # 2026-07-09-wal-archival-disaster-recovery). Same setup-order contract as

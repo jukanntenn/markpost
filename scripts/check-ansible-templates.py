@@ -73,7 +73,10 @@ BASE_VARS = {
     "beszel_hub_url": "https://beszel.example.com/beszel/agent",
     # Same contract for the pgBackRest archival config: the deploy tasks and
     # compose guard on the vaulted b2_repo_key_id, the templates assume the
-    # non-secret repo knobs exist (group_vars/production).
+    # non-secret repo knobs exist (group_vars/production). The vaulted key pair
+    # itself stays OUT of BASE_VARS — only the dedicated archival scenario
+    # carries it, so renders stay non-archival by default (check_compose
+    # asserts the branch shape from the scenario dict).
     "b2_s3_endpoint": "s3.us-west-004.backblazeb2.com",
     "b2_s3_region": "us-west-004",
     "b2_bucket": "markpost-backups",

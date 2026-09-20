@@ -18,15 +18,18 @@ Unbounded pools under concurrent reads exhaust Postgres connections; 25 open / 1
 
 ## Server GUCs
 
-Five GUCs are applied as `-c` flags on the postgres service command (layering overrides on the image's initdb-generated `postgresql.conf`), in the production Ansible template (`devops/ansible/templates/docker-compose.yml.j2`) and — via `command: postgres -c ...` — in the dev compose (`devops/docker-compose.yml`):
+Five GUCs are applied as `-c` flags on the postgres service command (layering overrides on the image's initdb-generated `postgresql.conf`), in the production Ansible template (`devops/ansible/templates/docker-compose.yml.j2`) and — via `command: postgres -c ...` — in the dev compose (`devops/docker-compose.yml`). Three more (the archival GUCs, production-only, appended by the same template when the vault activates the backup tier) follow:
 
-| GUC                    | Value  | Why                                                                                                                                   |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `shared_buffers`       | 256 MB | The box is not a dedicated DB server (shares 2 GB with Caddy + Go + Next.js); 256 MB leaves OS cache room.                            |
-| `effective_cache_size` | 1 GB   | Planner hint for total cache available (shared_buffers + OS cache).                                                                   |
-| `maintenance_work_mem` | 128 MB | Vacuum/index maintenance workspace.                                                                                                   |
-| `max_connections`      | 50     | Headroom over the pool's 25 open connections.                                                                                         |
-| `synchronous_commit`   | off    | Write rate is ~0.12/s of 7-day-retention ephemeral content; the crash-window loss is acceptable and `off` cannot cause inconsistency. |
+| GUC                    | Value                                          | Why                                                                                                                                                                                 |
+| ---------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared_buffers`       | 256 MB                                         | The box is not a dedicated DB server (shares 2 GB with Caddy + Go + Next.js); 256 MB leaves OS cache room.                                                                          |
+| `effective_cache_size` | 1 GB                                           | Planner hint for total cache available (shared_buffers + OS cache).                                                                                                                 |
+| `maintenance_work_mem` | 128 MB                                         | Vacuum/index maintenance workspace.                                                                                                                                                 |
+| `max_connections`      | 50                                             | Headroom over the pool's 25 open connections.                                                                                                                                       |
+| `synchronous_commit`   | off                                            | Write rate is ~0.12/s of 7-day-retention ephemeral content; the crash-window loss is acceptable and `off` cannot cause inconsistency.                                               |
+| `archive_mode`         | on                                             | Enables WAL archival to B2 via pgBackRest ([`disaster-recovery.md`](./disaster-recovery.md)); postmaster-context, so activation rides the container recreate.                       |
+| `archive_command`      | `pgbackrest --stanza=markpost archive-push %p` | The archiver runs inside the postgres container, whose image builds locally with the pgbackrest client (the official pgbackrest image is glibc and cannot enter musl-based alpine). |
+| `archive_timeout`      | 300                                            | Forces a segment switch every 5 minutes so RPO stays ≤5 min at ~0.12 writes/s (near-empty segments compress to KBs).                                                                |
 
 `shared_buffers` and `max_connections` are postmaster-context (restart required); the rest are reloadable. These are not Go code and cannot be unit-tested — after restart, `SHOW` confirms the values and `pg_settings.source` reports `command line` for the overrides.
 

@@ -22,15 +22,18 @@ sqlDB.SetConnMaxLifetime(30 * time.Minute)
 
 ## 服务器 GUC
 
-五个 GUC 以 postgres 服务命令上的 `-c` 标志施加（在镜像 initdb 生成的 `postgresql.conf` 之上分层覆盖），落在生产 Ansible 模板（`devops/ansible/templates/docker-compose.yml.j2`），并经 `command: postgres -c ...` 落在开发 compose（`devops/docker-compose.yml`）：
+五个 GUC 以 postgres 服务命令上的 `-c` 标志施加（在镜像 initdb 生成的 `postgresql.conf` 之上分层覆盖），落在生产 Ansible 模板（`devops/ansible/templates/docker-compose.yml.j2`），并经 `command: postgres -c ...` 落在开发 compose（`devops/docker-compose.yml`）。另有三个（归档 GUC，仅生产、由同一模板在 vault 激活备份档位时追加）：
 
-| GUC                    | 取值   | 缘由                                                                                             |
-| ---------------------- | ------ | ------------------------------------------------------------------------------------------------ |
-| `shared_buffers`       | 256 MB | 这台机器不是专用 DB 服务器（2 GB 与 Caddy + Go + Next.js 共享）；256 MB 给 OS 缓存留出空间。     |
-| `effective_cache_size` | 1 GB   | 向规划器提示总可用缓存（shared_buffers + OS 缓存）。                                             |
-| `maintenance_work_mem` | 128 MB | Vacuum/索引维护的工作内存。                                                                      |
-| `max_connections`      | 50     | 在连接池的 25 个打开连接之上留余量。                                                             |
-| `synchronous_commit`   | off    | 写入速率约 0.12/秒，均为 7 天保留期的临时内容；崩溃窗口内的丢失可接受，且 `off` 不会造成不一致。 |
+| GUC                    | 取值                                           | 缘由                                                                                                                                   |
+| ---------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared_buffers`       | 256 MB                                         | 这台机器不是专用 DB 服务器（2 GB 与 Caddy + Go + Next.js 共享）；256 MB 给 OS 缓存留出空间。                                           |
+| `effective_cache_size` | 1 GB                                           | 向规划器提示总可用缓存（shared_buffers + OS 缓存）。                                                                                   |
+| `maintenance_work_mem` | 128 MB                                         | Vacuum/索引维护的工作内存。                                                                                                            |
+| `max_connections`      | 50                                             | 在连接池的 25 个打开连接之上留余量。                                                                                                   |
+| `synchronous_commit`   | off                                            | 写入速率约 0.12/秒，均为 7 天保留期的临时内容；崩溃窗口内的丢失可接受，且 `off` 不会造成不一致。                                       |
+| `archive_mode`         | on                                             | 启用经 pgBackRest 到 B2 的 WAL 归档（[`disaster-recovery.zh.md`](./disaster-recovery.zh.md)）；postmaster 上下文，激活随容器重建完成。 |
+| `archive_command`      | `pgbackrest --stanza=markpost archive-push %p` | archiver 在 postgres 容器内运行，该镜像本地构建、带 pgbackrest 客户端（官方 pgbackrest 镜像是 glibc，进不了 musl 基底的 alpine）。     |
+| `archive_timeout`      | 300                                            | 每 5 分钟强制切段，写入约 0.12/秒时 RPO 保持 ≤5 分钟（近空段压缩后仅 KB 级）。                                                         |
 
 `shared_buffers` 与 `max_connections` 是 postmaster 上下文（需要重启）；其余可重载。它们不是 Go 代码、无法单元测试 —— 重启后用 `SHOW` 确认取值，`pg_settings.source` 对覆盖项报告 `command line`。
 

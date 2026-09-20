@@ -20,9 +20,9 @@ markpost 灾难恢复备份的运维指南：pgBackRest WAL 归档加每日逻�
 每环境一对 —— 下面是生产；staging 同法，写入 `group_vars/staging/vault.yml`、用该桶的键：
 
 ```sh
-ansible-vault encrypt_string --vault-id markpost-prod@avpm-client --stdin-name b2_repo_key_id \
+ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_key_id \
     >> devops/ansible/group_vars/production/vault.yml
-ansible-vault encrypt_string --vault-id markpost-prod@avpm-client --stdin-name b2_repo_app_key \
+ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_app_key \
     >> devops/ansible/group_vars/production/vault.yml
 ```
 

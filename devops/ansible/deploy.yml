@@ -127,6 +127,77 @@
         mode: "0644"
       when: env == 'production' and b2_repo_key_id is defined
 
+    # Scheduled backup operations (same guard as the provisioning above): the
+    # scripts run against the running compose project, carry no secrets, and
+    # take the project dir as $1 — the cron entries own every
+    # deployment-specific value. zstd + rclone are host-side stream stages for
+    # the daily logical dump.
+    - name: Install backup stream tools
+      ansible.builtin.package:
+        name:
+          - zstd
+          - rclone
+        state: present
+      become: true
+      when: env == 'production' and b2_repo_key_id is defined
+
+    - name: Install backup scripts
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ app_path }}/{{ item }}"
+        mode: "0750"
+      loop:
+        - pgbackrest-backup.sh
+        - pgbackrest-check.sh
+        - pg-dump-backup.sh
+        - pgbackrest-drill.sh
+      when: env == 'production' and b2_repo_key_id is defined
+
+    # 0600: carries the vaulted B2 key pair (and the optional kuma push URL).
+    - name: Template backup environment file
+      ansible.builtin.template:
+        src: backup.env.j2
+        dest: "{{ app_path }}/backup.env"
+        mode: "0600"
+      when: env == 'production' and b2_repo_key_id is defined
+
+    # Off-peak on purpose (the 3 Mbps uplink is the binding constraint): dump
+    # at 03:30 rate-limited, incremental/full backup after the 04:15 retention
+    # prune, observability last so it sees the night's results, drill on the
+    # 2nd (day 1 is the full backup itself).
+    - name: Schedule daily logical dump
+      ansible.builtin.cron:
+        name: markpost-pg-dump-backup
+        hour: "3"
+        minute: "30"
+        job: "{{ app_path }}/pg-dump-backup.sh {{ app_path }} >> {{ app_path }}/pg-dump-backup.log 2>&1"
+      when: env == 'production' and b2_repo_key_id is defined
+
+    - name: Schedule daily pgBackRest backup
+      ansible.builtin.cron:
+        name: markpost-pgbackrest-backup
+        hour: "4"
+        minute: "45"
+        job: "{{ app_path }}/pgbackrest-backup.sh {{ app_path }} >> {{ app_path }}/pgbackrest-backup.log 2>&1"
+      when: env == 'production' and b2_repo_key_id is defined
+
+    - name: Schedule daily backup observability
+      ansible.builtin.cron:
+        name: markpost-pgbackrest-check
+        hour: "5"
+        minute: "30"
+        job: "{{ app_path }}/pgbackrest-check.sh {{ app_path }} >> {{ app_path }}/pgbackrest-check.log 2>&1"
+      when: env == 'production' and b2_repo_key_id is defined
+
+    - name: Schedule monthly restore drill
+      ansible.builtin.cron:
+        name: markpost-pgbackrest-drill
+        day: "2"
+        hour: "5"
+        minute: "0"
+        job: "{{ app_path }}/pgbackrest-drill.sh {{ app_path }} >> {{ app_path }}/pgbackrest-drill.log 2>&1"
+      when: env == 'production' and b2_repo_key_id is defined
+
     # Schema changes are applied by `markpost migrate up`, never implicitly on
     # serve — infra.New only opens the connection. So the deploy has to order
     # postgres → migrate → app itself, rather than bringing everything up at

@@ -36,4 +36,4 @@ Status: implemented
 
 ## Consequences
 
-源站以约每月 $0.20 的边际成本撑过其负载包络，升级在一小时内传播而无需运维者动手，删除在 CDN 上近乎即时。接受的义务：缓存正确性依赖输出哈希 ETag 与删除驱动的失效（任何新的响应变体都必须对它所服务的内容做哈希），Caddyfile 中的 Cloudflare CIDR 列表是运维者维护的职责，GUC/lz4/socket 各项是部署模板事务、靠人工而非 Go 测试验证，而负载测试套件（`scripts/loadtest/`、容量报告）是包络仍然成立的常备证据。灾备层（备份工具）刻意不在本记录的范围内，活在[灾难恢复 MRFC](../proposed/2026-07-09-wal-archival-disaster-recovery.zh.md)里。
+源站以约每月 $0.20 的边际成本撑过其负载包络，升级在一小时内传播而无需运维者动手，删除在 CDN 上近乎即时。接受的义务：缓存正确性依赖输出哈希 ETag 与删除驱动的失效（任何新的响应变体都必须对它所服务的内容做哈希），Caddyfile 中的 Cloudflare CIDR 列表是运维者维护的职责，GUC/lz4/socket 各项是部署模板事务、靠人工而非 Go 测试验证，而负载测试套件（`scripts/loadtest/`、容量报告）是包络仍然成立的常备证据。灾备层（备份工具）刻意不在本记录的范围内，活在[灾难恢复 MRFC](../implemented/2026-07-09-wal-archival-disaster-recovery.zh.md)里。

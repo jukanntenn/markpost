@@ -17,7 +17,7 @@ Status: proposed
 
 - **Traces**：`stdouttrace` → `otlptracehttp`；**metrics**：`stdoutmetric` → `otlpmetrichttp`；均走 OTLP/HTTP + gzip，endpoint 与 headers 进配置。
 - **Logs**：slog 继续写本地 timberjack 文件，同时经 OTLP 日志管道外发（`otelslog` bridge，它从 ctx 提取 trace 上下文的行为与现有 handler 完全一致）。双写：文件是崩溃通道，API 侧副本才是被检索的。
-- **NAS 上的栈**（docker compose）：`otelcol-contrib` 作为唯一前门（按业务发放 bearer token 认证、`memory_limiter`、扇出）→ Jaeger v2 单二进制 + 内嵌 badger 存储（traces）、VictoriaMetrics `vmsingle`（metrics，OTLP 在 :8428）、VictoriaLogs（logs，OTLP 在 :9428，`trace_id` 自动建索引）；Grafana 作为唯一人类 UI，后端用一个小型专用 PostgreSQL 实例（绝不用 SQLite——Grafana 的 `conf/defaults.ini` 支持 mysql/postgres/sqlite3 三选一，postgres 与团队经验一致）。
+- **NAS 上的栈**：`otelcol-contrib` 作为唯一前门（按业务发放 bearer token 认证、`memory_limiter`、扇出）→ Jaeger v2 单二进制 + 内嵌 badger 存储（traces）、VictoriaMetrics `vmsingle`（metrics，OTLP 在 :8428）、VictoriaLogs（logs，OTLP 在 :9428，`trace_id` 自动建索引）；Grafana 作为唯一人类 UI，后端用一个小型专用 PostgreSQL 实例（绝不用 SQLite——Grafana 的 `conf/defaults.ini` 支持 mysql/postgres/sqlite3 三选一，postgres 与团队经验一致）。部署形态：每个服务一个 compose project，位于 `docker/<service>/docker-compose.yml`，全部接入同一个共享外部 docker 网络——网络是唯一的共享底座；跨服务不共享任何卷，各存储独占自己的数据目录。
 - **文件处置**：
   - `traces-*.jsonl` / `metrics-*.jsonl`：生产环境退役。压测/容量栈保留 stdout 导出器，使 [`scripts/loadtest/capacity/analyze.py`](../../../scripts/loadtest/capacity/analyze.py)——文件格式唯一的程序化消费方——零改动。
   - `app-*.jsonl`：保留为本地崩溃通道，保留期 30d → 7d；可检索副本进 VictoriaLogs。
@@ -40,6 +40,8 @@ Status: proposed
 
 **更年轻的一体化方案（Uptrace、OpenObserve、HyperDX）。** 深度探索前即被否：没有一个是社区采纳的标准，而运营方明确要求"官方采纳或事实标准、维护活跃"作为硬标准。
 
+**整个 NAS 栈用一个 compose 文件。** 单一 compose project 白送默认网络、跨服务 `depends_on` 与健康检查门控、一条命令起全栈。败在生命周期耦合：六个发布节奏刻意不同的服务（VictoriaMetrics 约双周、Grafana 约月度、Jaeger 约 6 周）将共享每一次 `pull`/`up`/`down` 和每一个 YAML 笔误的全量爆炸半径，而它的真实优势都有替代品——共享外部网络替代默认网络，`restart: unless-stopped` 加导出器 retry/queue 语义替代启动排序。（"任何变更都重启全部"略有夸大——`up -d` 按服务 diff——但 project 级生命周期耦合是真实的。）审阅者特别问到的每服务形态可行性：服务间互联是一次 `docker network create` 加每个文件里的 `external: true` 默认网络，Docker 内嵌 DNS 跨 project 解析服务名；数据共享按设计为零——不共享任何卷，各存储数据目录私有，无可协调之物。于本层 review 中提出。
+
 ## Acceptance criteria
 
 映射自 [#102](https://github.com/jukanntenn/markpost/issues/102)：
@@ -56,3 +58,4 @@ Status: proposed
 - **Grafana 是 AGPL-3.0**：未修改、仅内部使用不触发开源义务；嵌入或修改其代码则会。永不嵌入，按黑盒容器对待。
 - **trace 体量随业务数线性增长**（`ParentBased(AlwaysOn)` 下）：采样配置槽在 spec 中已预留；升级路径是 collector 侧 tail sampling，再到 Jaeger 远程/自适应采样。
 - **badger 在 NAS 盘上**：SSD 无虞；风险是无界增长，由 badger `ttl` 与 `max_traces` 封顶。
+- **跨 project 启动排序**：`depends_on` 不跨 compose project。首次启动排序（PostgreSQL 先于 Grafana）与一次性的外部网络引导步骤随实施写入运维 runbook；稳态依赖重启策略加推送侧 retry/queue 语义。

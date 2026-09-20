@@ -13,11 +13,13 @@ Status: proposed
 
 ## Proposal
 
+先定范围：**观测栈是外部服务——由外部运维方部署与运维，markpost 只是它的第一个消费方**（本层 review 的范围裁定）。本次变更的仓库侧交付物收敛为服务对接配置：下述导出器切换与生产方 OTLP 设置。这里记录的关于栈的一切——选型、形态、envelope——保留为决策记录与交付外部部署的参考材料，而非本仓库要亲手搭起之物。
+
 保持 OTel SDK 埋点不动（otelgin span、业务指标、手写 slog trace handler）；替换的是导出器，不是埋点：
 
 - **Traces**：`stdouttrace` → `otlptracehttp`；**metrics**：`stdoutmetric` → `otlpmetrichttp`；均走 OTLP/HTTP + gzip，endpoint 与 headers 进配置。
 - **Logs**：slog 继续写本地 timberjack 文件，同时经 OTLP 日志管道外发（`otelslog` bridge，它从 ctx 提取 trace 上下文的行为与现有 handler 完全一致）。双写：文件是崩溃通道，API 侧副本才是被检索的。
-- **NAS 上的栈**：`otelcol-contrib` 作为唯一前门（按业务发放 bearer token 认证、`memory_limiter`、扇出）→ Jaeger v2 单二进制 + 内嵌 badger 存储（traces）、VictoriaMetrics `vmsingle`（metrics，OTLP 在 :8428）、VictoriaLogs（logs，OTLP 在 :9428，`trace_id` 自动建索引）；Grafana 作为唯一人类 UI，后端用一个小型专用 PostgreSQL 实例（绝不用 SQLite——Grafana 的 `conf/defaults.ini` 支持 mysql/postgres/sqlite3 三选一，postgres 与团队经验一致）。部署形态：每个服务一个 compose project，位于 `docker/<service>/docker-compose.yml`，全部接入同一个共享外部 docker 网络——网络是唯一的共享底座；跨服务不共享任何卷，各存储独占自己的数据目录。
+- **NAS 上的栈**（外部部署；以参考材料交付）：`otelcol-contrib` 作为唯一前门（按业务发放 bearer token 认证、`memory_limiter`、扇出）→ Jaeger v2 单二进制 + 内嵌 badger 存储（traces）、VictoriaMetrics `vmsingle`（metrics，OTLP 在 :8428）、VictoriaLogs（logs，OTLP 在 :9428，`trace_id` 自动建索引）；Grafana 作为唯一人类 UI，后端用一个小型专用 PostgreSQL 实例（绝不用 SQLite——Grafana 的 `conf/defaults.ini` 支持 mysql/postgres/sqlite3 三选一，postgres 与团队经验一致）。部署形态，记录给外部运维方：每个服务一个 compose project，位于 `docker/<service>/docker-compose.yml`，全部接入同一个共享外部 docker 网络——网络是唯一的共享底座；跨服务不共享任何卷，各存储独占自己的数据目录。
 - **文件处置**：
   - `traces-*.jsonl` / `metrics-*.jsonl`：生产环境退役。压测/容量栈保留 stdout 导出器，使 [`scripts/loadtest/capacity/analyze.py`](../../../scripts/loadtest/capacity/analyze.py)——文件格式唯一的程序化消费方——零改动。
   - `app-*.jsonl`：保留为本地崩溃通道，保留期 30d → 7d；可检索副本进 VictoriaLogs。
@@ -48,7 +50,7 @@ Status: proposed
 
 - markpost 三支柱经 OTLP 到达 Jaeger / VictoriaMetrics / VictoriaLogs，可在 Grafana 查询并按 `trace_id` 关联（logs↔traces↔metrics）。
 - 文件处置按提案落地：app 日志双写、本地保留 7d，生产环境 traces/metrics 文件消失，压测文件模式不变（`analyze.py` 零改动）。
-- NAS compose 栈在 RAM/磁盘 envelope 内运行，各存储封顶配置生效。
+- 栈的 RAM/磁盘 envelope 与各存储封顶写入交付外部运维方的材料（envelope 正是该选型适配 NAS 的原因）；运行现实经由上述端到端集成验收验证，而非本仓库运维该栈。
 - [可观测 spec](../../../specs/backend/observability.zh.md) 中英双份改写，"仅文件"约束改为指向本 MRFC 的 supersede 说明。
 - 传输与暴露的验收条件由叠加于本层之上的传输 MRFC 承担（同属 [#102](https://github.com/jukanntenn/markpost/issues/102) 栈）。
 
@@ -58,4 +60,5 @@ Status: proposed
 - **Grafana 是 AGPL-3.0**：未修改、仅内部使用不触发开源义务；嵌入或修改其代码则会。永不嵌入，按黑盒容器对待。
 - **trace 体量随业务数线性增长**（`ParentBased(AlwaysOn)` 下）：采样配置槽在 spec 中已预留；升级路径是 collector 侧 tail sampling，再到 Jaeger 远程/自适应采样。
 - **badger 在 NAS 盘上**：SSD 无虞；风险是无界增长，由 badger `ttl` 与 `max_traces` 封顶。
-- **跨 project 启动排序**：`depends_on` 不跨 compose project。首次启动排序（PostgreSQL 先于 Grafana）与一次性的外部网络引导步骤随实施写入运维 runbook；稳态依赖重启策略加推送侧 retry/queue 语义。
+- **跨 project 启动排序**：`depends_on` 不跨 compose project。首次启动排序（PostgreSQL 先于 Grafana）与一次性的外部网络引导步骤在交付材料中记录给外部运维方；稳态依赖重启策略加推送侧 retry/queue 语义。
+- **栈为外部部署**：组件版本、升级与限额执行都在外部运维方手里；本仓库的控制手段是交付材料与集成侧的端到端验收。

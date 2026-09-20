@@ -13,11 +13,13 @@ The observability pipeline was deliberately built files-only: [the observability
 
 ## Proposal
 
+Scope first: **the observability stack is an external service — deployed and operated by the external operators; markpost is its first consumer** (review scope ruling on this layer). This change's repo-owned deliverable converges to the service-integration configuration: the exporter switch below and the producer-side OTLP settings. Everything recorded here about the stack — selection, form, envelopes — stays as the decision record and as handoff/reference material for the external deployment, not as something this repo stands up.
+
 Keep the OTel SDK instrumentation untouched (otelgin spans, business metrics, the hand-written slog trace handler); replace the exporters, not the instrumentation:
 
 - **Traces**: `stdouttrace` → `otlptracehttp`; **metrics**: `stdoutmetric` → `otlpmetrichttp`; both OTLP/HTTP + gzip, endpoint and headers from configuration.
 - **Logs**: slog keeps writing the local timberjack file AND ships through an OTLP log pipeline (`otelslog` bridge, which extracts trace context from ctx exactly like the current handler). Dual-write: the file stays as the crash channel, the API-bound copy is what gets searched.
-- **Stack on the NAS**: `otelcol-contrib` as the single front door (per-service bearer-token auth, `memory_limiter`, fan-out) → Jaeger v2 single binary with embedded badger storage (traces), VictoriaMetrics `vmsingle` (metrics, OTLP on :8428), VictoriaLogs (logs, OTLP on :9428, `trace_id` auto-indexed); Grafana as the only human UI, backed by a small dedicated PostgreSQL instance (never SQLite — Grafana's `conf/defaults.ini` offers mysql/postgres/sqlite3; postgres matches team experience). Deployment form: one compose project per service under `docker/<service>/docker-compose.yml`, every project joined to a single shared external docker network — the network is the only shared substrate; no volume is shared across services, each store owns its data directory.
+- **Stack on the NAS** (externally deployed; handed off as reference material): `otelcol-contrib` as the single front door (per-service bearer-token auth, `memory_limiter`, fan-out) → Jaeger v2 single binary with embedded badger storage (traces), VictoriaMetrics `vmsingle` (metrics, OTLP on :8428), VictoriaLogs (logs, OTLP on :9428, `trace_id` auto-indexed); Grafana as the only human UI, backed by a small dedicated PostgreSQL instance (never SQLite — Grafana's `conf/defaults.ini` offers mysql/postgres/sqlite3; postgres matches team experience). Deployment form, recorded for the external operators: one compose project per service under `docker/<service>/docker-compose.yml`, every project joined to a single shared external docker network — the network is the only shared substrate; no volume is shared across services, each store owns its data directory.
 - **Files disposition**:
   - `traces-*.jsonl` / `metrics-*.jsonl`: retire in production. The loadtest/capacity stack keeps the stdout exporters so [`scripts/loadtest/capacity/analyze.py`](../../../scripts/loadtest/capacity/analyze.py) — the only programmatic consumer of the file formats — is unchanged.
   - `app-*.jsonl`: keep as the local crash channel, retention 30d → 7d; the searchable copy lives in VictoriaLogs.
@@ -48,7 +50,7 @@ Mapped from [#102](https://github.com/jukanntenn/markpost/issues/102):
 
 - markpost's three pillars reach Jaeger / VictoriaMetrics / VictoriaLogs over OTLP and are queryable in Grafana, correlated by `trace_id` (logs↔traces↔metrics).
 - Files disposition shipped as proposed: app logs dual-written with 7d local retention, traces/metrics files gone in production, loadtest file mode intact (`analyze.py` unchanged).
-- The NAS compose stack runs within the RAM/disk envelopes with per-store caps configured.
+- The stack's RAM/disk envelopes and per-store caps are stated in the handoff material for the external operators (the envelopes are why this selection fits the NAS); the running reality is verified through the end-to-end integration above, not by this repo operating the stack.
 - [The observability spec](../../../specs/backend/observability.md) rewritten in both languages; the files-only constraint superseded by a pointer to this MRFC.
 - Transport and exposure criteria are owned by the transport MRFC layering above this one in the [#102](https://github.com/jukanntenn/markpost/issues/102) stack.
 
@@ -58,4 +60,5 @@ Mapped from [#102](https://github.com/jukanntenn/markpost/issues/102):
 - **Grafana is AGPL-3.0**: running it unmodified, internal-only, triggers no obligations; embedding or modifying its code in markpost would. Never embed; treat as a black-box container.
 - **Trace volume grows linearly with services** under `ParentBased(AlwaysOn)`: the sampling config slot is already reserved in the spec; the escalation path is collector-side tail sampling, then Jaeger remote/adaptive sampling.
 - **badger on the NAS disk**: fine on SSD; the risk is unbounded growth, bounded by badger `ttl` and `max_traces`.
-- **Cross-project startup ordering**: `depends_on` does not cross compose projects. First-boot ordering (PostgreSQL before Grafana) and the one-time external-network bootstrap step land in the ops runbook at implementation; steady state relies on restart policies plus push-side retry/queue semantics.
+- **Cross-project startup ordering**: `depends_on` does not cross compose projects. First-boot ordering (PostgreSQL before Grafana) and the one-time external-network bootstrap step are recorded for the external operators in the handoff material; steady state relies on restart policies plus push-side retry/queue semantics.
+- **Externally deployed stack**: component versions, upgrades, and cap enforcement sit with the external operators; this repo's controls are the handoff material and the end-to-end acceptance of the integration.

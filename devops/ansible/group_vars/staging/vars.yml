@@ -41,5 +41,5 @@ otel_service_name: "markpost-staging"
 # e.g. https://otlp.example.com. Left undefined on purpose — the compose
 # template references it, so a deploy fails loudly instead of shipping
 # telemetry to a placeholder.
-# otel_otlp_endpoint: "https://otlp.<TBD>"
+otel_otlp_endpoint: "https://otlp.bytehome.fun"
 # otel_otlp_token lives in this env's vault.yml (user-provided).

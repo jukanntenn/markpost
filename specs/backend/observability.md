@@ -8,7 +8,7 @@ The three observability pillars (Logs / Traces / Metrics) in one specification. 
 
 ### Hard constraints
 
-**Telemetry ships via OTLP to the externally deployed observability stack; the local filesystem is the fallback and the crash channel.** With `OTEL_EXPORTER_OTLP_ENDPOINT` set, all three pillars export OTLP/HTTP + gzip to the collector (bearer-token authenticated). Without it, the process falls back to the files-only pipeline (stdout exporters → JSONL) — the mode the loadtest/capacity stack still uses, so `scripts/loadtest/capacity/analyze.py` keeps working unchanged. The stack, its transport, and the exposure architecture are owned by [the OTLP observability stack MRFC](../../.agents/mrfcs/proposed/2026-09-19-otlp-observability-stack.md) and [the frp transport MRFC](../../.agents/mrfcs/proposed/2026-09-19-otlp-transport-frp-exposure.md); this spec describes markpost's producer side only.
+**Telemetry ships via OTLP to the externally deployed observability stack; the local filesystem is the fallback and the crash channel.** With `OTEL_EXPORTER_OTLP_ENDPOINT` set, all three pillars export OTLP/HTTP + gzip to the collector (bearer-token authenticated). Without it, the process falls back to the files-only pipeline (stdout exporters → JSONL) — the mode the loadtest/capacity stack still uses, so `scripts/loadtest/capacity/analyze.py` keeps working unchanged. The stack, its transport, and the exposure architecture are owned by [the OTLP observability stack MRFC](../../.agents/mrfcs/implemented/2026-09-19-otlp-observability-stack.md) and [the frp transport MRFC](../../.agents/mrfcs/implemented/2026-09-19-otlp-transport-frp-exposure.md); this spec describes markpost's producer side only.
 
 ### Route A: slog + a hand-written trace Handler
 

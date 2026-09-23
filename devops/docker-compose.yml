@@ -23,6 +23,13 @@ services:
       - MARKPOST_RENDER__ENABLED=true
       - MARKPOST_RENDER__CACHE_SIZE_BYTES=134217728
       - MARKPOST_OBSERVABILITY__LOG_DIR=/app/data/logs
+      # OTLP telemetry (MRFC 2026-09-19-otlp-observability-stack): dev reaches
+      # the NAS collector directly over the LAN. The bearer token is supplied
+      # out-of-band — export OTEL_TOKEN before `dev.py start` / compose up.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://192.168.5.57:4318
+      - OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20${OTEL_TOKEN}
+      - OTEL_EXPORTER_OTLP_COMPRESSION=gzip
+      - OTEL_SERVICE_NAME=markpost-dev
     ports:
       - "7330:7330"
     volumes:

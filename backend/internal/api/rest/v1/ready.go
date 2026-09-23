@@ -34,7 +34,7 @@ func Readiness(pinger Pinger) gin.HandlerFunc {
 			// The 503 alone says "not ready"; the error is what makes the
 			// cause diagnosable from app-*.jsonl, so it is logged here
 			// rather than swallowed into the response body.
-			slog.Warn("readiness probe failed", "error", err)
+			slog.WarnContext(ctx, "readiness probe failed", "error", err)
 			c.JSON(http.StatusServiceUnavailable, HealthResponse{Status: "unavailable"})
 			return
 		}

@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-五个业务计数器、无属性、每个结果一个,运行在既有 OTel 指标通道(meter `markpost`,每 60 秒导出至 `metrics-*.jsonl`),遵循已上线代码的命名与结构——semconv 风格点分命名(`backend/internal/observability/metrics.go`):
+五个业务计数器、无属性、每个结果一个,运行在既有 OTel 指标通道(meter `markpost`,每 60 秒经 OTLP 导出（文件模式下才落 `metrics-*.jsonl`）),遵循已上线代码的命名与结构——semconv 风格点分命名(`backend/internal/observability/metrics.go`):
 
 | Metric                             | Type    | Counts                                                     |
 | ---------------------------------- | ------- | ---------------------------------------------------------- |
@@ -41,4 +41,4 @@ Status: implemented
 
 ## Consequences
 
-回答"渲染缓存是否生效"与"purge 是否发起且成功"只需可观测文件与 `jq`——无需访问数据库。接受的义务:命中/未命中口径绑定在快路径 `Get` 的位置上,未来移动它的重构必须连带迁移埋点(`post_metrics_test.go` 的冷后热单测钉死一次未命中、一次命中,缓存关闭时只有未命中);`observability/metrics_test.go` 钉死指标名与无属性决策,`purger_test.go` 钉死结果分类;purge 尝试次数是派生量(success + failure),不是一级序列。无 Cloudflare 的自托管实例只会看到 `purge_skipped_total` 增长——这是预期稳态,caching 规范的解读指南已明说,以免误读为故障。基数保持平坦:五个计数器、无属性、每 60 秒导出各一条序列。超出 issue 严格范围的规范修正(login 与 `error_category` 漂移修复)已在交付 PR 中显式声明,供评审否决。
+回答"渲染缓存是否生效"与"purge 是否发起且成功"只需指标通道与一次查询——OTLP 模式走各存储的 HTTP API，文件模式用 `jq` 读 `metrics-*.jsonl`——无需访问数据库。接受的义务:命中/未命中口径绑定在快路径 `Get` 的位置上,未来移动它的重构必须连带迁移埋点(`post_metrics_test.go` 的冷后热单测钉死一次未命中、一次命中,缓存关闭时只有未命中);`observability/metrics_test.go` 钉死指标名与无属性决策,`purger_test.go` 钉死结果分类;purge 尝试次数是派生量(success + failure),不是一级序列。无 Cloudflare 的自托管实例只会看到 `purge_skipped_total` 增长——这是预期稳态,caching 规范的解读指南已明说,以免误读为故障。基数保持平坦:五个计数器、无属性、每 60 秒导出各一条序列。超出 issue 严格范围的规范修正(login 与 `error_category` 漂移修复)已在交付 PR 中显式声明,供评审否决。

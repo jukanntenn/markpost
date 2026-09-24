@@ -18,11 +18,11 @@
 
 ### 三支柱
 
-| 支柱       | 采集                                                                                 | OTLP 模式                                          | 文件模式（回退）                     |
-| ---------- | -------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------ |
-| **Logs**   | `log/slog`，手写 Handler 从 ctx 注入 trace_id/span_id                                 | 扇出：timberjack 文件 + `otelslog` → OTLP logs      | timberjack → `app-*.jsonl`           |
-| **Traces** | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）                                  | `otlptracehttp` → collector                        | `stdouttrace` → `traces-*.jsonl`     |
-| **Metrics**| OTel Go metric SDK（counter/gauge/histogram）+ 自动运行时采集                          | `otlpmetrichttp` → collector（60s PeriodicReader）  | `stdoutmetric` → `metrics-*.jsonl`   |
+| 支柱        | 采集                                                          | OTLP 模式                                          | 文件模式（回退）                   |
+| ----------- | ------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| **Logs**    | `log/slog`，手写 Handler 从 ctx 注入 trace_id/span_id         | 扇出：timberjack 文件 + `otelslog` → OTLP logs     | timberjack → `app-*.jsonl`         |
+| **Traces**  | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）          | `otlptracehttp` → collector                        | `stdouttrace` → `traces-*.jsonl`   |
+| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ 自动运行时采集 | `otlpmetrichttp` → collector（60s PeriodicReader） | `stdoutmetric` → `metrics-*.jsonl` |
 
 导出器选择完全由环境变量驱动（`OTEL_EXPORTER_OTLP_ENDPOINT`、携带 bearer token 的 `OTEL_EXPORTER_OTLP_HEADERS`、`OTEL_EXPORTER_OTLP_COMPRESSION`、`OTEL_SERVICE_NAME`）；两种模式下埋点完全一致。
 
@@ -40,14 +40,14 @@ OTLP 模式下只写应用日志文件（崩溃通道：collector/隧道中断�
 
 ### timberjack 轮转配置（混合策略，所有文件共用）
 
-| 设置               | 值                         | 用途                                                                 |
-| ------------------ | --------------------------- | --------------------------------------------------------------------- |
-| `RotateAt`         | `["00:00"]`                 | 每日午夜轮转（主策略）                                                 |
-| `MaxSize`          | 100 MB                      | 事故日午中的兜底切割（保证单文件有界）                                  |
-| `MaxBackups`       | 14                          | 保留 14 个旧文件（约两周）                                             |
-| `MaxAge`           | 30                          | 30 天后删除（MaxBackups/MaxAge 取更严者）                              |
-| `Compression`      | `"zstd"`                    | 旧文件 zstd 压缩                                                      |
-| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | 毫秒精度；避免第二次按大小切割时重名                                   |
+| 设置               | 值                          | 用途                                      |
+| ------------------ | --------------------------- | ----------------------------------------- |
+| `RotateAt`         | `["00:00"]`                 | 每日午夜轮转（主策略）                    |
+| `MaxSize`          | 100 MB                      | 事故日午中的兜底切割（保证单文件有界）    |
+| `MaxBackups`       | 14                          | 保留 14 个旧文件（约两周）                |
+| `MaxAge`           | 30                          | 30 天后删除（MaxBackups/MaxAge 取更严者） |
+| `Compression`      | `"zstd"`                    | 旧文件 zstd 压缩                          |
+| `BackupTimeFormat` | `"2006-01-02T15-04-05.000"` | 毫秒精度；避免第二次按大小切割时重名      |
 
 ## 日志（slog）
 
@@ -136,23 +136,23 @@ OTel 语义约定（semconv），点分风格如 `http.server.request.duration`�
 
 当前已采用的指标，按需扩展：
 
-| 层        | 指标                                 | 类型       | 标签                | 用途                                                             |
-| --------- | ------------------------------------ | ---------- | ------------------- | ---------------------------------------------------------------- |
-| HTTP      | `http.server.request.duration`       | histogram  | method, route, status | 端点级性能（otelgin 自动）                                        |
-| HTTP      | `http.server.active_requests`        | gauge      | —                   | 在途请求数                                                        |
-| 业务      | `markpost.posts.created_total`       | counter    | —                   | 文章创建数                                                        |
-| 业务      | `markpost.auth.login_success_total`  | counter    | —                   | 登录成功数                                                        |
-| 业务      | `markpost.auth.login_failure_total`  | counter    | —                   | 登录失败数                                                        |
-| 业务      | `markpost.auth.token_refresh_total`  | counter    | —                   | token 刷新数                                                      |
-| 业务      | `markpost.delivery.pending`          | gauge      | —                   | 待派发数                                                          |
-| 业务      | `markpost.delivery.dispatched_total` | counter    | —                   | 已派发数                                                          |
-| 业务      | `markpost.delivery.failed_total`     | counter    | error_category      | 派发失败数（按原因）                                              |
-| 业务      | `markpost.render_cache.hit_total`    | counter    | —                   | 渲染缓存命中数                                                    |
-| 业务      | `markpost.render_cache.miss_total`   | counter    | —                   | 渲染缓存未命中、进入 singleflight 的请求数                        |
-| 业务      | `markpost.cdn.purge_success_total`   | counter    | —                   | CDN cache-tag 清除完成数（HTTP < 300）                            |
-| 业务      | `markpost.cdn.purge_failure_total`   | counter    | —                   | CDN 清除尝试失败数（marshal/构建/传输/HTTP ≥ 300）                |
-| 业务      | `markpost.cdn.purge_skipped_total`   | counter    | —                   | 未尝试的 CDN 清除（no-op purger/未配置）                          |
-| 系统      | 运行时指标                           | —          | —                   | OTel Go 运行时自动采集（goroutines、GC、内存）                     |
+| 层   | 指标                                 | 类型      | 标签                  | 用途                                               |
+| ---- | ------------------------------------ | --------- | --------------------- | -------------------------------------------------- |
+| HTTP | `http.server.request.duration`       | histogram | method, route, status | 端点级性能（otelgin 自动）                         |
+| HTTP | `http.server.active_requests`        | gauge     | —                     | 在途请求数                                         |
+| 业务 | `markpost.posts.created_total`       | counter   | —                     | 文章创建数                                         |
+| 业务 | `markpost.auth.login_success_total`  | counter   | —                     | 登录成功数                                         |
+| 业务 | `markpost.auth.login_failure_total`  | counter   | —                     | 登录失败数                                         |
+| 业务 | `markpost.auth.token_refresh_total`  | counter   | —                     | token 刷新数                                       |
+| 业务 | `markpost.delivery.pending`          | gauge     | —                     | 待派发数                                           |
+| 业务 | `markpost.delivery.dispatched_total` | counter   | —                     | 已派发数                                           |
+| 业务 | `markpost.delivery.failed_total`     | counter   | error_category        | 派发失败数（按原因）                               |
+| 业务 | `markpost.render_cache.hit_total`    | counter   | —                     | 渲染缓存命中数                                     |
+| 业务 | `markpost.render_cache.miss_total`   | counter   | —                     | 渲染缓存未命中、进入 singleflight 的请求数         |
+| 业务 | `markpost.cdn.purge_success_total`   | counter   | —                     | CDN cache-tag 清除完成数（HTTP < 300）             |
+| 业务 | `markpost.cdn.purge_failure_total`   | counter   | —                     | CDN 清除尝试失败数（marshal/构建/传输/HTTP ≥ 300） |
+| 业务 | `markpost.cdn.purge_skipped_total`   | counter   | —                     | 未尝试的 CDN 清除（no-op purger/未配置）           |
+| 系统 | 运行时指标                           | —         | —                     | OTel Go 运行时自动采集（goroutines、GC、内存）     |
 
 五个渲染缓存/CDN 清除计数器无属性——每种结局一个序列，命中率与清除尝试可聚合导出（决策记录：[缓存/清除可观测 MRFC](../../.agents/mrfcs/implemented/2026-09-03-cache-purge-observability.zh.md)；对照 `CF-Cache-Status` 阅读：[`caching.md`](./caching.zh.md)）。
 

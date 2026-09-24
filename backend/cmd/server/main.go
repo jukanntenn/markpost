@@ -312,7 +312,10 @@ func serve(configPath string) {
 		log.Fatalf("Failed to get database pool: %v", err)
 	}
 
-	// Observability: three pillars (logs/traces/metrics) to the local filesystem.
+	// Observability: three pillars (logs/traces/metrics). File mode writes the
+	// local JSONL files; OTLP mode (OTEL_EXPORTER_OTLP_ENDPOINT set) ships all
+	// three pillars to the collector, with app logs dual-written locally as
+	// the crash channel.
 	logDir := cfg.Observability.LogDir
 	if logDir == "" {
 		logDir = "./logs"
@@ -326,7 +329,7 @@ func serve(configPath string) {
 	}
 	// Structured logging with trace_id/span_id correlation (observability.md
 	// §trace↔log 关联). Replaces the default text handler.
-	slog.SetDefault(slog.New(observability.NewTraceHandler(appLogger)))
+	providers.InstallSlogDefault(appLogger)
 
 	// Timezone self-check: emit the resolved process TZ, the configured DB
 	// timezone, and the live Postgres session timezone so any future drift

@@ -14,7 +14,9 @@ func TestOtlpMode_EnvDetection(t *testing.T) {
 	if !otlpMode() {
 		t.Fatal("otlpMode() = false with OTEL_EXPORTER_OTLP_ENDPOINT set")
 	}
-	os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+	if err := os.Unsetenv("OTEL_EXPORTER_OTLP_ENDPOINT"); err != nil {
+		t.Fatalf("unset OTEL_EXPORTER_OTLP_ENDPOINT: %v", err)
+	}
 	if otlpMode() {
 		t.Fatal("otlpMode() = true without OTEL_EXPORTER_OTLP_ENDPOINT")
 	}

@@ -34,3 +34,12 @@ debug: false
 app_dirs:
   - "{{ app_path }}"
   - "{{ app_path }}/data"
+
+# --- OTLP telemetry (3-env separation, MRFC 2026-09-19-otlp-observability-stack) ---
+otel_service_name: "markpost-staging"
+# PENDING (user-provided): public OTLP ingress domain behind the vps2 caddy,
+# e.g. https://otlp.example.com. Left undefined on purpose — the compose
+# template references it, so a deploy fails loudly instead of shipping
+# telemetry to a placeholder.
+otel_otlp_endpoint: "https://otlp.bytehome.fun"
+# otel_otlp_token lives in this env's vault.yml (user-provided).

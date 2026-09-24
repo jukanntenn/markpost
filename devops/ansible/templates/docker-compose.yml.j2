@@ -33,6 +33,18 @@ services:
       - postgres-socket:/var/run/postgresql
     environment:
       - MARKPOST_DEBUG={{ debug | lower }}
+{% if otel_otlp_endpoint is defined and otel_otlp_token is defined %}
+      # OTLP telemetry (MRFC 2026-09-19-otlp-observability-stack): endpoint
+      # and service.name differ per env (group_vars/<env>/vars.yml); the
+      # producer token is vaulted per env (otel_otlp_token in vault.yml).
+      # dev reaches the NAS collector over the LAN; staging/production push
+      # to the public OTLP ingress (caddy TLS → frp → collector). With the
+      # vars unset the container falls back to the files-only pipeline.
+      - OTEL_EXPORTER_OTLP_ENDPOINT={{ otel_otlp_endpoint }}
+      - OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20{{ otel_otlp_token }}
+      - OTEL_EXPORTER_OTLP_COMPRESSION=gzip
+      - OTEL_SERVICE_NAME={{ otel_service_name }}
+{% endif %}
     depends_on:
       postgres:
         condition: service_healthy

@@ -36,3 +36,10 @@ debug: true
 app_dirs:
   - "{{ app_path }}"
   - "{{ app_path }}/data"
+
+# --- OTLP telemetry (3-env separation, MRFC 2026-09-19-otlp-observability-stack) ---
+# dev connects directly to the NAS collector over the LAN; markpost-dev is
+# the service.name every store and dashboard keys on. Token is vaulted.
+otel_otlp_endpoint: "http://192.168.5.57:4318"
+otel_service_name: "markpost-dev"
+# otel_otlp_token lives in this env's vault.yml (user-provided).

@@ -235,7 +235,7 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 		return "", service.Wrap(service.ErrInternal, "create post failed", err)
 	}
 	s.metrics.IncPostsCreated(ctx)
-	s.logger().Info("post created",
+	s.logger().InfoContext(ctx, "post created",
 		"qid", p.QID,
 		"post_id", p.ID,
 		"user_id", userID,

@@ -191,7 +191,7 @@ func (s *Service) grantVIPForGitHubLogin(ctx context.Context, u *user.User) {
 	}
 	enabled, err := s.vipStrategy.VIPStrategyEnabled(ctx)
 	if err != nil {
-		slog.Error("vip strategy read failed; skipping grant", "error", err, "user_id", u.ID)
+		slog.ErrorContext(ctx, "vip strategy read failed; skipping grant", "error", err, "user_id", u.ID)
 		return
 	}
 	if !enabled || u.VIP {
@@ -199,14 +199,14 @@ func (s *Service) grantVIPForGitHubLogin(ctx context.Context, u *user.User) {
 	}
 	days, derr := s.vipStrategy.VIPRetentionDays(ctx)
 	if derr != nil && !errors.Is(derr, domain.ErrNotFound) {
-		slog.Error("vip retention default read failed; skipping grant", "error", derr, "user_id", u.ID)
+		slog.ErrorContext(ctx, "vip retention default read failed; skipping grant", "error", derr, "user_id", u.ID)
 		return
 	}
 	if errors.Is(derr, domain.ErrNotFound) {
 		days = nil
 	}
 	if err := s.users.SetUserVIP(ctx, u.ID, true, days); err != nil {
-		slog.Error("vip grant write failed", "error", err, "user_id", u.ID)
+		slog.ErrorContext(ctx, "vip grant write failed", "error", err, "user_id", u.ID)
 		return
 	}
 	u.VIP = true
@@ -335,12 +335,12 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 			if revoked, rErr := s.tokens.IsRefreshTokenRevoked(ctx, tokenHash); rErr == nil && revoked {
 				if rt, gErr := s.tokens.GetRevokedRefreshToken(ctx, tokenHash); gErr == nil {
 					if withinGraceWindow(rt) {
-						slog.Info("refresh token replay within grace window", "token_hash", tokenHash, "user_id", rt.UserID)
+						slog.InfoContext(ctx, "refresh token replay within grace window", "token_hash", tokenHash, "user_id", rt.UserID)
 						return nil, nil, service.New(ErrInvalidToken, "refresh token replay within grace window")
 					}
 					_ = s.tokens.RevokeAllByUserID(ctx, rt.UserID)
 				}
-				slog.Warn("refresh token reuse detected", "token_hash", tokenHash)
+				slog.WarnContext(ctx, "refresh token reuse detected", "token_hash", tokenHash)
 				return nil, nil, service.New(ErrInvalidToken, "refresh token reuse detected")
 			}
 			return nil, nil, service.New(ErrInvalidToken, "invalid refresh token")
@@ -411,7 +411,7 @@ func (s *Service) Logout(ctx context.Context, accessToken string) error {
 	// ErrTokenExpired), so we can revoke.
 	if claims != nil {
 		if err := s.tokens.RevokeAllByUserID(ctx, claims.UserID); err != nil {
-			slog.Error("logout: revoke refresh tokens failed", "error", err, "user_id", claims.UserID)
+			slog.ErrorContext(ctx, "logout: revoke refresh tokens failed", "error", err, "user_id", claims.UserID)
 		}
 	}
 
@@ -445,7 +445,7 @@ func (s *Service) completeLogin(ctx context.Context, u *user.User) (*user.User, 
 
 	now := time.Now()
 	if err := s.users.UpdateLastLoginAt(ctx, u.ID, now); err != nil {
-		slog.Error("update last login at failed", "error", err, "user_id", u.ID)
+		slog.ErrorContext(ctx, "update last login at failed", "error", err, "user_id", u.ID)
 	}
 
 	return u, pair, nil

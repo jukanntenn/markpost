@@ -1,0 +1,29 @@
+# {{ ansible_managed }}
+# pgBackRest repo and stanza for the markpost DR stack (MRFC
+# 2026-07-09-wal-archival-disaster-recovery). Non-secret knobs only: the B2 key
+# pair rides the container environment (PGBACKREST_REPO1_S3_KEY /
+# PGBACKREST_REPO1_S3_KEY_SECRET) from the ansible vault, so this file stays
+# 0644-readable. Operated via `docker compose exec postgres pgbackrest ...`;
+# the restore runbook lives in docs/backup.md.
+[global]
+repo1-type=s3
+repo1-s3-endpoint={{ b2_s3_endpoint }}
+repo1-s3-bucket={{ b2_bucket }}
+repo1-s3-region={{ b2_s3_region }}
+repo1-s3-uri-style=path
+repo1-path=/markpost
+repo1-retention-full=2
+compress-type=zst
+compress-level=3
+process-max=2
+# Backpressure + alert point for archive stalls: postgres cannot recycle
+# pg_wal until a segment is archived, so an unbounded push queue would grow the
+# 40 GB disk until the write path dies (see the MRFC's Risks).
+archive-push-queue-max=1GiB
+spool-path=/var/spool/pgbackrest
+start-fast=y
+
+[markpost]
+pg1-path=/var/lib/postgresql/data
+pg1-socket-path=/var/run/postgresql
+pg1-user={{ postgres_user }}

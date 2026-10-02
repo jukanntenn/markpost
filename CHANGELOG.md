@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.0-rc.7] - 2026-10-02
+
+### Added
+
+- Admins can now set a per-user retention window (in days) that governs how long posts and delivery history are kept, and users see the retention that applies to them on their data lists
+- Keyword filter expressions come with a plain-language narration, a live preview of what they match, and localized error messages
+- A standalone markpost command-line client is available for agent-driven use
+- markpost can now be driven by AI agents through a Model Context Protocol (MCP) server
+- Logging in and completing GitHub sign-in now show a spinner instead of a silent wait
+- The landing page and app shell now have a site footer
+- Admin user pages show each user's GitHub avatar and how they sign in
+- A new /api/v1/ready endpoint reports whether the app is able to serve traffic
+
+### Changed
+
+- The signed-in profile is re-synced from the server on every page load, keeping the display name and avatar current
+
+### Fixed
+
+- Concurrent refreshes no longer sign a session out — reuse detection now tolerates a 30-second grace window
+
 ## [0.2.0-rc.6] - 2026-08-23
 
 ### Added

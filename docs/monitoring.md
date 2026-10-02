@@ -74,31 +74,31 @@ Removal is manual (the deploy never uninstalls): delete `/etc/supervisor/conf.d/
 
 ## Host metrics (Beszel)
 
-The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a hub on a separate ops-managed server. Design record: [host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.md) and [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.md).
+The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a self-hosted hub on the observability server. Design record: [host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.md), [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.md), and the WebSocket wiring in [the agent-token MRFC](../.agents/mrfcs/implemented/2026-10-02-beszel-agent-websocket-token.md).
 
-**Agent (repo-automated, production only).** A one-service compose project at `~/docker/beszel-agent`, rendered from [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2): pinned `henrygd/beszel-agent`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network plus per-container stats for `markpost` and `markpost-postgres`, and reaches the hub by outbound WebSocket only — the firewall opens nothing.
+**Hub (own lifecycle, on the observability server).** Deployed at `~/docker/beszel` on 192.168.5.57 (`beszel.bytehome.fun` at the edge): pinned `henrygd/beszel`, bind-mounted `beszel_data` (upstream embeds PocketBase and has no external-database support), `DISABLE_SSH=true` — pure WebSocket topology where agents dial the hub and it never dials them. Back up the whole `beszel_data` dir (it also holds the hub keypair the agents' `KEY` verifies).
 
-**Hub (ops-owned, outside this repo).** Deploy per [beszel.dev](https://beszel.dev) (docker compose, embedded SQLite) on its own server behind TLS. Add a system for ttyo there and copy the public key it shows.
+**Agent (repo-automated, production only).** A one-service compose project at `~/docker/beszel-agent`, rendered from [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2): pinned `henrygd/beszel-agent`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network plus per-container stats for `markpost` and `markpost-postgres`, and reaches the hub by outbound WebSocket (`HUB_URL` + vaulted `TOKEN`; `KEY` verifies the hub) — the firewall opens nothing.
 
-**Alerts.** Dual warning/critical thresholds on the hub; suggested starting points, tuned after a week of curves:
+**Alerts.** Thresholds on the hub; suggested starting points, tuned after a week of curves (beszel holds one threshold per metric, so the critical tier is used):
 
-| Metric                     | warning / critical |
-| -------------------------- | ------------------ |
-| Disk usage                 | 80% / 90%          |
-| Memory                     | 80% / 92%          |
-| CPU                        | 85% / 95%          |
-| System status (agent down) | — / any            |
+| Metric                     | threshold (sustained) |
+| -------------------------- | --------------------- |
+| Disk usage                 | 90% for 2 min         |
+| Memory                     | 92% for 2 min         |
+| CPU                        | 95% for 2 min         |
+| System status (agent down) | down for 1 min        |
 
 Notifications go to the same Feishu channel as kuma (shoutrrr `lark://` URL configured on the hub).
 
 **Setup order.**
 
-1. Ops: bring the hub up on its server, add a system, copy the public key.
-2. Set `beszel_hub_url` (the hub's `/beszel/agent` WebSocket URL) and `beszel_agent_key` (the public key — not a secret) in `devops/ansible/group_vars/production/vars.yml`.
+1. Hub: add a system for the host, and take the public key and the per-system token its Add-System dialog shows.
+2. Set `beszel_hub_url` and `beszel_agent_key` (the public key — not a secret) in `devops/ansible/group_vars/production/vars.yml`, and vault the token as `beszel_agent_token` in that env's `vault.yml`.
 3. `ansible-playbook devops/ansible/deploy.yml -e target=production` — the deploy installs the agent only once both vars exist.
 4. Verify: `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` shows the agent running, and the hub's system page shows live data.
 
-Removal is manual (the deploy never uninstalls): `docker compose -f ~/docker/beszel-agent/docker-compose.yml down`, delete `~/docker/beszel-agent`, delete the two vars.
+Removal is manual (the deploy never uninstalls): `docker compose -f ~/docker/beszel-agent/docker-compose.yml down`, delete `~/docker/beszel-agent`, delete the vars.
 
 <a id="alert-triage"></a>
 

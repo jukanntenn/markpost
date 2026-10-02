@@ -61,15 +61,20 @@ b2_s3_endpoint: s3.us-west-004.backblazeb2.com
 b2_s3_region: us-west-004
 b2_bucket: markpost-backups
 
-# Beszel metrics agent (the hub is ops-managed on a separate server; this repo
-# automates only the agent — see docs/monitoring.md for the split). The deploy
-# installs the agent only when beszel_hub_url is defined, mirroring the
-# heartbeat's setup-order contract: add beszel_hub_url (the hub's /beszel/agent
-# WebSocket URL) and beszel_agent_key (the hub's PUBLIC key, not a secret —
-# shown when adding a system in the hub) once the hub exists; removing the
-# vars does not uninstall. Pin deliberately: bump only after reviewing the
-# release notes.
-beszel_agent_version: "0.18.8"
+# Beszel metrics agent — the hub runs on the observability server
+# (192.168.5.57, ~/docker/beszel; beszel.bytehome.fun at the edge), this repo
+# automates only the agent — see docs/monitoring.md for the split. WebSocket
+# mode: the agent dials the hub outbound, the VPS firewall opens nothing. The
+# deploy installs the agent only when beszel_hub_url and beszel_agent_token
+# are BOTH defined (the token vaulted in vault.yml, per-system value from the
+# hub's Add-System dialog; the key below is the hub's PUBLIC key, not a
+# secret), mirroring the heartbeat's setup-order contract; removing the vars
+# does not uninstall. Pin deliberately: bump only after reviewing the release
+# notes (0.19 made agents verify the hub's TLS certificate — fine behind a
+# real-cert edge).
+beszel_hub_url: "https://beszel.bytehome.fun"
+beszel_agent_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF74xu28I0XIy+B1gsT7lnEsOo7Bw6ZwlRFiF/1ksjtq"
+beszel_agent_version: "0.20.0"
 beszel_agent_image: "henrygd/beszel-agent:{{ beszel_agent_version }}"
 
 # --- OTLP telemetry (3-env separation, MRFC 2026-09-19-otlp-observability-stack) ---

@@ -1,7 +1,8 @@
-# Beszel agent — host and container metrics for the markpost VPS. The hub is a
-# separate ops-managed server; this compose is the repo-owned half (see
-# docs/monitoring.md). Rendered by deploy.yml only when beszel_hub_url is
-# defined, so the deploy stays green until the hub exists and the vars are set.
+# Beszel agent — host and container metrics for the markpost VPS. The hub runs
+# on the observability server (beszel.bytehome.fun at the edge); this compose
+# is the repo-owned half (see docs/monitoring.md). Rendered by deploy.yml only
+# when beszel_hub_url and beszel_agent_token are defined, so the deploy stays
+# green until the hub exists and the vars are set.
 services:
   beszel-agent:
     image: {{ beszel_agent_image }}
@@ -15,6 +16,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       PORT: "45876"
-      # The hub's public key — not a secret (group_vars/production/vars.yml).
+      # The hub's public key — not a secret (group_vars/production/vars.yml);
+      # in WebSocket mode the agent verifies the hub's signed challenge with it.
       KEY: "{{ beszel_agent_key }}"
+      # WebSocket mode: the agent dials the hub outbound (the hub never dials
+      # agents — DISABLE_SSH). TOKEN is the per-system value from the hub's
+      # Add-System dialog, vaulted as beszel_agent_token; without it the
+      # agent cannot authenticate to the hub. Conditional so the template
+      # renders for every environment; the deploy.yml guard requires the
+      # token in production, so the agent never ships without it.
       HUB_URL: "{{ beszel_hub_url }}"
+{% if beszel_agent_token is defined %}
+      TOKEN: "{{ beszel_agent_token }}"
+{% endif %}

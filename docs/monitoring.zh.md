@@ -74,31 +74,31 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 
 ## 主机指标（Beszel）
 
-上面的监控项回答"**是否**"；Beszel agent 回答"**为何**"——主机与容器级资源历史加阈值告警，上报给独立运维服务器上的 hub。设计记录：[host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.zh.md) 与 [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.zh.md)。
+上面的监控项回答"**是否**"；Beszel agent 回答"**为何**"——主机与容器级资源历史加阈值告警，上报给可观测服务器上的自托管 hub。设计记录：[host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.zh.md)、[topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.zh.md)，WebSocket 接线见 [agent-token MRFC](../.agents/mrfcs/implemented/2026-10-02-beszel-agent-websocket-token.zh.md)。
 
-**agent（仓库自动化，仅 production）。** 独立单服务 compose 项目位于 `~/docker/beszel-agent`，由 [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：钉版 `henrygd/beszel-agent`、host 网络、只读 `docker.sock`。采集主机 CPU/内存/磁盘/负载/网络，以及 `markpost` 与 `markpost-postgres` 两个容器的统计；对 hub 仅有出站 WebSocket——防火墙零新增放行。
+**hub（自有生命周期，位于可观测服务器）。** 部署在 192.168.5.57 的 `~/docker/beszel`（边缘为 `beszel.bytehome.fun`）：钉版 `henrygd/beszel`、bind mount 的 `beszel_data`（上游内嵌 PocketBase，不支持外部数据库）、`DISABLE_SSH=true` —— 纯 WebSocket 拓扑，agent 主动外拨 hub，hub 从不反连。备份整个 `beszel_data` 目录（其中还有各 agent 的 `KEY` 所校验的 hub 密钥对）。
 
-**hub（运维所有，在本仓库之外）。** 按 [beszel.dev](https://beszel.dev) 部署（docker compose、内嵌 SQLite）在独立服务器上，置于 TLS 之后。在那里为 ttyo 添加 system 并复制其展示的公钥。
+**agent（仓库自动化，仅 production）。** 独立单服务 compose 项目位于 `~/docker/beszel-agent`，由 [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：钉版 `henrygd/beszel-agent`、host 网络、只读 `docker.sock`。采集主机 CPU/内存/磁盘/负载/网络，以及 `markpost` 与 `markpost-postgres` 两个容器的统计；经出站 WebSocket（`HUB_URL` + vault 的 `TOKEN`；`KEY` 用于校验 hub）连 hub——防火墙零新增放行。
 
-**告警。** hub 上的 warning/critical 双阈值；建议起点，观察一周曲线后调整：
+**告警。** hub 上的阈值；建议起点，观察一周曲线后调整（beszel 每指标仅一个阈值，取 critical 档）：
 
-| 指标                   | warning / critical |
-| ---------------------- | ------------------ |
-| 磁盘使用率             | 80% / 90%          |
-| 内存                   | 80% / 92%          |
-| CPU                    | 85% / 95%          |
-| 系统状态（agent 离线） | — / 任意           |
+| 指标                   | 阈值（持续）    |
+| ---------------------- | --------------- |
+| 磁盘使用率             | 90% 持续 2 分钟 |
+| 内存                   | 92% 持续 2 分钟 |
+| CPU                    | 95% 持续 2 分钟 |
+| 系统状态（agent 离线） | 离线 1 分钟     |
 
 通知走与 kuma 相同的飞书渠道（在 hub 上配置 shoutrrr `lark://` URL）。
 
 **配置顺序。**
 
-1. 运维：在独立服务器上起 hub，添加 system，复制公钥。
-2. 在 `devops/ansible/group_vars/production/vars.yml` 设置 `beszel_hub_url`（hub 的 `/beszel/agent` WebSocket URL）与 `beszel_agent_key`（公钥——不是密钥）。
+1. hub：为主机添加 system，取其 Add-System 对话框展示的公钥与该 system 的令牌。
+2. 在 `devops/ansible/group_vars/production/vars.yml` 设置 `beszel_hub_url` 与 `beszel_agent_key`（公钥——不是密钥），并把令牌 vault 进该环境 `vault.yml` 的 `beszel_agent_token`。
 3. `ansible-playbook devops/ansible/deploy.yml -e target=production` —— 两变量齐备后部署才会安装 agent。
 4. 验证：`docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` 显示运行中，hub 的 system 页面出现实时数据。
 
-卸载是手动的（部署不会卸载）：`docker compose -f ~/docker/beszel-agent/docker-compose.yml down`，删除 `~/docker/beszel-agent`，删除两个变量。
+卸载是手动的（部署不会卸载）：`docker compose -f ~/docker/beszel-agent/docker-compose.yml down`，删除 `~/docker/beszel-agent`，删除相关变量。
 
 <a id="alert-triage"></a>
 

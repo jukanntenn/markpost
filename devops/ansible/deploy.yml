@@ -133,7 +133,16 @@
     # scripts run against the running compose project, carry no secrets, and
     # take the project dir as $1 — the cron entries own every
     # deployment-specific value. zstd + rclone are host-side stream stages for
-    # the daily logical dump.
+    # the daily logical dump. The unprivileged probe keeps deploys off sudo
+    # once the tools exist (staging hosts have no passwordless sudo); the
+    # privileged install runs only when the probe misses a tool.
+    - name: Check for backup stream tools
+      ansible.builtin.shell: command -v zstd && command -v rclone
+      register: backup_stream_tools
+      changed_when: false
+      failed_when: false
+      when: env in ['staging', 'production'] and b2_repo_key_id is defined
+
     - name: Install backup stream tools
       ansible.builtin.package:
         name:
@@ -141,7 +150,9 @@
           - rclone
         state: present
       become: true
-      when: env in ['staging', 'production'] and b2_repo_key_id is defined
+      when: >-
+        env in ['staging', 'production'] and b2_repo_key_id is defined
+        and (backup_stream_tools.rc | default(1)) != 0
 
     - name: Install backup scripts
       ansible.builtin.copy:

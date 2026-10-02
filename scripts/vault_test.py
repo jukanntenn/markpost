@@ -172,6 +172,29 @@ class CliIntegrationTest(unittest.TestCase):
         self.assertIn(b"l_var", proc.stdout)
         self.assertIn(b"markpost-staging", proc.stdout)
 
+    def test_list_without_env_fails_friendly(self):
+        proc = run_tool("list", env=self.tool_env)
+        self.assertEqual(proc.returncode, 2)
+        self.assertNotIn(b"Traceback", proc.stderr)
+        self.assertIn(b"provide an environment", proc.stderr)
+
+    def test_list_rejects_env_and_all_together(self):
+        proc = run_tool("list", ENV, "--all", env=self.tool_env)
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn(b"not both", proc.stderr)
+
+    def test_set_interactive_requires_a_tty(self):
+        proc = run_tool("set", ENV, "i_var", env=self.tool_env, stdin=b"piped\n")
+        self.assertEqual(proc.returncode, 2)
+        self.assertNotIn(b"Traceback", proc.stderr)
+        self.assertIn(b"--stdin", proc.stderr)
+
+    def test_check_rejects_unknown_environment_friendly(self):
+        proc = run_tool("check", "bogus", env=self.tool_env)
+        self.assertEqual(proc.returncode, 2)
+        self.assertNotIn(b"Traceback", proc.stderr)
+        self.assertIn(b"invalid choice", proc.stderr)
+
     def test_check_reports_ok_and_missing_env_is_skipped(self):
         run_tool("set", ENV, "c_var", "--stdin", env=self.tool_env, stdin=b"v")
         proc = run_tool("check", env=self.tool_env)

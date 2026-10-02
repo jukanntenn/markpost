@@ -244,6 +244,11 @@ def load_value(args: argparse.Namespace, name: str) -> bytes:
             if value.endswith(b"\r"):
                 value = value[:-1]
     else:
+        if not sys.stdin.isatty():
+            raise UsageError(
+                "stdin is not a terminal, so a hidden prompt cannot read the value; "
+                "pipe it in with --stdin instead"
+            )
         value = getpass.getpass(f"value for {name} (input hidden): ").encode()
     if not value:
         raise UsageError(f"empty value for {name!r}")
@@ -286,6 +291,10 @@ def cmd_get(args: argparse.Namespace) -> None:
 
 
 def cmd_list(args: argparse.Namespace) -> None:
+    if args.all and args.env:
+        raise UsageError("pass either an environment or --all, not both")
+    if not args.all and not args.env:
+        raise UsageError(f"provide an environment ({', '.join(ENVIRONMENTS)}) or --all")
     envs = list(ENVIRONMENTS) if args.all else [args.env]
     for env in envs:
         path = vault_path(env)

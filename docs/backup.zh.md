@@ -20,10 +20,7 @@ markpost 灾难恢复备份的运维指南：pgBackRest WAL 归档加每日逻�
 每环境一对 —— 下面是生产；staging 同法，写入 `group_vars/staging/vault.yml`、用该桶的键：
 
 ```sh
-ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_key_id \
-    >> devops/ansible/group_vars/production/vault.yml
-ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_app_key \
-    >> devops/ansible/group_vars/production/vault.yml
+python3 scripts/vault.py set production b2_repo_key_id b2_repo_app_key
 ```
 
 `kuma_backup_url`（可选，与[监控](monitoring.zh.md)里可用性心跳同一推送模式）把每日检查变成显式的 up/down 推送；没有它，检查仍会经 cron 日志响亮地失败。

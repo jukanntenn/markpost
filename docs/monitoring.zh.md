@@ -64,7 +64,7 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 [`deploy.yml`](../devops/ansible/deploy.yml) 中的部署任务仅在 vault 变量 `kuma_heartbeat_url` 已定义时安装脚本与程序，因此配置顺序是：
 
 1. 在 kuma 添加 prod · heartbeat 监控项（Push，interval 120，retries 2）并复制其 push URL —— 持有者可伪造 up 心跳掩盖故障，按密钥对待。
-2. 入库：`ansible-vault encrypt_string '<push-url>' --name kuma_heartbeat_url >> devops/ansible/group_vars/production/vault.yml`
+2. 入库：`python3 scripts/vault.py set production kuma_heartbeat_url`（在隐藏输入提示处粘贴 push URL）
 3. 部署：`ansible-playbook devops/ansible/deploy.yml -e target=production` —— handler 执行 `supervisorctl reread && update` 并启动程序。
 4. 验证：`sudo supervisorctl status markpost-heartbeat` 显示 RUNNING，且 kuma 收到心跳。
 

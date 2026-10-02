@@ -64,7 +64,7 @@ On the production VPS, a supervisor program `markpost-heartbeat` runs the static
 The deploy tasks in [`deploy.yml`](../devops/ansible/deploy.yml) install the script and program only when the vault variable `kuma_heartbeat_url` is defined, so the setup order is:
 
 1. In kuma, add the prod · heartbeat monitor (Push, interval 120, retries 2) and copy its push URL — anyone holding it can forge up-beats, so treat it as a secret.
-2. Vault it: `ansible-vault encrypt_string '<push-url>' --name kuma_heartbeat_url >> devops/ansible/group_vars/production/vault.yml`
+2. Vault it: `python3 scripts/vault.py set production kuma_heartbeat_url` (paste the push URL at the hidden prompt)
 3. Deploy: `ansible-playbook devops/ansible/deploy.yml -e target=production` — the handler runs `supervisorctl reread && update` and starts the program.
 4. Verify: `sudo supervisorctl status markpost-heartbeat` shows RUNNING and kuma receives beats.
 

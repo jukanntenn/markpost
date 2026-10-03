@@ -57,7 +57,8 @@ def main() -> int:
         return 1
 
     live_count = psql_count(
-        args.project_dir, "docker", "compose", "exec", "-T", "postgres"
+        args.project_dir,
+        "docker", "compose", "exec", "-T", "--user", "postgres", "postgres",
     )
 
     try:

@@ -28,8 +28,12 @@ FRESHNESS_SECONDS = 26 * 3600
 
 
 def compose_exec(argv: list[str], project_dir: str) -> subprocess.CompletedProcess:
+    # --user postgres: archive_command runs as the postgres user and its
+    # pgbackrest lock dir (/tmp/pgbackrest) must not be recreated root-owned
+    # by these calls - a 0700 root dir there denies postgres the stat on the
+    # stop file and stalls WAL archiving (rehearsed on staging 2026-10-03).
     return subprocess.run(
-        ["docker", "compose", "exec", "-T", "postgres"] + argv,
+        ["docker", "compose", "exec", "-T", "--user", "postgres", "postgres"] + argv,
         cwd=project_dir,
         capture_output=True,
         text=True,
@@ -37,7 +41,7 @@ def compose_exec(argv: list[str], project_dir: str) -> subprocess.CompletedProce
 
 
 def load_env(project_dir: str) -> dict[str, str]:
-    """Overlay backup.env (KEY=VALUE lines, no quoting syntax) on the environ."""
+    """Overlay backup.env (quoted KEY=VALUE lines) on the environ."""
     env = dict()
     path = pathlib.Path(project_dir) / "backup.env"
     if path.exists():
@@ -45,7 +49,12 @@ def load_env(project_dir: str) -> dict[str, str]:
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, value = line.split("=", 1)
-                env[key.strip()] = value.strip()
+                value = value.strip()
+                # strip one pair of matching quotes the template adds so shell
+                # sourcing stays safe for values containing & characters
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                    value = value[1:-1]
+                env[key.strip()] = value
     return env
 
 
@@ -54,12 +63,25 @@ def backup_age_seconds(project_dir: str) -> float | None:
         ["pgbackrest", "--stanza=markpost", "info", "--output=json"], project_dir
     )
     repos = json.loads(proc.stdout)
-    stops = [backup["stop"] for repo in repos for backup in repo.get("backup", [])]
+    stops = []
+    for repo in repos:
+        for backup in repo.get("backup", []):
+            # pgbackrest 2.5x nests epoch stamps under "timestamp"; accept a
+            # flat ISO "stop" too so both schema generations work.
+            ts = backup.get("timestamp")
+            stop = ts.get("stop") if isinstance(ts, dict) else backup.get("stop")
+            if stop is None:
+                continue
+            if isinstance(stop, str):
+                parsed = datetime.datetime.fromisoformat(stop)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+                stops.append(parsed.timestamp())
+            else:
+                stops.append(float(stop))
     if not stops:
         return None
-    newest = max(datetime.datetime.fromisoformat(stop) for stop in stops)
-    if newest.tzinfo is None:
-        newest = newest.replace(tzinfo=datetime.timezone.utc)
+    newest = datetime.datetime.fromtimestamp(max(stops), tz=datetime.timezone.utc)
     return (datetime.datetime.now(datetime.timezone.utc) - newest).total_seconds()
 
 

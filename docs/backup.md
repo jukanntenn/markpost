@@ -20,10 +20,7 @@ Operating guide for markpost's disaster-recovery backups: pgBackRest WAL archiva
 One pair per environment — production below, staging the same against `group_vars/staging/vault.yml` with that bucket's key:
 
 ```sh
-ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_key_id \
-    >> devops/ansible/group_vars/production/vault.yml
-ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client --stdin-name b2_repo_app_key \
-    >> devops/ansible/group_vars/production/vault.yml
+python3 scripts/vault.py set production b2_repo_key_id b2_repo_app_key
 ```
 
 `kuma_backup_url` (optional, same push-monitor pattern as the availability heartbeat in [monitoring](monitoring.md)) turns the daily check into an explicit up/down push; without it the check still fails loudly via cron logs.

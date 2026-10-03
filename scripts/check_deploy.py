@@ -39,7 +39,13 @@ LANDING_TITLE = "Markpost — Self-hosted Markdown Publishing"
 
 def fetch_json(url: str, timeout: float) -> dict | None:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
+        # Explicit UA: urllib's default (Python-urllib/3.x) is blocked by
+        # Cloudflare's bot protection on the production zone with 403, which
+        # reads as a deployment failure.
+        request = urllib.request.Request(
+            url, headers={"User-Agent": "markpost-check-deploy/1.0"}
+        )
+        with urllib.request.urlopen(request, timeout=timeout) as resp:
             if resp.status != 200:
                 return None
             return json.loads(resp.read().decode())
@@ -65,7 +71,8 @@ def wait_ready(base_url: str, interval: float, timeout: float) -> bool:
 def check_landing(base_url: str, timeout: float) -> bool:
     url = f"{base_url}/"
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
+        request = urllib.request.Request(url, headers={"User-Agent": "markpost-check-deploy/1.0"})
+        with urllib.request.urlopen(request, timeout=timeout) as resp:
             status = resp.status
             body = resp.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError, OSError) as e:

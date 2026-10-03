@@ -31,6 +31,7 @@ def main() -> int:
             "compose",
             "exec",
             "-T",
+            "--user", "postgres",
             "postgres",
             "pgbackrest",
             "--stanza=markpost",

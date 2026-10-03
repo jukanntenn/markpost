@@ -32,9 +32,9 @@ python3 scripts/vault.py set production b2_repo_key_id b2_repo_app_key
 The deploy applies the archival GUCs (`archive_mode=on` needs the postgres restart the recreate already is). After it, initialize the stanza and take the first full immediately — WAL accumulated without a base backup is unusable:
 
 ```sh
-docker compose exec postgres pgbackrest --stanza=markpost stanza-create
-docker compose exec postgres pgbackrest --stanza=markpost backup --type=full
-docker compose exec postgres pgbackrest --stanza=markpost check
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost stanza-create
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost backup --type=full
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost check
 ```
 
 <a id="schedule"></a>

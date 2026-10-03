@@ -35,9 +35,9 @@ ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client -
 The deploy applies the archival GUCs (`archive_mode=on` needs the postgres restart the recreate already is). After it, initialize the stanza and take the first full immediately — WAL accumulated without a base backup is unusable:
 
 ```sh
-docker compose exec postgres pgbackrest --stanza=markpost stanza-create
-docker compose exec postgres pgbackrest --stanza=markpost backup --type=full
-docker compose exec postgres pgbackrest --stanza=markpost check
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost stanza-create
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost backup --type=full
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost check
 ```
 
 <a id="schedule"></a>

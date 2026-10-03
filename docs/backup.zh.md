@@ -35,9 +35,9 @@ ansible-vault encrypt_string --vault-id markpost-prod@~/.local/bin/avpm-client -
 部署会施加归档 GUC（`archive_mode=on` 需要的重启正是一次容器重建）。部署后立即初始化 stanza 并做首次全量 —— 没有基础备份的 WAL 累积不可用：
 
 ```sh
-docker compose exec postgres pgbackrest --stanza=markpost stanza-create
-docker compose exec postgres pgbackrest --stanza=markpost backup --type=full
-docker compose exec postgres pgbackrest --stanza=markpost check
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost stanza-create
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost backup --type=full
+docker compose exec --user postgres postgres pgbackrest --stanza=markpost check
 ```
 
 <a id="schedule"></a>

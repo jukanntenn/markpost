@@ -10,7 +10,7 @@ Telemetry producers and the observability stack live on opposite sides of a NAT.
 
 ## Decision
 
-The whole external chain is operated by the external operators from handoff material; this repo owns exactly one touchpoint: markpost's OTLP environment (`OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun` for staging and production, LAN-direct for `markpost-dev`, bearer token per env vaulted as `otel_otlp_token`).
+The whole external chain is operated by the external operators from handoff material; this repo owns exactly one touchpoint: markpost's OTLP environment (`OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun` for staging and production, LAN-direct for `markpost-dev`, bearer token per env vaulted as `otel_otlp_token`; staging later moved LAN-direct — see [the observability wiring overhaul MRFC](2026-10-04-observability-wiring-overhaul.md)).
 
 ```
 markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost, IP-allowlisted)

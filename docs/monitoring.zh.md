@@ -37,7 +37,7 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 | markpost · staging    | markpost · stg · host heartbeat (push)  | Push                 | Interval `120`、Retries `2`——与生产对称                                                   |
 | markpost · staging    | markpost · stg · db backup (push)       | Push                 | Interval `86400`、Retries `1`                                                             |
 
-**Push URL 契约**：vault 中的 push URL 是**裸**端点（`https://uptime-kuma.bytehome.fun/api/push/<token>`，公网形态——两台应用主机都经公网路由抵达 kuma），不带查询后缀。`heartbeat.py` 以 `?status=…` 追加;`pgbackrest-check.py` 同样以 `?status=…` 追加。若带上第二段 `?status=…`（kuma 界面复制出来的形态）会产生重复参数，kuma 把 status 读成"非 up"——每次真实推送都会把监控项打成 down。
+**Push URL 契约**：vault 中的 push URL 是**裸**端点、不带查询后缀，且按各生产者的可达性选择主机形态：生产（vps1 上）走公网路由（`https://uptime-kuma.bytehome.fun/api/push/<token>`），staging 主机走内网（`http://192.168.5.50:3001/api/push/<token>`）——它到 vps2 的出站会挂起（家宽 IP 在那边不被接受），公网形态会静默超时。脚本侧契约处处一致：`heartbeat.py` 以 `?status=…` 追加，`pgbackrest-check.py` 同样以 `?status=…` 追加。若带上第二段 `?status=…`（kuma 界面复制出来的形态）会产生重复参数，kuma 把 status 读成"非 up"——每次真实推送都会把监控项打成 down。
 
 证书与域名到期通知按 kuma 全局阈值触发（默认剩余 7/14/21 天）。stg · origin readiness 直探内网地址，因此入口故障与实例故障可区分。
 

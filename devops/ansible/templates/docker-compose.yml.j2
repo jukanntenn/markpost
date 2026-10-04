@@ -37,13 +37,16 @@ services:
       # OTLP telemetry (MRFC 2026-09-19-otlp-observability-stack): endpoint
       # and service.name differ per env (group_vars/<env>/vars.yml); the
       # producer token is vaulted per env (otel_otlp_token in vault.yml).
-      # dev reaches the NAS collector over the LAN; staging/production push
+      # dev and staging reach the collector over the LAN; production pushes
       # to the public OTLP ingress (caddy TLS → frp → collector). With the
       # vars unset the container falls back to the files-only pipeline.
       - OTEL_EXPORTER_OTLP_ENDPOINT={{ otel_otlp_endpoint }}
       - OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20{{ otel_otlp_token }}
       - OTEL_EXPORTER_OTLP_COMPRESSION=gzip
       - OTEL_SERVICE_NAME={{ otel_service_name }}
+      # Standard semconv deployment attribute: dashboards, alert rules and
+      # notification routing slice by this instead of parsing service.name.
+      - OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name={{ env }}
 {% endif %}
     depends_on:
       postgres:

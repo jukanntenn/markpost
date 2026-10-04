@@ -1,6 +1,7 @@
 # {{ ansible_managed }}
-# supervisor program for the markpost availability heartbeat (production
-# only). The script itself is static (devops/ansible/files/heartbeat.py);
+# supervisor program for the markpost availability heartbeat (staging and
+# production — symmetric by design, MRFC 2026-10-04-observability-wiring-
+# overhaul). The script itself is static (devops/ansible/files/heartbeat.py);
 # the non-secret knobs ride the command line and the secret push URL rides
 # KUMA_HEARTBEAT_URL, vaulted and interpolated here only — which is why this
 # conf is 0600 while the script is 0750. `supervisorctl reread && update`

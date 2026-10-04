@@ -99,10 +99,14 @@ def wal_segment_count(project_dir: str) -> int:
 
 def push_verdict(url: str, ok: bool, msg: str) -> None:
     # Best-effort: a failed push is caught by kuma's silence detection — the
-    # same dual channel the availability heartbeat uses.
+    # same dual channel the availability heartbeat uses. The vaulted URL is
+    # the bare push endpoint (no query suffix): appending with "?" keeps a
+    # single status/msg pair — a second "?status=..." suffix from the kuma
+    # copy-paste form would produce duplicate params and kuma reads the
+    # status array as "not up", marking the monitor down on every push.
     query = urllib.parse.urlencode({"status": "up" if ok else "down", "msg": msg})
     try:
-        urllib.request.urlopen(f"{url}&{query}", timeout=10)
+        urllib.request.urlopen(f"{url}?{query}", timeout=10)
     except OSError:
         pass
 

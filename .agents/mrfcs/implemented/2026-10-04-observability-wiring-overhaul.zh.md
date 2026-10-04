@@ -16,7 +16,7 @@ Status: implemented
 
 1. **标准部署属性。** 每个接线环境导出 `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<env>`(compose 模板)。看板与告警规则按该标签切分,不再解析 `service.name`。
 2. **staging 改 LAN 直连。** staging 的 `otel_otlp_endpoint` 改为内网直达 collector(`http://192.168.5.57:4318`)——与 dev 同路径;生产保留公网入口。此条取代[frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md)中 staging 走公网的决定。
-3. **裸 push URL 契约。** vault 中的 kuma URL 是不带查询后缀的裸 push 端点。`heartbeat.py` 以 `?query` 追加(不变);`pgbackrest-check.py` 现在也用 `?query`(原为 `&`——那只对带后缀的 URL 成立,正是重复参数 bug 的来源)。
+3. **裸 push URL 契约。** vault 中的 kuma URL 是不带查询后缀的裸 push 端点,并按各生产者的可达性选择主机形态——生产走公网路由,staging 走内网(它到 vps2 的出站会挂起,公网形态会静默超时)。`heartbeat.py` 以 `?query` 追加(不变);`pgbackrest-check.py` 现在也用 `?query`(原为 `&`——那只对带后缀的 URL 成立,正是重复参数 bug 的来源)。
 4. **心跳对称。** 部署在 staging 与 production 都安装 supervisor 程序,按环境的 vault 变量 `kuma_heartbeat_url` 守卫;staging 有自己的 push 监控与 vault 变量。两个环境彩排完全相同的形态。
 5. **kuma 清单标准。** 两个分组监控(`markpost · production`、`markpost · staging`)作为叶子监控的父级;每个监控带自描述标签(`env:production` / `env:staging`、`service:markpost`、`layer:edge|origin|push`);命名遵循 `markpost · <env> · <对象> (<layer>)`;push 监控显式设置 retries(心跳 2,每日备份检查 1)。
 6. **双通知渠道。** 飞书(主)+ 经 mailrise SMTP 网关的邮件(兜底),都设为默认并应用到全部监控,兑现 runbook 的承诺。

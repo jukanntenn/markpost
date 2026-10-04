@@ -58,3 +58,29 @@ func TestFanoutHandler_EnabledIfAnyHandlerEnabled(t *testing.T) {
 		t.Error("Enabled = true while no handler accepts below debug")
 	}
 }
+
+// levelFilterHandler must mirror the file handler's level on the OTLP bridge:
+// debug records stay off the collector unless the process runs at debug level
+// (otelslog v0.20.1 has no leveler option of its own).
+func TestLevelFilterHandler_DropsBelowLevel(t *testing.T) {
+	var buf bytes.Buffer
+	h := levelFilterHandler{
+		inner: slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		level: slog.LevelInfo,
+	}
+	logger := slog.New(h)
+
+	logger.DebugContext(context.Background(), "render post html", "qid", "abc")
+	if buf.String() != "" {
+		t.Errorf("debug record leaked through the info-level filter: %q", buf.String())
+	}
+
+	logger.InfoContext(context.Background(), "post created", "post_id", 7)
+	if !strings.Contains(buf.String(), "post created") {
+		t.Errorf("info record was dropped: %q", buf.String())
+	}
+
+	if h.Enabled(context.Background(), slog.LevelDebug) {
+		t.Error("Enabled = true for debug while filter level is info")
+	}
+}

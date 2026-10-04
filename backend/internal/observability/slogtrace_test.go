@@ -20,7 +20,7 @@ func TestTraceHandler_InjectsTraceID(t *testing.T) {
 	t.Cleanup(func() { _ = tp.Shutdown(context.Background()) })
 
 	var buf bytes.Buffer
-	logger := slog.New(NewTraceHandler(&buf))
+	logger := slog.New(NewTraceHandler(&buf, slog.LevelInfo))
 
 	ctx, span := tp.Tracer("test").Start(context.Background(), "op")
 	defer span.End()
@@ -46,7 +46,7 @@ func TestTraceHandler_InjectsTraceID(t *testing.T) {
 // emitted without trace attrs.
 func TestTraceHandler_NoSpan(t *testing.T) {
 	var buf bytes.Buffer
-	logger := slog.New(NewTraceHandler(&buf))
+	logger := slog.New(NewTraceHandler(&buf, slog.LevelInfo))
 
 	logger.Info("plain message")
 

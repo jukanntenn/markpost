@@ -291,7 +291,7 @@ func (s *Service) RenderPostHTML(ctx context.Context, qid string) (title, html, 
 		if err != nil {
 			return nil, err
 		}
-		s.logger().Debug("render post html",
+		s.logger().DebugContext(fetchCtx, "render post html",
 			"qid", qid,
 			"post_id", p.ID,
 			"created_at_iso", p.CreatedAt.UTC().Format(time.RFC3339Nano),

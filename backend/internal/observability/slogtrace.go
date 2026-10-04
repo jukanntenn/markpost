@@ -19,9 +19,11 @@ type traceHandler struct {
 }
 
 // NewTraceHandler wraps the given writer with a JSON slog handler that adds
-// trace_id/span_id attrs from the context's active span.
-func NewTraceHandler(w io.Writer) slog.Handler {
-	return &traceHandler{inner: slog.NewJSONHandler(w, nil)}
+// trace_id/span_id attrs from the context's active span. level applies to both
+// channels (file and OTLP bridge) so debug records never leak to one while the
+// other filters them.
+func NewTraceHandler(w io.Writer, level slog.Level) slog.Handler {
+	return &traceHandler{inner: slog.NewJSONHandler(w, &slog.HandlerOptions{Level: level})}
 }
 
 func (h *traceHandler) Handle(ctx context.Context, r slog.Record) error {

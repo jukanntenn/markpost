@@ -37,11 +37,17 @@ app_dirs:
 
 # --- OTLP telemetry (3-env separation, MRFC 2026-09-19-otlp-observability-stack) ---
 otel_service_name: "markpost-staging"
-# Public OTLP ingress behind the vps2 caddy (MRFC
-# 2026-09-19-otlp-observability-stack). The per-env producer token lives in
-# this env's vault.yml as otel_otlp_token; with either var unset the app
-# falls back to the files-only pipeline.
-otel_otlp_endpoint: "https://otlp.bytehome.fun"
+# LAN-direct to the collector on the observability server — the same path dev
+# uses. The originally planned public ingress (otlp.bytehome.fun, MRFC
+# 2026-09-19-otlp-transport-frp-exposure) never carried staging traffic: from
+# this host the name resolves to the LAN reverse proxy, which has no otlp
+# vhost, and the vps2 caddy allowlist only holds production's IP. The
+# deviation and its rationale are recorded in MRFC
+# 2026-10-04-observability-wiring-overhaul. The producer token still lives in
+# this env's vault.yml as otel_otlp_token (the collector is fail-closed on
+# every path); with either var unset the app falls back to the files-only
+# pipeline.
+otel_otlp_endpoint: "http://192.168.5.57:4318"
 # otel_otlp_token lives in this env's vault.yml (user-provided).
 
 # DR backup repository on Backblaze B2 — staging's own bucket, so promotion-

@@ -147,15 +147,47 @@ func initFile(appLogger, tracesLogger, metricsLogger *timberjack.Logger) (*Provi
 
 // InstallSlogDefault sets the default slog logger: always the timberjack file
 // handler with trace correlation (the crash channel), fanning out to the OTLP
-// logs pipeline as well when running in OTLP mode (dual-write).
-func (p *Providers) InstallSlogDefault(appLogger *timberjack.Logger) {
-	file := NewTraceHandler(appLogger)
+// logs pipeline as well when running in OTLP mode (dual-write). level applies
+// to both channels; the OTLP bridge needs an explicit filter because otelslog
+// v0.20.1 has no leveler option and would otherwise ship debug records the
+// file handler filters out.
+func (p *Providers) InstallSlogDefault(appLogger *timberjack.Logger, level slog.Level) {
+	file := NewTraceHandler(appLogger, level)
 	if !p.otlpMode || p.logProvider == nil {
 		slog.SetDefault(slog.New(file))
 		return
 	}
-	otlpLogs := otelslog.NewHandler("markpost", otelslog.WithLoggerProvider(p.logProvider))
+	otlpLogs := levelFilterHandler{
+		inner: otelslog.NewHandler("markpost", otelslog.WithLoggerProvider(p.logProvider)),
+		level: level,
+	}
 	slog.SetDefault(slog.New(fanoutHandler{[]slog.Handler{file, otlpLogs}}))
+}
+
+// levelFilterHandler drops records below level before they reach the wrapped
+// handler, so the OTLP logs pipeline mirrors the file handler's level.
+type levelFilterHandler struct {
+	inner slog.Handler
+	level slog.Level
+}
+
+func (h levelFilterHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return l >= h.level && h.inner.Enabled(ctx, l)
+}
+
+func (h levelFilterHandler) Handle(ctx context.Context, r slog.Record) error {
+	if !h.Enabled(ctx, r.Level) {
+		return nil
+	}
+	return h.inner.Handle(ctx, r)
+}
+
+func (h levelFilterHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return levelFilterHandler{inner: h.inner.WithAttrs(attrs), level: h.level}
+}
+
+func (h levelFilterHandler) WithGroup(name string) slog.Handler {
+	return levelFilterHandler{inner: h.inner.WithGroup(name), level: h.level}
 }
 
 // fanoutHandler writes each record to every handler that has it enabled.

@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-整条外部链路由外部运维方按交付材料运维；本仓库拥有且仅拥有一个触点：markpost 的 OTLP 环境变量（staging 与生产 `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun`，`markpost-dev` 内网直连，各环境 bearer token 以 `otel_otlp_token` 入库 vault）。
+整条外部链路由外部运维方按交付材料运维；本仓库拥有且仅拥有一个触点：markpost 的 OTLP 环境变量（staging 与生产 `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun`，`markpost-dev` 内网直连，各环境 bearer token 以 `otel_otlp_token` 入库 vault；staging 后来改为内网直连——见[观测接线改造 MRFC](2026-10-04-observability-wiring-overhaul.zh.md)）。
 
 ```
 markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost, IP-allowlisted)

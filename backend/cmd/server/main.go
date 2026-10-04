@@ -328,8 +328,13 @@ func serve(configPath string) {
 		log.Fatalf("Failed to init observability: %v", err)
 	}
 	// Structured logging with trace_id/span_id correlation (observability.md
-	// §trace↔log 关联). Replaces the default text handler.
-	providers.InstallSlogDefault(appLogger)
+	// §trace↔log 关联). Replaces the default text handler. The level applies
+	// to both the file and the OTLP channel: debug stays local/dev only.
+	logLevel := slog.LevelInfo
+	if cfg.Debug {
+		logLevel = slog.LevelDebug
+	}
+	providers.InstallSlogDefault(appLogger, logLevel)
 
 	// Timezone self-check: emit the resolved process TZ, the configured DB
 	// timezone, and the live Postgres session timezone so any future drift

@@ -1,6 +1,6 @@
 # AGENTS.md — The documentation standard
 
-This file defines the document tiers, writing rules, and the documentation-gate budgets; [docs/i18n/README.md](i18n/README.md) owns the bilingual pairing contract itself. Use [documenting](../.agents/skills/documenting/SKILL.md) for placement and validation, and [editing-prose](../.agents/skills/editing-prose/SKILL.md) for required coverage and editorial judgment.
+This file defines the document tiers, writing rules, and the documentation-gate budgets; [docs/i18n/README.md](i18n/README.md) owns the pairing contract. Use [documenting](../.agents/skills/documenting/SKILL.md) for placement and [editing-prose](../.agents/skills/editing-prose/SKILL.md) for editorial judgment.
 
 ## The tier taxonomy: one home per fact
 
@@ -25,11 +25,9 @@ Placement: rationale → RFCs; procedures → cookbooks or docs guides; contract
 
 ## Pairing rules
 
-- Every in-scope document is an English + Simplified Chinese pair — `foo.md`, `foo.zh.md`, and the `foo.i18n.yaml` record in the same directory — under the [pairing contract](i18n/README.md), enforced by `hdsh pairing verify`.
-- Instruction files are English-only and exempt from pairing: every `AGENTS.md` and everything under `.agents/skills/`; never create a `.zh.md` or `.i18n.yaml` for them.
-- Pairs update together in one PR: a PR that changes either side updates the other side terminology-guided and re-records with `hdsh pairing record <pair>`.
-- Archived RFC triplets are frozen and outside the pairing corpus ([archive policy](../.agents/rfcs/archived/AGENTS.md)).
-- Point-in-time reports under `scripts/loadtest/` join the corpus as pairs; raw result data stays outside the gates.
+- Every in-scope document is an English + Simplified Chinese pair — `foo.md`, `foo.zh.md`, and the `foo.i18n.yaml` record — under the [pairing contract](i18n/README.md), enforced by `hdsh pairing verify`; pairs update together in one PR and re-record with `hdsh pairing record <pair>`.
+- Instruction files are English-only and exempt from pairing: every `AGENTS.md` and everything under `.agents/skills/`.
+- Archived RFC triplets are frozen and outside the corpus ([archive policy](../.agents/rfcs/archived/AGENTS.md)); raw load-test data stays outside the gates.
 
 ## Writing rules
 
@@ -54,13 +52,4 @@ Ceilings are guardrails, not reduction targets. At or below target, retain at le
 
 ## The slop checklist
 
-Hunt these in any document:
-
-- The same rule stated in more than one home (a subtree `AGENTS.md` restating the root is the common case). Grep a distinctive phrase; keep one home and link the rest.
-- Narrated history or war stories: "previously", "now", "no longer", "used to", "已移除", "不再", PRs, or commits. State the current fact; link an RFC when needed.
-- Implementation-status annotations in prose or diagrams ("implemented!", "future: …", "已实现"). Status rots; the repo layout and the command inventory carry it.
-- Hand-restated catalogs, inventories of files, gates, or tests when source or a gate output is authoritative.
-- Reasoning transcripts: step-by-step implementation narration, proof of obvious branches, test walkthroughs, or rejected local alternatives. Keep the resulting contract or durable rationale; delete the path used to derive it.
-- Paragraph walls: one paragraph carrying several rules and parenthetical asides. Split it or demote the detail to its home.
-- Emphasis inflation: bold, CAPS, or "critically" everywhere means nothing stands out. Reserve emphasis for the clause that changes behavior.
-- One side of a language pair edited without its twin.
+Hunt duplicately-homed rules, narrated history ("previously", "已移除", PRs), implementation-status annotations ("future:", "已实现"), hand-restated catalogs where source is authoritative, reasoning transcripts, paragraph walls, emphasis inflation, and one-sided language-pair edits. The [editing-prose](../.agents/skills/editing-prose/SKILL.md) skill owns the full editorial checklist.

@@ -22,8 +22,8 @@
     ".agents/rfcs/implemented/process/2026-09-07-github-workflow.zh.md": "4baf9e5fe3643f89bac66a8a8525d07711a91137be090651db7ce20dc9e3d43a",
     ".agents/rfcs/implemented/process/2026-09-07-local-git-workflow.md": "8faa7c3f7371b01cbfe6a6d0548808b02126ace6643ec3dc33465a1bf8fd3305",
     ".agents/rfcs/implemented/process/2026-09-07-local-git-workflow.zh.md": "cf06d2e6060a3fcd4864b313bbe284a0fdafbc55529eab4a9683fb13e100e5a3",
-    ".agents/rfcs/implemented/process/2026-10-05-adopting-the-hdsh-harness.md": "3f1a844ac81581c4f47055a1f879f807e58f377c87eb533952e05f1a566c1674",
-    ".agents/rfcs/implemented/process/2026-10-05-adopting-the-hdsh-harness.zh.md": "2c0ca7cac15a498738609afb1ebb1c3e4fdc8e3a741ddaaba66cf504d1c306a8",
+    ".agents/rfcs/implemented/process/2026-10-06-adopting-the-hdsh-harness.md": "f2e6e4b9b8f36ce3f8c6024829bc14fcbafb56233f1deab1650e917b2001e767",
+    ".agents/rfcs/implemented/process/2026-10-06-adopting-the-hdsh-harness.zh.md": "9837b1d66033054f137145740a2c0fc312893d4c8feee89340c2fd43cf9be509",
     ".agents/skills/documenting/SKILL.md": "14d3a6f48143060ed8e92094888444f4cd8903122109058b959e0bbe71240a5d",
     ".agents/skills/editing-prose/SKILL.md": "e0c9ddb447d0d3798bb1c4a21b2b1ab58bceb31ee4b077b6c7114bf2334a13c7",
     ".agents/skills/editing-prose/references/examples.md": "45557418703e337cf0a1025ce3c598dbc041e3e7a8219a0c616c46f4f2f1bad8",
@@ -51,14 +51,8 @@
     "docs/i18n/translation-rules.md": "b5d87e4a410dc01477ffbd0f268ec4cfec25b4f0d1a8e65ae4a3cdd4961e60c2",
     "docs/i18n/translation-rules.zh.md": "cc41453ede5f12cbfb51450b3ad59caa78a89ac74721420c7815c71b8c580710"
   },
-  "editable": [
-    "docs/architecture.md",
-    "docs/architecture.zh.md"
-  ],
-  "pendingMerges": [
-    "AGENTS.md",
-    "docs/AGENTS.md"
-  ],
+  "editable": [],
+  "pendingMerges": ["AGENTS.md", "docs/AGENTS.md"],
   "consumerConfig": [
     ".github/issue-management/config.json",
     ".hdsh/docs.manifest.json",

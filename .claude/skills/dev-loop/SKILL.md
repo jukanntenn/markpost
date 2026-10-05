@@ -5,7 +5,7 @@ description: Use when a session should drive the agent-driven development loop �
 
 # Driving the development loop
 
-The design record is [the agent-driven development loop MRFC](../../../.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.md). The three human gates (issue → Ready, RFC approval, delivery approval) are asynchronous: a session ends waiting for them, and the next session detects their passage. Operate through the machine account's `GH_TOKEN`; never advance an issue into `Ready` yourself — that move is the human's first gate.
+The design record is [the agent-driven development loop MRFC](../../rfcs/implemented/process/2026-08-22-agent-driven-development-loop.md). The three human gates (issue → Ready, RFC approval, delivery approval) are asynchronous: a session ends waiting for them, and the next session detects their passage. Operate through the machine account's `GH_TOKEN`; never advance an issue into `Ready` yourself — that move is the human's first gate.
 
 ## Session-open triage (always, in order)
 

@@ -25,18 +25,12 @@ Backend, frontend, and e2e command blocks live in their `AGENTS.md` files linked
 ## Project Structure
 
 ```
-backend/           Go service — orders in backend/AGENTS.md
-frontend/          Next.js static export — orders in frontend/AGENTS.md
-cli/               standalone markpost client (own Go module) — orders in cli/AGENTS.md
-mcp/               standalone markpost-mcp MCP server — orders in mcp/AGENTS.md
-e2e/               Playwright workspace (own package.json) — orders in e2e/AGENTS.md
-devops/            dev.py, docker-compose.yml, Dockerfiles, ansible/
-docker/            production image (s6 multi-process), build.py
-docs/              operation guides + the documentation standard (docs/AGENTS.md)
-specs/             current-state design reference (index: specs/index.md)
-.agents/           rfcs/ (decision records) + skills/
-.github/workflows/ CI (lint/test/build/e2e with path filters)
-scripts/           deployment, vault, and load-test tooling
+backend/ frontend/ cli/ mcp/ e2e/   code trees — orders in each tree's AGENTS.md
+devops/ docker/ scripts/            dev.py, compose, images, ansible, tooling
+docs/                              operation guides + the documentation standard
+specs/                             current-state design reference (index: specs/index.md)
+.agents/                           rfcs/ (decision records) + skills/
+.github/workflows/                 CI (lint/test/build/e2e with path filters)
 ```
 
 ## Conventions
@@ -65,7 +59,7 @@ Every non-trivial change adds or updates an RFC in the same PR ([`.agents/rfcs/R
 
 ## Run relevant checks locally
 
-Hooks are worktree-local and intentionally narrow (`hdsh worktree install` installs them); CI owns exhaustive coverage and the platform matrix. Before pushing, run the checks owning your diff: the focused tests for changed behavior, `hdsh pairing verify` (re-record reviewed pairs with `hdsh pairing record <pair>`) plus `hdsh rfc verify` for decision records, the owning formatter/linter for touched trees, and `hdsh adopt verify` after adoption-related edits. The [pushing](.agents/skills/pushing/SKILL.md) skill carries the full inventory.
+Hooks are worktree-local and intentionally narrow (`hdsh worktree install`); CI owns the exhaustive matrix. Before pushing, run the checks owning your diff: focused tests for changed behavior, `hdsh pairing verify` (re-record with `hdsh pairing record <pair>`) and `hdsh rfc verify` for decision records, the touched trees' formatter/linter. The [pushing](.agents/skills/pushing/SKILL.md) skill carries the inventory.
 
 ## Boundaries
 

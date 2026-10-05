@@ -5,7 +5,7 @@ description: Use when creating or maintaining a stack of dependent pull requests
 
 # Building a PR stack
 
-The loop's stack rules are owned by [the design record](../../../.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.md); this skill is the mechanics.
+The loop's stack rules are owned by [the design record](../../rfcs/implemented/process/2026-08-22-agent-driven-development-loop.md); this skill is the mechanics.
 
 ## Worktrees
 

@@ -99,7 +99,7 @@ name = "prettier (root, non-frontend)"
 language = "system"
 entry = "frontend/node_modules/.bin/prettier --write"
 files = "\\.(md|ya?ml|html|json|css)$"
-exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
+exclude = "^(\\.agents|\\.claude|\\.codex|\\.opencode|\\.zcode)/|^frontend/|^docs/i18n/|^\\.github/(ISSUE_TEMPLATE/(bug|feature|idea|research|task|config)\\.md|workflows/issue-(policy|lifecycle)\\.yml|pull_request_template\\.md)$|^backend/docs/(docs\\.go|swagger\\.json|swagger\\.yaml)$|^backend/internal/web/post\\.[0-9a-f]+\\.css$"
 pass_filenames = true
 groups = ["fmt"]
 stages = ["pre-commit"]
@@ -194,12 +194,26 @@ stages = ["commit-msg"]
 repo = "https://github.com/jukanntenn/harness-deepseek-harness"
 rev = "3b1668f4bfebe6c967595ac023dd411d9bc8b5b9"
 hooks = [
-  { id = "hdsh-pairing-verify", groups = ["hdsh"] },
-  { id = "hdsh-rfc-verify", groups = ["hdsh"] },
-  { id = "hdsh-rfc-archive", groups = ["hdsh"] },
-  { id = "hdsh-docs-wrap", groups = ["hdsh"] },
-  { id = "hdsh-docs-links", groups = ["hdsh"] },
-  { id = "hdsh-docs-budgets", groups = ["hdsh"] },
-  { id = "hdsh-adopt-verify", groups = ["hdsh"] },
+  { id = "hdsh-pairing-verify", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-rfc-verify", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-rfc-archive", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-docs-wrap", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-docs-links", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-docs-budgets", groups = [
+    "hdsh",
+  ] },
+  { id = "hdsh-adopt-verify", groups = [
+    "hdsh",
+  ] },
 ]
 # END hdsh adopt

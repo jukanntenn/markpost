@@ -2,7 +2,5 @@
   "excluded": [],
   "generated": [],
   "public_blob_root": "https://github.com/jukanntenn/markpost/blob/main/",
-  "roots": [
-    "specs/"
-  ]
+  "roots": ["specs/"]
 }

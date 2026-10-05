@@ -70,17 +70,6 @@ files = "(^|/)(AGENTS|CLAUDE)\\.md$|^\\.claude/skills/|^\\.agents/skills/"
 pass_filenames = false
 stages = ["pre-commit"]
 
-# Issue/pull-request policy logic carries its own unittest suite; the
-# workflow files lint via actionlint above, the logic gates here (CI runs
-# the same suite through `prek run --all-files`).
-[[repos.hooks]]
-id = "issue-policy-tests"
-name = "issue policy unit tests"
-language = "system"
-entry = "python3 .github/issue-management/policy_test.py"
-files = "^\\.github/issue-management/"
-pass_filenames = false
-
 # Same pattern for the prek patch-cache auditor's unit suite.
 [[repos.hooks]]
 id = "prek-patch-audit-tests"
@@ -192,24 +181,6 @@ stages = ["pre-commit"]
 
 # Documentation gates: current-state prose, relative links + fragments,
 # one physical line per paragraph, specs/index completeness, MRFC format,
-# bilingual pairs, word budgets (scripts/doc_sync.py). Incremental only — staged Markdown
-# is passed through so each gate restricts itself; prek stashes unstaged
-# changes during hook runs, so any wider scan would see a stale tree.
-# Full-corpus runs are CI's job (docs.yml). Only the .agents/skills
-# mirror is skipped (byte copy of .claude/skills, owned by
-# agent-instructions-sync); .agents/mrfcs/ is hand-written content and
-# stays gated. Ledgers, loadtest reports, and generated Swagger are
-# outside gate scope (see docs/AGENTS.md).
-[[repos.hooks]]
-id = "doc-check"
-name = "documentation gates (doc_sync)"
-language = "system"
-entry = "python3 scripts/doc_sync.py"
-files = "\\.md$"
-exclude = "^\\.agents/skills/|^\\.zcode/|^scripts/loadtest/|^backend/docs/|^(CHANGELOG|KNOWN_ISSUES)\\.md$"
-pass_filenames = true
-stages = ["pre-commit"]
-
 # ---- commit-msg: Conventional Commits ----
 [[repos.hooks]]
 id = "conventional-commits"

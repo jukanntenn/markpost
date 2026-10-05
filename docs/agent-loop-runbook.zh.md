@@ -2,7 +2,7 @@
 
 English | [中文](agent-loop-runbook.md)
 
-以共享机器账号在其他仓库复用 agent 驱动开发闭环时的一次性激活清单与实测平台约束。设计理由见[闭环记录](../.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.zh.md)；本页持有操作流程。
+以共享机器账号在其他仓库复用 agent 驱动开发闭环时的一次性激活清单与实测平台约束。设计理由见[闭环记录](../.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.zh.md)；本页持有操作流程。
 
 ## Activation checklist
 
@@ -11,7 +11,7 @@ English | [中文](agent-loop-runbook.md)
 3. 落地仓库侧：五张 issue 模板与 `config.yml`（禁空白）、pull request 模板、带单测的 policy 脚本、两个 workflow、skills、根 `AGENTS.md` 章节——经一个 bootstrap pull request。
 4. 建看板：个人 GitHub Project，自定义单选 `Loop status` 字段（`Inbox / Backlog / Ready / In progress / In review / Done / No action`）、`Priority` 字段（`P0–P3`），并把机器账号加为项目的 `WRITER` 协作者。
 5. 把可写看板的 PAT 存为仓库 secret `MARKPOST_PROJECT_TOKEN`，并把闭环的 `config.json` 指向该项目、置 `requireProject: true`。
-6. 在 bootstrap pull request 合并之后（绝不提前）把仓库设为仅 merge commit，并开分支保护：一个 approving review、作废过期批准、要求线程解决、包含管理员、禁止向 `main` force push，并把六个状态检查设为 required——五个 `X conclusion` 检查加 `Issue policy`（[PR conclusion jobs and required checks](../.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.zh.md)）。
+6. 在 bootstrap pull request 合并之后（绝不提前）把仓库设为仅 merge commit，并开分支保护：一个 approving review、作废过期批准、要求线程解决、包含管理员、禁止向 `main` force push，并把六个状态检查设为 required——五个 `X conclusion` 检查加 `Issue policy`（[PR conclusion jobs and required checks](../.agents/rfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.zh.md)）。
 7. 宿主机装栈工具：`gh extension install github/gh-stack`。
 
 ## Measured platform constraints

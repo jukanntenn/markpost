@@ -2,7 +2,7 @@
 
 [English](cli.md) | 中文
 
-`markpost` CLI(`cli/`,独立 Go module `markpost/cli`)的当前状态设计。决策理由见[独立 agent CLI MRFC](../.agents/mrfcs/implemented/2026-09-03-standalone-agent-cli.zh.md)。
+`markpost` CLI(`cli/`,独立 Go module `markpost/cli`)的当前状态设计。决策理由见[独立 agent CLI MRFC](../.agents/rfcs/implemented/2026-09-03-standalone-agent-cli.zh.md)。
 
 ## 范围与技术栈
 

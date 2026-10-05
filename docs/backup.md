@@ -2,7 +2,7 @@
 
 [English](backup.md) | [中文](backup.zh.md)
 
-Operating guide for markpost's disaster-recovery backups: pgBackRest WAL archival plus a daily logical dump to Backblaze B2 (design and rationale: [the WAL-archival MRFC](../.agents/mrfcs/implemented/2026-07-09-wal-archival-disaster-recovery.md); current posture: [`specs/backend/disaster-recovery.md`](../specs/backend/disaster-recovery.md)). The tier covers **staging and production** — staging is the promotion gate and must rehearse the production shape — each against its own bucket, activated when that environment's vault defines `b2_repo_key_id`; until then the deploy stays byte-identical to the pre-backup pipeline. dev runs without backups.
+Operating guide for markpost's disaster-recovery backups: pgBackRest WAL archival plus a daily logical dump to Backblaze B2 (design and rationale: [the WAL-archival MRFC](../.agents/rfcs/implemented/2026-07-09-wal-archival-disaster-recovery.md); current posture: [`specs/backend/disaster-recovery.md`](../specs/backend/disaster-recovery.md)). The tier covers **staging and production** — staging is the promotion gate and must rehearse the production shape — each against its own bucket, activated when that environment's vault defines `b2_repo_key_id`; until then the deploy stays byte-identical to the pre-backup pipeline. dev runs without backups.
 
 <a id="b2-provisioning"></a>
 

@@ -5,7 +5,7 @@ description: Use when a session should drive the agent-driven development loop �
 
 # Driving the development loop
 
-The design record is [the agent-driven development loop MRFC](../../../.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md). The three human gates (issue → Ready, RFC approval, delivery approval) are asynchronous: a session ends waiting for them, and the next session detects their passage. Operate through the machine account's `GH_TOKEN`; never advance an issue into `Ready` yourself — that move is the human's first gate.
+The design record is [the agent-driven development loop MRFC](../../../.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.md). The three human gates (issue → Ready, RFC approval, delivery approval) are asynchronous: a session ends waiting for them, and the next session detects their passage. Operate through the machine account's `GH_TOKEN`; never advance an issue into `Ready` yourself — that move is the human's first gate.
 
 ## Session-open triage (always, in order)
 
@@ -20,7 +20,7 @@ The design record is [the agent-driven development loop MRFC](../../../.agents/m
 
 ## Phase: claim → decomposition → RFC stack
 
-1. Judge triviality against the [MRFC README](../../../.agents/mrfcs/README.md) mechanical-local-edit exemption; trivial issues take the fast path — straight to the implementation phase, delivery gate only.
+1. Judge triviality against the [MRFC README](../../../.agents/rfcs/README.md) mechanical-local-edit exemption; trivial issues take the fast path — straight to the implementation phase, delivery gate only.
 2. Decompose by decision, not by file: every non-trivial decision the issue forces gets one MRFC pair ([writing-mrfcs](../writing-mrfcs/SKILL.md)); layers stack when decisions depend on each other ([stacked-prs](../stacked-prs/SKILL.md)).
 3. Build the RFC stack; each layer references the issue as `Related to #N` — never a closing keyword.
 4. Pre-review every layer ([code-review](../code-review/SKILL.md)), then request the human review on every layer (`gh pr edit <n> --add-reviewer jukanntenn`) and end the session with a stack report.

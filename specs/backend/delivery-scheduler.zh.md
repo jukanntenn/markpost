@@ -2,7 +2,7 @@
 
 [English](delivery-scheduler.md) | 中文
 
-投递子系统是一个三层管线：一张用于持久化的 PostgreSQL 表、一个单 goroutine 的 ticker 负责调度、一个有界的 pond v2 worker 池负责并发。本页规定分发器（`internal/service/delivery/dispatcher.go`）—— 入队、调度器 tick、原子认领、worker 执行与清理。数据模型见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)；重试时序与失败分类见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)；投递语义与崩溃恢复见 [`delivery-recovery.zh.md`](./delivery-recovery.zh.md)。决策理由（选 pond 而非 ants、无消息代理、分批清扫）见[投递 MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
+投递子系统是一个三层管线：一张用于持久化的 PostgreSQL 表、一个单 goroutine 的 ticker 负责调度、一个有界的 pond v2 worker 池负责并发。本页规定分发器（`internal/service/delivery/dispatcher.go`）—— 入队、调度器 tick、原子认领、worker 执行与清理。数据模型见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)；重试时序与失败分类见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)；投递语义与崩溃恢复见 [`delivery-recovery.zh.md`](./delivery-recovery.zh.md)。决策理由（选 pond 而非 ants、无消息代理、分批清扫）见[投递 MRFC](../../.agents/rfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
 
 <a id="capacity-envelope-the-saas-reference-instance"></a>
 

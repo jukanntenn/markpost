@@ -2,7 +2,7 @@
 
 [English](index.md) | 中文
 
-> 为当前任务参考最相关的规格文件。本目录的每个规格都列在此处 —— 新增规格文件意味着同一变更里加上它的行（`scripts/verify_specs_index.py` 负责闸门）。排序：跨切面规格在前，随后后端，最后前端；同一节内，一起阅读的内容保持相邻。规格描述当前状态；决策理由位于 [MRFCs](../.agents/mrfcs/README.zh.md)。
+> 为当前任务参考最相关的规格文件。本目录的每个规格都列在此处 —— 新增规格文件意味着同一变更里加上它的行（`scripts/verify_specs_index.py` 负责闸门）。排序：跨切面规格在前，随后后端，最后前端；同一节内，一起阅读的内容保持相邻。规格描述当前状态；决策理由位于 [MRFCs](../.agents/rfcs/README.zh.md)。
 
 <a id="cross-cutting-specs"></a>
 

@@ -105,7 +105,7 @@ Removal is manual (the deploy never uninstalls): delete `/etc/supervisor/conf.d/
 
 ## Host metrics (Beszel)
 
-The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a self-hosted hub on the observability server. Design record: [host-metrics MRFC](../.agents/mrfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.md), [topology MRFC](../.agents/mrfcs/implemented/2026-08-31-beszel-deployment-topology.md), and the WebSocket wiring in [the agent-token MRFC](../.agents/mrfcs/implemented/2026-10-02-beszel-agent-websocket-token.md).
+The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a self-hosted hub on the observability server. Design record: [host-metrics MRFC](../.agents/rfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.md), [topology MRFC](../.agents/rfcs/implemented/2026-08-31-beszel-deployment-topology.md), and the WebSocket wiring in [the agent-token MRFC](../.agents/rfcs/implemented/2026-10-02-beszel-agent-websocket-token.md).
 
 **Hub (own lifecycle, on the observability server).** Deployed at `~/docker/beszel` on 192.168.5.57 (`beszel.bytehome.fun` at the edge): pinned `henrygd/beszel`, bind-mounted `beszel_data` (upstream embeds PocketBase and has no external-database support), `DISABLE_SSH=true` — pure WebSocket topology where agents dial the hub and it never dials them. Back up the whole `beszel_data` dir (it also holds the hub keypair the agents' `KEY` verifies).
 

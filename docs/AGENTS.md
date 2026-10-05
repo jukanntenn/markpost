@@ -12,11 +12,11 @@ This file defines where documentation lives and the writing rules every gate enf
 | `PRINCIPLES.md`                                                  | Frozen archive of behavioral constraints; the live home is root `AGENTS.md` § Conventions |
 | `specs/`                                                         | Current-state design reference; `specs/index.md` is the authoritative index               |
 | `docs/`                                                          | Operation guides (development, deployment)                                                |
-| `.agents/mrfcs/`                                                 | markpost's RFCs — proposals and decision records ([README](../.agents/mrfcs/README.md))   |
+| `.agents/rfcs/`                                                  | markpost's RFCs — proposals and decision records ([README](../.agents/rfcs/README.md))    |
 | `CHANGELOG.md` / `KNOWN_ISSUES.md`                               | Ledgers — narrate history by design; exempt from prose gates                              |
 | `.claude/skills/`                                                | Agent workflows (mirrored to `.agents/skills/` by `scripts/sync_agent_instructions.py`)   |
 
-Every tier but the agent-instruction files is bilingual (rule 7). Elsewhere, link; never restate. Rationale → `.agents/mrfcs/`; procedures → `docs/`; system facts → `specs/`; rules an agent needs every session → `AGENTS.md`.
+Every tier but the agent-instruction files is bilingual (rule 7). Elsewhere, link; never restate. Rationale → `.agents/rfcs/`; procedures → `docs/`; system facts → `specs/`; rules an agent needs every session → `AGENTS.md`.
 
 ## Rules and gates
 

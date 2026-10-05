@@ -2,7 +2,7 @@
 
 [English](disaster-recovery.md) | 中文
 
-markpost 的韧性态势：单实例，读路径在源站死亡期间靠 CDN 边缘存活，数据是保留策略管理的临时内容，备份档位是 pgBackRest WAL 归档到对象存储、辅以每日逻辑转储做格式多样性。架构及其替代方案（每小时 dump 起步、实时副本、R2、wal-g）记录在[WAL 归档 MRFC](../../.agents/mrfcs/implemented/2026-07-09-wal-archival-disaster-recovery.zh.md)；单实例决策本身（无 Redis、无副本、无第二台 VPS）是[性能优化 MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)的一部分。操作规程 —— 供给、激活、恢复、演练 —— 见 [`docs/backup.md`](../../docs/backup.zh.md)。
+markpost 的韧性态势：单实例，读路径在源站死亡期间靠 CDN 边缘存活，数据是保留策略管理的临时内容，备份档位是 pgBackRest WAL 归档到对象存储、辅以每日逻辑转储做格式多样性。架构及其替代方案（每小时 dump 起步、实时副本、R2、wal-g）记录在[WAL 归档 MRFC](../../.agents/rfcs/implemented/2026-07-09-wal-archival-disaster-recovery.zh.md)；单实例决策本身（无 Redis、无副本、无第二台 VPS）是[性能优化 MRFC](../../.agents/rfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)的一部分。操作规程 —— 供给、激活、恢复、演练 —— 见 [`docs/backup.md`](../../docs/backup.zh.md)。
 
 <a id="current-posture"></a>
 

@@ -2,7 +2,7 @@
 
 [English](postgres-tuning.md) | 中文
 
-markpost 所连接的单个 Postgres 实例的连接、存储与拓扑调优：Go 进程中的连接池边界、部署模板与迁移施加的服务器 GUC 与 TOAST 压缩，以及同级容器 + Unix 套接字拓扑。决策记录（GUC 取值、lz4 而非应用层压缩、Docker 而非裸金属）见[性能优化 MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)；DSN 格式见 [`dsn.zh.md`](./dsn.zh.md)。
+markpost 所连接的单个 Postgres 实例的连接、存储与拓扑调优：Go 进程中的连接池边界、部署模板与迁移施加的服务器 GUC 与 TOAST 压缩，以及同级容器 + Unix 套接字拓扑。决策记录（GUC 取值、lz4 而非应用层压缩、Docker 而非裸金属）见[性能优化 MRFC](../../.agents/rfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)；DSN 格式见 [`dsn.zh.md`](./dsn.zh.md)。
 
 <a id="connection-pool"></a>
 

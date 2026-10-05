@@ -50,7 +50,7 @@ Standing design rules, each 1–3 lines; this section is their live home as rule
 
 ## Development Loop
 
-Work flows issue-first: template-filed issues enter the board as `Inbox`; only the maintainer moves an issue to `Ready` (gate 1). The agent — a machine account via `GH_TOKEN` — claims `Ready` issues, decomposes by decision into MRFCs, and drives two-phase PR stacks: RFC stack (gate 2), then implementation stack (gate 3), landed only through `gh stack merge`. RFC layers reference `Related to #N`; only a stack's top implementation layer carries `Fixes #N`. The [`dev-loop` skill](.agents/skills/dev-loop/SKILL.md) owns the mechanics; [the loop record](.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md) holds the rationale.
+Work flows issue-first: template-filed issues enter the board as `Inbox`; only the maintainer moves an issue to `Ready` (gate 1). The agent — a machine account via `GH_TOKEN` — claims `Ready` issues, decomposes by decision into MRFCs, and drives two-phase PR stacks: RFC stack (gate 2), then implementation stack (gate 3), landed only through `gh stack merge`. RFC layers reference `Related to #N`; only a stack's top implementation layer carries `Fixes #N`. The [`dev-loop` skill](.agents/skills/dev-loop/SKILL.md) owns the mechanics; [the loop record](.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.md) holds the rationale.
 
 ## Git Workflow
 
@@ -64,7 +64,7 @@ Work flows issue-first: template-filed issues enter the board as `Inbox`; only t
 
 ## MRFCs
 
-Every non-trivial change adds or updates an MRFC in the same PR ([`.agents/mrfcs/README.md`](.agents/mrfcs/README.md)) — grep `.agents/mrfcs/` for the topic first; only mechanical/local edits are exempt. The `writing-mrfcs` skill owns the workflow.
+Every non-trivial change adds or updates an MRFC in the same PR ([`.agents/rfcs/README.md`](.agents/rfcs/README.md)) — grep `.agents/rfcs/` for the topic first; only mechanical/local edits are exempt. The `writing-mrfcs` skill owns the workflow.
 
 ## Boundaries
 

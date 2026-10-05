@@ -83,7 +83,7 @@ jobs:
         run: uvx prek run --all-files
 
   # Stable per-workflow verdict for branch protection's required checks
-  # (.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
+  # (.agents/rfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md):
   # runs past skips and failures, skipped jobs count as success.
   conclusion:
     # Distinct check name so branch protection's required-check picker is

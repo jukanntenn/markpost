@@ -2,7 +2,7 @@
 
 English | [中文](cli.zh.md)
 
-Current-state design of the `markpost` CLI (`cli/`, standalone Go module `markpost/cli`). Rationale lives in the [standalone agent CLI MRFC](../.agents/mrfcs/implemented/2026-09-03-standalone-agent-cli.md).
+Current-state design of the `markpost` CLI (`cli/`, standalone Go module `markpost/cli`). Rationale lives in the [standalone agent CLI MRFC](../.agents/rfcs/implemented/2026-09-03-standalone-agent-cli.md).
 
 ## Scope and stack
 

@@ -2,7 +2,7 @@
 
 [English](delivery-retry.md) | 中文
 
-投递队列的重试策略：硬编码的固定退避序列加自动计算的过期墙，再加上让永久被拒的发送快速失败、而不是烧光重试预算的错误分类。常量位于 `internal/service/delivery/backoff.go` 与 `internal/service/delivery/delivery_error.go`。序列为何硬编码而非可配置，以及落败的替代方案，记录在[投递 MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)；它改写的队列表见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)，驱动它的调度器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)。
+投递队列的重试策略：硬编码的固定退避序列加自动计算的过期墙，再加上让永久被拒的发送快速失败、而不是烧光重试预算的错误分类。常量位于 `internal/service/delivery/backoff.go` 与 `internal/service/delivery/delivery_error.go`。序列为何硬编码而非可配置，以及落败的替代方案，记录在[投递 MRFC](../../.agents/rfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)；它改写的队列表见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)，驱动它的调度器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)。
 
 <a id="the-backoff-sequence"></a>
 

@@ -53,4 +53,4 @@ make lint
 make acceptance   # e2e:需要 MARKPOST_E2E_BASE_URL/USERNAME/PASSWORD,否则跳过
 ```
 
-设计:[specs/cli.zh.md](../specs/cli.zh.md) · 决策:[MRFC](../.agents/mrfcs/implemented/2026-09-03-standalone-agent-cli.zh.md) · 子树规范:[AGENTS.md](AGENTS.md)
+设计:[specs/cli.zh.md](../specs/cli.zh.md) · 决策:[MRFC](../.agents/rfcs/implemented/2026-09-03-standalone-agent-cli.zh.md) · 子树规范:[AGENTS.md](AGENTS.md)

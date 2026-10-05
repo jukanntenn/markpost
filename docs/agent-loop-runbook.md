@@ -2,7 +2,7 @@
 
 English | [中文](agent-loop-runbook.zh.md)
 
-The one-time activation checklist and the measured platform constraints for standing the agent-driven development loop up in a repository, written for reuse with the shared machine account. The design rationale lives in [the loop record](../.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md); this page owns the procedure.
+The one-time activation checklist and the measured platform constraints for standing the agent-driven development loop up in a repository, written for reuse with the shared machine account. The design rationale lives in [the loop record](../.agents/rfcs/implemented/2026-08-22-agent-driven-development-loop.md); this page owns the procedure.
 
 ## Activation checklist
 
@@ -11,7 +11,7 @@ The one-time activation checklist and the measured platform constraints for stan
 3. Land the repository half: the five issue templates with `config.yml` (blank issues off), the pull-request template, the policy script with its unit tests, the two workflows, the skills, and the root `AGENTS.md` section — via one bootstrap pull request.
 4. Create the board: a personal GitHub Project with a custom single-select `Loop status` field (`Inbox / Backlog / Ready / In progress / In review / Done / No action`), a `Priority` field (`P0–P3`), and the machine account added as a `WRITER` collaborator of the project.
 5. Store the board-writing PAT as the repository secret `MARKPOST_PROJECT_TOKEN`, and point the loop's `config.json` at the project with `requireProject: true`.
-6. After the bootstrap pull request merges — never before — set the repository to merge commits only and enable branch protection: one approving review, dismiss stale approvals, require conversation resolution, include administrators, forbid force pushes to `main`, and require six status checks — the five `X conclusion` checks plus `Issue policy` ([PR conclusion jobs and required checks](../.agents/mrfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md)).
+6. After the bootstrap pull request merges — never before — set the repository to merge commits only and enable branch protection: one approving review, dismiss stale approvals, require conversation resolution, include administrators, forbid force pushes to `main`, and require six status checks — the five `X conclusion` checks plus `Issue policy` ([PR conclusion jobs and required checks](../.agents/rfcs/implemented/2026-08-24-pr-conclusion-jobs-required-checks.md)).
 7. Install the stack tool on the host: `gh extension install github/gh-stack`.
 
 ## Measured platform constraints

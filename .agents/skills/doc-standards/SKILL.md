@@ -1,6 +1,6 @@
 ---
 name: doc-standards
-description: Use when writing, moving, reviewing, or auditing documentation in markpost — deciding where a fact lives (README/specs/docs/.agents/mrfcs/skills), adding a spec to specs/index.md, trimming history narration from current-state docs, responding to a doc_sync.py gate failure, or requests like "improve the docs", "where should this be documented", "this doc is too long".
+description: Use when writing, moving, reviewing, or auditing documentation in markpost — deciding where a fact lives (README/specs/docs/.agents/rfcs/skills), adding a spec to specs/index.md, trimming history narration from current-state docs, responding to a doc_sync.py gate failure, or requests like "improve the docs", "where should this be documented", "this doc is too long".
 ---
 
 # Applying the markpost documentation standard
@@ -19,11 +19,11 @@ Before writing, check [specs/index.md](../../../specs/index.md) for an existing 
 | `PRINCIPLES.md` | Frozen archive of behavioral constraints; the live home is root `AGENTS.md` § Conventions |
 | `specs/` | Current-state design reference; `specs/index.md` is the authoritative index |
 | `docs/` | Operation guides (development, deployment); [docs/AGENTS.md](../../../docs/AGENTS.md) owns the doc rules |
-| `.agents/mrfcs/` | markpost's RFCs — proposals and decision records ([README](../../../.agents/mrfcs/README.md)) |
+| `.agents/rfcs/` | markpost's RFCs — proposals and decision records ([README](../../../.agents/rfcs/README.md)) |
 | `CHANGELOG.md` / `KNOWN_ISSUES.md` | Ledgers — narrate history by design, exempt from prose gates |
 | `.claude/skills/` | Reusable workflows (then run `scripts/sync_agent_instructions.py`) |
 
-Rationale and change stories go to `.agents/mrfcs/`, never into `specs/` prose. Procedures ("how to deploy") go to `docs/`; facts about the system ("what the delivery scheduler does") go to `specs/`.
+Rationale and change stories go to `.agents/rfcs/`, never into `specs/` prose. Procedures ("how to deploy") go to `docs/`; facts about the system ("what the delivery scheduler does") go to `specs/`.
 
 ## Writing discipline
 

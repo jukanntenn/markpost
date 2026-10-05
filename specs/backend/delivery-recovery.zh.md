@@ -2,7 +2,7 @@
 
 [English](delivery-recovery.md) | 中文
 
-投递子系统的产品契约及其跨进程崩溃的行为。机制细节位于兄弟页面 —— 表见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)，分发器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)，重试策略见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)。恰好一次与外部消息代理为何被拒绝，记录在[投递 MRFC](../../.agents/mrfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
+投递子系统的产品契约及其跨进程崩溃的行为。机制细节位于兄弟页面 —— 表见 [`delivery-queue.zh.md`](./delivery-queue.zh.md)，分发器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)，重试策略见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)。恰好一次与外部消息代理为何被拒绝，记录在[投递 MRFC](../../.agents/rfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
 
 <a id="product-semantics"></a>
 

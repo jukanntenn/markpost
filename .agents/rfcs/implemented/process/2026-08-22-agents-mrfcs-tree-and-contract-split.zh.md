@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-22-agents-mrfcs-tree-and-contract-split.md) | 中文
+[English](2026-08-22-agents-mrfcs-tree-and-contract-split.md) | 中文
 
 ## Problem
 
@@ -10,13 +10,13 @@ MRFC 系统唯一的 README 同时扛着两份工作：机制的持久契约（�
 
 ## Decision
 
-树活在 `.agents/rfcs/`（以 `git mv` 移动，历史保留）：`.agents/` 是 AI agent 工具加载仓库资源的地方 —— 今天是 skills，现在加上 MRFC —— 与参考项目的落位一致而不引入其机器。树携带两份工作正交的文档：[`AGENTS.md`](../AGENTS.md) 只装常备守则 —— 查重、替代而非改写、保持双语文件对同步 —— 每条都是一个链到规则之家的触发器；[MRFC README](../README.zh.md) 仍是唯一的规范契约。`README.zh.md` 逐节镜像 README，机器 token（`# MRFC:`、`Status:`）保持英文并带显式 ASCII 锚点，使 fragment 链接在两种语言中同样解析；记录保持纯英文，直到双语记录对落地（[layered-instructions MRFC](.././2026-08-22-layered-agent-instructions-and-direction-free-mirrors.zh.md)）。术语校准到本质：MRFC 是 markpost 的 RFC —— 持久留存的提案与决策记录 —— "MRFC" 处处是名词，ADR 腔的自述退役。闸门跟随树：[`verify_mrfc_format.py`](../../../scripts/verify_mrfc_format.py)、[`verify_md_links.py`](../../../scripts/verify_md_links.py) 与 [`verify_md_wrap.py`](../../../scripts/verify_md_wrap.py) 把范围定为 `.agents/rfcs/**`，格式闸门把树根文件（`README.md`、`AGENTS.md`、`README.zh.md`）列入白名单，[`prek.toml`](../../../prek.toml) 中的 prek 排除从 `^\.agents/` 收窄到 `^\.agents/skills/`，使提交时闸门在移动后存活；[`.github/workflows/docs.yml`](../../../.github/workflows/docs.yml) 的路径过滤跟随。记录在案的方向：`.agents/` 计划成为 agent 加载资源的真正源（今天 `.claude/skills/` 是镜像进 `.agents/skills/` 的源）；那次提升是后续工作，按子树的排除让闸门范围在其间保持正确。
+树活在 `.agents/rfcs/`（以 `git mv` 移动，历史保留）：`.agents/` 是 AI agent 工具加载仓库资源的地方 —— 今天是 skills，现在加上 MRFC —— 与参考项目的落位一致而不引入其机器。树携带两份工作正交的文档：[`AGENTS.md`](../AGENTS.md) 只装常备守则 —— 查重、替代而非改写、保持双语文件对同步 —— 每条都是一个链到规则之家的触发器；[MRFC README](../../README.zh.md) 仍是唯一的规范契约。`README.zh.md` 逐节镜像 README，机器 token（`# MRFC:`、`Status:`）保持英文并带显式 ASCII 锚点，使 fragment 链接在两种语言中同样解析；记录保持纯英文，直到双语记录对落地（[layered-instructions MRFC](2026-08-22-layered-agent-instructions-and-direction-free-mirrors.zh.md)）。术语校准到本质：MRFC 是 markpost 的 RFC —— 持久留存的提案与决策记录 —— "MRFC" 处处是名词，ADR 腔的自述退役。闸门跟随树：``verify_mrfc_format.py``、``verify_md_links.py`` 与 ``verify_md_wrap.py`` 把范围定为 `.agents/rfcs/**`，格式闸门把树根文件（`README.md`、`AGENTS.md`、`README.zh.md`）列入白名单，[`prek.toml`](../../../../prek.toml) 中的 prek 排除从 `^\.agents/` 收窄到 `^\.agents/skills/`，使提交时闸门在移动后存活；[`.github/workflows/docs.yml`](../../../../.github/workflows/docs.yml) 的路径过滤跟随。记录在案的方向：`.agents/` 计划成为 agent 加载资源的真正源（今天 `.claude/skills/` 是镜像进 `.agents/skills/` 的源）；那次提升是后续工作，按子树的排除让闸门范围在其间保持正确。
 
 ## Alternatives considered
 
 **把树留在仓库根部、只加一个 AGENTS.md。** 输在：`.agents/` 是 agent 工具既定的加载路径，仓库的方向使它成为仓库的 agent 侧 —— 决策记忆属于消费它的工作流旁边，而根目录保持产品聚焦。ADR 社区可见 `docs/adr/` 目录的惯例被权衡后搁置：markpost 的语料在作者与读者两端都是 agent 优先。
 
-**整包移植参考项目的机器 —— 分类目录、冻结档案、每笔记 `.zh.md` + `.i18n.yaml` 三元组、每生命周期一个 AGENTS.md 文件、词数预算闸门。** 输在：这重申了 [2026-08-21 的裁决](.././2026-08-21-documentation-gates-and-mrfc-system.zh.md) —— markpost 的语料小一个数量级，记录是单语的；在这个规模上，三元组与清单维护给每次编辑上税却什么也买不到。部件只在触发信号上到来；AGENTS.md/README 拆分与一个双语 README 正是本次变更的信号。
+**整包移植参考项目的机器 —— 分类目录、冻结档案、每笔记 `.zh.md` + `.i18n.yaml` 三元组、每生命周期一个 AGENTS.md 文件、词数预算闸门。** 输在：这重申了 [2026-08-21 的裁决](2026-08-21-documentation-gates-and-mrfc-system.zh.md) —— markpost 的语料小一个数量级，记录是单语的；在这个规模上，三元组与清单维护给每次编辑上税却什么也买不到。部件只在触发信号上到来；AGENTS.md/README 拆分与一个双语 README 正是本次变更的信号。
 
 **继续以 ADR 决策记录自述。** 输在：语料里还有评审中的提案与被拒的裁决，不只是回望的决策 —— 参考项目自己就把它的笔记定义为 agent 写的 RFC，而 "markpost's RFCs" 命名了这棵树实际管理的整个生命周期。
 

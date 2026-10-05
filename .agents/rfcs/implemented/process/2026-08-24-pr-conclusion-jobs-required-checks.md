@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-24-pr-conclusion-jobs-required-checks.zh.md)
+English | [中文](2026-08-24-pr-conclusion-jobs-required-checks.zh.md)
 
 ## Problem
 
@@ -10,7 +10,7 @@ Gate 3 — delivery approval — had no platform enforcement: branch protection 
 
 Required checks could not simply be pointed at the job names of that era. The five quality workflows — Lint, Test, Build, E2E, Docs — all filtered at the workflow level on `pull_request`: Lint/Test/Build/E2E via `paths-ignore` (`**/*.md`, `docs/**`, `.gitignore`, `LICENSE`), Docs via a positive `paths` list. A pull request whose changes fell outside a workflow's path set never triggered that workflow, so its check would sit at "Expected — waiting for status" forever and block the merge. Measured on this repository: docs-only PR #24 ran Docs and Issue policy only; Lint, Test, Build, and E2E never started.
 
-The [development-loop MRFC](../2026-08-22-agent-driven-development-loop.md) left platform enforcement to a maintainer settings step; this record designs what that step turns on.
+The [development-loop MRFC](2026-08-22-agent-driven-development-loop.md) left platform enforcement to a maintainer settings step; this record designs what that step turns on.
 
 ## Decision
 
@@ -18,7 +18,7 @@ All five quality workflows run on every `pull_request` targeting `main` with no 
 
 Each workflow ends in a `conclusion` job whose `needs` lists every other job and whose `if: always()` lets it run past skips and failures; a single step fails exactly when any need result is `failure` or `cancelled` — skipped jobs count as success. Each carries an explicit job name — five bare `conclusion` names are not selectable apart in branch protection's required-check picker — yielding five stable, always-reported checks per pull request: `Lint conclusion`, `Test conclusion`, `Build conclusion`, `E2E conclusion`, `Docs conclusion`.
 
-`main`'s required checks are those five conclusion checks, plus `Issue policy` once its release exemption ([issue-policy exemption for release pull requests](../2026-08-24-issue-policy-release-exemption.md)) is in place; applying the settings is the maintainer's branch-protection step — the workflow side ships here.
+`main`'s required checks are those five conclusion checks, plus `Issue policy` once its release exemption ([issue-policy exemption for release pull requests](2026-08-24-issue-policy-release-exemption.md)) is in place; applying the settings is the maintainer's branch-protection step — the workflow side ships here.
 
 ## Alternatives considered
 

@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/bug-fix/2026-09-03-dirty-tree-image-version-string.md
+2026-09-03-dirty-tree-image-version-string.md: 574de652fdaa390f1006bae617461923a8eeb1a4
+2026-09-03-dirty-tree-image-version-string.zh.md: eac23a9c7b075b033a6282f440bac0338a47d55d

@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/feature/2026-08-31-keyword-filter-input-ux.md
+2026-08-31-keyword-filter-input-ux.md: 3f1ae068591e849c47c7aef99ea1a0153fcd9a59
+2026-08-31-keyword-filter-input-ux.zh.md: 84d280c20359a84b58d3722e4cfb8c2022b4c2f5

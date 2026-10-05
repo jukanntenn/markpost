@@ -1,8 +1,8 @@
 # RFC: 独立的 agent 优先 markpost CLI
 
-[English](../2026-09-03-standalone-agent-cli.md) | 中文
-
 Status: implemented
+
+[English](2026-09-03-standalone-agent-cli.md) | 中文
 
 ## Problem
 

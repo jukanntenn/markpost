@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-07-15-frontend-static-export.md) | 中文
+[English](2026-07-15-frontend-static-export.md) | 中文
 
 ## Problem
 

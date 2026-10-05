@@ -2,15 +2,15 @@
 
 Status: implemented
 
-English | [中文](../2026-08-30-release-process-loop-adaptation.zh.md)
+English | [中文](2026-08-30-release-process-loop-adaptation.zh.md)
 
 ## Problem
 
-The release skill taught the repository's pre-loop operating model end to end: commit the version bump straight to `main`, push, push the tag. [The development loop](../2026-08-22-agent-driven-development-loop.md) closed that world — measured today, `main`'s branch protection requires a pull request with one approving review (administrators included) and conversation resolution, forbids force pushes, and names six required checks (five conclusion checks plus `Issue policy`); the repository merges through merge commits only. The skill's central move is mechanically impossible now — a direct push to `main` is rejected — and the one release attempted under the new regime, v0.2.0-rc.6 through PR #23, merged with `Issue policy` red: the incident that produced both [PR conclusion jobs and required checks](../2026-08-24-pr-conclusion-jobs-required-checks.md) and [the release exemption](../2026-08-24-issue-policy-release-exemption.md). The exemption made bare `release/**` pull requests pass policy and left the branch naming to the release skill — which still teaches the dead path, and has no answer for the loop's asynchronous gates: the approval a release waits for arrives after the session that opened it has ended.
+The release skill taught the repository's pre-loop operating model end to end: commit the version bump straight to `main`, push, push the tag. [The development loop](2026-08-22-agent-driven-development-loop.md) closed that world — measured today, `main`'s branch protection requires a pull request with one approving review (administrators included) and conversation resolution, forbids force pushes, and names six required checks (five conclusion checks plus `Issue policy`); the repository merges through merge commits only. The skill's central move is mechanically impossible now — a direct push to `main` is rejected — and the one release attempted under the new regime, v0.2.0-rc.6 through PR #23, merged with `Issue policy` red: the incident that produced both [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.md) and [the release exemption](2026-08-24-issue-policy-release-exemption.md). The exemption made bare `release/**` pull requests pass policy and left the branch naming to the release skill — which still teaches the dead path, and has no answer for the loop's asynchronous gates: the approval a release waits for arrives after the session that opened it has ended.
 
 ## Decision
 
-A release rides the same rails as any other change, in a release-specific shape, and [the release skill](../../skills/release/SKILL.md) now teaches exactly this.
+A release rides the same rails as any other change, in a release-specific shape, and [the release skill](../../../skills/release/SKILL.md) now teaches exactly this.
 
 **The bump lands through a pull request.** Branch `release/vX.Y.Z[-rc.N]` cut from current `main` — the skill owns the naming the policy exemption matches on — carrying one `chore: release vX.Y.Z` commit (`frontend/package.json` + `CHANGELOG.md`), a conventional title, no `area/*` label and no issue reference: bare by design, per the exemption.
 

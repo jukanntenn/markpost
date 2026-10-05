@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-06-06-single-multi-arch-image-with-caddy.md) | 中文
+[English](2026-06-06-single-multi-arch-image-with-caddy.md) | 中文
 
 ## Problem
 

@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-31-beszel-deployment-topology.md) | 中文
+[English](2026-08-31-beszel-deployment-topology.md) | 中文
 
 ## Problem
 
@@ -10,10 +10,10 @@ Beszel 的 agent 需要传输通道，仓库需要一条自动化边界。ttyo �
 
 ## Decision
 
-[host-metrics MRFC](.././2026-08-31-host-metrics-monitoring-beszel.zh.md) 选定了组件；本记录钉死它的拓扑与自动化边界。
+[host-metrics MRFC](2026-08-31-host-metrics-monitoring-beszel.zh.md) 选定了组件；本记录钉死它的拓扑与自动化边界。
 
-- hub 置于独立的、运维管理的服务器上——绝不同驻被监控主机。它的部署、暴露、凭据、通知渠道与升级都是本仓库之外的运维手工事务；[`docs/monitoring.zh.md`](../../../docs/monitoring.zh.md) 承载的是运维清单，不是自动化。
-- 仓库只自动化 ttyo 上的 agent：独立 compose 项目位于 `~/docker/beszel-agent`（`group_vars/all.yml` 的 `beszel_agent_path`），与应用的 compose 分离。[`deploy.yml`](../../../devops/ansible/deploy.yml) 从 [`beszel-agent-compose.yml.j2`](../../../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：镜像钉版、host 网络、只读 `docker.sock` 挂载，并把 agent 指向运维提供的 `HUB_URL`——出站 WebSocket，防火墙零新增放行。任务仅在 `beszel_hub_url` 已定义时运行。
+- hub 置于独立的、运维管理的服务器上——绝不同驻被监控主机。它的部署、暴露、凭据、通知渠道与升级都是本仓库之外的运维手工事务；[`docs/monitoring.zh.md`](../../../../docs/monitoring.zh.md) 承载的是运维清单，不是自动化。
+- 仓库只自动化 ttyo 上的 agent：独立 compose 项目位于 `~/docker/beszel-agent`（`group_vars/all.yml` 的 `beszel_agent_path`），与应用的 compose 分离。[`deploy.yml`](../../../../devops/ansible/deploy.yml) 从 [`beszel-agent-compose.yml.j2`](../../../../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：镜像钉版、host 网络、只读 `docker.sock` 挂载，并把 agent 指向运维提供的 `HUB_URL`——出站 WebSocket，防火墙零新增放行。任务仅在 `beszel_hub_url` 已定义时运行。
 - agent 的 `KEY` 是 hub 的公钥——不是密钥——直接进模板。仓库不承载任何 hub 密钥：hub 管理凭据与通知 token 归运维管理的 hub 所有，在仓库 vault 之外。
 - 自动化侧的移除像心跳的移除行一样写在运维手册里：部署模板永不卸载。hub 的移除是 hub 主机上普通的运维事务。
 

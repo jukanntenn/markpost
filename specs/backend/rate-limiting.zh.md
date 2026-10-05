@@ -2,7 +2,7 @@
 
 [English](rate-limiting.md) | 中文
 
-面向公开读路径、API 认证写路径与登录端点的请求限流：构建于 tollbooth v8 之上的四个独立令牌桶限流器，各限定一个路由类别，并以真正标识行为者的维度为键。接线位于 `cmd/server/main.go`（`SetupRoutes`）与 `internal/middleware/rate_limit.go`；配置位于 `[ratelimit]` TOML 节。决策记录（为何四个限流器、为何这些键维度、拒绝了什么）见[性能优化 MRFC](../../.agents/rfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)。
+面向公开读路径、API 认证写路径与登录端点的请求限流：构建于 tollbooth v8 之上的四个独立令牌桶限流器，各限定一个路由类别，并以真正标识行为者的维度为键。接线位于 `cmd/server/main.go`（`SetupRoutes`）与 `internal/middleware/rate_limit.go`；配置位于 `[ratelimit]` TOML 节。决策记录（为何四个限流器、为何这些键维度、拒绝了什么）见[性能优化 MRFC](../../.agents/rfcs/implemented/architecture/2026-07-09-read-path-performance-pass.zh.md)。
 
 <a id="the-four-limiters"></a>
 
@@ -42,7 +42,7 @@ SaaS 拓扑中的全部流量走一条路径：`Client → Cloudflare → 宿主
 
 刻意不把 `gin.PlatformCloudflare`（无条件信任 `CF-Connecting-IP`）用在应用层：它不做 CIDR 检查，因此能直连端口的攻击者可以伪造该头并逃避限流。已部署的设计把该头的真实性锚定在 Cloudflare 边缘覆写加宿主防火墙上 —— 防火墙被绕过是残余威胁，而防火墙正是执行点。
 
-**Cloudflare CIDR 维护。** CIDR 列表由运维者提供：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` 是该列表在文档中的归宿，供 443 上的宿主防火墙白名单使用（唯一执行点 —— 自 `trusted_proxies` 改为 `private_ranges` 后没有任何模板消费它）。Cloudflare 偶尔更新其公布的段（https://www.cloudflare.com/ips/）；运维者必须同步防火墙 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
+**Cloudflare CIDR 维护。** CIDR 列表由运维者提供：`devops/ansible/group_vars/production/vars.yml` 的 `cloudflare_cidrs` 是该列表在文档中的归宿，供 443 上的宿主防火墙白名单使用（唯一执行点 —— 自 `trusted_proxies` 改为 `private_ranges` 后没有任何模板消费它）。Cloudflare 偶尔更新其[公布的段](https://www.cloudflare.com/ips/)；运维者必须同步防火墙 —— 这一明确的运维职责记录在 [`cloudflare.zh.md`](./cloudflare.zh.md)。
 
 <a id="configuration"></a>
 

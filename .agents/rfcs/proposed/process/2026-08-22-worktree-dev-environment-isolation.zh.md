@@ -2,11 +2,11 @@
 
 Status: proposed
 
-English | [中文](../2026-08-22-worktree-dev-environment-isolation.md)
+English | [中文](2026-08-22-worktree-dev-environment-isolation.md)
 
 ## Problem
 
-[开发闭环](../implemented/2026-08-22-agent-driven-development-loop.zh.md)把栈的每层一个 git worktree 放在 `.local/worktrees/` 下，但 compose dev 环境无条件命名其容器——`markpost-backend`、`markpost-frontend`、`markpost-postgres`——并绑定单一的共享 `markpost_pgdata` 卷。两个后果：主 checkout 与所有 worktree 之间同时只能跑一套 dev 环境（启动 worktree 的环境要求先停主 checkout 的），闭环 v1 把这个互斥当作已知限制接受了下来，串行化了一切需要运行中环境的验证。单元测试与 testcontainers 支撑的后端测试不受影响——它们不需要 compose 环境——因此这个约束咬住的恰是想要并行做全栈或前端对后端验证的地方。
+[开发闭环](../../implemented/process/2026-08-22-agent-driven-development-loop.zh.md)把栈的每层一个 git worktree 放在 `.local/worktrees/` 下，但 compose dev 环境无条件命名其容器——`markpost-backend`、`markpost-frontend`、`markpost-postgres`——并绑定单一的共享 `markpost_pgdata` 卷。两个后果：主 checkout 与所有 worktree 之间同时只能跑一套 dev 环境（启动 worktree 的环境要求先停主 checkout 的），闭环 v1 把这个互斥当作已知限制接受了下来，串行化了一切需要运行中环境的验证。单元测试与 testcontainers 支撑的后端测试不受影响——它们不需要 compose 环境——因此这个约束咬住的恰是想要并行做全栈或前端对后端验证的地方。
 
 ## Proposal
 
@@ -28,4 +28,4 @@ English | [中文](../2026-08-22-worktree-dev-environment-isolation.md)
 
 compose 文件插值给一份被运维当配置阅读的文件增加了间接层；把每个默认值保持为今天的不带前缀名称框住了这项成本。端口参数化在 backend 与 frontend 端口接线不一致时存在漂移风险——冲突检查的存在就是把这种情况响亮地点出来而非离奇地失败。每套并发环境消耗其完整的容器与内存足迹；并行是按 `--env` 的主动选择，绝不是默认。并发运行的环境之间共享同一 postgres 镜像，因此按环境分卷必须被未来的任何迁移工具尊重。
 
-触发状态(2026-08-24):两个点燃条件均已实测——跨会话的全栈验证被串行化(2026-08-22 部署轮)、worktree 环境损坏迫使宿主侧回退(#19 截图轮)。处置:保持 `proposed` 直到下次具体需要并行验证;prek 侧的 worktree 危害另行追踪于 [prek stash 事故加固](../implemented/2026-08-24-prek-stash-lifecycle-hardening.zh.md)。
+触发状态(2026-08-24):两个点燃条件均已实测——跨会话的全栈验证被串行化(2026-08-22 部署轮)、worktree 环境损坏迫使宿主侧回退(#19 截图轮)。处置:保持 `proposed` 直到下次具体需要并行验证;prek 侧的 worktree 危害另行追踪于 [prek stash 事故加固](../../implemented/process/2026-08-24-prek-stash-lifecycle-hardening.zh.md)。

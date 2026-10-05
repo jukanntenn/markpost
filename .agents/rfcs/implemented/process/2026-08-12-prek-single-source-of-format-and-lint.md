@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-12-prek-single-source-of-format-and-lint.zh.md)
+English | [中文](2026-08-12-prek-single-source-of-format-and-lint.zh.md)
 
 ## Problem
 

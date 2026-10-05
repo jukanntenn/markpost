@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-24-prek-stash-lifecycle-hardening.zh.md)
+English | [中文](2026-08-24-prek-stash-lifecycle-hardening.zh.md)
 
 ## Problem
 
@@ -16,7 +16,7 @@ prek itself never applies an old patch across sessions (the single `git apply` c
 
 ## Decision
 
-`scripts/prek_patch_audit.py` (stdlib, unit-tested like the policy suite and wired into prek under the same pattern) flags orphaned patches — owning pid dead, age beyond a one-hour grace window — and prints a preview-first recovery path; the dev-loop skill runs it at session-open triage, before any work continues on top of a silently cleaned tree. Recovery goes through its previewed commands (`git diff --no-index` inspection, `git apply --check`, then apply), never a blind `git apply` of a cache patch; the runbook owns the procedure as a constraint row, alongside the worktree-misfire row. `prek cache gc` — the upstream 30-day stale-patch retention — joins the triage cadence, and the do-not-clean warning retires with these guards. The root fixes (delete or mark consumed patches; warn on dead-pid orphans) are upstream work in prek itself: markpost files the issue as a maintainer action and re-evaluates the repo-side guards when a fixed release is adopted. The [prek MRFC](../2026-08-12-prek-single-source-of-format-and-lint.md) keeps ownership of the tooling decision; this record owns the incident hardening, and the worktree-isolation proposal stays `proposed` with its ignition evidence recorded.
+`scripts/prek_patch_audit.py` (stdlib, unit-tested like the policy suite and wired into prek under the same pattern) flags orphaned patches — owning pid dead, age beyond a one-hour grace window — and prints a preview-first recovery path; the dev-loop skill runs it at session-open triage, before any work continues on top of a silently cleaned tree. Recovery goes through its previewed commands (`git diff --no-index` inspection, `git apply --check`, then apply), never a blind `git apply` of a cache patch; the runbook owns the procedure as a constraint row, alongside the worktree-misfire row. `prek cache gc` — the upstream 30-day stale-patch retention — joins the triage cadence, and the do-not-clean warning retires with these guards. The root fixes (delete or mark consumed patches; warn on dead-pid orphans) are upstream work in prek itself: markpost files the issue as a maintainer action and re-evaluates the repo-side guards when a fixed release is adopted. The [prek MRFC](2026-08-12-prek-single-source-of-format-and-lint.md) keeps ownership of the tooling decision; this record owns the incident hardening, and the worktree-isolation proposal stays `proposed` with its ignition evidence recorded.
 
 ## Alternatives considered
 

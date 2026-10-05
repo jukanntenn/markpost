@@ -2,15 +2,15 @@
 
 Status: implemented
 
-[English](../2026-07-09-wal-archival-disaster-recovery.md) | 中文
+[English](2026-07-09-wal-archival-disaster-recovery.md) | 中文
 
 ## Problem
 
-markpost 以单实例运行：一台 VPS、一个 Postgres 容器、无副本。服务器宕机或宿主丢失数据，一切皆失 —— 部署管线完全没有安排任何备份。数据是按用户保留策略管理的瞬时内容（全局默认 7 天；VIP 子集可无限保留，见[保留策略 MRFC](../implemented/2026-08-31-per-user-history-retention-policy.zh.md)），写入约 0.12 次/秒；而 VPS 上行链路约 3 Mbps —— 出站字节正是[缓存规格](../../../specs/backend/caching.zh.md)已经围绕设计的约束瓶颈。因此恢复设计必须相称：以最小成本换最小损失，备份流量按**新增写入**而非存量数据定尺，且不带副本运维的复杂度。
+markpost 以单实例运行：一台 VPS、一个 Postgres 容器、无副本。服务器宕机或宿主丢失数据，一切皆失 —— 部署管线完全没有安排任何备份。数据是按用户保留策略管理的瞬时内容（全局默认 7 天；VIP 子集可无限保留，见[保留策略 MRFC](../feature/2026-08-31-per-user-history-retention-policy.zh.md)），写入约 0.12 次/秒；而 VPS 上行链路约 3 Mbps —— 出站字节正是[缓存规格](../../../../specs/backend/caching.zh.md)已经围绕设计的约束瓶颈。因此恢复设计必须相称：以最小成本换最小损失，备份流量按**新增写入**而非存量数据定尺，且不带副本运维的复杂度。
 
 ## Decision
 
-DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、按环境经 vault 激活（`b2_repo_key_id` —— staging 与生产各一对、各对着自己的桶，因为 staging 是晋升门；与心跳、Beszel 代理共享的设置顺序契约；规程见 [`docs/backup.md`](../../../docs/backup.zh.md)）：
+DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、按环境经 vault 激活（`b2_repo_key_id` —— staging 与生产各一对、各对着自己的桶，因为 staging 是晋升门；与心跳、Beszel 代理共享的设置顺序契约；规程见 [`docs/backup.md`](../../../../docs/backup.zh.md)）：
 
 - 每月全量基础备份加每日增量，都在 postgres 容器内运行 —— 该镜像由 `postgres-archival.Dockerfile` 本地构建（postgres:17-alpine + Alpine 的 `pgbackrest` 包，因为官方 pgbackrest 镜像是 glibc，进不了 musl）。持续 WAL 归档依托 `archive_mode=on` / `archive_command` / `archive_timeout=300`，把 RPO 界定在 ≤ 5 分钟写入。
 - 每日一份逻辑 `pg_dump`（03:30 UTC，zstd，rclone 限速 2 MB/s，B2 生命周期 14 天过期）提供格式多样性，兜底会打断 PITR 链的基础镜像或页级损坏。
@@ -29,7 +29,7 @@ DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、
 
 **每小时 `pg_dump` 作为起步档。** 全量逻辑转储每次运行都是 O(全部存量数据)：~1 GB 库的未压缩每小时 dump 每小时要饱和 3 Mbps 链路约 13 分钟，且每天把整个语料重传 24 遍（压缩后 ~1.2 GB/天）；到设计上限 ~15 GB 时单次运行超过一小时，这一档直接死亡。在当前写入率下，RPO、带宽、静默失败面三轴全被 WAL + 增量支配 ——"最简单档起步"推迟的恰恰是正确的架构，而不是赚到了简单。
 
-**带自动故障转移的在线流式副本。** RPO/RTO 的收益配不上 25 倍的成本与副本运维的复杂度：写入率约 0.12/s，数据大多在 7 天视界上衰减，且故障期间读路径在 CDN 边缘存活、只有写在等。（单实例韧性 —— 无 Redis、无第二台 VPS —— 已由[性能优化 MRFC](../implemented/2026-07-09-read-path-performance-pass.zh.md)裁定；本记录覆盖那个裁决留下的备份层。）
+**带自动故障转移的在线流式副本。** RPO/RTO 的收益配不上 25 倍的成本与副本运维的复杂度：写入率约 0.12/s，数据大多在 7 天视界上衰减，且故障期间读路径在 CDN 边缘存活、只有写在等。（单实例韧性 —— 无 Redis、无第二台 VPS —— 已由[性能优化 MRFC](2026-07-09-read-path-performance-pass.zh.md)裁定；本记录覆盖那个裁决留下的备份层。）
 
 **用 Cloudflare R2 替代 B2。** 备份写多读少：B2 存储便宜 3 倍（$0.005 对 $0.015/GB/月），一次性的恢复出口流量可忽略。B2 还把备份留在 Cloudflare 伞外，一个失陷的 Cloudflare 账号无法同时删掉在线路径与备份。在 R2 免费层放第二份**副本**作为账号多样性加固曾被提出，暂未决定。
 
@@ -37,4 +37,4 @@ DR 档位是**pgBackRest WAL 归档到 Backblaze B2**，由部署管线供给、
 
 ## Consequences
 
-这笔取舍买到的是：RPO ≤ 5 分钟，占用 3 Mbps 链路不足 1%，成本 ≤ $0.10/月，且传输量随写入缩放 —— 到设计上限 ~15 GB 时同一设计仍然装得下（每月全量变大，日流仍是 ~MB 级），而任何重复的全量 dump 装不下。它付出的代价是：激活随一次计划内 postgres 重启（`archive_mode` 是 postmaster 上下文）；本地构建的派生镜像由我们维护（Alpine 包更新随基础镜像重建到来）；归档停滞会撑满 `pg_wal` 直至写路径死亡 —— 依次以 `archive-push-queue-max=1GiB` 背压、每日 check/新鲜度告警、`pg_wal` 绊线和 40 GB 盘上按天计的余量缓解。恢复路径由每月演练执行，而非假设。pgBackRest 自身刚经历维护者更替 —— 2026-04-27 被唯一维护者归档，2026-05-19 起由付费赞助联盟（Percona、AWS、Supabase 等）接管 —— 仓库格式 MIT、对象自存于 B2，即使项目停滞，既有备份仍可被任何旧版本二进制恢复。损失界定：WAL 尾巴外加[调优规格](../../../specs/backend/postgres-tuning.zh.md)已接受的 `synchronous_commit=off` ~600 ms 窗口。运行时激活 —— 建桶、无删除键、生命周期规则、vault 密钥对、首次 stanza-create + 全量 —— 是运维者工作，记录在 [`docs/backup.md`](../../../docs/backup.zh.md)；当前态势见 [`specs/backend/disaster-recovery.md`](../../../specs/backend/disaster-recovery.zh.md)。
+这笔取舍买到的是：RPO ≤ 5 分钟，占用 3 Mbps 链路不足 1%，成本 ≤ $0.10/月，且传输量随写入缩放 —— 到设计上限 ~15 GB 时同一设计仍然装得下（每月全量变大，日流仍是 ~MB 级），而任何重复的全量 dump 装不下。它付出的代价是：激活随一次计划内 postgres 重启（`archive_mode` 是 postmaster 上下文）；本地构建的派生镜像由我们维护（Alpine 包更新随基础镜像重建到来）；归档停滞会撑满 `pg_wal` 直至写路径死亡 —— 依次以 `archive-push-queue-max=1GiB` 背压、每日 check/新鲜度告警、`pg_wal` 绊线和 40 GB 盘上按天计的余量缓解。恢复路径由每月演练执行，而非假设。pgBackRest 自身刚经历维护者更替 —— 2026-04-27 被唯一维护者归档，2026-05-19 起由付费赞助联盟（Percona、AWS、Supabase 等）接管 —— 仓库格式 MIT、对象自存于 B2，即使项目停滞，既有备份仍可被任何旧版本二进制恢复。损失界定：WAL 尾巴外加[调优规格](../../../../specs/backend/postgres-tuning.zh.md)已接受的 `synchronous_commit=off` ~600 ms 窗口。运行时激活 —— 建桶、无删除键、生命周期规则、vault 密钥对、首次 stanza-create + 全量 —— 是运维者工作，记录在 [`docs/backup.md`](../../../../docs/backup.zh.md)；当前态势见 [`specs/backend/disaster-recovery.md`](../../../../specs/backend/disaster-recovery.zh.md)。

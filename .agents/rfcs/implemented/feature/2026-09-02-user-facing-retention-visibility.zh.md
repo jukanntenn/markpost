@@ -2,11 +2,11 @@
 
 Status: implemented
 
-[English](../2026-09-02-user-facing-retention-visibility.md) | 中文
+[English](2026-09-02-user-facing-retention-visibility.md) | 中文
 
 ## Problem
 
-markpost 的保留策略是一份关于用户数据的承诺，却从未展示给数据的主人。窗口放在全局配置里（`[post] retention_days`、`[delivery] history_retention`），而按用户策略（[per-user retention MRFC](../2026-08-31-per-user-history-retention-policy.zh.md)）落地后，一条覆盖值可以直接承诺「此人的数据永久保留」。数据主人对此一无所见：`/posts` 与 `/delivery/history` 只是在清扫时刻默默丢失行。默认持久的用户撞上无声删除，默认即逝的用户把内容无限期留存在库里。该 MRFC 有意把主人侧可见性留作后继（「a badge on /posts… a follow-up if operations asks for it」）；随后运营提出了这个要求。可展示的值是*生效*策略——覆盖值 ?? 全局——只有服务器能按调用者解析；静态文案恰恰会对策略所要保护的那批被覆盖用户撒谎。
+markpost 的保留策略是一份关于用户数据的承诺，却从未展示给数据的主人。窗口放在全局配置里（`[post] retention_days`、`[delivery] history_retention`），而按用户策略（[per-user retention MRFC](2026-08-31-per-user-history-retention-policy.zh.md)）落地后，一条覆盖值可以直接承诺「此人的数据永久保留」。数据主人对此一无所见：`/posts` 与 `/delivery/history` 只是在清扫时刻默默丢失行。默认持久的用户撞上无声删除，默认即逝的用户把内容无限期留存在库里。该 MRFC 有意把主人侧可见性留作后继（「a badge on /posts… a follow-up if operations asks for it」）；随后运营提出了这个要求。可展示的值是*生效*策略——覆盖值 ?? 全局——只有服务器能按调用者解析；静态文案恰恰会对策略所要保护的那批被覆盖用户撒谎。
 
 ## Decision
 
@@ -26,4 +26,4 @@ markpost 的保留策略是一份关于用户数据的承诺，却从未展示�
 
 ## Consequences
 
-这笔取舍买到的是：数据主人读到系统对自己数据的承诺，按调用者解析——永久覆盖的用户不再读到对自己不适用的全局「7 天」，默认即逝的用户知道删除已被排期。读取是一次廉价 JSON 响应、无仓储往返。验证：解析矩阵（显式永久、显式 N、默认全局下继承、全局 posts 0 下继承）与时长取整（168h → 7、36h → 2、不足一天 → 1）由 service 单测钉住；handler 在 gin 引擎里跑同一矩阵外加无上下文用户的 fail-closed 路径，未认证 401 归 `AuthWithBlacklist` 中间件测试套件所有——落地后的解析是纯函数，矩阵因此跑在快速测试而非 testcontainers；`RetentionHint` 的形态由 MSW 组件测试覆盖；[api-schema](../../../specs/backend/api-schema.zh.md) 双语对记录了端点；两个页面经 Playwright 截图验证——两页 × 永久与 N 天形态，验收证据以交付 PR（#81）的评论承载而非二进制入库存放。代价是：文案承诺清除，而清扫本身是 prune 层部署的每日 cron——提示陈述策略而非删除计时；提示最多滞后策略变更 5 分钟 `staleTime`；历史按整天展示而底层 cutoff 是时间戳，清扫边界与展示的日边界可能相差数小时；`/me` 从此是一个命名空间，今后的自作用域端点加入它而不是另起新前缀。
+这笔取舍买到的是：数据主人读到系统对自己数据的承诺，按调用者解析——永久覆盖的用户不再读到对自己不适用的全局「7 天」，默认即逝的用户知道删除已被排期。读取是一次廉价 JSON 响应、无仓储往返。验证：解析矩阵（显式永久、显式 N、默认全局下继承、全局 posts 0 下继承）与时长取整（168h → 7、36h → 2、不足一天 → 1）由 service 单测钉住；handler 在 gin 引擎里跑同一矩阵外加无上下文用户的 fail-closed 路径，未认证 401 归 `AuthWithBlacklist` 中间件测试套件所有——落地后的解析是纯函数，矩阵因此跑在快速测试而非 testcontainers；`RetentionHint` 的形态由 MSW 组件测试覆盖；[api-schema](../../../../specs/backend/api-schema.zh.md) 双语对记录了端点；两个页面经 Playwright 截图验证——两页 × 永久与 N 天形态，验收证据以交付 PR（#81）的评论承载而非二进制入库存放。代价是：文案承诺清除，而清扫本身是 prune 层部署的每日 cron——提示陈述策略而非删除计时；提示最多滞后策略变更 5 分钟 `staleTime`；历史按整天展示而底层 cutoff 是时间戳，清扫边界与展示的日边界可能相差数小时；`/me` 从此是一个命名空间，今后的自作用域端点加入它而不是另起新前缀。

@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-30-availability-monitoring.md) | 中文
+[English](2026-08-30-availability-monitoring.md) | 中文
 
 ## Problem
 
@@ -13,7 +13,7 @@ markpost 没有外部故障发现。Docker healthcheck 只影响本地重启；C
 可用性监控横跨三个视点分层，由自托管的 uptime-kuma 实例探测 production 与 staging：
 
 - `GET /api/v1/ready` 是就绪端点：驱动层数据库往返，返回 `200 {"status":"ready"}` 或 `503 {"status":"unavailable"}`，与 `/health` 一样注册在所有限流器之外。存活 `/health` 保持不变，仍是 Docker healthcheck 轮询的端点 —— 数据库死亡应当把服务标记为未就绪，而不是连坐杀死容器。
-- 监控项清单、通知渠道（飞书为主、SMTP 兜底）、告警策略（60 s 间隔、3 次重试、约 4 分钟触发、恢复通知开、重复提醒关、证书 / 域名到期 7/14/21 天）与分诊表都在 [`docs/monitoring.zh.md`](../../../docs/monitoring.zh.md)。
+- 监控项清单、通知渠道（飞书为主、SMTP 兜底）、告警策略（60 s 间隔、3 次重试、约 4 分钟触发、恢复通知开、重复提醒关、证书 / 域名到期 7/14/21 天）与分诊表都在 [`docs/monitoring.zh.md`](../../../../docs/monitoring.zh.md)。
 - 生产 VPS 运行 supervisor 程序 `markpost-heartbeat`：循环探测 `http://127.0.0.1:8080/api/v1/ready` 并把判定推送到 kuma 的 push 端点，让 kuma 看到 Cloudflare 之外的源站自身视角；推送静默则覆盖主机死亡。push URL 是 vault 密钥（`kuma_heartbeat_url`）；仅当该变量存在时，部署才安装此程序。
 
 ## Alternatives considered

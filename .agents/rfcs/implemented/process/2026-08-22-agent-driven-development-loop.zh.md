@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-22-agent-driven-development-loop.md)
+English | [中文](2026-08-22-agent-driven-development-loop.md)
 
 ## Problem
 
@@ -10,7 +10,7 @@ markpost 曾以直推 `main` 的方式交付：历史里一个 pull request 都�
 
 ## Decision
 
-**三门人类门禁；其余全部 agent 驱动。** 决定做什么（issue 进入 `Ready`）、批准设计（RFC 栈）、验收交付（实施栈）是每个非平凡变更中人类的三次决策；平凡变更只保留交付门禁。`Ready` 前移靠 skill 纪律——agent 永不把 issue 推入 `Ready`，只认领已在其中的 issue——因为项目看板权限表达不了这道边界；另外两道门禁在分支保护开启后由平台强制（见下的维护者设置项；required checks 的设计见 [PR conclusion jobs and required checks](../2026-08-24-pr-conclusion-jobs-required-checks.zh.md)）。既有的 Ask-first 边界（schema 迁移、新依赖、CI 与 Docker 变更）延续为 pull request 模板必有的"Ask-first 项"一节，作为人类 review 的强制关注清单。agent 在请求人类 review 前对每层先出预审：对照 `AGENTS.md`、specs 与文档门禁的结构化 comment review。approve 单属人类——不是靠约定，而是因为机器账号无法 approve 自己的 pull request，平台让"comment review 归 agent、approve 归人类"这组分工成为承重结构。
+**三门人类门禁；其余全部 agent 驱动。** 决定做什么（issue 进入 `Ready`）、批准设计（RFC 栈）、验收交付（实施栈）是每个非平凡变更中人类的三次决策；平凡变更只保留交付门禁。`Ready` 前移靠 skill 纪律——agent 永不把 issue 推入 `Ready`，只认领已在其中的 issue——因为项目看板权限表达不了这道边界；另外两道门禁在分支保护开启后由平台强制（见下的维护者设置项；required checks 的设计见 [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.zh.md)）。既有的 Ask-first 边界（schema 迁移、新依赖、CI 与 Docker 变更）延续为 pull request 模板必有的"Ask-first 项"一节，作为人类 review 的强制关注清单。agent 在请求人类 review 前对每层先出预审：对照 `AGENTS.md`、specs 与文档门禁的结构化 comment review。approve 单属人类——不是靠约定，而是因为机器账号无法 approve 自己的 pull request，平台让"comment review 归 agent、approve 归人类"这组分工成为承重结构。
 
 **机器账号执笔。** 所有 agent 驱动的 GitHub 操作——认领、push 分支、开 pull request、评论、落栈——以专属机器账号执行（`gh2bda`，本仓库的 collaborator，并被有意设计为可在维护者多个 agent 驱动项目间复用），凭一张 classic PAT——其四个 scope 各自解开一堵实测撞过的墙：`repo`（fine-grained 替代方案根本选不了协作者仓库）、`project`（看板写入）、`read:org`（gh CLI 的内部查询，如 `gh pr edit`）、`workflow`（HTTPS 推送触及 `.github/workflows/**`；SSH 推送不受 scope 限制）——经 agent 环境的 `GH_TOKEN` 生效，维护者自己的 `gh` 登录原封不动地留给决策动作。classic token 不是仓库级 scope 的——爆炸半径由账号的协作清单而非 token 界定，因此该账号只在运行闭环的仓库获得访问。这组分离买到共享身份买不到的三样东西：审批门禁能区分 agent 预审与人类签核、审计轨迹能把每个时间线动作归因到真实驱动者、agent 的爆炸半径是这些协作仓库而非整个人类账号。
 
@@ -20,11 +20,11 @@ markpost 曾以直推 `main` 的方式交付：历史里一个 pull request 都�
 
 **两段式栈。** RFC 栈——每层一对 `proposed/` MRFC，各层以 `Related to #N` 引用 issue——在设计门禁受审；批准后先行合并，MRFC 以 `proposed/` 落上 `main`，实施栈从新 `main` 起建、引用稳定。只有实施栈顶层带 closing 关键词 `Fixes #N`，issue 恰在整栈落地时关闭，部分落地时保持开启；agent 在实施启动时写一次看板的 `In progress`，因为底层实施层没有 closing 引用、lifecycle workflow 看不见实施开始。使决策成为现实的那一层实施（通常是顶层）在同一变更里把该 MRFC 对从 `proposed/` 移入 `implemented/` 并改写为现在时（本记录正是在实施它的变更里如此完成的）。实施中发现的小设计缺口在实施 pull request 内就地修订仍是 `proposed` 的 MRFC；决策级反转停下来等人类。
 
-**Worktree。** 每层一个 worktree，位于 `.local/worktrees/<分支>/`——在仓库既定的杂物根之内，已被 `.gitignore` 与 `.dockerignore` 双排除，skill 指令因此是仓库相对路径，克隆到哪里都成立。分支命名 `rfc/<issue>-<slug>` 与 `impl/<issue>-<slug>`；修复落在引入问题那一层的 worktree，绝不在下游 checkout 就地修。`prek` 的 hooks 经共享 hooks 目录分发、却在当前 worktree 内从 `PATH` 解析 `prek`，因此未移植任何 per-worktree 安装器。在[隔离提案](../proposed/2026-08-22-worktree-dev-environment-isolation.zh.md)落地之前 worktree 串行使用：compose dev 环境的固定容器名使环境互斥。
+**Worktree。** 每层一个 worktree，位于 `.local/worktrees/<分支>/`——在仓库既定的杂物根之内，已被 `.gitignore` 与 `.dockerignore` 双排除，skill 指令因此是仓库相对路径，克隆到哪里都成立。分支命名 `rfc/<issue>-<slug>` 与 `impl/<issue>-<slug>`；修复落在引入问题那一层的 worktree，绝不在下游 checkout 就地修。`prek` 的 hooks 经共享 hooks 目录分发、却在当前 worktree 内从 `PATH` 解析 `prek`，因此未移植任何 per-worktree 安装器。在[隔离提案](../../proposed/process/2026-08-22-worktree-dev-environment-isolation.zh.md)落地之前 worktree 串行使用：compose dev 环境的固定容器名使环境互斥。
 
 **会话恢复协议。** 门禁是异步的，因此每个 agent 会话以 triage 开场：枚举机器账号的开放 pull request 及其官方栈；对每一个，若 review 决定为 approved、checks 全绿、无未决变更，则门禁已过——合并该栈并推进下一阶段（RFC 栈合并意味着实施开始；实施栈合并意味着清理与关闭）；若 review 带回反馈，走响应循环；若无在途工作，认领下一个 `Ready` issue。会话由人类明确请求启动；执行同一协议的定时轮询是指名的后续项，仅在手动轮次证明稳定后加入。
 
-**交付物与证据。** 每个实施层交付代码、测试与其变更触及的文档——新 spec 页在同一 pull request 里加 `specs/index.md` 行。pull request body 写明引用、Ask-first 项与证据：跑过的命令及结果、对照 issue 验收条件的映射、UI 变更附 Playwright 截图。动画交互证据推迟到[浏览器 GIF 提案](../proposed/2026-08-22-browser-gif-evidence-chain.zh.md)；当前验收由截图承载。
+**交付物与证据。** 每个实施层交付代码、测试与其变更触及的文档——新 spec 页在同一 pull request 里加 `specs/index.md` 行。pull request body 写明引用、Ask-first 项与证据：跑过的命令及结果、对照 issue 验收条件的映射、UI 变更附 Playwright 截图。动画交互证据推迟到[浏览器 GIF 提案](../../proposed/testing/2026-08-22-browser-gif-evidence-chain.zh.md)；当前验收由截图承载。
 
 **反馈传播。** 每条 review 评论先对照代码核实再行动——指出正确症状的 review 也可能诊错病因。接受的修复落在引入问题的层上，以 merge-forward 向上传播，此为默认，因为它不重写已 review 的历史、approvals 保持有效；rebase 路径保留为刻意之选，lease 保护、事后全面重审。每个修复独立成 commit，绝不 amend 已 review 的工作；回复写进原 review 线程并注明携带修复的 commit。
 
@@ -66,8 +66,8 @@ markpost 曾以直推 `main` 的方式交付：历史里一个 pull request 都�
 
 ## Consequences
 
-闭环的仓库侧在本变更中完整落地：五张 issue 模板与 `config.yml`、pull request 模板、policy 脚本及其挂入 prek 的 32 用例套件、两个 workflow、六个 skill、紧凑的 `AGENTS.md` 章节，以及本记录自身的生命周期移动——bootstrap pull request 顺手演练了它引入的基础 PR 机制。仓库之外的激活已完成：机器账号连同其四 scope PAT 与 collaborator 权限就位，个人 Project 带上了 `Loop status` 与 `Priority` 字段且机器账号是项目的 `WRITER` 协作者，`MARKPOST_PROJECT_TOKEN` secret 已设置，`config.json` 已翻转，仅 merge commit 与 v1 分支保护均已生效。`type/*` 与 `area/*` 标签已由本变更的 setup 命令建好。首环验证：快速通道此后已在生产中跑通两次——标记端点修复与看板可见性修复各自走了 issue → 机器署名 pull request → 人类批准 → agent 合并 → issue 自动关闭 → 看板 `Done`。在其他仓库重复此激活的操作清单与背后的实测平台约束，见[闭环运行手册](../../../docs/agent-loop-runbook.zh.md)。
+闭环的仓库侧在本变更中完整落地：五张 issue 模板与 `config.yml`、pull request 模板、policy 脚本及其挂入 prek 的 32 用例套件、两个 workflow、六个 skill、紧凑的 `AGENTS.md` 章节，以及本记录自身的生命周期移动——bootstrap pull request 顺手演练了它引入的基础 PR 机制。仓库之外的激活已完成：机器账号连同其四 scope PAT 与 collaborator 权限就位，个人 Project 带上了 `Loop status` 与 `Priority` 字段且机器账号是项目的 `WRITER` 协作者，`MARKPOST_PROJECT_TOKEN` secret 已设置，`config.json` 已翻转，仅 merge commit 与 v1 分支保护均已生效。`type/*` 与 `area/*` 标签已由本变更的 setup 命令建好。首环验证：快速通道此后已在生产中跑通两次——标记端点修复与看板可见性修复各自走了 issue → 机器署名 pull request → 人类批准 → agent 合并 → issue 自动关闭 → 看板 `Done`。在其他仓库重复此激活的操作清单与背后的实测平台约束，见[闭环运行手册](../../../../docs/agent-loop-runbook.zh.md)。
 
 接受的代价与常在风险：看板自动化以一张长期 PAT secret 认证（实测 `GITHUB_TOKEN` 写不了用户级 Projects v2），是多一份需要轮换的凭据；dev 环境在隔离提案落地前跨 worktree 互斥；三门是每个非平凡变更的三次人类接触，快速通道减轻但不消除；`gh stack` 是架在年轻原生 API 之上的外部扩展，任一方变动时落地将硬停而非降级为不安全的手动合并；agent 的预审与其作者共享盲区——它是过滤器和简报，不是后续批准的替身；而 `Ready` 门禁始终是 skill 纪律而非平台强制——未来某个 agent 的看板误判可在审计轨迹中察觉，但仅凭权限无法预防。
 
-指名的后续项各带触发条件：逐 workflow 的结论 job 与五个 required checks（首批闭环跑通之后）；triage 协议的定时轮询（手动轮次证明稳定之后）；[浏览器 GIF 证据](../proposed/2026-08-22-browser-gif-evidence-chain.zh.md)（当人类反复亲手重验交互主张时）；以及 [worktree 开发环境隔离](../proposed/2026-08-22-worktree-dev-environment-isolation.zh.md)（当全栈验证争用真实咬合时）。
+指名的后续项各带触发条件：逐 workflow 的结论 job 与五个 required checks（首批闭环跑通之后）；triage 协议的定时轮询（手动轮次证明稳定之后）；[浏览器 GIF 证据](../../proposed/testing/2026-08-22-browser-gif-evidence-chain.zh.md)（当人类反复亲手重验交互主张时）；以及 [worktree 开发环境隔离](../../proposed/process/2026-08-22-worktree-dev-environment-isolation.zh.md)（当全栈验证争用真实咬合时）。

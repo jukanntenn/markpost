@@ -2,17 +2,17 @@
 
 Status: implemented
 
-[English](../2026-08-24-issue-policy-release-exemption.md) | 中文
+[English](2026-08-24-issue-policy-release-exemption.md) | 中文
 
 ## Problem
 
-[`issue-policy` workflow](../../../.github/workflows/issue-policy.yml) 对每个非草稿、非机器的 PR 校验准入契约:conventional-commit 标题、至少一个 `area/*` 标签、至少一个 issue 引用。release PR 天然不满足:它只带版本号与变更日志,不引用任何 issue,历史上也不带 area 标签。2026-08-23 实测:PR #23(`chore: release v0.2.0-rc.6`)以两项错误让 `Issue policy` 变红,且照旧被合并。
+[`issue-policy` workflow](../../../../.github/workflows/issue-policy.yml) 对每个非草稿、非机器的 PR 校验准入契约:conventional-commit 标题、至少一个 `area/*` 标签、至少一个 issue 引用。release PR 天然不满足:它只带版本号与变更日志,不引用任何 issue,历史上也不带 area 标签。2026-08-23 实测:PR #23(`chore: release v0.2.0-rc.6`)以两项错误让 `Issue policy` 变红,且照旧被合并。
 
-一旦 [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-conclusion-jobs-required-checks.zh.md) 使门禁 3 获得平台强制,"红但仍可合并"就不复存在:要么 release PR 被豁免而全绿,要么每次发版都卡在一个对它不适用的检查上。
+一旦 [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.zh.md) 使门禁 3 获得平台强制,"红但仍可合并"就不复存在:要么 release PR 被豁免而全绿,要么每次发版都卡在一个对它不适用的检查上。
 
 ## Decision
 
-[`policy.py`](../../../.github/issue-management/policy.py) 的 `pr` 子命令在 PR 的 head 分支匹配 `release/**` 时跳过三项准入检查——标题形式、area 标签、issue 引用:`is_release_pull` 是 head ref 的纯函数,读自 `run_pr_check` 本就获取的 PR 快照,判定零新增 API 调用,并天然覆盖 workflow 触发的全部事件形态。其余照旧:release PR 真携带的引用仍被正常校验,issue 侧检查不变。`Issue policy` 与五个 conclusion 检查一并加入 `main` 的 required checks——执行设置是维护者的分支保护步骤。release 分支命名仍归 release 技能所有(`release/v0.2.0-rc.6`,实测)。
+``policy.py`` 的 `pr` 子命令在 PR 的 head 分支匹配 `release/**` 时跳过三项准入检查——标题形式、area 标签、issue 引用:`is_release_pull` 是 head ref 的纯函数,读自 `run_pr_check` 本就获取的 PR 快照,判定零新增 API 调用,并天然覆盖 workflow 触发的全部事件形态。其余照旧:release PR 真携带的引用仍被正常校验,issue 侧检查不变。`Issue policy` 与五个 conclusion 检查一并加入 `main` 的 required checks——执行设置是维护者的分支保护步骤。release 分支命名仍归 release 技能所有(`release/v0.2.0-rc.6`,实测)。
 
 ## Alternatives considered
 

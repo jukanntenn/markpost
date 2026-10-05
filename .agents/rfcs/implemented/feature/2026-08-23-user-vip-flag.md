@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-23-user-vip-flag.zh.md)
+English | [中文](2026-08-23-user-vip-flag.zh.md)
 
 ## Problem
 

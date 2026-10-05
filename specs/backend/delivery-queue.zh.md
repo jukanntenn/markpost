@@ -2,7 +2,7 @@
 
 [English](delivery-queue.md) | 中文
 
-投递队列将其状态持久化在两张按访问模式与生命周期划分的 PostgreSQL 表中：`delivery_attempts`（热表，短生命周期行）与 `delivery_history`（冷表，7 天归档）。GORM 模型位于 `internal/domain/delivery/delivery.go`；schema —— 表、索引与 Postgres 存储选项 —— 声明在版本化 SQL 迁移中（表与索引在 `000001_init.up.sql`，历史表的错误分类列在 `000007_delivery_error_category.up.sql`）。设计严格遵循数据库范式：除作为性能所需查询键之外没有冗余列，外键强制引用完整性。清空队列的调度器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)；重试时序与终态见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)；决策理由见[投递 MRFC](../../.agents/rfcs/implemented/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
+投递队列将其状态持久化在两张按访问模式与生命周期划分的 PostgreSQL 表中：`delivery_attempts`（热表，短生命周期行）与 `delivery_history`（冷表，7 天归档）。GORM 模型位于 `internal/domain/delivery/delivery.go`；schema —— 表、索引与 Postgres 存储选项 —— 声明在版本化 SQL 迁移中（表与索引在 `000001_init.up.sql`，历史表的错误分类列在 `000007_delivery_error_category.up.sql`）。设计严格遵循数据库范式：除作为性能所需查询键之外没有冗余列，外键强制引用完整性。清空队列的调度器见 [`delivery-scheduler.zh.md`](./delivery-scheduler.zh.md)；重试时序与终态见 [`delivery-retry.zh.md`](./delivery-retry.zh.md)；决策理由见[投递 MRFC](../../.agents/rfcs/implemented/architecture/2026-07-10-persistent-best-effort-delivery-queue.zh.md)。
 
 <a id="the-status-enum-shared-by-both-tables"></a>
 

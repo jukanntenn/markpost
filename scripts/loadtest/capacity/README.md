@@ -1,5 +1,7 @@
 # Capacity / sweet-spot test environment
 
+English | [中文](README.zh.md)
+
 Answers two questions for the 2c/2g/3Mbps-behind-Cloudflare-free production
 target: **where is the sweet spot** (sustained rate with SLOs and headroom
 intact) and **where is the hard limit** (which resource wall each mechanism

@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-09-05-admin-github-identity.zh.md)
+English | [中文](2026-09-05-admin-github-identity.zh.md)
 
 ## Problem
 

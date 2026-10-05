@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record specs/backend/postgres-tuning.md
+postgres-tuning.md: 1c1966ba2ae51388c041d4e03f9d1791a832aabb
+postgres-tuning.zh.md: 2e592d67091374c63b9659116cc5c9735c1f7db5

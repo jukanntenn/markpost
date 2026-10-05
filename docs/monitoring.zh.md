@@ -105,7 +105,7 @@ ERROR 日志速率规则当前为 **paused**:日志数据源输出整数帧,Graf
 
 ## 主机指标（Beszel）
 
-上面的监控项回答"是否活着"，Beszel agent 回答"为什么"——主机与逐容器资源历史及阈值告警，上报给观测服务器上的自托管 hub。设计记录:[主机指标 MRFC](../.agents/rfcs/implemented/2026-08-31-host-metrics-monitoring-beszel.zh.md)、[拓扑 MRFC](../.agents/rfcs/implemented/2026-08-31-beszel-deployment-topology.zh.md)、WebSocket 接线见[agent-token MRFC](../.agents/rfcs/implemented/2026-10-02-beszel-agent-websocket-token.zh.md)。
+上面的监控项回答"是否活着"，Beszel agent 回答"为什么"——主机与逐容器资源历史及阈值告警，上报给观测服务器上的自托管 hub。设计记录:[主机指标 MRFC](../.agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.zh.md)、[拓扑 MRFC](../.agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.zh.md)、WebSocket 接线见[agent-token MRFC](../.agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.zh.md)。
 
 **Hub（独立生命周期，观测服务器上）。** 部署于 192.168.5.57 的 `~/docker/beszel`（边缘走 `beszel.bytehome.fun`）：固定 `henrygd/beszel`、bind-mount `beszel_data`（上游内嵌 PocketBase、不支持外接数据库）、`DISABLE_SSH=true`——纯 WebSocket 拓扑,agent 外连 hub,hub 从不回连。整个 `beszel_data` 目录一起备份（内含 agent `KEY` 验证用的 hub 密钥对）。
 

@@ -2,11 +2,11 @@
 
 Status: implemented
 
-English | [中文](../2026-08-31-keyword-filter-input-ux.zh.md)
+English | [中文](2026-08-31-keyword-filter-input-ux.zh.md)
 
 ## Problem
 
-The keyword filter field asked users to learn a seven-operator boolean grammar from one compressed one-liner — `语法：逗号/竖线=或，&=且，!=非，""=精确短语，()=分组` — which was also wrong: `""=精确短语` misdescribes quoting (quotes make operator characters literal; matching stays substring, and `""` is the doubled literal quote). Parse failures surfaced raw internal English errors (`unexpected comma`, `expected ')', got eof`). The `[?]` help tooltip never appeared on hover at all: its `group-hover:block` had no `group` ancestor, so only the click toggle worked. Meanwhile the spec promised better: [the keyword filter spec](../../../specs/backend/keyword-filter.md) designates a live parsed preview as the mitigation for CJK IME users whose full-width `，` is literal content, and its § Frontend documented `describeFilter` plus a feedback component — but the July dialog rewrite (D5.6) dropped semantic interpretation, keeping syntax validation only, without updating the spec. Users could not see what an expression does, and the spec–code contract was broken.
+The keyword filter field asked users to learn a seven-operator boolean grammar from one compressed one-liner — `语法：逗号/竖线=或，&=且，!=非，""=精确短语，()=分组` — which was also wrong: `""=精确短语` misdescribes quoting (quotes make operator characters literal; matching stays substring, and `""` is the doubled literal quote). Parse failures surfaced raw internal English errors (`unexpected comma`, `expected ')', got eof`). The `[?]` help tooltip never appeared on hover at all: its `group-hover:block` had no `group` ancestor, so only the click toggle worked. Meanwhile the spec promised better: [the keyword filter spec](../../../../specs/backend/keyword-filter.md) designates a live parsed preview as the mitigation for CJK IME users whose full-width `，` is literal content, and its § Frontend documented `describeFilter` plus a feedback component — but the July dialog rewrite (D5.6) dropped semantic interpretation, keeping syntax validation only, without updating the spec. Users could not see what an expression does, and the spec–code contract was broken.
 
 ## Decision
 

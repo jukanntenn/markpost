@@ -1,6 +1,6 @@
 # AGENTS.md — cli
 
-Standalone Go module (`markpost/cli`) producing the `markpost` client: session handling, publishing, and an `api` passthrough, designed for humans and AI agents. Repo-wide orders live in the [root AGENTS.md](../AGENTS.md); rationale in the [CLI MRFC](../.agents/rfcs/implemented/2026-09-03-standalone-agent-cli.md), current state in [specs/cli.md](../specs/cli.md). urfave/cli/v2 is the fixed framework; flags precede positional arguments.
+Standalone Go module (`markpost/cli`) producing the `markpost` client: session handling, publishing, and an `api` passthrough, designed for humans and AI agents. Repo-wide orders live in the [root AGENTS.md](../AGENTS.md); rationale in the [CLI MRFC](../.agents/rfcs/implemented/feature/2026-09-03-standalone-agent-cli.md), current state in [specs/cli.md](../specs/cli.md). urfave/cli/v2 is the fixed framework; flags precede positional arguments.
 
 ## Commands (run in `cli/`)
 

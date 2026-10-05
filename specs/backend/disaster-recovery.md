@@ -2,7 +2,7 @@
 
 English | [中文](disaster-recovery.zh.md)
 
-markpost's resilience posture: a single instance whose read path survives origin death on the CDN edge, whose data is retention-managed ephemeral content, and whose backup tier is pgBackRest WAL archival to object storage with a daily logical dump for format diversity. The architecture and its alternatives (hourly-dump start, live replica, R2, wal-g) are recorded in [the WAL-archival MRFC](../../.agents/rfcs/implemented/2026-07-09-wal-archival-disaster-recovery.md); the single-instance decision itself (no Redis, no replica, no second VPS) is part of [the performance-pass MRFC](../../.agents/rfcs/implemented/2026-07-09-read-path-performance-pass.md). Operating procedures — provisioning, activation, restore, drills — live in [`docs/backup.md`](../../docs/backup.md).
+markpost's resilience posture: a single instance whose read path survives origin death on the CDN edge, whose data is retention-managed ephemeral content, and whose backup tier is pgBackRest WAL archival to object storage with a daily logical dump for format diversity. The architecture and its alternatives (hourly-dump start, live replica, R2, wal-g) are recorded in [the WAL-archival MRFC](../../.agents/rfcs/implemented/architecture/2026-07-09-wal-archival-disaster-recovery.md); the single-instance decision itself (no Redis, no replica, no second VPS) is part of [the performance-pass MRFC](../../.agents/rfcs/implemented/architecture/2026-07-09-read-path-performance-pass.md). Operating procedures — provisioning, activation, restore, drills — live in [`docs/backup.md`](../../docs/backup.md).
 
 ## Current posture
 

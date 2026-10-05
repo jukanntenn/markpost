@@ -2,19 +2,19 @@
 
 Status: implemented
 
-[English](../2026-08-31-host-metrics-monitoring-beszel.md) | 中文
+[English](2026-08-31-host-metrics-monitoring-beszel.md) | 中文
 
 ## Problem
 
-可用性层（[availability-monitoring MRFC](.././2026-08-30-availability-monitoring.zh.md)）能在 ~4 分钟内发现故障，但解释不了故障：readiness 探针变红说不出源站究竟是磁盘满了、内存耗尽还是 CPU 饱和。ttyo 上没有任何组件记录主机与容器的资源历史、或在故障发生前发出阈值告警——单台小 VPS 的经典杀手（磁盘写满、内存耗尽、持续饱和）在酿成事故前完全不可见，直到变成 kuma 随后上报的那次宕机。markpost 容器的 Docker healthcheck 只管本地重启，Postgres 在 Unix socket 之外不可见。
+可用性层（[availability-monitoring MRFC](2026-08-30-availability-monitoring.zh.md)）能在 ~4 分钟内发现故障，但解释不了故障：readiness 探针变红说不出源站究竟是磁盘满了、内存耗尽还是 CPU 饱和。ttyo 上没有任何组件记录主机与容器的资源历史、或在故障发生前发出阈值告警——单台小 VPS 的经典杀手（磁盘写满、内存耗尽、持续饱和）在酿成事故前完全不可见，直到变成 kuma 随后上报的那次宕机。markpost 容器的 Docker healthcheck 只管本地重启，Postgres 在 Unix socket 之外不可见。
 
 ## Decision
 
 Beszel（MIT、Go、PocketBase + 内嵌 SQLite、无外部数据库）承载主机指标层，跨两台主机拆分，让监控不死在被监控者手里（#61）：
 
-- agent 运行在生产主机 ttyo 上，独立 compose 项目位于 `~/docker/beszel-agent`，由 [`deploy.yml`](../../../devops/ansible/deploy.yml) 从 [`beszel-agent-compose.yml.j2`](../../../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：镜像经 `group_vars/production/vars.yml` 的 `beszel_agent_version` 钉版、host 网络、只读 `docker.sock`。它采集主机 CPU/内存/磁盘/负载/网络与 markpost、postgres 两容器的统计，经出站 WebSocket（`HUB_URL`）连 hub；安装任务仅在 `beszel_hub_url` 已定义时运行——沿用心跳的配置顺序契约。
-- hub 运行在独立的、运维管理的服务器上——绝不同驻被监控主机。其生命周期是本仓库之外的运维事务；运维手册（[`docs/monitoring.zh.md`](../../../docs/monitoring.zh.md)）承载运维清单。
-- 阈值告警（warning/critical 双阈值）覆盖磁盘、内存、CPU、负载、带宽与 agent/系统状态，主通知渠道用飞书，与可用性层的约定一致；告警清单与阈值落在 [`docs/monitoring.zh.md`](../../../docs/monitoring.zh.md)。
+- agent 运行在生产主机 ttyo 上，独立 compose 项目位于 `~/docker/beszel-agent`，由 [`deploy.yml`](../../../../devops/ansible/deploy.yml) 从 [`beszel-agent-compose.yml.j2`](../../../../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：镜像经 `group_vars/production/vars.yml` 的 `beszel_agent_version` 钉版、host 网络、只读 `docker.sock`。它采集主机 CPU/内存/磁盘/负载/网络与 markpost、postgres 两容器的统计，经出站 WebSocket（`HUB_URL`）连 hub；安装任务仅在 `beszel_hub_url` 已定义时运行——沿用心跳的配置顺序契约。
+- hub 运行在独立的、运维管理的服务器上——绝不同驻被监控主机。其生命周期是本仓库之外的运维事务；运维手册（[`docs/monitoring.zh.md`](../../../../docs/monitoring.zh.md)）承载运维清单。
+- 阈值告警（warning/critical 双阈值）覆盖磁盘、内存、CPU、负载、带宽与 agent/系统状态，主通知渠道用飞书，与可用性层的约定一致；告警清单与阈值落在 [`docs/monitoring.zh.md`](../../../../docs/monitoring.zh.md)。
 - 范围边界：可用性拨测、反向心跳、证书到期仍归 uptime-kuma。Beszel 只承载指标与阈值告警；主机死亡仍由 kuma push 心跳的静默负责，异置 hub 额外把 agent 离线上报出来。
 
 ## Alternatives considered

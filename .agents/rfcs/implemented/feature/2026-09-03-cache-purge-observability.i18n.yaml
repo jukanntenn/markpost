@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/feature/2026-09-03-cache-purge-observability.md
+2026-09-03-cache-purge-observability.md: 377e9584abd9dde93219a4ef28bd847729843dcc
+2026-09-03-cache-purge-observability.zh.md: ef19ecf26590b51e74eeda09d8ce8c44a169a8cd

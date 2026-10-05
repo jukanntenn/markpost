@@ -1,5 +1,7 @@
 # Load Testing (k6)
 
+English | [中文](README.zh.md)
+
 End-to-end HTTP load tests for markpost. For the 2c/2g/3Mbps capacity study
 (sweet spot / hard limits) see [CAPACITY_REPORT.md](CAPACITY_REPORT.md) and
 [`capacity/`](capacity/README.md); the scenarios below are the per-mechanism

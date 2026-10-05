@@ -2,19 +2,19 @@
 
 Status: implemented
 
-English | [中文](../2026-08-31-host-metrics-monitoring-beszel.zh.md)
+English | [中文](2026-08-31-host-metrics-monitoring-beszel.zh.md)
 
 ## Problem
 
-The availability layer ([availability-monitoring MRFC](.././2026-08-30-availability-monitoring.md)) detects failures within ~4 minutes but explains nothing: a red readiness probe cannot say whether the origin ran out of disk, memory, or CPU. Nothing on ttyo records host or container resource history or raises threshold alerts before an outage — the classic single-VPS killers (disk filling up, memory exhaustion, sustained saturation) stay invisible until they become the outage that kuma then reports. The markpost container's Docker healthcheck only gates local restarts, and Postgres is invisible off its Unix socket.
+The availability layer ([availability-monitoring MRFC](2026-08-30-availability-monitoring.md)) detects failures within ~4 minutes but explains nothing: a red readiness probe cannot say whether the origin ran out of disk, memory, or CPU. Nothing on ttyo records host or container resource history or raises threshold alerts before an outage — the classic single-VPS killers (disk filling up, memory exhaustion, sustained saturation) stay invisible until they become the outage that kuma then reports. The markpost container's Docker healthcheck only gates local restarts, and Postgres is invisible off its Unix socket.
 
 ## Decision
 
 Beszel (MIT, Go, PocketBase + embedded SQLite, no external database) carries the host-metrics layer, split across two hosts so the monitor never dies with the monitored (#61):
 
-- The agent runs on the production host ttyo as its own compose project at `~/docker/beszel-agent`, rendered by [`deploy.yml`](../../../devops/ansible/deploy.yml) from [`beszel-agent-compose.yml.j2`](../../../devops/ansible/templates/beszel-agent-compose.yml.j2): image pinned via `beszel_agent_version` in `group_vars/production/vars.yml`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network and per-container stats for the markpost and postgres containers, and reaches the hub by outbound WebSocket (`HUB_URL`); the install tasks run only when `beszel_hub_url` is defined — the heartbeat's setup-order contract.
-- The hub runs on a separate, operator-managed server — never on the monitored host. Its lifecycle is ops work outside this repository; the runbook ([`docs/monitoring.md`](../../../docs/monitoring.md)) carries the ops checklist.
-- Threshold alerts (dual warning/critical) on disk, memory, CPU, load, bandwidth, and agent/system status notify through Feishu as primary channel, matching the availability layer's convention; the alert inventory and thresholds live in [`docs/monitoring.md`](../../../docs/monitoring.md).
+- The agent runs on the production host ttyo as its own compose project at `~/docker/beszel-agent`, rendered by [`deploy.yml`](../../../../devops/ansible/deploy.yml) from [`beszel-agent-compose.yml.j2`](../../../../devops/ansible/templates/beszel-agent-compose.yml.j2): image pinned via `beszel_agent_version` in `group_vars/production/vars.yml`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network and per-container stats for the markpost and postgres containers, and reaches the hub by outbound WebSocket (`HUB_URL`); the install tasks run only when `beszel_hub_url` is defined — the heartbeat's setup-order contract.
+- The hub runs on a separate, operator-managed server — never on the monitored host. Its lifecycle is ops work outside this repository; the runbook ([`docs/monitoring.md`](../../../../docs/monitoring.md)) carries the ops checklist.
+- Threshold alerts (dual warning/critical) on disk, memory, CPU, load, bandwidth, and agent/system status notify through Feishu as primary channel, matching the availability layer's convention; the alert inventory and thresholds live in [`docs/monitoring.md`](../../../../docs/monitoring.md).
 - Scope boundary: availability probing, the reverse heartbeat, and certificate expiry stay with uptime-kuma. Beszel carries metrics and threshold alerting only; host death remains the kuma push-heartbeat's signal (silence), with the off-host hub additionally reporting the agent offline.
 
 ## Alternatives considered

@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-05-27-testcontainers-real-postgres-testing.zh.md)
+English | [中文](2026-05-27-testcontainers-real-postgres-testing.zh.md)
 
 ## Problem
 
@@ -22,4 +22,4 @@ Backend integration tests run against a real PostgreSQL 17 container started thr
 
 ## Consequences
 
-A running Docker daemon is required to run the full backend suite (locally and in CI); without one, `TESTCONTAINERS_SKIP=1` trades coverage for runnability. The suite is slower than mock-only tests. In exchange, dialect behavior, migrations, and locking semantics execute under test, and local runs exercise the same engine CI and production use. This is [PRINCIPLES.md](../../../PRINCIPLES.md) "Minimal mock, maximal real" applied to the database boundary.
+A running Docker daemon is required to run the full backend suite (locally and in CI); without one, `TESTCONTAINERS_SKIP=1` trades coverage for runnability. The suite is slower than mock-only tests. In exchange, dialect behavior, migrations, and locking semantics execute under test, and local runs exercise the same engine CI and production use. This is [PRINCIPLES.md](../../../../PRINCIPLES.md) "Minimal mock, maximal real" applied to the database boundary.

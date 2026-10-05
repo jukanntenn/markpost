@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/feature/2026-08-23-github-login-vip-grant-strategy.md
+2026-08-23-github-login-vip-grant-strategy.md: a39a5f5f6f88ba3b2846c2a70031504425d6b263
+2026-08-23-github-login-vip-grant-strategy.zh.md: 8b9e727d608e9f1d711c3e67df7225522ce0ef3c

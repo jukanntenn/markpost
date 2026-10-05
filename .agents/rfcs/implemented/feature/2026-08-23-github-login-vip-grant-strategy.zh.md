@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-23-github-login-vip-grant-strategy.md) | 中文
+[English](2026-08-23-github-login-vip-grant-strategy.md) | 中文
 
 ## Problem
 

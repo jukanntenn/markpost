@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-09-03-cache-purge-observability.zh.md)
+English | [中文](2026-09-03-cache-purge-observability.zh.md)
 
 ## Problem
 
@@ -27,7 +27,7 @@ Placement:
 - **Purge outcome classification** (`backend/internal/service/post/purger.go`) follows the control flow: `skipped` for the no-op path, `failure` for marshal/build/transport errors and HTTP ≥ 300, `success` otherwise. A purge attempt is derivable as success + failure; no separate initiation counter. Purge logging uses `slog` with structured fields (`qid`, HTTP status or error) instead of `log.Printf`.
 - Instruments are delivered through the service-local `Metrics` interface (`post.Service`'s `WithMetrics` injection + `noopMetrics` fallback), whose purger subset is the `PurgeMetrics` interface; `cmd/server/metrics_adapters.go` adapts `*observability.Metrics`, and `NewService` builds the purger after options have injected the recorder.
 
-Docs: the five rows are in the metric inventory in [`specs/backend/observability.md`](../../../specs/backend/observability.md), which also corrects the drifted rows to the shipped reality (`markpost.auth.login_total` → separate `login_success_total`/`login_failure_total` counters; `markpost.delivery.failed_total` label `reason` → the actual `error_category` attribute). [`specs/backend/caching.md`](../../../specs/backend/caching.md) carries the subsection reading origin cache metrics against `CF-Cache-Status` (edge HIT/MISS/EXPIRED vs origin hit rate; the edge absorbs most reads, so low origin traffic with a high hit rate is the healthy steady state, not a fault). Both specs update their bilingual twins in the same change.
+Docs: the five rows are in the metric inventory in [`specs/backend/observability.md`](../../../../specs/backend/observability.md), which also corrects the drifted rows to the shipped reality (`markpost.auth.login_total` → separate `login_success_total`/`login_failure_total` counters; `markpost.delivery.failed_total` label `reason` → the actual `error_category` attribute). [`specs/backend/caching.md`](../../../../specs/backend/caching.md) carries the subsection reading origin cache metrics against `CF-Cache-Status` (edge HIT/MISS/EXPIRED vs origin hit rate; the edge absorbs most reads, so low origin traffic with a high hit rate is the healthy steady state, not a fault). Both specs update their bilingual twins in the same change.
 
 ## Alternatives considered
 

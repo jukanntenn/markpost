@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-24-pr-conclusion-jobs-required-checks.md) | 中文
+[English](2026-08-24-pr-conclusion-jobs-required-checks.md) | 中文
 
 ## Problem
 
@@ -10,7 +10,7 @@ Status: implemented
 
 required checks 也无法直接指向当时的 job 名。五个质量 workflow——Lint、Test、Build、E2E、Docs——都在 workflow 级对 `pull_request` 做路径过滤:Lint/Test/Build/E2E 用 `paths-ignore`(`**/*.md`、`docs/**`、`.gitignore`、`LICENSE`),Docs 用正向 `paths` 清单。改动落在某个 workflow 路径集之外的 PR 根本不触发它,其检查会永远停在 "Expected — waiting for status" 并阻塞合并。本仓库实测:纯文档 PR #24 只跑了 Docs 与 Issue policy,Lint、Test、Build、E2E 均未启动。
 
-[开发闭环 MRFC](../2026-08-22-agent-driven-development-loop.zh.md) 把平台强制留给了维护者的设置步骤;本记录设计该步骤要开启的东西。
+[开发闭环 MRFC](2026-08-22-agent-driven-development-loop.zh.md) 把平台强制留给了维护者的设置步骤;本记录设计该步骤要开启的东西。
 
 ## Decision
 
@@ -18,7 +18,7 @@ required checks 也无法直接指向当时的 job 名。五个质量 workflow�
 
 每个 workflow 以一个 `conclusion` job 收尾:其 `needs` 列出其余全部 job,`if: always()` 使其在跳过与失败之后照常运行;单一步骤仅在任一 need 结果为 `failure` 或 `cancelled` 时失败——被跳过的 job 记为成功。每个 job 带显式名——五个裸 `conclusion` 在分支保护的 required 选择器里无法区分选中——由此每个 PR 恒定产出五个稳定检查:`Lint conclusion`、`Test conclusion`、`Build conclusion`、`E2E conclusion`、`Docs conclusion`。
 
-`main` 的 required checks 即这五个 conclusion 检查,并在 release 豁免([issue-policy 豁免](../2026-08-24-issue-policy-release-exemption.zh.md))就位后加上 `Issue policy`;执行设置是维护者的分支保护步骤——workflow 侧随本记录落地。
+`main` 的 required checks 即这五个 conclusion 检查,并在 release 豁免([issue-policy 豁免](2026-08-24-issue-policy-release-exemption.zh.md))就位后加上 `Issue policy`;执行设置是维护者的分支保护步骤——workflow 侧随本记录落地。
 
 ## Alternatives considered
 

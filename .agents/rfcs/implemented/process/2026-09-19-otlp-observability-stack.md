@@ -1,25 +1,25 @@
 # RFC: Adopt the OTLP observability stack on the NAS and retire the files-only pipeline
 
-English | [中文](../2026-09-19-otlp-observability-stack.zh.md)
-
 Status: implemented
+
+English | [中文](2026-09-19-otlp-observability-stack.zh.md)
 
 ## Problem
 
-The observability pipeline was deliberately built files-only: [the observability spec](../../../specs/backend/observability.md) pinned a hard constraint that all three pillars land on disk as JSONL, analyzed with `jq`. That interface serves AI agents and single-service development well, but two forces broke the premise:
+The observability pipeline was deliberately built files-only: [the observability spec](../../../../specs/backend/observability.md) pinned a hard constraint that all three pillars land on disk as JSONL, analyzed with `jq`. That interface serves AI agents and single-service development well, but two forces broke the premise:
 
 1. markpost entered SaaS operations. Human operators need dashboards, alerting, and service-level views; JSONL files serve neither. The operators and the agents have different consumption interfaces — humans get a UI, agents get APIs — and the files-only design provided only the second.
 2. The observability infrastructure becomes shared: business systems beyond markpost send telemetry to the same stack. It must run within hard limits — a 2-core/4GB RAM NAS with a 128GB SSD, reached only through a 3Mbps public relay — and must avoid SQLite-class stores whose single-writer model corrupts under concurrent multi-writer load. Deciding this architecture late is expensive; the stores and query languages chosen now are what later migration costs.
 
 ## Decision
 
-markpost is a **consumer** of an externally deployed observability stack; the repo ships the producer side only. The stack — deployed and operated by the external operators from handoff material recorded in the [frp transport MRFC](.././2026-09-19-otlp-transport-frp-exposure.md) — is Jaeger v2 (traces, embedded badger), VictoriaMetrics `vmsingle` (metrics), VictoriaLogs (logs), and Grafana with a dedicated PostgreSQL backend, fronted by one `otelcol-contrib` (per-service bearer-token auth, memory_limiter, fan-out). Its selection rationale and resource envelopes live in Alternatives below; its deployment form (one compose project per service under `docker/<service>/`, one shared external docker network, no cross-service volumes) is handoff material, not repo deliverables.
+markpost is a **consumer** of an externally deployed observability stack; the repo ships the producer side only. The stack — deployed and operated by the external operators from handoff material recorded in the [frp transport MRFC](2026-09-19-otlp-transport-frp-exposure.md) — is Jaeger v2 (traces, embedded badger), VictoriaMetrics `vmsingle` (metrics), VictoriaLogs (logs), and Grafana with a dedicated PostgreSQL backend, fronted by one `otelcol-contrib` (per-service bearer-token auth, memory_limiter, fan-out). Its selection rationale and resource envelopes live in Alternatives below; its deployment form (one compose project per service under `docker/<service>/`, one shared external docker network, no cross-service volumes) is handoff material, not repo deliverables.
 
 The producer side in this repo (`backend/internal/observability/otel.go`):
 
 - **Exporters are environment-driven and dual-mode**: with `OTEL_EXPORTER_OTLP_ENDPOINT` set, traces ship via `otlptracehttp`, metrics via `otlpmetrichttp` (60s PeriodicReader), and logs via `otlploghttp` behind an `otelslog` bridge; without it the stdout exporters write the timberjack JSONL files unchanged — the mode the loadtest/capacity stack keeps, so `scripts/loadtest/capacity/analyze.py` is untouched.
 - **App logs are dual-written** in OTLP mode: the default slog logger fans out to the timberjack file handler (the crash channel) and the OTLP logs pipeline; every request-scoped log call uses the `*Context` form so both channels carry trace correlation.
-- **Agent consumption moves from jq-over-files to the stores' HTTP JSON APIs** (Prometheus querying API, LogsQL, Jaeger REST); the [observability spec](../../../specs/backend/observability.md) is rewritten to current state, superseding the files-only hard constraint with this record.
+- **Agent consumption moves from jq-over-files to the stores' HTTP JSON APIs** (Prometheus querying API, LogsQL, Jaeger REST); the [observability spec](../../../../specs/backend/observability.md) is rewritten to current state, superseding the files-only hard constraint with this record.
 - **Three environments are wired per env** (`devops/ansible`): `markpost-dev` reaches the collector directly over the LAN, `markpost-staging` and `markpost` push to the public OTLP ingress; each env's bearer token is vaulted (`otel_otlp_token`), the compose template falls back to file mode until endpoint and token are both defined.
 
 ## Alternatives considered

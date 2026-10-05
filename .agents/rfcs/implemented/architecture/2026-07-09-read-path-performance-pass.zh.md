@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-07-09-read-path-performance-pass.md) | 中文
+[English](2026-07-09-read-path-performance-pass.md) | 中文
 
 ## Problem
 
@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-这一轮优化（自 `ed16a32` 起落地，2026-07-09）把传输最小化当作主导目标，在应用代码与部署模板中发布了：三个按失效能力区分 TTL 的缓存层 —— 浏览器 `max-age=300`、CDN `s-maxage=3600`（Cloudflare 免费档），以及一个无界的进程内渲染缓存，键为 `qid:buildID:{html,raw}`（singleflight 折叠、ristretto 承载并带 TinyLFU 准入、可在 `[render]` 配置） —— 配上对**渲染后输出**做哈希的 ETag（压缩后 HTML / 原始字符串的 xxhash64），使渲染器、模板或 CSS 的升级自动改变 ETag；删除端点（`DELETE /api/v1/posts/:id` 及管理员变体）同步失效源站缓存，并经 `Purger` 接口异步发出尽力而为的 Cloudflare cache-tag 清除（未配置 Cloudflare 时为 no-op），而 `PruneExpired` 从不清除；可被边缘缓存的 404（`max-age=60, s-maxage=60`），用于吸收 QID 枚举探测；Caddy `encode zstd gzip`；CSS 抽取到 `templates/post.css`，由 `cmd/buildcss` 压缩并加内容哈希指纹（`go:embed` + `csshash.go`，以 `/static/post.<hash>.css` 提供并带 `immutable`），HTML 则在渲染时由同一个 `tdewolff/minify` 库压缩；四个 tollbooth 限流器 —— 读（每 IP 100/s）、公开写（每 `user_id` 10/min + 1000/day）、已认证写（每 `user_id` 30/min）、登录（每 IP 5/min） —— 以 gin `ClientIP()` 沿 XFF 链解析，Caddy `trusted_proxies` 钉在 Cloudflare CIDR 上；以及 Postgres 调优 —— 连接池 25/10/30 分钟，五个 GUC（`shared_buffers=256MB`、`effective_cache_size=1GB`、`maintenance_work_mem=128MB`、`max_connections=50`、`synchronous_commit=off`）由部署模板应用，lz4 TOAST 压缩在版本化迁移中声明，以及一条到兄弟 Postgres 容器的 Unix socket 连接。Specs：[`specs/backend/caching.md`](../../../specs/backend/caching.zh.md)、[`compression.md`](../../../specs/backend/compression.zh.md)、[`rate-limiting.md`](../../../specs/backend/rate-limiting.zh.md)、[`postgres-tuning.md`](../../../specs/backend/postgres-tuning.zh.md)。帖子一次写入且不可变 —— `UpdatePost` 路径已从契约中移除，正是这一点把缓存失效折叠为删除事件。
+这一轮优化（自 `ed16a32` 起落地，2026-07-09）把传输最小化当作主导目标，在应用代码与部署模板中发布了：三个按失效能力区分 TTL 的缓存层 —— 浏览器 `max-age=300`、CDN `s-maxage=3600`（Cloudflare 免费档），以及一个无界的进程内渲染缓存，键为 `qid:buildID:{html,raw}`（singleflight 折叠、ristretto 承载并带 TinyLFU 准入、可在 `[render]` 配置） —— 配上对**渲染后输出**做哈希的 ETag（压缩后 HTML / 原始字符串的 xxhash64），使渲染器、模板或 CSS 的升级自动改变 ETag；删除端点（`DELETE /api/v1/posts/:id` 及管理员变体）同步失效源站缓存，并经 `Purger` 接口异步发出尽力而为的 Cloudflare cache-tag 清除（未配置 Cloudflare 时为 no-op），而 `PruneExpired` 从不清除；可被边缘缓存的 404（`max-age=60, s-maxage=60`），用于吸收 QID 枚举探测；Caddy `encode zstd gzip`；CSS 抽取到 `templates/post.css`，由 `cmd/buildcss` 压缩并加内容哈希指纹（`go:embed` + `csshash.go`，以 `/static/post.<hash>.css` 提供并带 `immutable`），HTML 则在渲染时由同一个 `tdewolff/minify` 库压缩；四个 tollbooth 限流器 —— 读（每 IP 100/s）、公开写（每 `user_id` 10/min + 1000/day）、已认证写（每 `user_id` 30/min）、登录（每 IP 5/min） —— 以 gin `ClientIP()` 沿 XFF 链解析，Caddy `trusted_proxies` 钉在 Cloudflare CIDR 上；以及 Postgres 调优 —— 连接池 25/10/30 分钟，五个 GUC（`shared_buffers=256MB`、`effective_cache_size=1GB`、`maintenance_work_mem=128MB`、`max_connections=50`、`synchronous_commit=off`）由部署模板应用，lz4 TOAST 压缩在版本化迁移中声明，以及一条到兄弟 Postgres 容器的 Unix socket 连接。Specs：[`specs/backend/caching.md`](../../../../specs/backend/caching.zh.md)、[`compression.md`](../../../../specs/backend/compression.zh.md)、[`rate-limiting.md`](../../../../specs/backend/rate-limiting.zh.md)、[`postgres-tuning.md`](../../../../specs/backend/postgres-tuning.zh.md)。帖子一次写入且不可变 —— `UpdatePost` 路径已从契约中移除，正是这一点把缓存失效折叠为删除事件。
 
 ## Alternatives considered
 
@@ -36,4 +36,4 @@ Status: implemented
 
 ## Consequences
 
-源站以约每月 $0.20 的边际成本撑过其负载包络，升级在一小时内传播而无需运维者动手，删除在 CDN 上近乎即时。接受的义务：缓存正确性依赖输出哈希 ETag 与删除驱动的失效（任何新的响应变体都必须对它所服务的内容做哈希），Caddyfile 中的 Cloudflare CIDR 列表是运维者维护的职责，GUC/lz4/socket 各项是部署模板事务、靠人工而非 Go 测试验证，而负载测试套件（`scripts/loadtest/`、容量报告）是包络仍然成立的常备证据。灾备层（备份工具）刻意不在本记录的范围内，活在[灾难恢复 MRFC](../implemented/2026-07-09-wal-archival-disaster-recovery.zh.md)里。
+源站以约每月 $0.20 的边际成本撑过其负载包络，升级在一小时内传播而无需运维者动手，删除在 CDN 上近乎即时。接受的义务：缓存正确性依赖输出哈希 ETag 与删除驱动的失效（任何新的响应变体都必须对它所服务的内容做哈希），Caddyfile 中的 Cloudflare CIDR 列表是运维者维护的职责，GUC/lz4/socket 各项是部署模板事务、靠人工而非 Go 测试验证，而负载测试套件（`scripts/loadtest/`、容量报告）是包络仍然成立的常备证据。灾备层（备份工具）刻意不在本记录的范围内，活在[灾难恢复 MRFC](2026-07-09-wal-archival-disaster-recovery.zh.md)里。

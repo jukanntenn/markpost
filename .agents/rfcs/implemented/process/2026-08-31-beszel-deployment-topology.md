@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-31-beszel-deployment-topology.zh.md)
+English | [中文](2026-08-31-beszel-deployment-topology.zh.md)
 
 ## Problem
 
@@ -10,10 +10,10 @@ Beszel's agent needs a transport, and the repository needs an automation boundar
 
 ## Decision
 
-The [host-metrics MRFC](.././2026-08-31-host-metrics-monitoring-beszel.md) selected the component; this record fixes its topology and the automation boundary.
+The [host-metrics MRFC](2026-08-31-host-metrics-monitoring-beszel.md) selected the component; this record fixes its topology and the automation boundary.
 
-- The hub lives on a separate, operator-managed server — never on the monitored host. Its deployment, exposure, credentials, notification channels, and upgrades are manual ops work outside this repository; [`docs/monitoring.md`](../../../docs/monitoring.md) carries the ops checklist, not automation.
-- The repo automates only the agent on ttyo: its own compose project at `~/docker/beszel-agent` (`beszel_agent_path` in `group_vars/all.yml`), separate from the app's. [`deploy.yml`](../../../devops/ansible/deploy.yml) renders [`beszel-agent-compose.yml.j2`](../../../devops/ansible/templates/beszel-agent-compose.yml.j2) with the pinned image, host networking, and the read-only `docker.sock` mount, and points the agent at the operator-provisioned `HUB_URL` — an outbound WebSocket, so the firewall opens nothing new. The tasks run only when `beszel_hub_url` is defined.
+- The hub lives on a separate, operator-managed server — never on the monitored host. Its deployment, exposure, credentials, notification channels, and upgrades are manual ops work outside this repository; [`docs/monitoring.md`](../../../../docs/monitoring.md) carries the ops checklist, not automation.
+- The repo automates only the agent on ttyo: its own compose project at `~/docker/beszel-agent` (`beszel_agent_path` in `group_vars/all.yml`), separate from the app's. [`deploy.yml`](../../../../devops/ansible/deploy.yml) renders [`beszel-agent-compose.yml.j2`](../../../../devops/ansible/templates/beszel-agent-compose.yml.j2) with the pinned image, host networking, and the read-only `docker.sock` mount, and points the agent at the operator-provisioned `HUB_URL` — an outbound WebSocket, so the firewall opens nothing new. The tasks run only when `beszel_hub_url` is defined.
 - The agent's `KEY` is the hub's public key — not a secret — and lives in the template. The repo carries no hub secrets: hub admin credentials and notification tokens live with the ops-managed hub, outside the repository's vault.
 - Removal of the automated side is documented in the runbook like the heartbeat's removal row: deploy templates never uninstall. Hub removal is ordinary ops work on the hub host.
 

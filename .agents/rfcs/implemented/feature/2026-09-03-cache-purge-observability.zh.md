@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-09-03-cache-purge-observability.md) | 中文
+[English](2026-09-03-cache-purge-observability.md) | 中文
 
 ## Problem
 
@@ -27,7 +27,7 @@ Status: implemented
 - **purge 结果分类**(`backend/internal/service/post/purger.go`)遵循控制流:no-op 路径记 `skipped`,marshal/构造/传输错误与 HTTP ≥ 300 记 `failure`,其余记 `success`。purge 尝试次数可由 success + failure 推得,不设独立的发起计数器。purge 日志用 `slog` 结构化字段(`qid`、HTTP 状态或错误)替代 `log.Printf`。
 - 指标经服务内窄接口 `Metrics` 交付(`post.Service` 的 `WithMetrics` 注入 + `noopMetrics` 回退),其中 purger 子集为 `PurgeMetrics` 接口;`cmd/server/metrics_adapters.go` 适配 `*observability.Metrics`,`NewService` 在选项注入 recorder 之后构建 purger。
 
-文档:五个指标行进入 [`specs/backend/observability.zh.md`](../../../specs/backend/observability.zh.md) 的指标清单,同时把已漂移的行修正为已上线实态(`markpost.auth.login_total` → 分立的 `login_success_total`/`login_failure_total` 计数器;`markpost.delivery.failed_total` 标签 `reason` → 实际的 `error_category` 属性)。[`specs/backend/caching.zh.md`](../../../specs/backend/caching.zh.md) 载有对照 `CF-Cache-Status` 解读源站缓存指标的小节(边缘 HIT/MISS/EXPIRED 与源站命中率的关系;边缘吸收了绝大多数读流量,因此"源站流量低 + 命中率高"是健康稳态而非故障)。两份规范的双语孪生文件在同一变更中同步更新。
+文档:五个指标行进入 [`specs/backend/observability.zh.md`](../../../../specs/backend/observability.zh.md) 的指标清单,同时把已漂移的行修正为已上线实态(`markpost.auth.login_total` → 分立的 `login_success_total`/`login_failure_total` 计数器;`markpost.delivery.failed_total` 标签 `reason` → 实际的 `error_category` 属性)。[`specs/backend/caching.zh.md`](../../../../specs/backend/caching.zh.md) 载有对照 `CF-Cache-Status` 解读源站缓存指标的小节(边缘 HIT/MISS/EXPIRED 与源站命中率的关系;边缘吸收了绝大多数读流量,因此"源站流量低 + 命中率高"是健康稳态而非故障)。两份规范的双语孪生文件在同一变更中同步更新。
 
 ## Alternatives considered
 

@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-05-27-testcontainers-real-postgres-testing.md) | 中文
+[English](2026-05-27-testcontainers-real-postgres-testing.md) | 中文
 
 ## Problem
 
@@ -22,4 +22,4 @@ Status: implemented
 
 ## Consequences
 
-运行完整后端套件（本地与 CI 中）需要一个运行中的 Docker daemon；没有它时，`TESTCONTAINERS_SKIP=1` 以覆盖换可运行性。套件比纯 mock 测试慢。作为交换，方言行为、迁移和锁定语义都在测试下执行，本地运行演练的正是 CI 与生产使用的同一引擎。这是把 [PRINCIPLES.md](../../../PRINCIPLES.zh.md) 的 "Minimal mock, maximal real" 应用于数据库边界。
+运行完整后端套件（本地与 CI 中）需要一个运行中的 Docker daemon；没有它时，`TESTCONTAINERS_SKIP=1` 以覆盖换可运行性。套件比纯 mock 测试慢。作为交换，方言行为、迁移和锁定语义都在测试下执行，本地运行演练的正是 CI 与生产使用的同一引擎。这是把 [PRINCIPLES.md](../../../../PRINCIPLES.zh.md) 的 "Minimal mock, maximal real" 应用于数据库边界。

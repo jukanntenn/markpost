@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-09-03-mcp-server.md) | 中文
+[English](2026-09-03-mcp-server.md) | 中文
 
 ## Problem
 
@@ -10,7 +10,7 @@ markpost 的产品契约是 HTTP API，服务的客户端是人类（仪表盘�
 
 ## Decision
 
-`mcp/` 是独立 Go module（`github.com/jukanntenn/markpost/mcp`），以薄的类型化 HTTP 客户端包装 REST API，不 import backend 的任何内容——即 github-mcp-server 与 api.github.com 的关系，支撑独立构建与发布。MCP 层为官方 `modelcontextprotocol/go-sdk` v1.7.0（黄金参考的锁定版本）；工具是类型化 handler，JSON Schema 由参数结构体推导，输出为 backend REST JSON 原样。认证使用 `MARKPOST_MCP_*` 环境变量中的用户名/密码（不设 flag），会话维护全自动：启动即登录、客户端跟踪 refresh token 轮换、客户端互斥锁下的单飞 401 恢复（先刷新、被拒再重登录）——并发刷新会触发后端的令牌盗用检测；`change_my_password` 采纳 backend 返回的全新令牌对。工具面为四个工具集——`posts`、`delivery`、`account` 默认开启；`admin`（28 个工具镜像 `/api/v1/admin`）按需开启——另有 `--read-only` 在注册时移除全部写工具（服务端保证）。传输：面向本地 host 的 `stdio` 与面向远程的 `http`（无状态 streamable-http、可选常数时间 bearer 守卫）；CLI 与 backend 同为 urfave/cli v2。测试对齐黄金参考：逐工具的 httptest 契约测试、进程内会话的工具测试、锁定 47 工具面的 schema 快照、以及 `--tags e2e` 套件（起 postgres testcontainer、构建真实 backend、经 stdio 驱动真实二进制）。分发搭产品的 release tag：GitHub release 附交叉编译二进制、发布 `jukanntenn/markpost-mcp` 多架构镜像、支持 `go install`。完整设计见 [specs/mcp/mcp-server.zh.md](../../../specs/mcp/mcp-server.zh.md)；操作指南见 [docs/mcp.zh.md](../../../docs/mcp.zh.md)。
+`mcp/` 是独立 Go module（`github.com/jukanntenn/markpost/mcp`），以薄的类型化 HTTP 客户端包装 REST API，不 import backend 的任何内容——即 github-mcp-server 与 api.github.com 的关系，支撑独立构建与发布。MCP 层为官方 `modelcontextprotocol/go-sdk` v1.7.0（黄金参考的锁定版本）；工具是类型化 handler，JSON Schema 由参数结构体推导，输出为 backend REST JSON 原样。认证使用 `MARKPOST_MCP_*` 环境变量中的用户名/密码（不设 flag），会话维护全自动：启动即登录、客户端跟踪 refresh token 轮换、客户端互斥锁下的单飞 401 恢复（先刷新、被拒再重登录）——并发刷新会触发后端的令牌盗用检测；`change_my_password` 采纳 backend 返回的全新令牌对。工具面为四个工具集——`posts`、`delivery`、`account` 默认开启；`admin`（28 个工具镜像 `/api/v1/admin`）按需开启——另有 `--read-only` 在注册时移除全部写工具（服务端保证）。传输：面向本地 host 的 `stdio` 与面向远程的 `http`（无状态 streamable-http、可选常数时间 bearer 守卫）；CLI 与 backend 同为 urfave/cli v2。测试对齐黄金参考：逐工具的 httptest 契约测试、进程内会话的工具测试、锁定 47 工具面的 schema 快照、以及 `--tags e2e` 套件（起 postgres testcontainer、构建真实 backend、经 stdio 驱动真实二进制）。分发搭产品的 release tag：GitHub release 附交叉编译二进制、发布 `jukanntenn/markpost-mcp` 多架构镜像、支持 `go install`。完整设计见 [specs/mcp/mcp-server.zh.md](../../../../specs/mcp/mcp-server.zh.md)；操作指南见 [docs/mcp.zh.md](../../../../docs/mcp.zh.md)。
 
 ## Alternatives considered
 

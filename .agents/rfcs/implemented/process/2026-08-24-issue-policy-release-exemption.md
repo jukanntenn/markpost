@@ -2,17 +2,17 @@
 
 Status: implemented
 
-English | [中文](../2026-08-24-issue-policy-release-exemption.zh.md)
+English | [中文](2026-08-24-issue-policy-release-exemption.zh.md)
 
 ## Problem
 
-The [`issue-policy` workflow](../../../.github/workflows/issue-policy.yml) validates every non-draft, non-bot pull request against the intake contract: a conventional-commit title, at least one `area/*` label, and at least one issue reference. A release pull request fails this by nature: it carries a version bump and a changelog, references no issue, and historically carries no area label. Measured 2026-08-23: PR #23 (`chore: release v0.2.0-rc.6`) failed `Issue policy` with both errors and merged red anyway.
+The [`issue-policy` workflow](../../../../.github/workflows/issue-policy.yml) validates every non-draft, non-bot pull request against the intake contract: a conventional-commit title, at least one `area/*` label, and at least one issue reference. A release pull request fails this by nature: it carries a version bump and a changelog, references no issue, and historically carries no area label. Measured 2026-08-23: PR #23 (`chore: release v0.2.0-rc.6`) failed `Issue policy` with both errors and merged red anyway.
 
-Once [PR conclusion jobs and required checks](../implemented/2026-08-24-pr-conclusion-jobs-required-checks.md) makes gate 3 platform-enforced, red-but-mergeable stops existing: either release pull requests are exempt and green, or every release blocks on a check that cannot apply to it.
+Once [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.md) makes gate 3 platform-enforced, red-but-mergeable stops existing: either release pull requests are exempt and green, or every release blocks on a check that cannot apply to it.
 
 ## Decision
 
-[`policy.py`](../../../.github/issue-management/policy.py) `pr` skips the three intake checks — title form, area label, issue reference — when the pull request's head branch matches `release/**`: `is_release_pull` is a pure function of the head ref on the pull-request snapshot `run_pr_check` already fetches, so detection adds no API call and covers every event shape the workflow triggers on. Everything else still runs: any references a release pull request carries are validated as usual, and the issue-side checks are unchanged. `Issue policy` joins `main`'s required checks alongside the five conclusion checks — applying the settings is the maintainer's branch-protection step. Release branch naming stays owned by the release skill (`release/v0.2.0-rc.6`, measured).
+``policy.py`` `pr` skips the three intake checks — title form, area label, issue reference — when the pull request's head branch matches `release/**`: `is_release_pull` is a pure function of the head ref on the pull-request snapshot `run_pr_check` already fetches, so detection adds no API call and covers every event shape the workflow triggers on. Everything else still runs: any references a release pull request carries are validated as usual, and the issue-side checks are unchanged. `Issue policy` joins `main`'s required checks alongside the five conclusion checks — applying the settings is the maintainer's branch-protection step. Release branch naming stays owned by the release skill (`release/v0.2.0-rc.6`, measured).
 
 ## Alternatives considered
 

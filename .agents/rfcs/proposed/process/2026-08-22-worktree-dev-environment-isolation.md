@@ -2,11 +2,11 @@
 
 Status: proposed
 
-English | [中文](../2026-08-22-worktree-dev-environment-isolation.zh.md)
+English | [中文](2026-08-22-worktree-dev-environment-isolation.zh.md)
 
 ## Problem
 
-The [development loop](../implemented/2026-08-22-agent-driven-development-loop.md) places one git worktree per stack layer under `.local/worktrees/`, but the compose dev environment names its containers unconditionally — `markpost-backend`, `markpost-frontend`, `markpost-postgres` — and binds one shared `markpost_pgdata` volume. Two consequences: only one dev environment can run at a time across the main checkout and every worktree (starting a worktree's environment requires stopping the main checkout's), and v1 of the loop accepted that mutual exclusion as a known limit, serializing any verification that needs a running stack. Unit tests and testcontainers-backed backend tests are unaffected — they need no compose environment — so the constraint bites exactly where full-stack or frontend-against-backend verification is wanted in parallel.
+The [development loop](../../implemented/process/2026-08-22-agent-driven-development-loop.md) places one git worktree per stack layer under `.local/worktrees/`, but the compose dev environment names its containers unconditionally — `markpost-backend`, `markpost-frontend`, `markpost-postgres` — and binds one shared `markpost_pgdata` volume. Two consequences: only one dev environment can run at a time across the main checkout and every worktree (starting a worktree's environment requires stopping the main checkout's), and v1 of the loop accepted that mutual exclusion as a known limit, serializing any verification that needs a running stack. Unit tests and testcontainers-backed backend tests are unaffected — they need no compose environment — so the constraint bites exactly where full-stack or frontend-against-backend verification is wanted in parallel.
 
 ## Proposal
 
@@ -28,4 +28,4 @@ Two dev environments — the main checkout's unprefixed one and a `--env wt-<n>`
 
 Compose-file interpolation adds indirection to a file operators read as configuration; keeping every default identical to today's unprefixed names bounds that cost. Port parameterization risks drift between the backend and frontend port wiring if the two disagree — the collision check exists to fail that loudly rather than mysteriously. Each concurrent environment consumes its full container and memory footprint; parallelism is opt-in per `--env`, never the default. And postgres major-version upgrades across simultaneously running environments share one image, so the volume-per-environment split must be respected by any future migration tooling.
 
-Trigger status (2026-08-24): both ignition conditions have been measured — serialized full-stack verification across sessions (the 2026-08-22 deploy round) and worktree-environment breakage forcing host-side fallbacks (the #19 screenshot round). Disposition: stay `proposed` until the next concrete need for parallel verification; the prek-side worktree hazards are tracked separately in [prek stash-lifecycle incident hardening](../implemented/2026-08-24-prek-stash-lifecycle-hardening.md).
+Trigger status (2026-08-24): both ignition conditions have been measured — serialized full-stack verification across sessions (the 2026-08-22 deploy round) and worktree-environment breakage forcing host-side fallbacks (the #19 screenshot round). Disposition: stay `proposed` until the next concrete need for parallel verification; the prek-side worktree hazards are tracked separately in [prek stash-lifecycle incident hardening](../../implemented/process/2026-08-24-prek-stash-lifecycle-hardening.md).

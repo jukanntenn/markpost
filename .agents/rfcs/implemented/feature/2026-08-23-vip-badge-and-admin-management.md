@@ -2,11 +2,11 @@
 
 Status: implemented
 
-English | [中文](../2026-08-23-vip-badge-and-admin-management.zh.md)
+English | [中文](2026-08-23-vip-badge-and-admin-management.zh.md)
 
 ## Problem
 
-With vip stored ([the flag MRFC](../2026-08-23-user-vip-flag.md)) and granted by strategy ([the grant MRFC](../2026-08-23-github-login-vip-grant-strategy.md)), the strategy still had no surface: a VIP user could not see their own standing — and that visibility is the entire product of a growth strategy — and admins had no per-user lever and no switch in the UI. The frontend renders the current user's username in the dashboard welcome and the app-shell user menu, and admin renders usernames in the users list and detail pages; the repo has its own Badge component and a governance-dialog pattern to copy. What the badge says, where it appears, and how admins drive both levers was this layer's decision.
+With vip stored ([the flag MRFC](2026-08-23-user-vip-flag.md)) and granted by strategy ([the grant MRFC](2026-08-23-github-login-vip-grant-strategy.md)), the strategy still had no surface: a VIP user could not see their own standing — and that visibility is the entire product of a growth strategy — and admins had no per-user lever and no switch in the UI. The frontend renders the current user's username in the dashboard welcome and the app-shell user menu, and admin renders usernames in the users list and detail pages; the repo has its own Badge component and a governance-dialog pattern to copy. What the badge says, where it appears, and how admins drive both levers was this layer's decision.
 
 ## Decision
 
@@ -34,4 +34,4 @@ A VIP user sees the mark beside their own username in the welcome line and user 
 
 ## 2026-09-05 amendment
 
-"Visible immediately" above held only server-side. The frontend persisted a login-time `user` snapshot in local storage and no code path re-read it, so a user granted vip saw no badge even after a page refresh — only a full re-login caught up. The fix closes that gap from both ends: `GET /api/v1/me` (joining the [`/me` namespace](../2026-09-02-user-facing-retention-visibility.md)) serializes the middleware's freshly reloaded row, and `useProfileSync` refetches it once per full page load, overwriting the stored snapshot — the badge now appears on the user's next refresh. The same read path future-proofs every admin-mutable profile field (role, ban state), not just vip.
+"Visible immediately" above held only server-side. The frontend persisted a login-time `user` snapshot in local storage and no code path re-read it, so a user granted vip saw no badge even after a page refresh — only a full re-login caught up. The fix closes that gap from both ends: `GET /api/v1/me` (joining the [`/me` namespace](2026-09-02-user-facing-retention-visibility.md)) serializes the middleware's freshly reloaded row, and `useProfileSync` refetches it once per full page load, overwriting the stored snapshot — the badge now appears on the user's next refresh. The same read path future-proofs every admin-mutable profile field (role, ban state), not just vip.

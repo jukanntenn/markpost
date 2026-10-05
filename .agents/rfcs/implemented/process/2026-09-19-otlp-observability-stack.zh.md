@@ -1,25 +1,25 @@
 # RFC: 在 NAS 上采纳 OTLP 观测栈并退役仅文件管道
 
-[English](../2026-09-19-otlp-observability-stack.md) | 中文
-
 Status: implemented
+
+[English](2026-09-19-otlp-observability-stack.md) | 中文
 
 ## Problem
 
-可观测管道当初是刻意设计为仅文件的：[可观测 spec](../../../specs/backend/observability.zh.md) 曾把"三支柱全部落盘为 JSONL、用 `jq` 分析"定为硬约束。这个接口很好地服务了 AI agent 与单服务开发，但两个变化打破了前提：
+可观测管道当初是刻意设计为仅文件的：[可观测 spec](../../../../specs/backend/observability.zh.md) 曾把"三支柱全部落盘为 JSONL、用 `jq` 分析"定为硬约束。这个接口很好地服务了 AI agent 与单服务开发，但两个变化打破了前提：
 
 1. markpost 进入 SaaS 运营阶段。人类运营人员需要仪表盘、告警与服务级视图，JSONL 文件两者都给不了。运营人员和 agent 的消费接口不同——人看 UI，agent 用 API——仅文件设计只提供了后者。
 2. 可观测基建变为共享：markpost 之外的业务系统向同一套栈发送遥测。它必须运行在硬限制内——2核4G 内存、128GB SSD 的 NAS，且只能经 3Mbps 公网中继到达——并必须避开 SQLite 这类单写者模型、在并发多写负载下会出问题的存储。这类架构决策拖到后期再定的代价极高：现在选定的存储与查询语言就是将来的迁移成本。
 
 ## Decision
 
-markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——由外部运维方按 [frp 传输 MRFC](.././2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的交付材料部署运维——为 Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）。其选型理由与资源 envelope 见下文 Alternatives；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）是交付材料而非仓库交付物。
+markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——由外部运维方按 [frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的交付材料部署运维——为 Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）。其选型理由与资源 envelope 见下文 Alternatives；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）是交付材料而非仓库交付物。
 
 仓库内的生产方一侧（`backend/internal/observability/otel.go`）：
 
 - **导出器由环境驱动、双模式**：设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 后，traces 走 `otlptracehttp`、metrics 走 `otlpmetrichttp`（60s PeriodicReader）、logs 经 `otelslog` bridge 走 `otlploghttp`；未设置时 stdout 导出器照旧写 timberjack JSONL 文件——压测/容量栈沿用该模式，`scripts/loadtest/capacity/analyze.py` 零改动。
 - **OTLP 模式下 app 日志双写**：默认 slog logger 扇出到 timberjack 文件 handler（崩溃通道）与 OTLP 日志管道；所有请求作用域的日志调用一律 `*Context` 形式，两个通道都携带 trace 关联。
-- **Agent 消费从 jq 读文件转为各存储的 HTTP JSON API**（Prometheus querying API、LogsQL、Jaeger REST）；[可观测 spec](../../../specs/backend/observability.zh.md) 已改写为当前状态，"仅文件"硬约束由本记录 supersede。
+- **Agent 消费从 jq 读文件转为各存储的 HTTP JSON API**（Prometheus querying API、LogsQL、Jaeger REST）；[可观测 spec](../../../../specs/backend/observability.zh.md) 已改写为当前状态，"仅文件"硬约束由本记录 supersede。
 - **三套环境按环境接线**（`devops/ansible`）：`markpost-dev` 经内网直连 collector，`markpost-staging` 与 `markpost` 推送公网 OTLP 入口；各环境 bearer token 已 vault（`otel_otlp_token`），compose 模板在 endpoint 与 token 未同时定义时回落文件模式。
 
 ## Alternatives considered

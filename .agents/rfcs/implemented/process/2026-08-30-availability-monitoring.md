@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-08-30-availability-monitoring.zh.md)
+English | [中文](2026-08-30-availability-monitoring.zh.md)
 
 ## Problem
 
@@ -13,7 +13,7 @@ markpost had no external failure detection. Docker healthchecks only influence l
 Availability monitoring is layered across three vantage points, operated by a self-hosted uptime-kuma instance probing production and staging:
 
 - `GET /api/v1/ready` is a readiness endpoint: a driver-level database round trip answering `200 {"status":"ready"}` or `503 {"status":"unavailable"}`, registered outside every rate limiter next to `/health`. Liveness `/health` is unchanged and remains what the Docker healthcheck polls — a dead database must mark the service unready, not kill the container.
-- The monitor inventory, notification channels (Feishu primary, SMTP fallback), alert policy (60 s interval, 3 retries, ~4 minutes to page, recovery notices on, repeat reminders off, certificate/domain expiry at 7/14/21 days), and the triage table live in [`docs/monitoring.md`](../../../docs/monitoring.md).
+- The monitor inventory, notification channels (Feishu primary, SMTP fallback), alert policy (60 s interval, 3 retries, ~4 minutes to page, recovery notices on, repeat reminders off, certificate/domain expiry at 7/14/21 days), and the triage table live in [`docs/monitoring.md`](../../../../docs/monitoring.md).
 - The production VPS runs a supervisor program `markpost-heartbeat`: a loop probing `http://127.0.0.1:8080/api/v1/ready` and pushing the verdict to kuma's push endpoint, so kuma sees the origin's own view past Cloudflare, and push silence covers host death. The push URL is a vault secret (`kuma_heartbeat_url`); the deploy installs the program only when that variable exists.
 
 ## Alternatives considered

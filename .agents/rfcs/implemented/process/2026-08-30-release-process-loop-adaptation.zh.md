@@ -2,15 +2,15 @@
 
 Status: implemented
 
-[English](../2026-08-30-release-process-loop-adaptation.md) | 中文
+[English](2026-08-30-release-process-loop-adaptation.md) | 中文
 
 ## Problem
 
-release 技能从头到尾教的是闭环之前的仓库运营模式：把版本号提交直推 `main`、push、再推 tag。[开发闭环](../2026-08-22-agent-driven-development-loop.zh.md)封闭了那个世界——今日实测，`main` 的分支保护要求 pull request 携带一个批准评审（管理员同样受限）并解决全部会话，禁止 force push，并点名六个 required checks（五个 conclusion 检查加 `Issue policy`）；仓库只允许以 merge commit 合并。技能的核心动作在机制上已不可能——对 `main` 的直接 push 会被拒绝——而新体制下尝试过的唯一一次发版，即经 PR #23 走的 v0.2.0-rc.6，是在 `Issue policy` 变红的情况下合并的：正是那起事故催生了 [PR conclusion jobs and required checks](../2026-08-24-pr-conclusion-jobs-required-checks.zh.md) 与 [release 豁免](../2026-08-24-issue-policy-release-exemption.zh.md) 两份记录。豁免让裸的 `release/**` pull request 能通过 policy，并把分支命名留给了 release 技能——而技能仍在教那条死路，也对闭环的异步门禁无言以对：发版等待的批准，在开出它的会话结束之后才到来。
+release 技能从头到尾教的是闭环之前的仓库运营模式：把版本号提交直推 `main`、push、再推 tag。[开发闭环](2026-08-22-agent-driven-development-loop.zh.md)封闭了那个世界——今日实测，`main` 的分支保护要求 pull request 携带一个批准评审（管理员同样受限）并解决全部会话，禁止 force push，并点名六个 required checks（五个 conclusion 检查加 `Issue policy`）；仓库只允许以 merge commit 合并。技能的核心动作在机制上已不可能——对 `main` 的直接 push 会被拒绝——而新体制下尝试过的唯一一次发版，即经 PR #23 走的 v0.2.0-rc.6，是在 `Issue policy` 变红的情况下合并的：正是那起事故催生了 [PR conclusion jobs and required checks](2026-08-24-pr-conclusion-jobs-required-checks.zh.md) 与 [release 豁免](2026-08-24-issue-policy-release-exemption.zh.md) 两份记录。豁免让裸的 `release/**` pull request 能通过 policy，并把分支命名留给了 release 技能——而技能仍在教那条死路，也对闭环的异步门禁无言以对：发版等待的批准，在开出它的会话结束之后才到来。
 
 ## Decision
 
-发版与任何其他变更走同一套轨道，只是带一个 release 特有的形状，[release 技能](../../skills/release/SKILL.md)现在教的正是这套。
+发版与任何其他变更走同一套轨道，只是带一个 release 特有的形状，[release 技能](../../../skills/release/SKILL.md)现在教的正是这套。
 
 **版本落地经由 pull request。** 从当前 `main` 切出分支 `release/vX.Y.Z[-rc.N]`——技能拥有这个命名，policy 豁免正是按它匹配——携带一个 `chore: release vX.Y.Z` 提交（`frontend/package.json` + `CHANGELOG.md`）、一个 conventional 标题、不带 `area/*` 标签也不带 issue 引用：依豁免有意裸报。
 

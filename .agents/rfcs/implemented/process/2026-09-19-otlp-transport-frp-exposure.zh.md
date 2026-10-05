@@ -1,8 +1,8 @@
 # RFC: OTLP 遥测经 frp 链路的传输与暴露架构
 
-[English](../2026-09-19-otlp-transport-frp-exposure.md) | 中文
-
 Status: implemented
+
+[English](2026-09-19-otlp-transport-frp-exposure.md) | 中文
 
 ## Problem
 
@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-整条外部链路由外部运维方按交付材料运维；本仓库拥有且仅拥有一个触点：markpost 的 OTLP 环境变量（staging 与生产 `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun`，`markpost-dev` 内网直连，各环境 bearer token 以 `otel_otlp_token` 入库 vault；staging 后来改为内网直连——见[观测接线改造 MRFC](../2026-10-04-observability-wiring-overhaul.zh.md)）。
+整条外部链路由外部运维方按交付材料运维；本仓库拥有且仅拥有一个触点：markpost 的 OTLP 环境变量（staging 与生产 `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun`，`markpost-dev` 内网直连，各环境 bearer token 以 `otel_otlp_token` 入库 vault；staging 后来改为内网直连——见[观测接线改造 MRFC](2026-10-04-observability-wiring-overhaul.zh.md)）。
 
 ```
 markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost, IP-allowlisted)
@@ -42,6 +42,6 @@ markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost,
 
 rollout 期间浮出的运维事实，现为义务：
 
-- **`docker compose restart` 不重读 `.env`**——改 env 必须 `up -d`（重建）。一次 env 失配让 collector 静默拒绝一切推送数日，正因 SDK 侧失败无声；摄取断流告警与[观测栈 MRFC](.././2026-09-19-otlp-observability-stack.zh.md)的后续工作一并跟踪。
+- **`docker compose restart` 不重读 `.env`**——改 env 必须 `up -d`（重建）。一次 env 失配让 collector 静默拒绝一切推送数日，正因 SDK 侧失败无声；摄取断流告警与[观测栈 MRFC](2026-09-19-otlp-observability-stack.zh.md)的后续工作一并跟踪。
 - **接口漂移是外部运维链路的长期风险**：站点、代理端口、限速与网络接入都经外部运维方。交付文档写明必需属性，黑盒检查（403/401/接受）验证外部可观测项——无论配置出自谁手。
 - **token 轮换是两侧动作**：collector 的 token 列表与各生产方的环境必须同步移动，否则摄取静默中断；轮换顺序为先 collector（追加新 token）、后生产方。

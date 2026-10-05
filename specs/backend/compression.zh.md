@@ -2,7 +2,7 @@
 
 [English](compression.md) | 中文
 
-读路径的传输最小化：Caddy 上的 HTTP 压缩、CSS 外置 + 最小化 + 内容哈希指纹，以及渲染期 HTML 最小化。在 SaaS 参考实例的 3 Mbps / 1 TB 预算下，省下的每个字节同时是链路余量与配额余量（见 [`caching.zh.md`](./caching.zh.md) _硬件包络_），这就是字节削减在本设计中压倒 CPU 优化的原因。决策记录（zstd 而非 brotli、不做预压缩、无 Node 工具链）见[性能优化 MRFC](../../.agents/rfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)。
+读路径的传输最小化：Caddy 上的 HTTP 压缩、CSS 外置 + 最小化 + 内容哈希指纹，以及渲染期 HTML 最小化。在 SaaS 参考实例的 3 Mbps / 1 TB 预算下，省下的每个字节同时是链路余量与配额余量（见 [`caching.zh.md`](./caching.zh.md) _硬件包络_），这就是字节削减在本设计中压倒 CPU 优化的原因。决策记录（zstd 而非 brotli、不做预压缩、无 Node 工具链）见[性能优化 MRFC](../../.agents/rfcs/implemented/architecture/2026-07-09-read-path-performance-pass.zh.md)。
 
 <a id="why-page-weight-dominates"></a>
 

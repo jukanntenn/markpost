@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.md
+2026-10-02-beszel-agent-websocket-token.md: 3d53c15f56b7af5825151155270c21dba3154c35
+2026-10-02-beszel-agent-websocket-token.zh.md: cb9e2f4426363747d08af2ba8a1807e15c50f657

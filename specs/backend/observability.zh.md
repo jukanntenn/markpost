@@ -8,7 +8,7 @@
 
 ### 硬约束
 
-**遥测经 OTLP 发往外部部署的观测栈；本地文件是回退模式与崩溃通道。** 设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 后，三支柱全部以 OTLP/HTTP + gzip 导出至 collector（bearer token 认证）。未设置时进程回退到仅文件管道（stdout 导出器 → JSONL）——压测/容量栈仍使用该模式，`scripts/loadtest/capacity/analyze.py` 因此零改动。观测栈本身、其传输与暴露架构由 [OTLP 观测栈 MRFC](../../.agents/rfcs/implemented/2026-09-19-otlp-observability-stack.zh.md) 与 [frp 传输 MRFC](../../.agents/rfcs/implemented/2026-09-19-otlp-transport-frp-exposure.zh.md) 承载；本规范只描述 markpost 的生产方一侧。
+**遥测经 OTLP 发往外部部署的观测栈；本地文件是回退模式与崩溃通道。** 设置 `OTEL_EXPORTER_OTLP_ENDPOINT` 后，三支柱全部以 OTLP/HTTP + gzip 导出至 collector（bearer token 认证）。未设置时进程回退到仅文件管道（stdout 导出器 → JSONL）——压测/容量栈仍使用该模式，`scripts/loadtest/capacity/analyze.py` 因此零改动。观测栈本身、其传输与暴露架构由 [OTLP 观测栈 MRFC](../../.agents/rfcs/implemented/process/2026-09-19-otlp-observability-stack.zh.md) 与 [frp 传输 MRFC](../../.agents/rfcs/implemented/process/2026-09-19-otlp-transport-frp-exposure.zh.md) 承载；本规范只描述 markpost 的生产方一侧。
 
 ### 路线 A：slog + 手写 trace Handler
 
@@ -154,7 +154,7 @@ OTel 语义约定（semconv），点分风格如 `http.server.request.duration`�
 | 业务 | `markpost.cdn.purge_skipped_total`   | counter   | —                     | 未尝试的 CDN 清除（no-op purger/未配置）           |
 | 系统 | 运行时指标                           | —         | —                     | OTel Go 运行时自动采集（goroutines、GC、内存）     |
 
-五个渲染缓存/CDN 清除计数器无属性——每种结局一个序列，命中率与清除尝试可聚合导出（决策记录：[缓存/清除可观测 MRFC](../../.agents/rfcs/implemented/2026-09-03-cache-purge-observability.zh.md)；对照 `CF-Cache-Status` 阅读：[`caching.md`](./caching.zh.md)）。
+五个渲染缓存/CDN 清除计数器无属性——每种结局一个序列，命中率与清除尝试可聚合导出（决策记录：[缓存/清除可观测 MRFC](../../.agents/rfcs/implemented/feature/2026-09-03-cache-purge-observability.zh.md)；对照 `CF-Cache-Status` 阅读：[`caching.md`](./caching.zh.md)）。
 
 计数器在首次递增前不产生数据点——仪表盘与告警规则不得假设首个业务事件前序列已存在。
 

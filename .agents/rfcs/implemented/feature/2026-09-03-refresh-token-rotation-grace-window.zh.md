@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-09-03-refresh-token-rotation-grace-window.md) | 中文
+[English](2026-09-03-refresh-token-rotation-grace-window.md) | 中文
 
 ## Problem
 

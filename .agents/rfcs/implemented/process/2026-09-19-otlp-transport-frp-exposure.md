@@ -1,8 +1,8 @@
 # RFC: Transport and exposure architecture for OTLP telemetry over frp
 
-English | [中文](../2026-09-19-otlp-transport-frp-exposure.zh.md)
-
 Status: implemented
+
+English | [中文](2026-09-19-otlp-transport-frp-exposure.zh.md)
 
 ## Problem
 
@@ -10,7 +10,7 @@ Telemetry producers and the observability stack live on opposite sides of a NAT.
 
 ## Decision
 
-The whole external chain is operated by the external operators from handoff material; this repo owns exactly one touchpoint: markpost's OTLP environment (`OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun` for staging and production, LAN-direct for `markpost-dev`, bearer token per env vaulted as `otel_otlp_token`; staging later moved LAN-direct — see [the observability wiring overhaul MRFC](../2026-10-04-observability-wiring-overhaul.md)).
+The whole external chain is operated by the external operators from handoff material; this repo owns exactly one touchpoint: markpost's OTLP environment (`OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp.bytehome.fun` for staging and production, LAN-direct for `markpost-dev`, bearer token per env vaulted as `otel_otlp_token`; staging later moved LAN-direct — see [the observability wiring overhaul MRFC](2026-10-04-observability-wiring-overhaul.md)).
 
 ```
 markpost@vps1 ──HTTPS(OTLP+gzip+Bearer)──► caddy@vps2:443 (otlp vhost, IP-allowlisted)
@@ -42,6 +42,6 @@ The public chain is verified end-to-end: `https://grafana.bytehome.fun` serves G
 
 Operational truths that surfaced during rollout and now stand as obligations:
 
-- **`docker compose restart` does not reload `.env`** — an env change requires `up -d` (recreate). A stale-env collector silently rejected every push for days because SDK-side failures are quiet; the ingest-absence alert is tracked as follow-up work alongside the [observability stack MRFC](.././2026-09-19-otlp-observability-stack.md).
+- **`docker compose restart` does not reload `.env`** — an env change requires `up -d` (recreate). A stale-env collector silently rejected every push for days because SDK-side failures are quiet; the ingest-absence alert is tracked as follow-up work alongside the [observability stack MRFC](2026-09-19-otlp-observability-stack.md).
 - **Interface drift is the standing risk** of the externally operated chain: vhosts, proxy ports, limits, and network attachment route through the external operators. The handoff document states the required properties, and the black-box checks (403/401/accepted) verify the externally observable ones regardless of who configures them.
 - **Token rotation is two-sided**: the collector's token list and every producer's env move together, or ingestion breaks quietly; rotation runs collector-side first (new tokens added), then producer-side.

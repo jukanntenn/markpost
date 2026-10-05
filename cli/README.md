@@ -53,4 +53,4 @@ make lint
 make acceptance   # e2e: needs MARKPOST_E2E_BASE_URL/USERNAME/PASSWORD, skips otherwise
 ```
 
-Design: [specs/cli.md](../specs/cli.md) · decisions: [MRFC](../.agents/rfcs/implemented/2026-09-03-standalone-agent-cli.md) · tree orders: [AGENTS.md](AGENTS.md)
+Design: [specs/cli.md](../specs/cli.md) · decisions: [MRFC](../.agents/rfcs/implemented/feature/2026-09-03-standalone-agent-cli.md) · tree orders: [AGENTS.md](AGENTS.md)

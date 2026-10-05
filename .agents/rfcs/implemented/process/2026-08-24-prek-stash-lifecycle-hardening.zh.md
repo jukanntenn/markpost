@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-08-24-prek-stash-lifecycle-hardening.md) | 中文
+[English](2026-08-24-prek-stash-lifecycle-hardening.md) | 中文
 
 ## Problem
 
@@ -16,7 +16,7 @@ prek 自身绝不跨会话 apply 旧 patch(全源码唯一的 `git apply` 调用
 
 ## Decision
 
-`scripts/prek_patch_audit.py`(stdlib,单测风格与 policy 套件一致并以同一模式接入 prek)标记孤儿 patch——归属 pid 已死、龄超一小时宽限窗——并打印预览优先的恢复路径;dev-loop skill 在会话开场分诊运行它,先于任何工作叠上被静默打扫的树。恢复走其预览命令(`git diff --no-index` 检视、`git apply --check`、而后 apply),绝不盲 `git apply` 缓存 patch;runbook 以约束行持有该规程,连同 worktree 误报行。`prek cache gc`——上游 30 天陈旧 patch 保留期——加入分诊节律,守卫落地后"勿清缓存"警告退役。根因修复(删除或标记已消费 patch、对死 pid 孤儿告警)是 prek 本体的上游工作:markpost 以维护者动作提 issue,并在采用修复版本时重估仓库侧守卫。[prek MRFC](../2026-08-12-prek-single-source-of-format-and-lint.zh.md) 继续持有工具决策,本记录持有事故加固;worktree 隔离提案保持 `proposed` 并已记录点燃证据。
+`scripts/prek_patch_audit.py`(stdlib,单测风格与 policy 套件一致并以同一模式接入 prek)标记孤儿 patch——归属 pid 已死、龄超一小时宽限窗——并打印预览优先的恢复路径;dev-loop skill 在会话开场分诊运行它,先于任何工作叠上被静默打扫的树。恢复走其预览命令(`git diff --no-index` 检视、`git apply --check`、而后 apply),绝不盲 `git apply` 缓存 patch;runbook 以约束行持有该规程,连同 worktree 误报行。`prek cache gc`——上游 30 天陈旧 patch 保留期——加入分诊节律,守卫落地后"勿清缓存"警告退役。根因修复(删除或标记已消费 patch、对死 pid 孤儿告警)是 prek 本体的上游工作:markpost 以维护者动作提 issue,并在采用修复版本时重估仓库侧守卫。[prek MRFC](2026-08-12-prek-single-source-of-format-and-lint.zh.md) 继续持有工具决策,本记录持有事故加固;worktree 隔离提案保持 `proposed` 并已记录点燃证据。
 
 ## Alternatives considered
 

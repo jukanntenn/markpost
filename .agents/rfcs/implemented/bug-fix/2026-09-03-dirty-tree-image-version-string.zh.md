@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-09-03-dirty-tree-image-version-string.md) | 中文
+[English](2026-09-03-dirty-tree-image-version-string.md) | 中文
 
 ## Problem
 

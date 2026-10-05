@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-07-10-persistent-best-effort-delivery-queue.md) | 中文
+[English](2026-07-10-persistent-best-effort-delivery-queue.md) | 中文
 
 ## Problem
 
@@ -10,13 +10,13 @@ Status: implemented
 
 ## Decision
 
-投递是一个三层的持久化尽力而为子系统（`internal/service/delivery/`）：一张 `delivery_attempts` PostgreSQL 表持有全部待决状态（热行，在任何终态的同一事务内归档进 `delivery_history` 并删除 —— 细节见 [`specs/backend/delivery-queue.md`](../../../specs/backend/delivery-queue.zh.md)），一个单 goroutine 的 1 s ticker 扫过到期墙并认领到期行（`FOR UPDATE SKIP LOCKED`，把 `next_at` 预约到请求超时加 500 ms 缓冲之后，使在途行对下一个 tick 不可见 —— [`specs/backend/delivery-scheduler.md`](../../../specs/backend/delivery-scheduler.zh.md)），以及一个含 32 个 worker 的有界 pond v2 池发出 Feishu HTTP 调用。重试间隔是 `backoff.go` 中硬编码的序列 `[1m, 5m, 10m, 20m]`，40 分钟到期墙按 `round_up_to_10min(sum(sequence))` 计算；两者都不可由运维者配置。发送失败被分类（`delivery_error.go`）为带显式可重试标志的类别 —— 被永久拒绝的卡片或被吊销的 webhook 立即归档为 `failed`，而不是烧掉 36 分钟预算，且类别记录在历史行上（`000007_delivery_error_category`），供管理端过滤器与 `delivery_failed` 指标标签使用（[`specs/backend/delivery-retry.md`](../../../specs/backend/delivery-retry.zh.md)）。投递是 at-least-once：发送成功与归档提交之间的一次崩溃可能复制一张卡片，这被接受是因为卡片内容幂等（[`specs/backend/delivery-recovery.md`](../../../specs/backend/delivery-recovery.zh.md)）。状态机是 `pending → delivered | failed | expired`，没有中间 `running` 状态 —— `next_at` 预约以少一个状态的代价提供在途去重。
+投递是一个三层的持久化尽力而为子系统（`internal/service/delivery/`）：一张 `delivery_attempts` PostgreSQL 表持有全部待决状态（热行，在任何终态的同一事务内归档进 `delivery_history` 并删除 —— 细节见 [`specs/backend/delivery-queue.md`](../../../../specs/backend/delivery-queue.zh.md)），一个单 goroutine 的 1 s ticker 扫过到期墙并认领到期行（`FOR UPDATE SKIP LOCKED`，把 `next_at` 预约到请求超时加 500 ms 缓冲之后，使在途行对下一个 tick 不可见 —— [`specs/backend/delivery-scheduler.md`](../../../../specs/backend/delivery-scheduler.zh.md)），以及一个含 32 个 worker 的有界 pond v2 池发出 Feishu HTTP 调用。重试间隔是 `backoff.go` 中硬编码的序列 `[1m, 5m, 10m, 20m]`，40 分钟到期墙按 `round_up_to_10min(sum(sequence))` 计算；两者都不可由运维者配置。发送失败被分类（`delivery_error.go`）为带显式可重试标志的类别 —— 被永久拒绝的卡片或被吊销的 webhook 立即归档为 `failed`，而不是烧掉 36 分钟预算，且类别记录在历史行上（`000007_delivery_error_category`），供管理端过滤器与 `delivery_failed` 指标标签使用（[`specs/backend/delivery-retry.md`](../../../../specs/backend/delivery-retry.zh.md)）。投递是 at-least-once：发送成功与归档提交之间的一次崩溃可能复制一张卡片，这被接受是因为卡片内容幂等（[`specs/backend/delivery-recovery.md`](../../../../specs/backend/delivery-recovery.zh.md)）。状态机是 `pending → delivered | failed | expired`，没有中间 `running` 状态 —— `next_at` 预约以少一个状态的代价提供在途去重。
 
 ## Alternatives considered
 
 **保留发后即忘的 channel 派发器。** 可能的最简设计，但它在 116 任务/秒的上限下丢掉约 97% 的投递，并在重启时丢失全部待决工作；产品契约要求持久化与有界重试。
 
-**外部消息代理（Cloudflare Queues、Redis、RabbitMQ）。** Cloudflare Queues 经深入评估后在架构上被拒：它的推送消费者只能在 Workers 上运行，Feishu 卡片逻辑就得在第二个代码库里重新实现，带上自己的部署管线和一个云依赖，却比不过一张 Postgres 表 + ticker。Redis/RabbitMQ 为一个写入率均值约 0.12 帖/秒的单实例部署加上常驻依赖与运维负担 —— 与[性能优化 MRFC](.././2026-07-09-read-path-performance-pass.zh.md)拒绝第二台 VPS 的推理相同。
+**外部消息代理（Cloudflare Queues、Redis、RabbitMQ）。** Cloudflare Queues 经深入评估后在架构上被拒：它的推送消费者只能在 Workers 上运行，Feishu 卡片逻辑就得在第二个代码库里重新实现，带上自己的部署管线和一个云依赖，却比不过一张 Postgres 表 + ticker。Redis/RabbitMQ 为一个写入率均值约 0.12 帖/秒的单实例部署加上常驻依赖与运维负担 —— 与[性能优化 MRFC](2026-07-09-read-path-performance-pass.zh.md)拒绝第二台 VPS 的推理相同。
 
 **并发层用 ants v2。** ants 是一个回收 goroutine 的池，没有内建任务队列，采用它就得把手写的缓冲 channel 保留为独立的排队层，还携带一个 `golang.org/x/sync` 依赖。pond v2 零依赖，有一等公民的队列（`WithQueueSize`）、非阻塞提交、优雅排空、默认 panic 恢复和指标面 —— 与投递需求一一对应。
 
@@ -32,4 +32,4 @@ Status: implemented
 
 ## Consequences
 
-投递在重启后存活，在 40 分钟内到达终态，并经由历史行及其错误类别对用户保持诚实。队列可观测（`delivery_pending`/`delivery_dispatched`/`delivery_failed` 指标、`CountByStatus`、管理端历史过滤器与故障渠道查询）。接受的代价：at-least-once 重复（对幂等卡片无害）、需要一个发布才能更改的硬编码重试序列、永远冻结为只追加的 `Status` 排序，以及依赖 PostgreSQL 专有认领 SQL 的调度器 —— 这是唯一受支持的数据库（[PostgreSQL-only MRFC](.././2026-07-26-postgresql-only.zh.md)移除了该子系统最初携带的多方言分支）。
+投递在重启后存活，在 40 分钟内到达终态，并经由历史行及其错误类别对用户保持诚实。队列可观测（`delivery_pending`/`delivery_dispatched`/`delivery_failed` 指标、`CountByStatus`、管理端历史过滤器与故障渠道查询）。接受的代价：at-least-once 重复（对幂等卡片无害）、需要一个发布才能更改的硬编码重试序列、永远冻结为只追加的 `Status` 排序，以及依赖 PostgreSQL 专有认领 SQL 的调度器 —— 这是唯一受支持的数据库（[PostgreSQL-only MRFC](2026-07-26-postgresql-only.zh.md)移除了该子系统最初携带的多方言分支）。

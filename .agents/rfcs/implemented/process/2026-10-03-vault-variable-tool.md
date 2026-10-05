@@ -2,7 +2,7 @@
 
 Status: implemented
 
-English | [中文](../2026-10-03-vault-variable-tool.zh.md)
+English | [中文](2026-10-03-vault-variable-tool.zh.md)
 
 ## Problem
 

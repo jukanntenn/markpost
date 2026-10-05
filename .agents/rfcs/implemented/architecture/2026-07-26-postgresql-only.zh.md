@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-07-26-postgresql-only.md) | 中文
+[English](2026-07-26-postgresql-only.md) | 中文
 
 ## Problem
 
@@ -22,4 +22,4 @@ markpost 只在 PostgreSQL 17 上运行。`backend/internal/infra/db.go` 用 `go
 
 ## Consequences
 
-任何部署，包括 homelab，都运行一个 PostgreSQL 17 实例 —— 单一 Docker 镜像与 dev compose 都提供一个。作为回报，数据层为每项工作使用可得的最佳 PostgreSQL 机制，测试对着唯一真实引擎运行，迁移只写一次。彻底删掉驱动而不是带着不用，是 [PRINCIPLES.md](../../../PRINCIPLES.zh.md) "Design from first principles" 的应用。
+任何部署，包括 homelab，都运行一个 PostgreSQL 17 实例 —— 单一 Docker 镜像与 dev compose 都提供一个。作为回报，数据层为每项工作使用可得的最佳 PostgreSQL 机制，测试对着唯一真实引擎运行，迁移只写一次。彻底删掉驱动而不是带着不用，是 [PRINCIPLES.md](../../../../PRINCIPLES.zh.md) "Design from first principles" 的应用。

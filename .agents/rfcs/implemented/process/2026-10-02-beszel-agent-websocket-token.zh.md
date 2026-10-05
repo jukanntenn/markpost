@@ -2,7 +2,7 @@
 
 Status: implemented
 
-[English](../2026-10-02-beszel-agent-websocket-token.md) | 中文
+[English](2026-10-02-beszel-agent-websocket-token.md) | 中文
 
 ## Problem
 

@@ -1,8 +1,8 @@
 # RFC: Observability wiring overhaul (three-env telemetry, kuma rework, Grafana alerting)
 
-English | [中文](../2026-10-04-observability-wiring-overhaul.zh.md)
-
 Status: implemented
+
+English | [中文](2026-10-04-observability-wiring-overhaul.zh.md)
 
 ## Problem
 
@@ -15,7 +15,7 @@ Three findings broke the observability story the stack was designed around:
 ## Decision
 
 1. **Standard deployment attribute.** Every wired environment exports `OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=<env>` (compose template). Dashboards and alert rules slice on this label instead of parsing `service.name`.
-2. **Staging goes LAN-direct.** `otel_otlp_endpoint` for staging is the collector over the LAN (`http://192.168.5.57:4318`) — the same path dev uses; production keeps the public ingress. This supersedes the staging leg of [the frp transport MRFC](../2026-09-19-otlp-transport-frp-exposure.md).
+2. **Staging goes LAN-direct.** `otel_otlp_endpoint` for staging is the collector over the LAN (`http://192.168.5.57:4318`) — the same path dev uses; production keeps the public ingress. This supersedes the staging leg of [the frp transport MRFC](2026-09-19-otlp-transport-frp-exposure.md).
 3. **Bare push URL contract.** Vaulted kuma URLs are the bare push endpoint with no query suffix, in the form each producer can reach — production pushes through the public route, staging over the LAN (its egress to vps2 hangs; a public-form URL would time out silently). `heartbeat.py` appends `?query` (unchanged); `pgbackrest-check.py` now appends `?query` too (was `&`, which only worked with the suffix form and produced the duplicate-param bug).
 4. **Symmetric heartbeat.** The deploy installs the supervisor program on staging and production, guarded per env on the vaulted `kuma_heartbeat_url`; staging has its own push monitor and vault variable. Both envs rehearse the identical shape.
 5. **Kuma inventory standard.** Two group monitors (`markpost · production`, `markpost · staging`) parent the leaf monitors; every monitor carries self-describing tags (`env:production` / `env:staging`, `service:markpost`, `layer:edge|origin|push`); names follow `markpost · <env> · <object> (<layer>)`; push monitors set retries explicitly (heartbeat 2, daily backup checks 1).

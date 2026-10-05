@@ -4,7 +4,7 @@ name: Docs
 # fragments, word budgets, RFC format + archive, bilingual pairing,
 # adoption verify) plus the agent-instruction mirror check.
 # Lint ignores *.md by path filter, so doc-only changes get their own fast
-# job — hdsh installs via uv, no other toolchain needed.
+# job — hdsh installs via uv (setup-uv), no other toolchain needed.
 on:
   push:
     branches: [main]
@@ -55,6 +55,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
       - name: Install hdsh (pinned ref)
         run: uv tool install "harness-deepseek-harness @ git+https://github.com/jukanntenn/harness-deepseek-harness@${HDSH_REF}"

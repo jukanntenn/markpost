@@ -31,6 +31,6 @@ GraphQL `PullRequest.stack` is the membership authority — re-query and verify 
 
 ## Discipline
 
-- Merge-forward is the default propagation for fixes; rebase is deliberate, lease-protected, and re-audited ([responding-to-review](../responding-to-review/SKILL.md)).
+- Merge-forward is the default propagation for fixes; rebase is deliberate, lease-protected, and re-audited ([stack review cookbook](../../../docs/cookbook/responding-to-pr-review-on-a-stack.md)).
 - Pushing a branch uses the machine account's credentials; never force-push a reviewed layer (`--force-with-lease` only, and only on the rebase path).
 - One worktree per layer stands for the whole life of the stack — [merging-stacked-prs](../merging-stacked-prs/SKILL.md) removes them in the cleanup pass.

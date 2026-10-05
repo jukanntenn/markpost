@@ -12,7 +12,7 @@ markpost 此前运行一套自研 harness：`.github/issue-management/policy.py`
 
 markpost 接入 [hdsh](https://github.com/jukanntenn/harness-deepseek-harness)（以完整 SHA 钉在 [`prek.toml`](../../../../prek.toml) 与 [`.hdsh/adopt.manifest.json`](../../../../.hdsh/adopt.manifest.json)），并按「不搞双标准」的接入契约在同一变更中退役本地 harness：
 
-- issue 引擎、其 workflow、模板与 `.github/issue-management/` 删除；由 hdsh 的薄 workflow 与上游 composite action 取代，绑定新 Project 看板（#6，"markpost Issue Management"），其内置 Status 字段承载七个标准状态；旧看板 #1 及其 `Loop status` 字段随旧引擎一并废弃。
+- issue 引擎、其 workflow、模板与 `.github/issue-management/` 删除；由 hdsh 的薄 workflow 与上游 composite action 取代，重绑到既有 Project 看板 #1（"markpost Development"）——其内置 Status 字段改写为七个标准状态（`Loop status` 自定义字段作为惰性遗留数据原地保留），新增 `Start date` 字段，看板链接到仓库。四个职能已被 hdsh 拥有的 markpost 自有 skill 在同一变更中退役——`writing-mrfcs`（RFC 规则 + `archiving-rfcs`）、`doc-standards`（`documenting` + `editing-prose`）、`code-review`（`reviewing`）与 `responding-to-review`（栈评审 cookbook）——保留的 skill 重定向了它们的引用。
 - `.agents/mrfcs/` 迁至 `.agents/rfcs/` 并归类（`feature`/`bug-fix`/`simplification`/`architecture`/`process`/`testing`），标题行 `# MRFC:` 改为 `# RFC:`，逐对记录配对 sidecar。
 - 文档门禁脚本及其清单删除；词数上限折入 [`.hdsh/docs.manifest.json`](../../../../.hdsh/docs.manifest.json)，`specs/` 语料子树折入 [`.hdsh/pairing.manifest.json`](../../../../.hdsh/pairing.manifest.json) 的 roots，七个 hdsh 门禁经 adopt 管理的 prek 块与 [`.github/workflows/docs.yml`](../../../../.github/workflows/docs.yml) 运行。
 - `scripts/agentlib.py`、`check_agent_instructions.py` 与 `sync_agent_instructions.py` 保留：AGENTS↔CLAUDE 与 skills 镜像契约是 markpost 本地事务，与文档标准正交。`.claude/skills/` 镜像在引导时即包含 hdsh 安装的 skills，使方向无关的镜像永远不会把它们当作幻影删除。

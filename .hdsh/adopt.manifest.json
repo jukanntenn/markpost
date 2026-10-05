@@ -64,7 +64,6 @@
     ".agents/skills/pushing/SKILL.md",
     ".agents/skills/reviewing/SKILL.md"
   ],
-  "projectAnchor": 6,
   "slotGuidance": {
     ".agents/skills/archiving-rfcs/SKILL.md": {
       "archive-tests": "7e5b7c9a635c7bae11d9b4478457e62610aed660b2b4b0b9fd68b3640fe94ae3"
@@ -84,5 +83,6 @@
     ".agents/skills/reviewing/SKILL.md": {
       "entry-path": "5cf8ef6b8f8ef840ddaa80fa04fa00b8f678e16614e538c677ee99136937f4fb"
     }
-  }
+  },
+  "projectAnchor": 1
 }

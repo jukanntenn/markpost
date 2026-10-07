@@ -1,22 +1,21 @@
 ---
 name: Bug
-about: 记录现有预期行为的失效
-title: ""
-labels: "type/bug"
-assignees: ""
+about: Record a failure of existing intended behavior
+title: ''
+assignees: ''
+labels: type/bug
 ---
 
-<!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
-
-一句话说明错误结果。
+<!-- Title states an English action or outcome; exposed body stays within 50 units. -->
+One sentence describing the wrong result.
 
 <details>
-<summary>复现、预期与验收</summary>
+<summary>Reproduction, expectation, and acceptance</summary>
 
-- 复现步骤：
-- 实际结果：
-- 预期结果：
-- 环境：
-- 验收条件：
+- Reproduction steps:
+- Actual result:
+- Expected result:
+- Environment:
+- Acceptance criteria:
 
 </details>

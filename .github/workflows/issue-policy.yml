@@ -1,47 +1,26 @@
 name: Issue policy
 
-# Pull-request check for the agent-driven development loop: once a
-# non-draft, non-bot PR enters review (review requested or any review
-# submitted), validate the conventional-commit title, the area/* label,
-# the issue references, and every referenced issue's template contract
-# (see .agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md).
-# Failures post an audit comment on the PR and fail the check.
-
 on:
   pull_request:
-    types:
-      - opened
-      - edited
-      - synchronize
-      - reopened
-      - labeled
-      - unlabeled
-      - ready_for_review
-      - review_requested
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled, ready_for_review, review_requested]
   pull_request_review:
     types: [submitted]
 
 permissions:
   contents: read
   issues: read
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   policy:
     name: Issue policy
     runs-on: ubuntu-latest
     steps:
-      - name: Check out policy at the event commit
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Fully qualified, never a relative path: a relative reference would
+      # load the action from the pull request's merge ref, letting a pull
+      # request modify its own validator.
+      - name: Validate the pull request
+        uses: jukanntenn/harness-deepseek-harness/.github/actions/issue-policy@3b1668f4bfebe6c967595ac023dd411d9bc8b5b9
         with:
-          ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Validate pull request
-        # The referenced-issue validation reads board status on the private
-        # user-owned Project, which GITHUB_TOKEN cannot see (and cannot be
-        # granted): authenticate with the same board-capable PAT the
-        # lifecycle workflow uses, falling back to github.token for the
-        # pre-review window where no board read happens.
-        env:
-          GH_TOKEN: ${{ secrets.MARKPOST_PROJECT_TOKEN || github.token }}
-        run: python3 .github/issue-management/policy.py pr
+          project-token: ${{ secrets.HDSH_ISSUE_PROJECT_TOKEN }}
+          hdsh-ref: 3b1668f4bfebe6c967595ac023dd411d9bc8b5b9

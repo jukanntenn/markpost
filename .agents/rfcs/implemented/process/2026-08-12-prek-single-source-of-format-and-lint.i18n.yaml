@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-08-12-prek-single-source-of-format-and-lint.md
+2026-08-12-prek-single-source-of-format-and-lint.md: 12b30b8508c2c13a10b2702f1fb56a72e469f7b9
+2026-08-12-prek-single-source-of-format-and-lint.zh.md: f00c330f1abaceed99a441e0deef72e2a907f7e4

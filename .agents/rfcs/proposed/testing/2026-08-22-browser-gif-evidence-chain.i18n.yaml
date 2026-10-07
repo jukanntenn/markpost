@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/proposed/testing/2026-08-22-browser-gif-evidence-chain.md
+2026-08-22-browser-gif-evidence-chain.md: ac36135c747ce6d10434f652f0e1fc4ec196d733
+2026-08-22-browser-gif-evidence-chain.zh.md: 095cc19d33fd133c504d90ff933b7a84fbe9e20f

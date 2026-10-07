@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-10-03-vault-variable-tool.md
+2026-10-03-vault-variable-tool.md: d7fabc6e6d4b38d55ce99eb9c3bc5982a950aebf
+2026-10-03-vault-variable-tool.zh.md: 5d4ccbfb12c6978f20c86ffcb28f805c6f145618

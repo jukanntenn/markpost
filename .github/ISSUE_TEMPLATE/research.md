@@ -1,21 +1,20 @@
 ---
 name: Research
-about: 形成结论、证据或决策
-title: ""
-labels: "type/research"
-assignees: ""
+about: Produce a conclusion, evidence, or decision
+title: ''
+assignees: ''
+labels: type/research
 ---
 
-<!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
-
-一句话说明待回答的问题。
+<!-- Title states an English action or outcome; exposed body stays within 50 units. -->
+One sentence describing the question to answer.
 
 <details>
-<summary>问题与证据标准</summary>
+<summary>Question and evidence standard</summary>
 
-- 核心问题：
-- 证据标准：
-- 交付结论：
-- 可能的后续工作：
+- Core question:
+- Evidence standard:
+- Delivered conclusion:
+- Possible follow-up work:
 
 </details>

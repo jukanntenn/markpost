@@ -2,7 +2,7 @@
 
 [English](backup.md) | 中文
 
-markpost 灾难恢复备份的运维指南：pgBackRest WAL 归档加每日逻辑转储到 Backblaze B2（设计与取舍见[WAL 归档 MRFC](../.agents/mrfcs/implemented/2026-07-09-wal-archival-disaster-recovery.zh.md)；当前态势见 [`specs/backend/disaster-recovery.md`](../specs/backend/disaster-recovery.zh.md)）。档位覆盖 **staging 与生产** —— staging 是晋升门，必须演练生产形态 —— 各自对着自己的桶，在该环境的 vault 定义 `b2_repo_key_id` 时激活；此前部署与备份前的管线逐字节一致。dev 不跑备份。
+markpost 灾难恢复备份的运维指南：pgBackRest WAL 归档加每日逻辑转储到 Backblaze B2（设计与取舍见[WAL 归档 MRFC](../.agents/rfcs/implemented/architecture/2026-07-09-wal-archival-disaster-recovery.zh.md)；当前态势见 [`specs/backend/disaster-recovery.md`](../specs/backend/disaster-recovery.zh.md)）。档位覆盖 **staging 与生产** —— staging 是晋升门，必须演练生产形态 —— 各自对着自己的桶，在该环境的 vault 定义 `b2_repo_key_id` 时激活；此前部署与备份前的管线逐字节一致。dev 不跑备份。
 
 <a id="b2-provisioning"></a>
 

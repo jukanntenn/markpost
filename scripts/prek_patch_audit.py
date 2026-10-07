@@ -8,7 +8,7 @@ leaves the worktree silently without that work — the patch file is the only
 copy. This script flags patches whose owning pid is dead and whose age
 exceeds the grace window, and prints a preview-first recovery path; it never
 applies anything itself — the decision record is
-.agents/mrfcs/implemented/2026-08-24-prek-stash-lifecycle-hardening.md.
+.agents/rfcs/implemented/2026-08-24-prek-stash-lifecycle-hardening.md.
 """
 from __future__ import annotations
 

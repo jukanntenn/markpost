@@ -1,14 +1,15 @@
-<!-- Fixes #N 表示解决并自动关闭（仅实施栈顶层使用）；Related to #N 仅关联（RFC 层使用）。 -->
-<!-- 进入评审的非草稿 PR 将由 issue-policy 校验：Conventional 标题、area/* 标签、issue 引用。 -->
+<!-- Write "Fixes #NN" to resolve and auto-close; write "Related to #NN" to link only. -->
+<!-- A non-draft human PR entering review must reference at least one same-repository Issue. -->
+<!-- A resolving PR keeps Priority in sync with its Issues; when resolving several, take the highest. -->
+<!-- Draft PRs are welcome early; mark ready once the checks pass. -->
+<!-- Never open a public PR for an undisclosed vulnerability — SECURITY.md owns the coordination. -->
 
-关联 Issue：
-
-**Ask-first 项**（schema 迁移 / 新依赖 / CI / Docker 变更；无则写"无"）：
+Linked Issue:
 
 <details>
-<summary>变更与验证</summary>
+<summary>Change and verification</summary>
 
-- 变更：
-- 验证：
+- Change:
+- Verification:
 
 </details>

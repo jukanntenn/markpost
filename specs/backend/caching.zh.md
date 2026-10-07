@@ -2,7 +2,7 @@
 
 [English](caching.md) | 中文
 
-本页规定 markpost 的读路径缓存设计：三个缓存层（浏览器 / CDN / 源站渲染缓存）、ETag/304 方案、CDN 清除契约，以及由删除驱动的失效。压缩与页面权重的工作见 [`compression.zh.md`](./compression.zh.md)；请求限流见 [`rate-limiting.zh.md`](./rate-limiting.zh.md)。决策记录 —— 为何选 Cloudflare、为何是这些 TTL、拒绝了什么 —— 是[性能优化 MRFC](../../.agents/mrfcs/implemented/2026-07-09-read-path-performance-pass.zh.md)。运维层的 Cloudflare（接入、SSL 模式、免费版边界）见 [`cloudflare.zh.md`](./cloudflare.zh.md)。
+本页规定 markpost 的读路径缓存设计：三个缓存层（浏览器 / CDN / 源站渲染缓存）、ETag/304 方案、CDN 清除契约，以及由删除驱动的失效。压缩与页面权重的工作见 [`compression.zh.md`](./compression.zh.md)；请求限流见 [`rate-limiting.zh.md`](./rate-limiting.zh.md)。决策记录 —— 为何选 Cloudflare、为何是这些 TTL、拒绝了什么 —— 是[性能优化 MRFC](../../.agents/rfcs/implemented/architecture/2026-07-09-read-path-performance-pass.zh.md)。运维层的 Cloudflare（接入、SSL 模式、免费版边界）见 [`cloudflare.zh.md`](./cloudflare.zh.md)。
 
 <a id="scope-and-workload"></a>
 

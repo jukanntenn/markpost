@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-08-22-layered-agent-instructions-and-direction-free-mirrors.md
+2026-08-22-layered-agent-instructions-and-direction-free-mirrors.md: df20ca9d14e22c24b9a0c5b2b0b1baf962b2f5d5
+2026-08-22-layered-agent-instructions-and-direction-free-mirrors.zh.md: 9d7426a2ef66db249cdf0c089bbfd957475f1a83

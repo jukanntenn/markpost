@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/feature/2026-08-23-user-vip-flag.md
+2026-08-23-user-vip-flag.md: 99fa7e83f69e2cd74c38ba583d8a0708159ee4cf
+2026-08-23-user-vip-flag.zh.md: 9d3251d6a9c7b8369e01d73b2a83f0a2dd374644

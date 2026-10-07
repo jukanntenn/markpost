@@ -1,8 +1,14 @@
 {
   "owner": "jukanntenn",
+  "accountType": "user",
   "repository": "markpost",
   "projectNumber": 1,
-  "statusField": "Loop status",
+  "projectTitle": "markpost Development",
+  "lifecycleActor": "gh2bda",
+  "priorityField": "Priority",
+  "startDateField": "Start date",
+  "projectTimeZone": "Asia/Shanghai",
+  "allowUnassignedOwner": false,
   "statuses": [
     "Inbox",
     "Backlog",
@@ -11,10 +17,5 @@
     "In review",
     "Done",
     "No action"
-  ],
-  "priorityField": "Priority",
-  "lifecycleActor": "gh2bda",
-  "bodyUnitLimit": 50,
-  "types": ["idea", "feature", "bug", "research", "task"],
-  "requireProject": true
+  ]
 }

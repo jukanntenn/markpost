@@ -8,7 +8,7 @@ The three observability pillars (Logs / Traces / Metrics) in one specification. 
 
 ### Hard constraints
 
-**Telemetry ships via OTLP to the externally deployed observability stack; the local filesystem is the fallback and the crash channel.** With `OTEL_EXPORTER_OTLP_ENDPOINT` set, all three pillars export OTLP/HTTP + gzip to the collector (bearer-token authenticated). Without it, the process falls back to the files-only pipeline (stdout exporters → JSONL) — the mode the loadtest/capacity stack still uses, so `scripts/loadtest/capacity/analyze.py` keeps working unchanged. The stack, its transport, and the exposure architecture are owned by [the OTLP observability stack MRFC](../../.agents/mrfcs/implemented/2026-09-19-otlp-observability-stack.md) and [the frp transport MRFC](../../.agents/mrfcs/implemented/2026-09-19-otlp-transport-frp-exposure.md); this spec describes markpost's producer side only.
+**Telemetry ships via OTLP to the externally deployed observability stack; the local filesystem is the fallback and the crash channel.** With `OTEL_EXPORTER_OTLP_ENDPOINT` set, all three pillars export OTLP/HTTP + gzip to the collector (bearer-token authenticated). Without it, the process falls back to the files-only pipeline (stdout exporters → JSONL) — the mode the loadtest/capacity stack still uses, so `scripts/loadtest/capacity/analyze.py` keeps working unchanged. The stack, its transport, and the exposure architecture are owned by [the OTLP observability stack MRFC](../../.agents/rfcs/implemented/process/2026-09-19-otlp-observability-stack.md) and [the frp transport MRFC](../../.agents/rfcs/implemented/process/2026-09-19-otlp-transport-frp-exposure.md); this spec describes markpost's producer side only.
 
 ### Route A: slog + a hand-written trace Handler
 
@@ -154,7 +154,7 @@ The metrics adopted today, extended as needed:
 | Business | `markpost.cdn.purge_skipped_total`   | counter   | —                     | CDN purges not attempted (no-op purger/unconfigured)           |
 | System   | runtime metrics                      | —         | —                     | OTel Go runtime auto-collection (goroutines, GC, memory)       |
 
-The five render-cache/CDN-purge counters are attribute-free — one series per outcome, hit rate and purge attempts derivable by aggregation (decision record: [the cache/purge observability MRFC](../../.agents/mrfcs/implemented/2026-09-03-cache-purge-observability.md); reading them against `CF-Cache-Status`: [`caching.md`](./caching.md)).
+The five render-cache/CDN-purge counters are attribute-free — one series per outcome, hit rate and purge attempts derivable by aggregation (decision record: [the cache/purge observability MRFC](../../.agents/rfcs/implemented/feature/2026-09-03-cache-purge-observability.md); reading them against `CF-Cache-Status`: [`caching.md`](./caching.md)).
 
 Counters produce their first data point only on first increment — dashboards and alert rules must not assume a series exists before the first business event.
 

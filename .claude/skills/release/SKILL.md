@@ -149,9 +149,7 @@ cat .github/workflows/docker-publish.yml
 
 - Trigger on `v*` tags
 - Native multi-arch Docker build (amd64 + arm64, one runner per arch, no QEMU)
-- Push to Docker Hub (`jukanntenn/markpost`) with the SAME stable regex;
-  Docker tags strip the leading `v` (`v0.1.3` → `0.1.3`, `v0.1.3-rc.1` →
-  `0.1.3-rc.1`); `latest` moves only on stable releases
+- Push to Docker Hub (`jukanntenn/markpost`) with the SAME stable regex; Docker tags strip the leading `v` (`v0.1.3` → `0.1.3`, `v0.1.3-rc.1` → `0.1.3-rc.1`); `latest` moves only on stable releases
 
 If either file is missing or incomplete → report, explain what's expected, and ask user to confirm before continuing.
 
@@ -243,14 +241,9 @@ Then provide monitoring URLs:
 
 Provide user with:
 
-1. **GitHub Release**: check body matches CHANGELOG entry
-   → `https://github.com/jukanntenn/markpost/releases/tag/vX.Y.Z`
-2. **GitHub Actions**: verify both workflows succeeded
-   → Release: `https://github.com/jukanntenn/markpost/actions/workflows/release.yml`
-   → Docker: `https://github.com/jukanntenn/markpost/actions/workflows/docker-publish.yml`
-3. **Docker Hub**: verify the new tag is published (`X.Y.Z` or `X.Y.Z-rc.N`,
-   no `v` prefix); `latest` must also have moved, but ONLY for stable releases
-   → `https://hub.docker.com/r/jukanntenn/markpost/tags`
+1. **GitHub Release**: check body matches CHANGELOG entry → `https://github.com/jukanntenn/markpost/releases/tag/vX.Y.Z`
+2. **GitHub Actions**: verify both workflows succeeded → Release: `https://github.com/jukanntenn/markpost/actions/workflows/release.yml` → Docker: `https://github.com/jukanntenn/markpost/actions/workflows/docker-publish.yml`
+3. **Docker Hub**: verify the new tag is published (`X.Y.Z` or `X.Y.Z-rc.N`, no `v` prefix); `latest` must also have moved, but ONLY for stable releases → `https://hub.docker.com/r/jukanntenn/markpost/tags`
 4. **Version checklist**: confirm `frontend/package.json` shows X.Y.Z
 5. **Rollback options** (one per stage):
    - PR open, not merged: close the PR, `git push origin --delete release/vX.Y.Z`, delete the local branch — nothing landed.

@@ -5,9 +5,9 @@
 [markpost](../README.zh.md) 服务器的官方命令行客户端——独立二进制(`cli/` 是独立 Go module,基于 urfave/cli/v2),为人类与 AI agent 双方设计。
 
 ```bash
-cd cli && make build          # 或:go build -o markpost ./cmd/markpost
+cd cli && make build          # or: go build -o markpost ./cmd/markpost
 ./markpost config set server https://mp.example.com
-./markpost auth login          # 终端下交互提示;脚本用 flag
+./markpost auth login          # prompts on a terminal; flags for scripts
 ./markpost posts create --title "Hello" "# Hello World
 
 Some **markdown**."
@@ -47,10 +47,10 @@ Some **markdown**."
 ## 开发
 
 ```bash
-make test         # 单测(httptest 假后端;无需 Docker)
+make test         # unit tests (httptest fake backend; no Docker)
 make test-race
 make lint
-make acceptance   # e2e:需要 MARKPOST_E2E_BASE_URL/USERNAME/PASSWORD,否则跳过
+make acceptance   # e2e: needs MARKPOST_E2E_BASE_URL/USERNAME/PASSWORD, skips otherwise
 ```
 
-设计:[specs/cli.zh.md](../specs/cli.zh.md) · 决策:[MRFC](../.agents/mrfcs/implemented/2026-09-03-standalone-agent-cli.zh.md) · 子树规范:[AGENTS.md](AGENTS.md)
+设计:[specs/cli.zh.md](../specs/cli.zh.md) · 决策:[MRFC](../.agents/rfcs/implemented/feature/2026-09-03-standalone-agent-cli.zh.md) · 子树规范:[AGENTS.md](AGENTS.md)

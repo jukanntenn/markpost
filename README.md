@@ -1,14 +1,12 @@
+# Markpost
+
 English | [简体中文](README.zh.md)
 
 <div align="center">
 
-# Markpost
-
 **A lightweight Markdown-to-HTML publishing service.** Upload Markdown via API, get a rendered HTML page back. Simple, self-hosted, and fast.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev/)[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
 </div>
 

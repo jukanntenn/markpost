@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-06-06-single-multi-arch-image-with-caddy.md
+2026-06-06-single-multi-arch-image-with-caddy.md: 5e657acca8ce5a234ff5a2170eab7f67a7f1ab36
+2026-06-06-single-multi-arch-image-with-caddy.zh.md: acea2b43aaa2b813640fb47a40a50c8b9811e980

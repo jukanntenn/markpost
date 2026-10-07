@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/architecture/2026-07-15-frontend-static-export.md
+2026-07-15-frontend-static-export.md: eb3c9557c59d1fd02ccd526bc8d689f7c66a346a
+2026-07-15-frontend-static-export.zh.md: 52738970fef1f30150eb0040982ddc4d8c323e52

@@ -5,7 +5,7 @@ description: Use when creating or maintaining a stack of dependent pull requests
 
 # Building a PR stack
 
-The loop's stack rules are owned by [the design record](../../../.agents/mrfcs/implemented/2026-08-22-agent-driven-development-loop.md); this skill is the mechanics.
+The loop's stack rules are owned by [the design record](../../rfcs/implemented/process/2026-08-22-agent-driven-development-loop.md); this skill is the mechanics.
 
 ## Worktrees
 
@@ -31,6 +31,6 @@ GraphQL `PullRequest.stack` is the membership authority — re-query and verify 
 
 ## Discipline
 
-- Merge-forward is the default propagation for fixes; rebase is deliberate, lease-protected, and re-audited ([responding-to-review](../responding-to-review/SKILL.md)).
+- Merge-forward is the default propagation for fixes; rebase is deliberate, lease-protected, and re-audited ([stack review cookbook](../../../docs/cookbook/responding-to-pr-review-on-a-stack.md)).
 - Pushing a branch uses the machine account's credentials; never force-push a reviewed layer (`--force-with-lease` only, and only on the rebase path).
 - One worktree per layer stands for the whole life of the stack — [merging-stacked-prs](../merging-stacked-prs/SKILL.md) removes them in the cleanup pass.

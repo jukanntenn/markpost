@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-08-22-cloudflare-deployment-guide.md
+2026-08-22-cloudflare-deployment-guide.md: 302ed4f98603859877fc9b007a12ed5219be5cbf
+2026-08-22-cloudflare-deployment-guide.zh.md: 7ae91e31fb8fd6060ffaf041fccd254e7c6fb198

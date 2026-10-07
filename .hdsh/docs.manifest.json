@@ -1,0 +1,15 @@
+{
+  "docBudgets": {
+    "AGENTS.md": 820,
+    "backend/AGENTS.md": 500,
+    "frontend/AGENTS.md": 300,
+    "e2e/AGENTS.md": 150,
+    "docs/AGENTS.md": 750,
+    "cli/AGENTS.md": 300,
+    "mcp/AGENTS.md": 350,
+    "docs/development.md": 950,
+    "docs/development.zh.md": 649,
+    "docs/architecture.md": 400,
+    "docs/architecture.zh.md": 250
+  }
+}

@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-08-23-origin-port-443-shared-gateway.md
+2026-08-23-origin-port-443-shared-gateway.md: f0c4134288e76e6b7cee76c55aaa11bf39f1cd71
+2026-08-23-origin-port-443-shared-gateway.zh.md: a9ac978732a95306b70489579a58bb8fe9a123cb

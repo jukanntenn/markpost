@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-09-19-otlp-transport-frp-exposure.md
+2026-09-19-otlp-transport-frp-exposure.md: 0b067154a1ec390b0680f44305c22bc09d00ec3c
+2026-09-19-otlp-transport-frp-exposure.zh.md: c043a1fff62571e4974d9ee20a807251d1f65c3c

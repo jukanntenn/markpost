@@ -2,7 +2,7 @@
 
 English | [中文](index.zh.md)
 
-> Reference the most relevant spec file(s) for your current task. Every spec in this directory is listed here — adding a spec file means adding its row in the same change (`scripts/verify_specs_index.py` gates it). Ordering: cross-cutting specs first, then backend, then frontend; within a section, keep what is read together adjacent. Specs describe current state; decision rationale lives in [MRFCs](../.agents/mrfcs/README.md).
+> Reference the most relevant spec file(s) for your current task. Every spec in this directory is listed here — adding a spec file means adding its row in the same change (`scripts/verify_specs_index.py` gates it). Ordering: cross-cutting specs first, then backend, then frontend; within a section, keep what is read together adjacent. Specs describe current state; decision rationale lives in [MRFCs](../.agents/rfcs/README.md).
 
 ## Cross-Cutting Specs
 

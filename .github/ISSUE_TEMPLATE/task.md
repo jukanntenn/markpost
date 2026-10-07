@@ -1,20 +1,19 @@
 ---
 name: Task
-about: 明确的非 Feature、非 Bug 工作
-title: ""
-labels: "type/task"
-assignees: ""
+about: Clear-cut work that is neither a Feature nor a Bug
+title: ''
+assignees: ''
+labels: type/task
 ---
 
-<!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
-
-一句话说明要完成的工作。
+<!-- Title states an English action or outcome; exposed body stays within 50 units. -->
+One sentence describing the work to complete.
 
 <details>
-<summary>验收与细节</summary>
+<summary>Acceptance and details</summary>
 
-- 验收条件：
-- 交付物：
-- 测试证据：
+- Acceptance criteria:
+- Deliverables:
+- Test evidence:
 
 </details>

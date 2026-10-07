@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/feature/2026-09-03-mcp-server.md
+2026-09-03-mcp-server.md: 1ca098d7d599107adc5a20360048fffb61d88f9c
+2026-09-03-mcp-server.zh.md: 8755c06a507e8a1e853672c5734179b40f60af21

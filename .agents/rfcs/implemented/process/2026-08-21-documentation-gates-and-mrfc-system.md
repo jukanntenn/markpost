@@ -1,0 +1,23 @@
+# RFC: Documentation gates and the MRFC system
+
+Status: implemented
+
+English | [中文](2026-08-21-documentation-gates-and-mrfc-system.zh.md)
+
+## Problem
+
+The Markdown corpus had drifted from reality with nothing mechanical to catch it: specs and guides narrated change history and described mechanisms that no longer existed, cross-links rotted silently, spec pages went unindexed, hard-wrapped prose produced reflow noise in every diff, and decision rationale lived inside spec pages as "Decision Record" / "Implementation Plan" sections — plan-speak for shipped work. Review discipline alone had not kept roughly fifty files honest, so every documentation task started with re-deriving facts from the code before a word could be trusted.
+
+## Decision
+
+The standard lives in one home, [`docs/AGENTS.md`](../../../../docs/AGENTS.md): a tier map assigning each fact a single home (README, AGENTS, PRINCIPLES, specs, docs, mrfcs, ledgers, skills) plus five writing rules, each backed by a stdlib-Python gate in `scripts/` — ``verify_md_links.py`` (relative links and `#fragment` anchors resolve), ``verify_md_wrap.py`` (one physical line per paragraph), ``verify_md_current.py`` (current-state prose in README/docs/specs), ``verify_specs_index.py`` (`specs/index.md` completeness in both directions), and ``verify_mrfc_format.py`` — sharing masking and slug helpers in ``doclib.py`` and aggregated by ``doc_sync.py``, which runs them in sequence, keeps each independently runnable, and restricts scope to given file arguments. The prek `doc-check` hook runs `doc_sync` on staged Markdown only (prek stashes unstaged changes during hook runs, so a wider scan would see a stale tree); the full corpus runs in CI via [`.github/workflows/docs.yml`](../../../../.github/workflows/docs.yml), which exists because `lint.yml` path-ignores `*.md`. MRFCs — markpost's RFCs: durable proposals and decision records — live in `.agents/rfcs/` under the lifecycle and format contract of [`README.md`](../../README.md), with the tree placement and two-document contract owned by [the mrfcs-tree MRFC](2026-08-22-agents-mrfcs-tree-and-contract-split.md): every non-trivial change adds or updates one in the same PR. Two agent workflows carry the system day to day — `doc-standards` and `writing-mrfcs` in `.claude/skills/`, mirrored to `.agents/skills/` by [`sync_agent_instructions.py`](../../../../scripts/sync_agent_instructions.py). Ledgers, `scripts/loadtest/` reports, generated Swagger, and the agent-config mirrors sit outside gate scope by design.
+
+## Alternatives considered
+
+**Port the reference repo's full documentation taxonomy.** deepseek-harness pairs every page bilingually (`.md` + `.zh.md` + i18n manifests), classifies notes under `.agents/notes` with a frozen archive and a supersession gate, maintains an invariant system, per-file coverage manifests, word budgets, stacked-PR rules, and a doc-typecheck pipeline over mdast. It lost: markpost's corpus is single-language and an order of magnitude smaller, has no root Node toolchain to run mdast checks, and pairing plus manifest upkeep would tax every edit while buying nothing at this size — pieces are ported only when a trigger signal appears, never wholesale. The trigger arrived; the pairing tier was ported in [the bilingual-pairs MRFC](2026-08-22-bilingual-documentation-pairs.md).
+
+**A gate scheduler.** The reference repo routes all gates through a dependency-graph runner with aggregate modes, `needs`/`after` edges, partitions, and `allowFailure`. It lost: five sequential stdlib gates over a few dozen Markdown files finish in seconds, and a scheduler would be the most complex script in the tree serving no scheduling need markpost has.
+
+## Consequences
+
+Documentation regressions now fail at commit and in CI mechanically, rationale has a home so `specs/` can stay current-state, and the whole mechanism is Python-stdlib with zero new dependencies. The rule binds its own introduction — the batch that shipped the gates and `mrfc/` was itself a non-trivial process change and landed without its record; this file is that record. The costs it accepts: every non-trivial change carries a new or updated MRFC, every new spec file needs its `specs/index.md` row in the same change, a failing gate is fixed in the doc rather than the gate (gate changes ship in the same change as the doc need that motivated them and say so here), and because the pre-commit hook checks only staged files, full-corpus truth lives in CI.

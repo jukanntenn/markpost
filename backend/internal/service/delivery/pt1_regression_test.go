@@ -22,6 +22,7 @@ type recordingMetrics struct {
 	pendingDelta     int64
 	failedCategories []string
 	dispatched       int
+	durations        []float64
 }
 
 func (r *recordingMetrics) AddDeliveryPending(_ context.Context, delta int64) {
@@ -30,6 +31,9 @@ func (r *recordingMetrics) AddDeliveryPending(_ context.Context, delta int64) {
 func (r *recordingMetrics) IncDeliveryDispatched(context.Context) { r.dispatched++ }
 func (r *recordingMetrics) IncDeliveryFailed(_ context.Context, category string) {
 	r.failedCategories = append(r.failedCategories, category)
+}
+func (r *recordingMetrics) ObserveDeliveryDuration(_ context.Context, seconds float64) {
+	r.durations = append(r.durations, seconds)
 }
 
 // TestPostDeliveryService_SendStripsImagesFromCard is the end-to-end regression
@@ -192,6 +196,51 @@ func TestDispatcher_HandleSendError(t *testing.T) {
 			t.Errorf("retryable error should not record failure yet: %v", met.failedCategories)
 		}
 	})
+}
+
+// TestDispatcher_ExecuteObservesEnqueueToDispatchDuration pins the
+// markpost.delivery.duration observation: taken at the dispatch point, from the
+// attempt's persisted CreatedAt (the enqueue timestamp) to the injected now.
+func TestDispatcher_ExecuteObservesEnqueueToDispatchDuration(t *testing.T) {
+	loadDeliveryTestConfig(t)
+	db := infra.SetupTestDB(t)
+	attemptRepo := infra.NewAttemptRepository(db)
+	met := &recordingMetrics{}
+	d := NewDispatcher(
+		attemptRepo,
+		infra.NewDeliveryChannelRepository(db),
+		infra.NewPostRepository(db),
+		recordingSender{},
+		WithMetrics(met),
+	)
+
+	uid, pid, cid := seedUserPostChannel(t, db)
+	enqueuedAt := time.Now()
+	attempt := &delivery.Attempt{
+		UserID: uid, PostID: pid, ChannelID: cid, Status: delivery.StatusPending,
+		NextAt: enqueuedAt.UnixMilli(), CreatedAt: enqueuedAt, UpdatedAt: enqueuedAt,
+	}
+	if err := attemptRepo.Create(context.Background(), []*delivery.Attempt{attempt}); err != nil {
+		t.Fatalf("create attempt: %v", err)
+	}
+
+	// A retry-shaped gap: dispatched 6 minutes after enqueue (first backoff
+	// step + the initial claim).
+	dispatchedAt := enqueuedAt.Add(6 * time.Minute)
+	d.now = func() time.Time { return dispatchedAt }
+
+	d.execute(context.Background(), attempt)
+
+	if len(met.durations) != 1 {
+		t.Fatalf("duration observations = %d, want 1", len(met.durations))
+	}
+	const want = 6 * 60
+	if got := met.durations[0]; got < want-0.001 || got > want+0.001 {
+		t.Errorf("observed duration = %v s, want %v s", got, want)
+	}
+	if met.dispatched != 1 {
+		t.Errorf("dispatched = %d, want 1", met.dispatched)
+	}
 }
 
 // TestListHistoryErrorCategoryFilter verifies the admin filter dimension.

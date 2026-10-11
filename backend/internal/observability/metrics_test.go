@@ -9,10 +9,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
-// The instruments must record under the names documented in observability.md
-// §Metric inventory — the spec table is the operator's jq query contract, and
-// the five cache/purge counters are deliberately attribute-free (one series
-// per outcome, MRFC 2026-09-03-cache-purge-observability).
+// The instruments must record under the names documented in docs/metrics.md —
+// the generated inventory is the operator's jq query contract, and the five
+// cache/purge counters are deliberately attribute-free (one series per
+// outcome, MRFC 2026-09-03-cache-purge-observability).
 func TestNewMetrics_InstrumentNamesCountsAndAttributes(t *testing.T) {
 	reader := metric.NewManualReader()
 	prev := otel.GetMeterProvider()
@@ -28,6 +28,7 @@ func TestNewMetrics_InstrumentNamesCountsAndAttributes(t *testing.T) {
 	m.DeliveryPending.Add(ctx, 2)
 	m.DeliveryDispatched.Add(ctx, 1)
 	m.DeliveryFailed.Add(ctx, 1)
+	m.DeliveryDuration.Record(ctx, 90.5)
 	m.RenderCacheHit.Add(ctx, 3)
 	m.RenderCacheMiss.Add(ctx, 4)
 	m.CDNPurgeSuccess.Add(ctx, 5)
@@ -89,5 +90,26 @@ func TestNewMetrics_InstrumentNamesCountsAndAttributes(t *testing.T) {
 		if total != wantVal {
 			t.Errorf("metric %q = %d, want %d", name, total, wantVal)
 		}
+	}
+
+	// The delivery duration histogram: seconds recorded against the explicit
+	// bucket set (a 90.5 s retry lands in the 120 s bucket, not +Inf).
+	hist, ok := got["markpost.delivery.duration"]
+	if !ok {
+		t.Fatal("metric \"markpost.delivery.duration\" not recorded")
+	}
+	h, ok := hist.Data.(metricdata.Histogram[float64])
+	if !ok {
+		t.Fatalf("metric \"markpost.delivery.duration\" is %T, want Histogram[float64]", hist.Data)
+	}
+	var count uint64
+	for _, dp := range h.DataPoints {
+		count += dp.Count
+		if dp.Attributes.Len() != 0 {
+			t.Errorf("duration histogram carries attributes %v, want none", dp.Attributes.ToSlice())
+		}
+	}
+	if count != 1 {
+		t.Errorf("duration histogram count = %d, want 1", count)
 	}
 }

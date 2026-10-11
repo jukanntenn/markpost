@@ -114,7 +114,7 @@ type mockEnqueuer struct {
 	jobs []post.DeliveryJob
 }
 
-func (m *mockEnqueuer) Enqueue(job post.DeliveryJob) {
+func (m *mockEnqueuer) Enqueue(_ context.Context, job post.DeliveryJob) {
 	m.jobs = append(m.jobs, job)
 }
 

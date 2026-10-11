@@ -341,8 +341,10 @@ func serve(configPath string) {
 	// (container TZ vs. server default vs. NowFunc) is visible in app-*.jsonl.
 	logTimezoneSelfCheck(cfg.DB.Timezone, dbInstance.DB())
 
-	// Business + runtime metrics (observability.md §指标清单). Resolved once;
-	// instruments are no-ops before Init, so this is safe in any boot order.
+	// Business metrics (docs/metrics.md is the generated inventory; runtime
+	// go.* metrics come from contrib runtime started inside Init). Resolved
+	// once; instruments are no-ops before Init, so this is safe in any boot
+	// order.
 	metrics := observability.NewMetrics()
 
 	userRepo = infra.NewUserRepository(dbInstance.DB(), cfg.PostKeyLength)
@@ -379,6 +381,7 @@ func serve(configPath string) {
 		jwtSvc,
 		"markpost",
 		cfg.Admin.InitialPassword,
+		auth.WithMetrics(&authMetrics{metrics}),
 	).WithUserURL(cfg.OAuth.GitHub.UserURL)
 	if stateStore, err := auth.NewRistrettoOAuthStateStore(); err == nil {
 		authSvc = authSvc.WithOAuthStateStore(stateStore)

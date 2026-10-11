@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record .agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.md
-2026-08-31-host-metrics-monitoring-beszel.md: dda9623dca45ab65d41105733167f531766db190
-2026-08-31-host-metrics-monitoring-beszel.zh.md: 24792165d359d0d20791158d645abe0db3727531
+2026-08-31-host-metrics-monitoring-beszel.md: ecac875e0e34111320171c9bab5bbbbbf29d94db
+2026-08-31-host-metrics-monitoring-beszel.zh.md: ec0848af4600c072714107c24be505ff8a8886e0

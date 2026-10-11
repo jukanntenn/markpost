@@ -144,3 +144,5 @@ Removal is manual (the deploy never uninstalls): `docker compose -f ~/docker/bes
 | heartbeat only                         | Heartbeat loop, supervisor, or kuma reachability | `sudo supervisorctl status markpost-heartbeat`; heartbeat log                          |
 | telemetry gap (Grafana, per env)       | App alive but telemetry path broken              | Collector reachability from the env; `docker logs otelcol` on the observability server |
 | Beszel agent offline (via Feishu)      | ttyo alive but agent/route/hub trouble           | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`; hub reachability      |
+
+**Telemetry producer tokens.** markpost's side of that pipeline is its three bearer-token lines in the collector's shared token file on the NAS, written idempotently by [`otelcol-tokens.yml`](../devops/ansible/otelcol-tokens.yml) — the collector hot-reloads the file, so no restart is involved. Rotation = update the vault value (`python3 scripts/vault.py set <env> otel_otlp_token`), then re-run `ansible-playbook devops/ansible/otelcol-tokens.yml`.

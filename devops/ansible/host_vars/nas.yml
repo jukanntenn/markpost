@@ -1,0 +1,5 @@
+---
+# FLAGGED ASSUMPTION: default mirrors dev's fn; the real NAS SSH username is not verifiable from this repo — confirm/correct at review.
+user: "fn"
+# FLAGGED ASSUMPTION: default mirrors dev's fn home; the real NAS home directory is not verifiable from this repo — confirm/correct at review.
+home: "/vol1/1000"

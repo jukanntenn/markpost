@@ -1,0 +1,7 @@
+---
+user: alice
+home: /home/alice
+# Root of the observability services on hs1 — deliberately NOT all.yml's
+# apps_path (that is the app hosts' layout; any resemblance is coincidence).
+observability_docker_root: "{{ home }}/docker"
+otelcol_tokens_file: "{{ observability_docker_root }}/otelcol/tokens"

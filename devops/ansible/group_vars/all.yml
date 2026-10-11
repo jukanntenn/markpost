@@ -17,12 +17,6 @@ caddyfile: "{{ app_path }}/Caddyfile"
 # docs/monitoring.md and the Beszel topology MRFC).
 beszel_agent_path: "{{ apps_path }}/beszel-agent"
 
-# Shared otelcol-contrib token file on the NAS (observability host): the
-# collector's bearertokenauth extension reads it and hot-reloads on change.
-# otelcol-tokens.yml writes markpost's three producer-token lines there; the
-# playbook header documents the cross-repo content contract.
-otelcol_tokens_file: "{{ apps_path }}/otelcol/tokens"
-
 # DR backup (pgBackRest, staging + production — each activated by vaulting
 # its B2 key pair; MRFC 2026-07-09-wal-archival-disaster-recovery). The
 # playbook copies

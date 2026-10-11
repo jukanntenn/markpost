@@ -64,7 +64,7 @@ One fault, one owner — the three systems must not double-page:
 | Host resources             | beszel  | Disk, memory, CPU, agent down                                    |
 | App / business / pipeline  | Grafana | RED signals, delivery backlog, error-log rate, telemetry no-data |
 
-Grafana-managed alerting (contact points, notification policies, rules) and the dashboards live in this repo under `devops/ansible/files/grafana/` and are pushed to the platform — owned by the external devops repo — by [`grafana-tenant.yml`](../devops/ansible/grafana-tenant.yml), which also asserts the platform loaded them; alerts route by `alertname` + `env` label and cover dev, staging, and production. Rule inventory (thresholds are starting points; tune after two weeks of baselines):
+Grafana-managed alerting (contact points, notification policies, rules) and the dashboards live in this repo under `devops/ansible/files/grafana/` and are pushed to the platform — owned by the external devops repo — by the deploy playbook ([`deploy.yml`](../devops/ansible/deploy.yml)) on every deploy, a tenant-sync block delegated to hs1 and idempotent (unchanged files are no-op copies); the post-push assertions are gated on the vaulted Grafana API token (`grafana_api_token` in hs1's host_vars) and skip until it exists. Alerts route by `alertname` + `env` label and cover dev, staging, and production. Rule inventory (thresholds are starting points; tune after two weeks of baselines):
 
 | Rule                                             | Condition                                               | For    | Severity                     |
 | ------------------------------------------------ | ------------------------------------------------------- | ------ | ---------------------------- |

@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record .agents/rfcs/implemented/process/2026-10-11-grafana-tenant-rebuild.md
-2026-10-11-grafana-tenant-rebuild.md: 4e090e70f3078c670b28b3e4a32e51846c706f94
-2026-10-11-grafana-tenant-rebuild.zh.md: 97120c0748fa23b6e49330c5bddb9d7571281ff3
+2026-10-11-grafana-tenant-rebuild.md: 82e5a7b36319e681db4a39e523f99808b5153447
+2026-10-11-grafana-tenant-rebuild.zh.md: 6ccbefb250434f16a0badeebff3c460e18aafb6d

@@ -1,0 +1,289 @@
+{
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "interval": "60s",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (deployment.environment.name, http.route) (rate(http.server.request.duration_count{deployment.environment.name=~\"$env\"}[5m]))",
+          "legendFormat": "{{deployment.environment.name}} {{http.route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Request rate by route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "interval": "60s",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "sum by (deployment.environment.name, http.route) (rate(http.server.request.duration_count{deployment.environment.name=~\"$env\", http.response.status_code=~\"5..\"}[5m])) / sum by (deployment.environment.name, http.route) (rate(http.server.request.duration_count{deployment.environment.name=~\"$env\"}[5m]))",
+          "legendFormat": "{{deployment.environment.name}} {{http.route}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "5xx ratio by route",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "interval": "60s",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (deployment.environment.name, le) (rate(http.server.request.duration_bucket{deployment.environment.name=~\"$env\"}[5m])))",
+          "legendFormat": "p50 {{deployment.environment.name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (deployment.environment.name, le) (rate(http.server.request.duration_bucket{deployment.environment.name=~\"$env\"}[5m])))",
+          "legendFormat": "p95 {{deployment.environment.name}}",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (deployment.environment.name, le) (rate(http.server.request.duration_bucket{deployment.environment.name=~\"$env\"}[5m])))",
+          "legendFormat": "p99 {{deployment.environment.name}}",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Request duration quantiles",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "victoriametrics"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "interval": "60s",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (deployment.environment.name, le) (rate(http.server.request.body.size_bucket{deployment.environment.name=~\"$env\"}[5m])))",
+          "legendFormat": "request p50 {{deployment.environment.name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "victoriametrics"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.5, sum by (deployment.environment.name, le) (rate(http.server.response.body.size_bucket{deployment.environment.name=~\"$env\"}[5m])))",
+          "legendFormat": "response p50 {{deployment.environment.name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Request / response body size (p50)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs",
+        "uid": "victorialogs"
+      },
+      "description": "ERROR records per minute across all environments. The matching alert rule is provisioned paused (Grafana 13.2.1 alert expressions reject the logs datasource's integer frames); this panel keeps the ERROR trend visible meanwhile.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "interval": "60s",
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs",
+            "uid": "victorialogs"
+          },
+          "expr": "severity_text:ERROR | stats by (_time:1m) count()",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "ERROR log rate",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 41,
+  "tags": ["markpost"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "victoriametrics"
+        },
+        "definition": "label_values(go.goroutine.count, deployment.environment.name)",
+        "includeAll": true,
+        "allValue": ".*",
+        "label": "environment",
+        "multi": true,
+        "name": "env",
+        "options": [],
+        "query": {
+          "query": "label_values(go.goroutine.count, deployment.environment.name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "markpost HTTP",
+  "uid": "markpost-http",
+  "version": 0
+}

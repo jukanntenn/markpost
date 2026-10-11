@@ -64,7 +64,7 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 | 主机资源           | beszel  | 磁盘、内存、CPU、agent 掉线                |
 | 应用 / 业务 / 管线 | Grafana | RED 信号、投递积压、错误日志速率、遥测断流 |
 
-Grafana-managed 告警（接触点、通知策略、规则）在观测服务器上以代码形式 provision（`~/docker/grafana/provisioning/alerting/`），按 `alertname` + `deployment.environment.name` 路由，覆盖 staging 与 production。规则清单（阈值为起点，跑两周基线后再调）:
+Grafana-managed 告警（接触点、通知策略、规则）与看板位于本仓库 `devops/ansible/files/grafana/`，由 [`grafana-tenant.yml`](../devops/ansible/grafana-tenant.yml) 推送到平台（平台归外部 devops 仓库所有）并断言平台加载成功；告警按 `alertname` + `env` 标签路由，覆盖 dev、staging 与 production。规则清单（阈值为起点，跑两周基线后再调）:
 
 | 规则                           | 条件                                   | For    | 级别                |
 | ------------------------------ | -------------------------------------- | ------ | ------------------- |
@@ -75,7 +75,7 @@ Grafana-managed 告警（接触点、通知策略、规则）在观测服务器�
 | 投递 / CDN 清除失败            | 失败计数器速率 > 0                     | 15m    | warning             |
 | 遥测断流（按环境）             | runtime gauge 10m 无数据——管线自身挂了 | 0m     | critical            |
 
-ERROR 日志速率规则当前为 **paused**:日志数据源输出整数帧,Grafana 13.2.1 的告警表达式拒绝;待插件输出数值帧后启用(Runtime 看板 meantime 持续展示 ERROR 速率)。
+ERROR 日志速率规则当前为 **paused**:日志数据源输出整数帧,Grafana 13.2.1 的告警表达式拒绝;待插件输出数值帧后启用(HTTP 看板的 ERROR 趋势面板 meantime 持续展示其速率)。
 
 <a id="alert-policy"></a>
 

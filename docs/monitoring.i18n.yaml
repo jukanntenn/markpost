@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record docs/monitoring.md
-monitoring.md: bedf6aa1df19fae51e0dd64af4d4eac95cf61a8f
-monitoring.zh.md: 74f307f9c878b7f9a519b99b856fec233695b481
+monitoring.md: fa30fc0b75d25d8748bb9d1ea542bb3c51e8aa8e
+monitoring.zh.md: bbad714efc0d0e7ee223d5f0e15c27cca5de66a2

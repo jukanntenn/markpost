@@ -64,7 +64,7 @@ One fault, one owner — the three systems must not double-page:
 | Host resources             | beszel  | Disk, memory, CPU, agent down                                    |
 | App / business / pipeline  | Grafana | RED signals, delivery backlog, error-log rate, telemetry no-data |
 
-Grafana-managed alerting (contact points, notification policies, rules) is provisioned as code on the observability server (`~/docker/grafana/provisioning/alerting/`), routes by `alertname` + `deployment.environment.name`, and covers staging and production. Rule inventory (thresholds are starting points; tune after two weeks of baselines):
+Grafana-managed alerting (contact points, notification policies, rules) and the dashboards live in this repo under `devops/ansible/files/grafana/` and are pushed to the platform — owned by the external devops repo — by [`grafana-tenant.yml`](../devops/ansible/grafana-tenant.yml), which also asserts the platform loaded them; alerts route by `alertname` + `env` label and cover dev, staging, and production. Rule inventory (thresholds are starting points; tune after two weeks of baselines):
 
 | Rule                                             | Condition                                               | For    | Severity                     |
 | ------------------------------------------------ | ------------------------------------------------------- | ------ | ---------------------------- |
@@ -75,7 +75,7 @@ Grafana-managed alerting (contact points, notification policies, rules) is provi
 | Delivery / CDN purge failures                    | failure-counter rate > 0                                | 15m    | warning                      |
 | Telemetry gap (per env)                          | no runtime gauges for 10m — the pipeline itself is down | 0m     | critical                     |
 
-The ERROR-log-rate rule is provisioned **paused**: the logs datasource emits integer frames that Grafana 13.2.1's alert expressions reject; re-enable it once the plugin ships numeric frames (the Runtime dashboard keeps ERROR rates visible meanwhile).
+The ERROR-log-rate rule is provisioned **paused**: the logs datasource emits integer frames that Grafana 13.2.1's alert expressions reject; re-enable it once the plugin ships numeric frames (the HTTP dashboard's ERROR-trend panel keeps the rate visible meanwhile).
 
 <a id="alert-policy"></a>
 

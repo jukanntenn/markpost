@@ -1,0 +1,763 @@
+# markpost alert rules — one of the four tenant files the Grafana platform
+# provisions (pushed by devops/ansible/grafana-tenant.yml; see the 2026-10-11
+# grafana-tenant-rebuild RFC). Twelve rules reconcile against the inventory
+# table in docs/monitoring.md: its six rows expand to eleven evaluating rules
+# (5xx ratio at two thresholds, p95 latency, request-rate collapse, delivery
+# backlog level + growth, delivery failures, CDN purge failures, telemetry gap
+# per environment x3 — dev ships telemetry since #135's wiring) plus the
+# paused ERROR-log-rate rule below the table.
+#
+# Query scoping: rules pin service.name instead of a dashboard variable, and
+# slice nothing by env except the per-env telemetry-gap rules. noDataState is
+# OK on every rule by design: absence of series means "no traffic" or "pipeline
+# down", and the pipeline-down case is exactly what the absent_over_time
+# telemetry-gap rules detect — they fire ON absence while everything else stays
+# quiet (availability itself is kuma's job).
+# Every rule links its owning dashboard (dashboardUid field + `dashboard`
+# annotation; Grafana's best practice: most dashboards should be linked to by
+# alerts) and the runbook's triage table.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: http
+    folder: markpost
+    interval: 60s
+    rules:
+      - uid: markpost-http-5xx-warn
+        title: HTTP 5xx ratio above 5%
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?", http.response.status_code=~"5.."}[5m])) / sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?"}[5m]))
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.05
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-http
+        panelId: 2
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: 5xx responses are {{printf "%.0f" (100 * $values.A.Value)}}% of request rate (5m)
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-http/markpost-http
+        labels:
+          severity: warning
+        isPaused: false
+      - uid: markpost-http-5xx-crit
+        title: HTTP 5xx ratio above 20%
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 120
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?", http.response.status_code=~"5.."}[2m])) / sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?"}[2m]))
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.2
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-http
+        panelId: 2
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        annotations:
+          summary: 5xx responses are {{printf "%.0f" (100 * $values.A.Value)}}% of request rate (2m)
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-http/markpost-http
+        labels:
+          severity: critical
+        isPaused: false
+      - uid: markpost-http-p95
+        title: HTTP p95 latency above 1s
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: histogram_quantile(0.95, sum by (le) (rate(http.server.request.duration_bucket{service.name=~"markpost(-dev|-staging)?"}[5m])))
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-http
+        panelId: 3
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: p95 request duration is {{printf "%.2f" $values.A.Value}}s
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-http/markpost-http
+        labels:
+          severity: warning
+        isPaused: false
+      - uid: markpost-http-rate-collapse
+        title: Request rate collapsed
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 4200
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?"}[10m])) / sum(rate(http.server.request.duration_count{service.name=~"markpost(-dev|-staging)?"}[10m] offset 1h))
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.2
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-http
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: 10m request rate is {{printf "%.0f" (100 * $values.A.Value)}}% of the hour-ago baseline
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-http/markpost-http
+        labels:
+          severity: critical
+        isPaused: false
+  - orgId: 1
+    name: delivery
+    folder: markpost
+    interval: 60s
+    rules:
+      - uid: markpost-delivery-backlog
+        title: Delivery backlog above 100
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: max(markpost.delivery.pending{service.name=~"markpost(-dev|-staging)?"})
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 100
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-delivery
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: delivery queue holds {{printf "%.0f" $values.A.Value}} pending attempts
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-delivery/markpost-delivery
+        labels:
+          severity: warning
+        isPaused: false
+      - uid: markpost-delivery-backlog-growth
+        title: Delivery backlog grew 50+ in 15m
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: max(markpost.delivery.pending{service.name=~"markpost(-dev|-staging)?"}) - max(markpost.delivery.pending{service.name=~"markpost(-dev|-staging)?"} offset 15m)
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 50
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-delivery
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        annotations:
+          summary: delivery queue grew by {{printf "%.0f" $values.A.Value}} pending attempts in 15m
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-delivery/markpost-delivery
+        labels:
+          severity: warning
+        isPaused: false
+      - uid: markpost-delivery-failures
+        title: Delivery failures above zero
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: sum by (error_category) (rate(markpost.delivery.failed_total{service.name=~"markpost(-dev|-staging)?"}[15m]))
+              instant: true
+              intervalMs: 1000
+              legendFormat: "{{error_category}}"
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-delivery
+        panelId: 3
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: delivery attempts are failing ({{ $labels.error_category }}) at {{printf "%.2f" $values.A.Value}} per second
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-delivery/markpost-delivery
+        labels:
+          severity: warning
+        isPaused: false
+      - uid: markpost-cdn-purge-failures
+        title: CDN purge failures above zero
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: sum(rate(markpost.cdn.purge_failure_total{service.name=~"markpost(-dev|-staging)?"}[15m]))
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-delivery
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: CDN cache-tag purges are failing at {{printf "%.2f" $values.A.Value}} per second
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-delivery/markpost-delivery
+        labels:
+          severity: warning
+        isPaused: false
+  - orgId: 1
+    name: telemetry
+    folder: markpost
+    interval: 60s
+    rules:
+      - uid: markpost-telemetry-gap-dev
+        title: Telemetry gap (dev)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: absent_over_time(go.goroutine.count{service.name="markpost-dev", deployment.environment.name="dev"}[10m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-runtime
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        annotations:
+          summary: no go.* runtime data from markpost-dev for 10 minutes — the pipeline itself is down
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-runtime/markpost-runtime
+        labels:
+          severity: critical
+          env: dev
+        isPaused: false
+      - uid: markpost-telemetry-gap-staging
+        title: Telemetry gap (staging)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: absent_over_time(go.goroutine.count{service.name="markpost-staging", deployment.environment.name="staging"}[10m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-runtime
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        annotations:
+          summary: no go.* runtime data from markpost-staging for 10 minutes — the pipeline itself is down
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-runtime/markpost-runtime
+        labels:
+          severity: critical
+          env: staging
+        isPaused: false
+      - uid: markpost-telemetry-gap-production
+        title: Telemetry gap (production)
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              datasource:
+                type: prometheus
+                uid: victoriametrics
+              editorMode: code
+              expr: absent_over_time(go.goroutine.count{service.name="markpost", deployment.environment.name="production"}[10m])
+              instant: true
+              intervalMs: 1000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-runtime
+        panelId: 1
+        noDataState: OK
+        execErrState: Alerting
+        for: 0m
+        annotations:
+          summary: no go.* runtime data from production for 10 minutes — the pipeline itself is down
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-runtime/markpost-runtime
+        labels:
+          severity: critical
+          env: production
+        isPaused: false
+  - orgId: 1
+    name: logs
+    folder: markpost
+    interval: 60s
+    rules:
+      # PAUSED: the logs datasource emits integer frames that Grafana 13.2.1's
+      # alert expressions reject; re-enable once the plugin ships numeric
+      # frames (documented in docs/monitoring.md; the HTTP dashboard's ERROR
+      # log rate panel keeps the trend visible meanwhile).
+      - uid: markpost-error-log-rate
+        title: ERROR log rate above 10 per 5m
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victorialogs
+            model:
+              datasource:
+                type: victoriametrics-logs
+                uid: victorialogs
+              expr: severity_text:ERROR | stats by (_time:5m) count()
+              queryType: range
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              settings:
+                mode: dropNN
+              type: threshold
+        dashboardUid: markpost-http
+        panelId: 5
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: '{{printf "%.0f" $values.A.Value}} ERROR records in 5 minutes'
+          runbook: https://github.com/jukanntenn/markpost/blob/main/docs/monitoring.md#alert-triage
+          dashboard: /d/markpost-http/markpost-http
+        labels:
+          severity: warning
+        isPaused: true

@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-10-11-observability-storage-handover.md
+2026-10-11-observability-storage-handover.md: bfea9b77017315f5ba984a8107d477b6494c889b
+2026-10-11-observability-storage-handover.zh.md: ee9f21f0d9c666d66a0e0c52760cdd157a2671f3

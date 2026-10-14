@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record .agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.md
-2026-08-31-beszel-deployment-topology.md: e7a22a9ccf6395d2cb5410453519296b0d10ff0c
-2026-08-31-beszel-deployment-topology.zh.md: 73868e61615c4992647dd5bc5567a4c0fa60320a
+2026-08-31-beszel-deployment-topology.md: fa91cf321835c6c874dd0d9186d0b9b8ec582880
+2026-08-31-beszel-deployment-topology.zh.md: 83f91214865ac94c9d0748ef6d4e8c09751e3068

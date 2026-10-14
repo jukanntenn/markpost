@@ -2,7 +2,7 @@
 
 English | [中文](monitoring.zh.md)
 
-markpost's availability is monitored by a self-hosted [uptime-kuma](https://github.com/louislam/uptime-kuma) instance probing production and staging from outside, plus a reverse heartbeat from each app host; a Beszel agent on the origin reports host and container metrics to an off-site hub; Grafana on the observability server owns application, business, and telemetry-pipeline alerts. Alerts go to Feishu (primary) and email via the mailrise gateway (fallback). This runbook owns the monitor inventory, naming standard, notification setup, alert ownership boundaries, and the heartbeat's deploy/remove procedures.
+markpost's availability is monitored by a self-hosted [uptime-kuma](https://github.com/louislam/uptime-kuma) instance probing production and staging from outside, plus a reverse heartbeat from each app host; a Beszel agent on the origin (deployed and owned by the external devops ops repo) reports host and container metrics to an off-site hub; Grafana on the observability server owns application, business, and telemetry-pipeline alerts. Alerts go to Feishu (primary) and email via the mailrise gateway (fallback). This runbook owns the monitor inventory, naming standard, notification setup, alert ownership boundaries, and the heartbeat's deploy/remove procedures.
 
 <a id="probe-model"></a>
 
@@ -58,11 +58,11 @@ Add both, then set them as default notifications (Settings → Notifications →
 
 One fault, one owner — the three systems must not double-page:
 
-| Layer                      | Owner   | Signals                                                          |
-| -------------------------- | ------- | ---------------------------------------------------------------- |
-| Edge / origin availability | kuma    | Homepage, origin readiness, heartbeat, certificate/domain expiry |
-| Host resources             | beszel  | Disk, memory, CPU, agent down                                    |
-| App / business / pipeline  | Grafana | RED signals, delivery backlog, error-log rate, telemetry no-data |
+| Layer                      | Owner                               | Signals                                                          |
+| -------------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| Edge / origin availability | kuma                                | Homepage, origin readiness, heartbeat, certificate/domain expiry |
+| Host resources             | beszel — external ops (devops repo) | Disk, memory, CPU, agent down                                    |
+| App / business / pipeline  | Grafana                             | RED signals, delivery backlog, error-log rate, telemetry no-data |
 
 Grafana-managed alerting (contact points, notification policies, rules) and the dashboards live in this repo under `devops/ansible/files/grafana/` and are pushed to the platform — owned by the external devops repo on hs1, a different machine than the deploy targets — by the standalone playbook [`grafana-tenant.yml`](../devops/ansible/grafana-tenant.yml) (`ansible-playbook devops/ansible/grafana-tenant.yml`), env-independent and idempotent (unchanged files are no-op copies); its post-push assertions are gated on the vaulted Grafana API token (`grafana_api_token` in hs1's host_vars) and skip until it exists. Alerts route by `alertname` + `env` label and cover dev, staging, and production. Rule inventory (thresholds are starting points; tune after two weeks of baselines):
 
@@ -105,42 +105,18 @@ Removal is manual (the deploy never uninstalls): delete `/etc/supervisor/conf.d/
 
 ## Host metrics (Beszel)
 
-The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts, reported to a self-hosted hub on the observability server. Design record: [host-metrics MRFC](../.agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.md), [topology MRFC](../.agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.md), and the WebSocket wiring in [the agent-token MRFC](../.agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.md).
-
-**Hub (own lifecycle, on the observability server).** Deployed at `~/docker/beszel` on 192.168.5.57 (`beszel.bytehome.fun` at the edge): pinned `henrygd/beszel`, bind-mounted `beszel_data` (upstream embeds PocketBase and has no external-database support), `DISABLE_SSH=true` — pure WebSocket topology where agents dial the hub and it never dials them. Back up the whole `beszel_data` dir (it also holds the hub keypair the agents' `KEY` verifies).
-
-**Agent (repo-automated, production only).** A one-service compose project at `~/docker/beszel-agent`, rendered from [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2): pinned `henrygd/beszel-agent`, host networking, read-only `docker.sock`. It collects host CPU/memory/disk/load/network plus per-container stats for `markpost` and `markpost-postgres`, and reaches the hub by outbound WebSocket (`HUB_URL` + vaulted `TOKEN`; `KEY` verifies the hub) — the firewall opens nothing.
-
-**Alerts.** Thresholds on the hub; suggested starting points, tuned after a week of curves (beszel holds one threshold per metric, so the critical tier is used):
-
-| Metric                     | threshold (sustained) |
-| -------------------------- | --------------------- |
-| Disk usage                 | 90% for 2 min         |
-| Memory                     | 92% for 2 min         |
-| CPU                        | 95% for 2 min         |
-| System status (agent down) | down for 1 min        |
-
-Notifications go to the same Feishu channel as kuma (shoutrrr `lark://` URL configured on the hub).
-
-**Setup order.**
-
-1. Hub: add a system for the host, and take the public key and the per-system token its Add-System dialog shows.
-2. Set `beszel_hub_url` and `beszel_agent_key` (the public key — not a secret) in `devops/ansible/group_vars/production/vars.yml`, and vault the token as `beszel_agent_token` in that env's `vault.yml`.
-3. `ansible-playbook devops/ansible/deploy.yml -e target=production` — the deploy installs the agent only once both vars exist.
-4. Verify: `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` shows the agent running, and the hub's system page shows live data.
-
-Removal is manual (the deploy never uninstalls): `docker compose -f ~/docker/beszel-agent/docker-compose.yml down`, delete `~/docker/beszel-agent`, delete the vars.
+The monitors above answer _whether_; the Beszel agent answers _why_ — host and per-container resource history with threshold alerts on a self-hosted hub on the observability server. The agent on the origin is deployed and owned by the devops ops repo (`ansible/beszel.yml`), which manages `~/docker/beszel-agent` in place. Design records: [host-metrics MRFC](../.agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.md), [topology MRFC](../.agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.md), and the WebSocket wiring in [the agent-token MRFC](../.agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.md).
 
 <a id="alert-triage"></a>
 
 ## Alert triage
 
-| Red monitors                           | Meaning                                          | First action                                                                           |
-| -------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| user path + readiness + heartbeat      | Total origin outage                              | SSH to the app host; `docker compose ps`, container logs                               |
-| user path + readiness, heartbeat green | Cloudflare / edge path failure; origin alive     | Cloudflare dashboard; origin is fine                                                   |
-| user path only                         | Static export or CDN cache issue                 | Compare `/` vs `/api/v1/ready` by curl; check the release                              |
-| readiness (503) + heartbeat `down`     | Database failure                                 | `docker compose logs postgres`; disk space                                             |
-| heartbeat only                         | Heartbeat loop, supervisor, or kuma reachability | `sudo supervisorctl status markpost-heartbeat`; heartbeat log                          |
-| telemetry gap (Grafana, per env)       | App alive but telemetry path broken              | Collector reachability from the env; `docker logs otelcol` on the observability server |
-| Beszel agent offline (via Feishu)      | ttyo alive but agent/route/hub trouble           | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`; hub reachability      |
+| Red monitors                           | Meaning                                          | First action                                                                                                           |
+| -------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| user path + readiness + heartbeat      | Total origin outage                              | SSH to the app host; `docker compose ps`, container logs                                                               |
+| user path + readiness, heartbeat green | Cloudflare / edge path failure; origin alive     | Cloudflare dashboard; origin is fine                                                                                   |
+| user path only                         | Static export or CDN cache issue                 | Compare `/` vs `/api/v1/ready` by curl; check the release                                                              |
+| readiness (503) + heartbeat `down`     | Database failure                                 | `docker compose logs postgres`; disk space                                                                             |
+| heartbeat only                         | Heartbeat loop, supervisor, or kuma reachability | `sudo supervisorctl status markpost-heartbeat`; heartbeat log                                                          |
+| telemetry gap (Grafana, per env)       | App alive but telemetry path broken              | Collector reachability from the env; `docker logs otelcol` on the observability server                                 |
+| Beszel agent offline (via Feishu)      | ttyo alive but agent/route/hub trouble           | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` — the devops ops repo owns the agent; hub reachability |

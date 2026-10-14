@@ -12,11 +12,6 @@ compose_file: "{{ app_path }}/docker-compose.yml"
 config_file: "{{ app_path }}/config.toml"
 caddyfile: "{{ app_path }}/Caddyfile"
 
-# Beszel metrics agent — its own compose project, a sibling of the app, so
-# monitoring and app deploys stay independent (production only; see
-# docs/monitoring.md and the Beszel topology MRFC).
-beszel_agent_path: "{{ apps_path }}/beszel-agent"
-
 # DR backup (pgBackRest, staging + production — each activated by vaulting
 # its B2 key pair; MRFC 2026-07-09-wal-archival-disaster-recovery). The
 # playbook copies

@@ -244,7 +244,7 @@ func (s *Service) CreatePost(ctx context.Context, title, body string, userID int
 	)
 
 	if s.delivery != nil {
-		s.delivery.Enqueue(post.DeliveryJob{
+		s.delivery.Enqueue(ctx, post.DeliveryJob{
 			UserID:  userID,
 			PostID:  p.ID,
 			PostQID: p.QID,

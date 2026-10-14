@@ -9,6 +9,7 @@ import (
 
 	"github.com/DeRuina/timberjack"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -103,6 +104,7 @@ func initOTLP(appLogger *timberjack.Logger) (*Providers, error) {
 
 	otel.SetTracerProvider(tracerProvider)
 	otel.SetMeterProvider(meterProvider)
+	startRuntimeMetrics()
 
 	return &Providers{
 		tracerProvider: tracerProvider,
@@ -137,12 +139,26 @@ func initFile(appLogger, tracesLogger, metricsLogger *timberjack.Logger) (*Provi
 
 	otel.SetTracerProvider(tracerProvider)
 	otel.SetMeterProvider(meterProvider)
+	startRuntimeMetrics()
 
 	return &Providers{
 		tracerProvider: tracerProvider,
 		meterProvider:  meterProvider,
 		closers:        []io.Closer{appLogger, tracesLogger, metricsLogger},
 	}, nil
+}
+
+// startRuntimeMetrics turns on the contrib runtime instrumentation
+// (go.memory.*, go.goroutine.count, go.processor.limit, go.config.gogc), the
+// single source of Go runtime metrics in both OTLP and file mode. It resolves
+// the meter from the global provider at call time, so it must run after
+// otel.SetMeterProvider. A registration failure is logged and swallowed —
+// losing runtime gauges must not take the process down with it (MRFC
+// 2026-10-11-metrics-wiring-runtime-source).
+func startRuntimeMetrics() {
+	if err := runtime.Start(); err != nil {
+		slog.Error("runtime metrics start failed", "error", err)
+	}
 }
 
 // InstallSlogDefault sets the default slog logger: always the timberjack file

@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record scripts/loadtest/README.md
-README.md: 5967a34e8d19316e41aef008aaa2612e48805149
-README.zh.md: e40aac218938d2fa9701970714f53313d3718c6b
+README.md: e99130cef5398cb8b4f5f264f1dbbc4854cd19ca
+README.zh.md: 52838c1e0c5648fb1cdc90c35b5b549c9d282754

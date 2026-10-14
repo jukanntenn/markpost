@@ -54,14 +54,18 @@ stages = ["pre-commit"]
 
 # Generated-files drift gate. go generate ./... is the single source of
 # regeneration (swag via the go.mod tool directive + buildcss via the
-# //go:generate in internal/web/gen.go). Fails if committed output is stale.
+# //go:generate in internal/web/gen.go + the metrics inventory via
+# //go:generate in internal/observability/gen.go → tools/metricsdoc, which
+# writes the docs/metrics.* pair at the repository root). Fails if committed
+# output is stale. The root-docs pathspecs are relative to backend/ (the
+# hook's cwd), where go generate runs.
 [[repos.hooks]]
 id = "backend-generate-check"
 name = "generated files up to date (backend)"
 language = "system"
-entry = "go generate ./... && git diff --exit-code -- docs internal/web/csshash.go 'internal/web/post.*.css'"
+entry = "go generate ./... && git diff --exit-code -- docs internal/web/csshash.go 'internal/web/post.*.css' ../docs/metrics.md ../docs/metrics.zh.md ../docs/metrics.i18n.yaml"
 shell = "bash"
-files = "\\.go$|^templates/post\\.css$|^cmd/buildcss/"
+files = "\\.go$|^templates/post\\.css$|^cmd/buildcss/|^go\\.(mod|sum)$"
 pass_filenames = false
 stages = ["pre-commit"]
 

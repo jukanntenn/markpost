@@ -23,6 +23,23 @@ func (d *dispatcherMetrics) IncDeliveryDispatched(ctx context.Context) {
 func (d *dispatcherMetrics) IncDeliveryFailed(ctx context.Context, category string) {
 	d.m.DeliveryFailed.Add(ctx, 1, metric.WithAttributes(attribute.String("error_category", category)))
 }
+func (d *dispatcherMetrics) ObserveDeliveryDuration(ctx context.Context, seconds float64) {
+	d.m.DeliveryDuration.Record(ctx, seconds)
+}
+
+// authMetrics adapts *observability.Metrics to the auth service's Metrics
+// interface.
+type authMetrics struct{ m *observability.Metrics }
+
+func (a *authMetrics) IncLoginSuccess(ctx context.Context) {
+	a.m.AuthLoginSuccess.Add(ctx, 1)
+}
+func (a *authMetrics) IncLoginFailure(ctx context.Context) {
+	a.m.AuthLoginFailure.Add(ctx, 1)
+}
+func (a *authMetrics) IncTokenRefresh(ctx context.Context) {
+	a.m.TokenRefresh.Add(ctx, 1)
+}
 
 // postMetrics adapts *observability.Metrics to the post service's Metrics
 // interface.

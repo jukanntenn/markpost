@@ -18,11 +18,11 @@
 
 ### 三支柱
 
-| 支柱        | 采集                                                          | OTLP 模式                                          | 文件模式（回退）                   |
-| ----------- | ------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
-| **Logs**    | `log/slog`，手写 Handler 从 ctx 注入 trace_id/span_id         | 扇出：timberjack 文件 + `otelslog` → OTLP logs     | timberjack → `app-*.jsonl`         |
-| **Traces**  | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）          | `otlptracehttp` → collector                        | `stdouttrace` → `traces-*.jsonl`   |
-| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ 自动运行时采集 | `otlpmetrichttp` → collector（60s PeriodicReader） | `stdoutmetric` → `metrics-*.jsonl` |
+| 支柱        | 采集                                                                            | OTLP 模式                                          | 文件模式（回退）                   |
+| ----------- | ------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| **Logs**    | `log/slog`，手写 Handler 从 ctx 注入 trace_id/span_id                           | 扇出：timberjack 文件 + `otelslog` → OTLP logs     | timberjack → `app-*.jsonl`         |
+| **Traces**  | OTel Go SDK + `otelgin.Middleware`（自动 HTTP span）                            | `otlptracehttp` → collector                        | `stdouttrace` → `traces-*.jsonl`   |
+| **Metrics** | OTel Go metric SDK（counter/gauge/histogram）+ contrib 运行时自动采集（`go.*`） | `otlpmetrichttp` → collector（60s PeriodicReader） | `stdoutmetric` → `metrics-*.jsonl` |
 
 导出器选择完全由环境变量驱动（`OTEL_EXPORTER_OTLP_ENDPOINT`、携带 bearer token 的 `OTEL_EXPORTER_OTLP_HEADERS`、`OTEL_EXPORTER_OTLP_COMPRESSION`、`OTEL_SERVICE_NAME`）；两种模式下埋点完全一致。
 
@@ -134,25 +134,7 @@ OTel 语义约定（semconv），点分风格如 `http.server.request.duration`�
 
 ### 指标清单
 
-当前已采用的指标，按需扩展：
-
-| 层   | 指标                                 | 类型      | 标签                  | 用途                                               |
-| ---- | ------------------------------------ | --------- | --------------------- | -------------------------------------------------- |
-| HTTP | `http.server.request.duration`       | histogram | method, route, status | 端点级性能（otelgin 自动）                         |
-| HTTP | `http.server.active_requests`        | gauge     | —                     | 在途请求数                                         |
-| 业务 | `markpost.posts.created_total`       | counter   | —                     | 文章创建数                                         |
-| 业务 | `markpost.auth.login_success_total`  | counter   | —                     | 登录成功数                                         |
-| 业务 | `markpost.auth.login_failure_total`  | counter   | —                     | 登录失败数                                         |
-| 业务 | `markpost.auth.token_refresh_total`  | counter   | —                     | token 刷新数                                       |
-| 业务 | `markpost.delivery.pending`          | gauge     | —                     | 待派发数                                           |
-| 业务 | `markpost.delivery.dispatched_total` | counter   | —                     | 已派发数                                           |
-| 业务 | `markpost.delivery.failed_total`     | counter   | error_category        | 派发失败数（按原因）                               |
-| 业务 | `markpost.render_cache.hit_total`    | counter   | —                     | 渲染缓存命中数                                     |
-| 业务 | `markpost.render_cache.miss_total`   | counter   | —                     | 渲染缓存未命中、进入 singleflight 的请求数         |
-| 业务 | `markpost.cdn.purge_success_total`   | counter   | —                     | CDN cache-tag 清除完成数（HTTP < 300）             |
-| 业务 | `markpost.cdn.purge_failure_total`   | counter   | —                     | CDN 清除尝试失败数（marshal/构建/传输/HTTP ≥ 300） |
-| 业务 | `markpost.cdn.purge_skipped_total`   | counter   | —                     | 未尝试的 CDN 清除（no-op purger/未配置）           |
-| 系统 | 运行时指标                           | —         | —                     | OTel Go 运行时自动采集（goroutines、GC、内存）     |
+清单位于 [`docs/metrics.zh.md`](../../docs/metrics.zh.md)：由 `backend/tools/metricsdoc` 从埋点声明生成（在 `backend/` 下 `go generate ./...`），覆盖名称、类型、单位、属性、适配器方法、服务层调用点、dead 指标标记，以及按版本锚定的 otelgin 与 contrib-runtime 章节。改源码，不改文档。
 
 五个渲染缓存/CDN 清除计数器无属性——每种结局一个序列，命中率与清除尝试可聚合导出（决策记录：[缓存/清除可观测 MRFC](../../.agents/rfcs/implemented/feature/2026-09-03-cache-purge-observability.zh.md)；对照 `CF-Cache-Status` 阅读：[`caching.md`](./caching.zh.md)）。
 
@@ -168,7 +150,7 @@ OTel 语义约定（semconv），点分风格如 `http.server.request.duration`�
 
 1. **创建三个 timberjack Logger**（app / traces / metrics），带轮转配置
 2. **构建管道**（`observability.Init`）：OTLP 模式从环境变量构建 `otlptracehttp` / `otlpmetrichttp` / `otlploghttp` 导出器加共享 resource（`service.name`）；文件模式照旧构建 stdout 导出器
-3. **接线上 providers**：tracer/meter providers → `otel.SetTracerProvider` / `SetMeterProvider`
+3. **接线上 providers**：tracer/meter providers → `otel.SetTracerProvider` / `SetMeterProvider`；紧随其后 `observability.Init` 启动 contrib 运行时采集器（`runtime.Start()`），`go.*` 指标在两种模式下共用同一 reader
 4. **注册 otelgin 中间件**：`r.Use(otelgin.Middleware("markpost"))`
 5. **安装默认 slog logger**（`providers.InstallSlogDefault`）：带 trace 关联的文件 handler，OTLP 模式下扇出到 OTLP 日志管道
 6. **优雅停机**：`Shutdown(ctx)` 冲刷 trace/metric/log 导出器 + `Close()` 三个 timberjack logger

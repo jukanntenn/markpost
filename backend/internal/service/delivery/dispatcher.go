@@ -59,13 +59,17 @@ type Metrics interface {
 	AddDeliveryPending(ctx context.Context, delta int64)
 	IncDeliveryDispatched(ctx context.Context)
 	IncDeliveryFailed(ctx context.Context, category string)
+	// ObserveDeliveryDuration records the enqueue→dispatch latency of one
+	// dispatch attempt, in seconds, from the attempt's persisted CreatedAt.
+	ObserveDeliveryDuration(ctx context.Context, seconds float64)
 }
 
 type noopMetrics struct{}
 
-func (noopMetrics) AddDeliveryPending(context.Context, int64) {}
-func (noopMetrics) IncDeliveryDispatched(context.Context)     {}
-func (noopMetrics) IncDeliveryFailed(context.Context, string) {}
+func (noopMetrics) AddDeliveryPending(context.Context, int64)        {}
+func (noopMetrics) IncDeliveryDispatched(context.Context)            {}
+func (noopMetrics) IncDeliveryFailed(context.Context, string)        {}
+func (noopMetrics) ObserveDeliveryDuration(context.Context, float64) {}
 
 // Dispatcher implements domainpost.DeliveryEnqueuer on top of the persistent
 // best-effort delivery queue: a PostgreSQL-backed attempt table,
@@ -144,9 +148,11 @@ func NewDispatcher(attemptRepo AttemptRepo, channelRepo ChannelRepo, postRepo Po
 // channels and inserts a pending attempt row per matching channel. The keyword
 // filter runs before persistence, so only channels that actually match produce
 // attempt rows. Enqueue is best-effort: any error is logged and swallowed so a
-// delivery failure can never fail post creation.
-func (d *Dispatcher) Enqueue(job domainpost.DeliveryJob) {
-	ctx := context.Background()
+// delivery failure can never fail post creation. ctx is the creating request's
+// context — trace correlation flows through to the enqueue reads/writes even
+// though the job outlives the request (MRFC
+// 2026-10-11-metrics-wiring-runtime-source).
+func (d *Dispatcher) Enqueue(ctx context.Context, job domainpost.DeliveryJob) {
 	channels, err := d.channelRepo.GetByUserID(ctx, job.UserID)
 	if err != nil {
 		log.Printf("delivery enqueue: list channels user_id=%d err=%v", job.UserID, err)
@@ -270,6 +276,11 @@ func (d *Dispatcher) claimDue(ctx context.Context) {
 }
 
 func (d *Dispatcher) execute(ctx context.Context, a *delivery.Attempt) {
+	// Enqueue→dispatch latency, from the persisted CreatedAt (set at enqueue)
+	// to now. Every dispatch attempt observes — a retry legitimately lands
+	// further out in the distribution, and that visibility is the point.
+	d.metrics.ObserveDeliveryDuration(ctx, d.now().Sub(a.CreatedAt).Seconds())
+
 	p, err := d.postRepo.GetByID(ctx, a.PostID)
 	if err != nil {
 		d.handleSendError(ctx, a, fmt.Errorf("get post id=%d: %w", a.PostID, err))

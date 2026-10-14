@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record specs/backend/observability.md
-observability.md: d044bcb3436531f4558750c89eabd3e4b8bac2ce
-observability.zh.md: c4fa86a13c0944a0316035ad779fa1f732ee1849
+observability.md: c6a18217d5c0320adabd8cabeb1950cc8bef11a6
+observability.zh.md: da1aae88e5533eb9d0d538a0df24e6fcb989cc57

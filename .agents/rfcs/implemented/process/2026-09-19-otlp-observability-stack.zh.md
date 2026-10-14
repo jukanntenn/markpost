@@ -13,7 +13,7 @@ Status: implemented
 
 ## Decision
 
-markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——由外部运维方按 [frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的交付材料部署运维——为 Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）。其选型理由与资源 envelope 见下文 Alternatives；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）是交付材料而非仓库交付物。
+markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）——由外部运维方部署运维于观测服务器，公网入口走 [frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的 frp 链路。栈的配置（含 otelcol collector 配置）标准化于独立的 devops 运维仓库并归其所有，而非仅存于服务器的非正式交付材料；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）同属该仓库；选型理由与资源 envelope 见下文 Alternatives。markpost 在平台侧的唯一写入，是 collector 共享 token 文件中自己的三行生产方 token，由独立 playbook `devops/ansible/otelcol-tokens.yml` 直连 hs1 管理（deploy.yml 面向的是应用主机——另一台机器，这正是 token 同步单独成 playbook 的原因），遵循文件的热重载契约——bearertokenauth 扩展在文件变更时重读内容，token 轮换即更新 vault 后重跑 playbook，无需重启 collector。
 
 仓库内的生产方一侧（`backend/internal/observability/otel.go`）：
 
@@ -35,6 +35,8 @@ markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一�
 **更年轻的一体化方案（Uptrace、OpenObserve、HyperDX）。** 深度探索前即被否：没有一个是社区采纳的标准，而运营方明确要求"官方采纳或事实标准、维护活跃"作为硬标准。
 
 **整个 NAS 栈用一个 compose 文件。** 单一 compose project 白送默认网络、跨服务 `depends_on` 与健康检查门控、一条命令起全栈。败在生命周期耦合：六个发布节奏刻意不同的服务（VictoriaMetrics 约双周、Grafana 约月度、Jaeger 约 6 周）将共享每一次 `pull`/`up`/`down` 和每一个 YAML 笔误的全量爆炸半径，而它的真实优势都有平替——共享外部网络替代默认网络，`restart: unless-stopped` 加导出器 retry/queue 语义替代启动排序。（"任何变更都重启全部"略有夸大——`up -d` 按服务 diff——但 project 级生命周期耦合是真实的。）审阅者特别问到的每服务形态可行性：服务间互联是一次 `docker network create` 加每个文件里的 `external: true` 默认网络，Docker 内嵌 DNS 跨 project 解析服务名；数据共享按设计为零——不共享任何卷，各存储数据目录私有，无可协调之物。于本记录的 review 中提出。
+
+**collector 入口的 OIDC 认证。** 可由 OIDC issuer 在 collector 处校验各租户的客户端凭证——拿到身份、受限 audience 与撤销能力，且无需分发共享 token 文件。暂不采纳（issue 共识）：bearer-token 文件行更简单、可热重载，三租户规模下已足够；若租户数或轮换策略超出静态 token 的承受范围，OIDC 是书面升级路径。
 
 ## Consequences
 

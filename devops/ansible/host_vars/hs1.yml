@@ -7,6 +7,7 @@ home: "/home/alice"
 # markpost environment host, so the platform's trees must not alias an
 # app-deploy path or inherit future apps_path changes by accident.
 observability_docker_root: "{{ home }}/docker"
+otelcol_tokens_file: "{{ observability_docker_root }}/otelcol/tokens"
 
 # FLAGGED ASSUMPTION: the platform's provisioning tree follows the shared
 # ~/docker layout; the actual path comes from the devops repo's compose

@@ -65,12 +65,6 @@ BASE_VARS = {
     # conf template assumes it exists.
     "user": "deploy",
     "kuma_heartbeat_url": "https://kuma.example.com/api/push/token",
-    # Same contract for the Beszel agent compose: the deploy tasks guard on
-    # beszel_hub_url (set in group_vars/production once the ops hub exists),
-    # the template assumes all three exist.
-    "beszel_agent_image": "henrygd/beszel-agent:0.0.0",
-    "beszel_agent_key": "ssh-ed25519-AAAAC3Nzatest-render-key",
-    "beszel_hub_url": "https://beszel.example.com/beszel/agent",
     # Same contract for the pgBackRest archival config: the deploy tasks and
     # compose guard on the vaulted b2_repo_key_id, the templates assume the
     # non-secret repo knobs exist (group_vars/production). The vaulted key pair

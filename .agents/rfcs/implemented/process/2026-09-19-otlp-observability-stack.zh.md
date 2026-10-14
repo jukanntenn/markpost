@@ -13,7 +13,7 @@ Status: implemented
 
 ## Decision
 
-markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）——由外部运维方部署运维于观测服务器，公网入口走 [frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的 frp 链路。栈的配置（含 otelcol collector 配置）标准化于独立的 devops 运维仓库并归其所有，而非仅存于服务器的非正式交付材料；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）同属该仓库；选型理由与资源 envelope 见下文 Alternatives。markpost 在平台侧的唯一写入，是 collector 共享 token 文件中自己的三行生产方 token，由部署 playbook（`devops/ansible/deploy.yml`，委托至 hs1 执行——每环境部署写各自一行）幂等写入，遵循文件的热重载契约——bearertokenauth 扩展在文件变更时重读内容，token 轮换即更新 vault 后重新部署，无需重启 collector。
+markpost 是外部部署观测栈的**消费方**；仓库只交付生产方一侧。观测栈——Jaeger v2（traces、内嵌 badger）、VictoriaMetrics `vmsingle`（metrics）、VictoriaLogs（logs）、Grafana + 专用 PostgreSQL 后端，前置一个 `otelcol-contrib`（按业务发放 bearer token 认证、memory_limiter、扇出）——由外部运维方部署运维于观测服务器，公网入口走 [frp 传输 MRFC](2026-09-19-otlp-transport-frp-exposure.zh.md) 记录的 frp 链路。栈的配置（含 otelcol collector 配置）标准化于独立的 devops 运维仓库并归其所有，而非仅存于服务器的非正式交付材料；其部署形态（每服务一个 compose project 于 `docker/<service>/`、单一共享外部 docker 网络、跨服务零共享卷）同属该仓库；选型理由与资源 envelope 见下文 Alternatives。markpost 在平台侧的唯一写入，是 collector 共享 token 文件中自己的三行生产方 token，由独立 playbook `devops/ansible/otelcol-tokens.yml` 直连 hs1 管理（deploy.yml 面向的是应用主机——另一台机器，这正是 token 同步单独成 playbook 的原因），遵循文件的热重载契约——bearertokenauth 扩展在文件变更时重读内容，token 轮换即更新 vault 后重跑 playbook，无需重启 collector。
 
 仓库内的生产方一侧（`backend/internal/observability/otel.go`）：
 

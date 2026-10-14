@@ -145,4 +145,4 @@ ERROR 日志速率规则当前为 **paused**:日志数据源输出整数帧,Graf
 | 遥测断流（Grafana,按环境）        | 应用活着但遥测路径断了                | 该环境到 collector 的可达性；观测服务器上 `docker logs otelcol`             |
 | Beszel agent 离线（经飞书）       | ttyo 活着但 agent/路由/hub 故障       | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`；hub 可达性 |
 
-**遥测生产方 token。** markpost 在该管道中的生产方一侧，是 hs1 上 collector 共享 token 文件里属于自己的 bearer token 行——每环境的部署幂等写入该环境自己的那一行（[`deploy.yml`](../devops/ansible/deploy.yml) 中的委托任务，先于应用开始导出执行；该环境的 `otel_otlp_token` 入库前保持跳过）。collector 对文件热重载，不涉及重启。轮换 = 更新 vault 值（`python3 scripts/vault.py set <env> otel_otlp_token`），然后重新部署该环境。
+**遥测生产方 token。** markpost 在该管道中的生产方一侧，是 hs1 上 collector 共享 token 文件里属于自己的三行 bearer token——[`otelcol-tokens.yml`](../devops/ansible/otelcol-tokens.yml) 一次运行幂等写入全部三行（`ansible-playbook devops/ansible/otelcol-tokens.yml`；每个环境的 `otel_otlp_token` 入库前保持跳过、运行保持绿色）。collector 对文件热重载，不涉及重启。轮换 = 更新 vault 值（`python3 scripts/vault.py set <env> otel_otlp_token`），然后重跑该 playbook。

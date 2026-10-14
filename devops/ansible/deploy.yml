@@ -5,13 +5,11 @@
 # is selected with -e target=<env> (default: dev), and per-environment
 # differences live in group_vars/<env>/ (vars.yml + vault.yml, auto-loaded).
 # Run from the repo root — ansible.cfg there supplies the inventory and the
-# avpm vault identities. The producer-token sync delegates to hs1 with become
-# (as do the gateway/heartbeat tasks where they apply), so runs carry
-# --ask-become-pass unless the involved sudoers are passwordless:
+# avpm vault identities:
 #
-#   ansible-playbook devops/ansible/deploy.yml --ask-become-pass                   # dev (fn)
-#   ansible-playbook devops/ansible/deploy.yml -e target=staging --ask-become-pass
-#   ansible-playbook devops/ansible/deploy.yml -e target=production --ask-become-pass
+#   ansible-playbook devops/ansible/deploy.yml                  # dev (fn)
+#   ansible-playbook devops/ansible/deploy.yml -e target=staging
+#   ansible-playbook devops/ansible/deploy.yml -e target=production
 
 - name: Validate target environment
   # Runs before the deploy play so a misspelled target fails loudly — a bare
@@ -212,39 +210,6 @@
         minute: "0"
         job: "{{ app_path }}/pgbackrest-drill.py {{ app_path }} >> {{ app_path }}/pgbackrest-drill.log 2>&1"
       when: env in ['staging', 'production'] and b2_repo_key_id is defined
-
-    # The env's producer token for the shared otelcol collector on hs1
-    # (observability host; the platform-side contract and its rationale live
-    # in MRFC 2026-09-19-otlp-observability-stack). Placed before the app
-    # (re)starts exporting: the token is what lets the collector accept the
-    # env's telemetry. Binding on every writer of that file: only token lines
-    # and blank lines — the bearertokenauth parser takes
-    # strings.Fields(line)[0], so a whole-line "#" comment would register "#"
-    # as a token; each tenant anchors its own trailing comment, so writers
-    # never touch each other's lines; every writer pins owner/group/mode
-    # (numeric 10001: the image runs as USER 10001 and the host has no such
-    # username). A change hot-reloads (fsnotify) — no collector restart;
-    # rotation = `python3 scripts/vault.py set <env> otel_otlp_token` plus
-    # this redeploy. `trim` keeps a trailing newline inside a vaulted value
-    # from splitting the line; become because pinning owner 10001 is a chown
-    # to a foreign uid. The guard mirrors the heartbeat/beszel setup-order
-    # contract: green and skipped until the env's vault var exists. The
-    # token-file path lives in hs1's own host_vars (next to the observability
-    # root); a delegated task still templates against the play host, so the
-    # value is reached through the hostvars lookup — a bare
-    # {{ otelcol_tokens_file }} is undefined in the app host's scope.
-    - name: Sync the env's producer token into the hs1 collector token file
-      ansible.builtin.lineinfile:
-        path: "{{ hostvars['hs1'].otelcol_tokens_file }}"
-        line: "{{ otel_otlp_token | trim }} # tenant={{ app_name }} env={{ env }} repo={{ app_name }}"
-        regexp: "env={{ env }} repo={{ app_name }}$"
-        owner: "10001"
-        group: "10001"
-        mode: "0600"
-        create: true
-      become: true
-      delegate_to: hs1
-      when: otel_otlp_token is defined
 
     # Schema changes are applied by `markpost migrate up`, never implicitly on
     # serve — infra.New only opens the connection. So the deploy has to order

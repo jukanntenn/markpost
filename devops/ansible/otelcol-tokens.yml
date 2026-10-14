@@ -1,0 +1,120 @@
+---
+# markpost producer-token sync into the shared otelcol token file on hs1.
+#
+# The collector on hs1 is the shared OTLP entry for every tenant; its
+# bearertokenauth extension reads one token file (bind-mounted from
+# ~/docker/otelcol/tokens on hs1; the path rides otelcol_tokens_file in
+# host_vars/hs1.yml) and hot-reloads it on change (fsnotify) — no collector
+# restart. The file itself is platform-owned: the devops ops repo creates and
+# validates it; this playbook only adds markpost's three lines (one per env),
+# idempotently. Cross-repo content contract:
+#   - only token lines and blank lines — NO comments of any kind: the parser
+#     takes strings.Fields(line)[0] as the token, so a whole-line "#"
+#     comment would register literal "#" as a valid token
+#     (upstream otel-collector-contrib extension/bearertokenauthextension).
+#   - line format "<token> # tenant=<t> env=<e> repo=<r>"; each tenant
+#     anchors its own lines with a regexp on its own trailing comment, so
+#     writers never touch each other's lines.
+#   - every writer pins owner 10001, group 10001, mode 0600 on every write
+#     (numeric uid/gid: the image runs as USER 10001 and the host has no
+#     such username; bind-mount perms pass through).
+#
+# The play runs ON hs1 — the observability host, a different machine from the
+# app hosts deploy.yml targets, which is why the token sync is its own
+# playbook — so host_vars/hs1.yml loads naturally: the token-file path, user
+# and home need no delegate_to or hostvars bridging. Run from the repo root —
+# ansible.cfg supplies the inventory and the vault identities (its three env
+# identities cover the three vaults included below; chown to uid 10001 needs
+# root: pass --ask-become-pass if the hs1 user is not passwordless-sudo):
+#   ansible-playbook devops/ansible/otelcol-tokens.yml
+#
+# Rotation: python3 scripts/vault.py set <env> otel_otlp_token, then re-run —
+# the collector picks the new value up on its own (hot reload).
+
+- name: Sync markpost producer tokens into the shared otelcol token file
+  hosts: hs1
+  user: "{{ user }}"
+  gather_facts: false
+
+  vars:
+    # Pairs each environment's namespaced include_vars results; the env name
+    # in the line comes from that env's own group_vars vars.yml — the exact
+    # variable the deploy play templates on, so no env literal is repeated
+    # here. Braced references, resolved lazily after the include_vars tasks
+    # below have defined the mappings. `env` is extracted as a scalar on
+    # purpose: pulling a whole vars.yml mapping into the loop would
+    # deep-template its unrelated raw templates (e.g. dev's
+    # image: "{{ registry }}/markpost:{{ image_tag }}") against hs1's
+    # scope, where they do not resolve. The vault mapping is safe to pass
+    # whole — decrypted secrets are inert strings — and resolving it whole
+    # keeps the loop templatable when a token is not yet vaulted, which is
+    # what lets the guard below skip this task green.
+    otelcol_token_lines:
+      - { env: "{{ dev_vars.env }}", vault: "{{ dev_vault }}" }
+      - { env: "{{ staging_vars.env }}", vault: "{{ staging_vault }}" }
+      - { env: "{{ production_vars.env }}", vault: "{{ production_vault }}" }
+
+  tasks:
+    # All three envs define the same variable names (vars.yml: env, ...;
+    # vault.yml: otel_otlp_token, ...); include_vars' `name` namespaces each
+    # file's mapping so the three coexist.
+    - name: Load dev group_vars (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/dev/vars.yml
+        name: dev_vars
+
+    - name: Load dev vault (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/dev/vault.yml
+        name: dev_vault
+
+    - name: Load staging group_vars (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/staging/vars.yml
+        name: staging_vars
+
+    - name: Load staging vault (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/staging/vault.yml
+        name: staging_vault
+
+    - name: Load production group_vars (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/production/vars.yml
+        name: production_vars
+
+    - name: Load production vault (namespaced)
+      ansible.builtin.include_vars:
+        file: group_vars/production/vault.yml
+        name: production_vault
+
+    # Setup-order contract, mirroring the heartbeat/beszel guards in
+    # deploy.yml: everything below is skipped — and the run stays green —
+    # until every env's token is vaulted. Provision with
+    # `python3 scripts/vault.py set <env> otel_otlp_token`.
+    - name: Determine whether all three producer tokens are vaulted
+      ansible.builtin.set_fact:
+        otel_tokens_ready: >-
+          {{ dev_vault.otel_otlp_token is defined
+             and staging_vault.otel_otlp_token is defined
+             and production_vault.otel_otlp_token is defined }}
+
+    # One line per env, anchored on its own trailing comment so re-runs and
+    # rotations replace exactly markpost's line and never another tenant's.
+    # `trim` keeps a trailing newline inside a vaulted value from splitting
+    # the comment onto its own line — which would register "#" as a token.
+    # become: pinning owner 10001 is a chown to a foreign uid — root only.
+    - name: Sync markpost producer token lines
+      ansible.builtin.lineinfile:
+        path: "{{ otelcol_tokens_file }}"
+        line: "{{ item.vault.otel_otlp_token | trim }} # tenant={{ app_name }} env={{ item.env }} repo={{ app_name }}"
+        regexp: "env={{ item.env }} repo={{ app_name }}$"
+        owner: "10001"
+        group: "10001"
+        mode: "0600"
+        create: true
+      become: true
+      when: otel_tokens_ready | bool
+      loop: "{{ otelcol_token_lines }}"
+      loop_control:
+        label: "{{ item.env }}"

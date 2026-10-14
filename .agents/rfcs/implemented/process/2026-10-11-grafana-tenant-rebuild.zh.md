@@ -10,7 +10,7 @@ Status: implemented
 
 ## 决策
 
-markpost 的租户资产位于本仓库 `devops/ansible/files/grafana/`，由部署 playbook 的租户同步块（[`devops/ansible/deploy.yml`](../../../../devops/ansible/deploy.yml)）将其任务委托给 hs1 推送；平台（compose、数据源、根策略、Grafana 数据卷）仍归 devops 仓库所有。runbook 的[告警归属一节](../../../../docs/monitoring.zh.md)承载当前状态。
+markpost 的租户资产位于本仓库 `devops/ansible/files/grafana/`，由独立 playbook [`devops/ansible/grafana-tenant.yml`](../../../../devops/ansible/grafana-tenant.yml) 推送，该 playbook 直连 hs1——观测平台与部署目标不同机，租户同步因此自成一份 playbook，`deploy.yml` 只管应用主机；平台（compose、数据源、根策略、Grafana 数据卷）仍归 devops 仓库所有。runbook 的[告警归属一节](../../../../docs/monitoring.zh.md)承载当前状态。
 
 ### markpost 落地的租户入驻契约
 
@@ -27,7 +27,7 @@ markpost 的租户资产位于本仓库 `devops/ansible/files/grafana/`，由部
 
 ### 推送及其断言
 
-[`deploy.yml`](../../../../devops/ansible/deploy.yml) 的租户同步块将任务委托给 hs1，逐文件复制白名单内的租户文件——每个文件一个任务，绝不对 `provisioning/` 做目录级复制，其他租户的文件因此不可触碰。该块在每次部署每个环境时运行：租户资产与环境无关，重复部署幂等——未变更的文件为零操作拷贝，断言均为读取。删除以显式 `state: absent` 任务承载（注释示例给出退役形态）。看板推送经 10 秒 provisioning 重扫无需重启即生效；告警 provisioning 由该块调用 admin reload 端点应用。推送后断言从 hs1 访问 Grafana HTTP API，任何一项缺失即令部署失败：文件夹 `markpost` 存在且恰好容纳四块看板、每个看板 uid 经看板 API 可解析、ruler API 显示文件夹内全部十二条规则、每条通知策略的 receiver 都解析到现存接触点。API token 是 hs1 上的 vault 变量（`host_vars/hs1.yml` 中的 `grafana_api_token`，身份 `markpost-observability`）；推送免 token 运行，断言以变量存在为门——与 otel-token 同步相同的 setup 顺序契约。
+[`grafana-tenant.yml`](../../../../devops/ansible/grafana-tenant.yml) 在 hs1 上运行，逐文件复制白名单内的租户文件——每个文件一个任务，绝不对 `provisioning/` 做目录级复制，其他租户的文件因此不可触碰。该 playbook 与环境无关且幂等：未变更的文件为零操作拷贝，reload 重复同一 admin 调用，断言均为读取，重复运行不留痕迹。删除以显式 `state: absent` 任务承载（注释示例给出退役形态）。看板推送经 10 秒 provisioning 重扫无需重启即生效；告警 provisioning 由 playbook 调用 admin reload 端点应用。推送后断言从 hs1 访问 Grafana HTTP API，任何一项缺失即令本次运行失败：文件夹 `markpost` 存在且恰好容纳四块看板、每个看板 uid 经看板 API 可解析、ruler API 显示文件夹内全部十二条规则、每条通知策略的 receiver 都解析到现存接触点。API token 是 hs1 上的 vault 变量（`host_vars/hs1.yml` 中的 `grafana_api_token`，身份 `markpost-observability`）；推送免 token 运行，断言以变量存在为门——与 otel-token 同步相同的 setup 顺序契约。
 
 ### 规则清单：十一条在评估，加一条暂停
 
@@ -49,7 +49,7 @@ markpost 的租户资产位于本仓库 `devops/ansible/files/grafana/`，由部
 
 ### 顺序
 
-runtime 看板与 telemetry-gap 规则直接按[指标接线改造](../architecture/2026-10-11-metrics-wiring-runtime-source.zh.md)发布的 `go.*` 族编写；早于该后端到达某环境部署本栈，会让该环境的 runtime 看板空白、gap 规则误触发——应在 [#135](https://github.com/jukanntenn/markpost/issues/135) 的后端之后部署，而非之前。租户同步随部署 playbook 运行，其委托任务与桥接变量需要 `hs1` inventory 条目——此处应用与 [#133](https://github.com/jukanntenn/markpost/issues/133) 修订相同的顶层主机（用户 alice），让本树在该合并前后运行如一。
+runtime 看板与 telemetry-gap 规则直接按[指标接线改造](../architecture/2026-10-11-metrics-wiring-runtime-source.zh.md)发布的 `go.*` 族编写；早于该后端到达某环境部署本栈，会让该环境的 runtime 看板空白、gap 规则误触发——应在 [#135](https://github.com/jukanntenn/markpost/issues/135) 的后端之后部署，而非之前。该 playbook 需要 `hs1` inventory 条目——此处应用与 [#133](https://github.com/jukanntenn/markpost/issues/133) 修订相同的顶层主机（用户 alice），让本树在该合并前后运行如一。
 
 ## 考虑过的替代方案
 
@@ -61,4 +61,4 @@ runtime 看板与 telemetry-gap 规则直接按[指标接线改造](../architect
 
 ## 后果
 
-markpost 的看板与告警成为本仓库可评审的工件，由部署 playbook 推送，并以 API 断言证明加载成功——Grafana 侧的可观测性故事不再依赖任何仓库都不追踪的服务器上的交接材料。代价：重建从空数据卷起步（无导入历史——"阈值是起点"的调优基线自重新入驻之日重计）；Grafana API key 必须重签并以新身份（`markpost-observability`）入库于 hs1 的 host_vars，旧 NAS 的 provisioning 文件随旧卷消失而非归档；平台实际的 provisioning 路径、端口与 mailrise apprise 地址在 hs1 的 host_vars 与资产文件中是标注过的假设，待评审或首跑修正；policies 条目的根替换语义使 markpost 的路由只有被平台自己的策略文件承载时才能幸存——配对断言会在下次推送时抓到它的丢失。
+markpost 的看板与告警成为本仓库可评审的工件，由独立的 grafana-tenant.yml playbook 推送，并以 API 断言证明加载成功——Grafana 侧的可观测性故事不再依赖任何仓库都不追踪的服务器上的交接材料。代价：重建从空数据卷起步（无导入历史——"阈值是起点"的调优基线自重新入驻之日重计）；Grafana API key 必须重签并以新身份（`markpost-observability`）入库于 hs1 的 host_vars，旧 NAS 的 provisioning 文件随旧卷消失而非归档；平台实际的 provisioning 路径、端口与 mailrise apprise 地址在 hs1 的 host_vars 与资产文件中是标注过的假设，待评审或首跑修正；policies 条目的根替换语义使 markpost 的路由只有被平台自己的策略文件承载时才能幸存——配对断言会在下次推送时抓到它的丢失。

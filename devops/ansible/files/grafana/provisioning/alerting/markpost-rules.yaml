@@ -1,8 +1,7 @@
 # markpost alert rules — one of the four tenant files the Grafana platform
-# provisions (pushed by the deploy playbook, devops/ansible/deploy.yml; see
-# the 2026-10-11 grafana-tenant-rebuild RFC). Twelve rules reconcile against
-# the inventory table in docs/monitoring.md: its six rows expand to eleven
-# evaluating rules
+# provisions (pushed by devops/ansible/grafana-tenant.yml; see the 2026-10-11
+# grafana-tenant-rebuild RFC). Twelve rules reconcile against the inventory
+# table in docs/monitoring.md: its six rows expand to eleven evaluating rules
 # (5xx ratio at two thresholds, p95 latency, request-rate collapse, delivery
 # backlog level + growth, delivery failures, CDN purge failures, telemetry gap
 # per environment x3 — dev ships telemetry since #135's wiring) plus the

@@ -64,7 +64,7 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 | 主机资源           | beszel  | 磁盘、内存、CPU、agent 掉线                |
 | 应用 / 业务 / 管线 | Grafana | RED 信号、投递积压、错误日志速率、遥测断流 |
 
-Grafana-managed 告警（接触点、通知策略、规则）与看板位于本仓库 `devops/ansible/files/grafana/`，由部署 playbook（[`deploy.yml`](../devops/ansible/deploy.yml)）在每次部署时经委托 hs1 的租户同步块推送到平台（平台归外部 devops 仓库所有），幂等重复（未变更的文件为零操作拷贝）；推送后断言由 vault 中的 Grafana API token（hs1 的 host_vars 里的 `grafana_api_token`）门控，token 入库前跳过。告警按 `alertname` + `env` 标签路由，覆盖 dev、staging 与 production。规则清单（阈值为起点，跑两周基线后再调）:
+Grafana-managed 告警（接触点、通知策略、规则）与看板位于本仓库 `devops/ansible/files/grafana/`，由独立 playbook [`grafana-tenant.yml`](../devops/ansible/grafana-tenant.yml)（`ansible-playbook devops/ansible/grafana-tenant.yml`）推送到平台（平台归外部 devops 仓库所有，位于与部署目标不同机的 hs1 上），与环境无关且幂等（未变更的文件为零操作拷贝）；推送后断言由 vault 中的 Grafana API token（hs1 的 host_vars 里的 `grafana_api_token`）门控，token 入库前跳过。告警按 `alertname` + `env` 标签路由，覆盖 dev、staging 与 production。规则清单（阈值为起点，跑两周基线后再调）:
 
 | 规则                           | 条件                                   | For    | 级别                |
 | ------------------------------ | -------------------------------------- | ------ | ------------------- |

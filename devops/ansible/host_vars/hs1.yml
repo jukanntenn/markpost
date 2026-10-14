@@ -22,9 +22,9 @@ grafana_port: 3000
 #     --stdin-name grafana_api_token >> devops/ansible/host_vars/hs1.yml
 #
 # grafana_api_token: a Grafana service account token (Admin role) for the
-# platform's HTTP API — the deploy playbook's tenant sync uses it for the
+# platform's HTTP API — the grafana-tenant.yml playbook uses it for the
 # alerting provisioning reload and the post-push assertions; until it is
-# vaulted every deploy pushes the files and skips the assertions
+# vaulted every run pushes the files and skips the assertions
 # (setup-order contract).
 #
 # Why a dedicated markpost-observability identity: it is a separate avpm

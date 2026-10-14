@@ -1,6 +1,6 @@
 # markpost contact point + notification policy — one of the four tenant files
-# the Grafana platform provisions (pushed by the deploy playbook,
-# devops/ansible/deploy.yml; see the 2026-10-11 grafana-tenant-rebuild RFC).
+# the Grafana platform provisions (pushed by devops/ansible/grafana-tenant.yml;
+# see the 2026-10-11 grafana-tenant-rebuild RFC).
 #
 # Delivery path (Grafana 13.2.1 OSS ships no Feishu receiver): the email
 # contact point hands notifications to the mailrise SMTP gateway, whose

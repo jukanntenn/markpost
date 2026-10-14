@@ -2,7 +2,7 @@
 
 [English](monitoring.md) | 中文
 
-markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/uptime-kuma) 实例从外部探测 production 与 staging，并由各应用主机反向推送心跳；源站上的 Beszel agent 另将主机与容器指标上报给异地 hub；观测服务器上的 Grafana 承载应用、业务与遥测管线告警。告警发往飞书（主）与经 mailrise 网关的邮件（兜底）。本 runbook 承载监控项清单、命名标准、通知渠道配置、告警归属边界与心跳的部署 / 卸载流程。
+markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/uptime-kuma) 实例从外部探测 production 与 staging，并由各应用主机反向推送心跳；源站上的 Beszel agent（由外部 devops 运维仓库部署并持有）另将主机与容器指标上报给异地 hub；观测服务器上的 Grafana 承载应用、业务与遥测管线告警。告警发往飞书（主）与经 mailrise 网关的邮件（兜底）。本 runbook 承载监控项清单、命名标准、通知渠道配置、告警归属边界与心跳的部署 / 卸载流程。
 
 <a id="probe-model"></a>
 
@@ -58,11 +58,11 @@ markpost 的可用性由自托管的 [uptime-kuma](https://github.com/louislam/u
 
 一个故障只有一个 owner——三个系统不得重复叫:
 
-| 层                 | 归属    | 信号                                       |
-| ------------------ | ------- | ------------------------------------------ |
-| 边缘 / 源站可用性  | kuma    | 首页、源站就绪、心跳、证书/域名到期        |
-| 主机资源           | beszel  | 磁盘、内存、CPU、agent 掉线                |
-| 应用 / 业务 / 管线 | Grafana | RED 信号、投递积压、错误日志速率、遥测断流 |
+| 层                 | 归属                            | 信号                                       |
+| ------------------ | ------------------------------- | ------------------------------------------ |
+| 边缘 / 源站可用性  | kuma                            | 首页、源站就绪、心跳、证书/域名到期        |
+| 主机资源           | beszel——外部运维（devops 仓库） | 磁盘、内存、CPU、agent 掉线                |
+| 应用 / 业务 / 管线 | Grafana                         | RED 信号、投递积压、错误日志速率、遥测断流 |
 
 Grafana-managed 告警（接触点、通知策略、规则）在观测服务器上以代码形式 provision（`~/docker/grafana/provisioning/alerting/`），按 `alertname` + `deployment.environment.name` 路由，覆盖 staging 与 production。规则清单（阈值为起点，跑两周基线后再调）:
 
@@ -105,44 +105,20 @@ ERROR 日志速率规则当前为 **paused**:日志数据源输出整数帧,Graf
 
 ## 主机指标（Beszel）
 
-上面的监控项回答"是否活着"，Beszel agent 回答"为什么"——主机与逐容器资源历史及阈值告警，上报给观测服务器上的自托管 hub。设计记录:[主机指标 MRFC](../.agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.zh.md)、[拓扑 MRFC](../.agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.zh.md)、WebSocket 接线见[agent-token MRFC](../.agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.zh.md)。
-
-**Hub（独立生命周期，观测服务器上）。** 部署于 192.168.5.57 的 `~/docker/beszel`（边缘走 `beszel.bytehome.fun`）：固定 `henrygd/beszel`、bind-mount `beszel_data`（上游内嵌 PocketBase、不支持外接数据库）、`DISABLE_SSH=true`——纯 WebSocket 拓扑,agent 外连 hub,hub 从不回连。整个 `beszel_data` 目录一起备份（内含 agent `KEY` 验证用的 hub 密钥对）。
-
-**Agent（仓库自动化，仅生产）。** 单服务 compose 项目 `~/docker/beszel-agent`,由 [`beszel-agent-compose.yml.j2`](../devops/ansible/templates/beszel-agent-compose.yml.j2) 渲染：固定 `henrygd/beszel-agent`、host 网络、只读 `docker.sock`。采集主机 CPU/内存/磁盘/负载/网络及 `markpost`、`markpost-postgres` 的容器统计，经出站 WebSocket 连接 hub（`HUB_URL` + vault 的 `TOKEN`;`KEY` 验证 hub）——防火墙不开任何入站。
-
-**告警。** 阈值配在 hub 上；起步值如下，跑一周曲线后再调（beszel 每个指标一个阈值，只用 critical 档）：
-
-| 指标                   | 阈值（持续）     |
-| ---------------------- | ---------------- |
-| 磁盘使用               | 90% 持续 2 分钟  |
-| 内存                   | 92% 持续 2 分钟  |
-| CPU                    | 95% 持续 2 分钟  |
-| 系统状态（agent 掉线） | down 持续 1 分钟 |
-
-通知发往与 kuma 相同的飞书群（hub 上配置 shoutrrr `lark://` URL）。
-
-**Setup 顺序。**
-
-1. Hub：为该主机添加 system，取 Add-System 对话框展示的公钥与每系统 token。
-2. 在 `devops/ansible/group_vars/production/vars.yml` 写入 `beszel_hub_url` 与 `beszel_agent_key`（公钥——非秘密），token 入库为该环境 vault 的 `beszel_agent_token`。
-3. `ansible-playbook devops/ansible/deploy.yml -e target=production`——两个变量齐备后部署才会安装 agent。
-4. 验证:`docker compose -f ~/docker/beszel-agent/docker-compose.yml ps` 显示 agent 运行，hub 的 system 页面出现实时数据。
-
-卸载是手动的（部署从不卸载）：`docker compose -f ~/docker/beszel-agent/docker-compose.yml down`，删除 `~/docker/beszel-agent`，删除变量。
+上面的监控项回答"是否活着"，Beszel agent 回答"为什么"——主机与逐容器资源历史及阈值告警，阈值配在观测服务器上的自托管 hub。源站上的 agent 由 devops 运维仓库部署并持有（`ansible/beszel.yml`），原位管理 `~/docker/beszel-agent`。设计记录:[主机指标 MRFC](../.agents/rfcs/implemented/process/2026-08-31-host-metrics-monitoring-beszel.zh.md)、[拓扑 MRFC](../.agents/rfcs/implemented/process/2026-08-31-beszel-deployment-topology.zh.md)、WebSocket 接线见[agent-token MRFC](../.agents/rfcs/implemented/process/2026-10-02-beszel-agent-websocket-token.zh.md)。
 
 <a id="alert-triage"></a>
 
 ## 告警分诊
 
-| 红掉的监控项                      | 含义                                  | 首个动作                                                                    |
-| --------------------------------- | ------------------------------------- | --------------------------------------------------------------------------- |
-| user path + readiness + heartbeat | 源站整体宕机                          | SSH 到应用主机；`docker compose ps`、容器日志                               |
-| user path + readiness 红，心跳绿  | Cloudflare / 边缘路径故障；源站还活着 | Cloudflare 控制台；源站无恙                                                 |
-| 仅 user path 红                   | 静态导出或 CDN 缓存问题               | curl 对比 `/` 与 `/api/v1/ready`；检查发布                                  |
-| readiness（503）+ 心跳 `down`     | 数据库故障                            | `docker compose logs postgres`；磁盘空间                                    |
-| 仅心跳红                          | 心跳循环、supervisor 或 kuma 可达性   | `sudo supervisorctl status markpost-heartbeat`；心跳日志                    |
-| 遥测断流（Grafana,按环境）        | 应用活着但遥测路径断了                | 该环境到 collector 的可达性；观测服务器上 `docker logs otelcol`             |
-| Beszel agent 离线（经飞书）       | ttyo 活着但 agent/路由/hub 故障       | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`；hub 可达性 |
+| 红掉的监控项                      | 含义                                  | 首个动作                                                                                              |
+| --------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| user path + readiness + heartbeat | 源站整体宕机                          | SSH 到应用主机；`docker compose ps`、容器日志                                                         |
+| user path + readiness 红，心跳绿  | Cloudflare / 边缘路径故障；源站还活着 | Cloudflare 控制台；源站无恙                                                                           |
+| 仅 user path 红                   | 静态导出或 CDN 缓存问题               | curl 对比 `/` 与 `/api/v1/ready`；检查发布                                                            |
+| readiness（503）+ 心跳 `down`     | 数据库故障                            | `docker compose logs postgres`；磁盘空间                                                              |
+| 仅心跳红                          | 心跳循环、supervisor 或 kuma 可达性   | `sudo supervisorctl status markpost-heartbeat`；心跳日志                                              |
+| 遥测断流（Grafana,按环境）        | 应用活着但遥测路径断了                | 该环境到 collector 的可达性；观测服务器上 `docker logs otelcol`                                       |
+| Beszel agent 离线（经飞书）       | ttyo 活着但 agent/路由/hub 故障       | `docker compose -f ~/docker/beszel-agent/docker-compose.yml ps`——agent 归 devops 运维仓库；hub 可达性 |
 
 **遥测生产方 token。** markpost 在该管道中的生产方一侧，是 hs1 上 collector 共享 token 文件里属于自己的三行 bearer token——[`otelcol-tokens.yml`](../devops/ansible/otelcol-tokens.yml) 一次运行幂等写入全部三行（`ansible-playbook devops/ansible/otelcol-tokens.yml`；每个环境的 `otel_otlp_token` 入库前保持跳过、运行保持绿色）。collector 对文件热重载，不涉及重启。轮换 = 更新 vault 值（`python3 scripts/vault.py set <env> otel_otlp_token`），然后重跑该 playbook。

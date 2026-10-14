@@ -3,5 +3,5 @@
 # languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   hdsh pairing record specs/backend/disaster-recovery.md
-disaster-recovery.md: 724fd9e6860be68461c291ce4abbeadca831763a
-disaster-recovery.zh.md: c0c944cf11e97b9d12db704136be5148e2610f12
+disaster-recovery.md: 6f9a7b3737fd09cbacf3046767c4caf5d21209e2
+disaster-recovery.zh.md: 6be51b9b8b83f79910c9047a125336ce98052268

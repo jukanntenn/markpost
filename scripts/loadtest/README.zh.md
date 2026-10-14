@@ -88,8 +88,8 @@ SCENARIO=soak HOLD=60m READ_RATE=15 WRITE_RATE=2 bash scripts/loadtest/run.sh
 
 浸泡摘要打印 k6 侧数字，但慢故障信号位于后端的 `metrics-*.jsonl`（确保 dev/prod 挂载了它——见 `devops/dev.py` / 各 compose 文件）：
 
-- `process.runtime.go.mem.heap_alloc` —— 应在渲染缓存 `MaxCost`（128 MiB）附近走平，而不是单调爬升（ristretto TinyLFU 稳态）。
-- `process.runtime.go.goroutines` —— 应保持稳定（投递 worker 池 + http handler），而不是无限增长。
+- `go.memory.used`（contrib runtime，带 `memory.type` 属性）—— 应在渲染缓存 `MaxCost`（128 MiB）附近走平，而不是单调爬升（ristretto TinyLFU 稳态）。
+- `go.goroutine.count` —— 应保持稳定（投递 worker 池 + http handler），而不是无限增长。
 - `markpost.delivery.pending` —— 应跟随写速率，而不是累积。
 
 60 分钟保持特意超过 Postgres 的 `ConnMaxLifetime`（30m）和 CDN 的 `s-maxage`（1h），使测试期间发生一次完整的连接回收和缓存再验证周期。

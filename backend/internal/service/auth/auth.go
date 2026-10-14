@@ -58,6 +58,22 @@ type VIPStrategyChecker interface {
 	VIPRetentionDays(ctx context.Context) (*int, error)
 }
 
+// Metrics is the subset of observability instruments the auth service records.
+// Implementations are typically *observability.Metrics adapted in the
+// composition root; a nil value (noopMetrics) makes metrics opt-in so existing
+// callers and tests are unchanged.
+type Metrics interface {
+	IncLoginSuccess(ctx context.Context)
+	IncLoginFailure(ctx context.Context)
+	IncTokenRefresh(ctx context.Context)
+}
+
+type noopMetrics struct{}
+
+func (noopMetrics) IncLoginSuccess(context.Context) {}
+func (noopMetrics) IncLoginFailure(context.Context) {}
+func (noopMetrics) IncTokenRefresh(context.Context) {}
+
 // Service handles authentication operations including OAuth, JWT token management,
 // and user session handling.
 type Service struct {
@@ -71,11 +87,25 @@ type Service struct {
 	userURL         string               // Override for GitHub user API URL (for testing)
 	initialPassword string               // Password for the initial admin user (created on first startup)
 	attempts        *LoginAttemptTracker // C2.1 层 B：账号级登录失败锁定
+	metrics         Metrics
+}
+
+// Option configures a Service.
+type Option func(*Service)
+
+// WithMetrics injects the auth-metrics recorder. Without it the service runs
+// with a no-op recorder.
+func WithMetrics(m Metrics) Option {
+	return func(s *Service) {
+		if m != nil {
+			s.metrics = m
+		}
+	}
 }
 
 // NewService creates a new Service instance with the provided dependencies.
-func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth2.Config, jwt *JWTService, issuer string, initialPassword string) *Service {
-	return &Service{
+func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth2.Config, jwt *JWTService, issuer string, initialPassword string, opts ...Option) *Service {
+	s := &Service{
 		users:           users,
 		tokens:          tokens,
 		oauth:           oauth,
@@ -84,7 +114,12 @@ func NewService(users user.Repository, tokens user.TokenRepository, oauth *oauth
 		stateStore:      noopOAuthStateStore{},
 		initialPassword: initialPassword,
 		attempts:        NewLoginAttemptTracker(),
+		metrics:         noopMetrics{},
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 // WithOAuthStateStore sets the OAuth state store (ristretto-backed in the
@@ -146,7 +181,20 @@ func (s *Service) GenerateGitHubAuthURL(_ context.Context) (url, state string, e
 // consumption from the state store), exchanges the code with the PKCE verifier,
 // fetches the GitHub user, and issues a token pair. See auth.md §3.2 step ⑦.
 // A missing/mismatched/expired/already-consumed state returns ErrInvalidState.
+// Every error return counts one login failure; a completed login counts one
+// login success (recorded here, not inside completeLogin, so refreshes don't
+// inflate the login counters).
 func (s *Service) LoginWithGitHub(ctx context.Context, code, state string) (*user.User, *JWTTokenPair, error) {
+	u, pair, err := s.loginWithGitHub(ctx, code, state)
+	if err != nil {
+		s.metrics.IncLoginFailure(ctx)
+		return nil, nil, err
+	}
+	s.metrics.IncLoginSuccess(ctx)
+	return u, pair, nil
+}
+
+func (s *Service) loginWithGitHub(ctx context.Context, code, state string) (*user.User, *JWTTokenPair, error) {
 	if state == "" {
 		return nil, nil, service.New(ErrMissingState, "state is required")
 	}
@@ -287,7 +335,19 @@ func accountLockedError(remaining time.Duration) error {
 }
 
 // LoginWithEmail authenticates a user with email and password, returning user info with JWT tokens.
+// Every error return — invalid credentials and account-locked alike — counts one
+// login failure; a completed login counts one login success.
 func (s *Service) LoginWithEmail(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
+	u, pair, err := s.loginWithEmail(ctx, username, password)
+	if err != nil {
+		s.metrics.IncLoginFailure(ctx)
+		return nil, nil, err
+	}
+	s.metrics.IncLoginSuccess(ctx)
+	return u, pair, nil
+}
+
+func (s *Service) loginWithEmail(ctx context.Context, username, password string) (*user.User, *JWTTokenPair, error) {
 	// C2.1 层 B：锁定期间（含正确密码）一律返回 account_locked + 剩余时间。
 	if locked, remaining := s.attempts.CheckLocked(username); locked {
 		return nil, nil, accountLockedError(remaining)
@@ -315,6 +375,9 @@ func withinGraceWindow(rt *user.RefreshToken) bool {
 
 // RefreshToken validates a refresh token, performs one-time rotation with
 // token-theft reuse detection (auth.md §2), and issues a new token pair.
+// Only a completed refresh increments token_refresh_total — rejected replays
+// and expired/invalid tokens are security signals, not refreshes (MRFC
+// 2026-10-11-metrics-wiring-runtime-source).
 //
 // A resubmitted already-revoked token is judged by how long ago it was
 // revoked: within refreshGraceWindow it is a rotation race — the request is
@@ -370,7 +433,12 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*user.
 		return nil, nil, service.Wrap(service.ErrInternal, "failed to revoke refresh token", err)
 	}
 
-	return s.completeLogin(ctx, u)
+	u, pair, err := s.completeLogin(ctx, u)
+	if err != nil {
+		return nil, nil, err
+	}
+	s.metrics.IncTokenRefresh(ctx)
+	return u, pair, nil
 }
 
 // Logout invalidates the provided access token by adding it to the blacklist

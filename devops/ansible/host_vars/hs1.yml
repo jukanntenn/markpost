@@ -1,7 +1,35 @@
 ---
-user: alice
-home: /home/alice
-# Root of the observability services on hs1 — deliberately NOT all.yml's
-# apps_path (that is the app hosts' layout; any resemblance is coincidence).
+user: "alice"
+home: "/home/alice"
+
+# The observability platform's docker root on hs1 — the same ~/docker layout
+# as all.yml's apps_path, but deliberately a separate variable: hs1 is not a
+# markpost environment host, so the platform's trees must not alias an
+# app-deploy path or inherit future apps_path changes by accident.
 observability_docker_root: "{{ home }}/docker"
 otelcol_tokens_file: "{{ observability_docker_root }}/otelcol/tokens"
+
+# FLAGGED ASSUMPTION: the platform's provisioning tree follows the shared
+# ~/docker layout; the actual path comes from the devops repo's compose
+# bind mount — correct here if it differs.
+grafana_provisioning_path: "{{ observability_docker_root }}/grafana/provisioning"
+# FLAGGED ASSUMPTION: Grafana's default port inside the compose network;
+# correct if the platform publishes or maps it differently.
+grafana_port: 3000
+
+# hs1 platform secrets — per-variable !vault blocks. Encrypt the Grafana
+# service account token with (plaintext via stdin):
+#   ansible-vault encrypt_string --vault-id markpost-observability@~/.local/bin/avpm-client \
+#     --stdin-name grafana_api_token >> devops/ansible/host_vars/hs1.yml
+#
+# grafana_api_token: a Grafana service account token (Admin role) for the
+# platform's HTTP API — the grafana-tenant.yml playbook uses it for the
+# alerting provisioning reload and the post-push assertions; until it is
+# vaulted every run pushes the files and skips the assertions
+# (setup-order contract).
+#
+# Why a dedicated markpost-observability identity: it is a separate avpm
+# keyring entry from the three environment identities, so hs1's platform
+# token is not decryptable with any single environment's vault password
+# (dev/staging/prod each have their own), and vice versa — no one password
+# opens both an environment's secrets and the observability host's.

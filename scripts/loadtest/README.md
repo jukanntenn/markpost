@@ -129,9 +129,9 @@ The soak summary prints the k6-side numbers, but the slow-failure signals live
 in the backend's `metrics-*.jsonl` (ensure dev/prod mounts it — see
 `devops/dev.py` / the compose files):
 
-- `process.runtime.go.mem.heap_alloc` — should plateau near the render-cache
+- `go.memory.used` (contrib runtime, `memory.type` attribute) — should plateau near the render-cache
   `MaxCost` (128 MiB), not climb monotonically (ristretto TinyLFU steady state).
-- `process.runtime.go.goroutines` — should be stable (delivery worker pool +
+- `go.goroutine.count` — should be stable (delivery worker pool +
   http handlers), not grow without bound.
 - `markpost.delivery.pending` — should track the write rate, not accumulate.
 

@@ -146,9 +146,10 @@ files = "^(devops|docker)/docker-compose[^/]*\\.yml$"
 pass_filenames = false
 stages = ["pre-commit"]
 
-# ansible-playbook --syntax-check: deploy.yml (the deploy entrypoint) and
-# otelcol-tokens.yml (the standalone token sync) are the repo's playbooks; a
-# YAML/task-structure error should fail at commit time, not at run time.
+# ansible-playbook --syntax-check: deploy.yml (the deploy entrypoint),
+# otelcol-tokens.yml (the standalone token sync) and grafana-tenant.yml (the
+# tenant Grafana push) are the repo's playbooks; a YAML/task-structure error
+# should fail at commit time, not at run time.
 # ANSIBLE_VAULT_IDENTITY_LIST is overridden with a synthetic identity backed by
 # a temp file: ansible hard-errors at startup when a listed vault password file
 # is missing or empty, and ansible.cfg points at ~/.local/bin/avpm-client,
@@ -161,9 +162,9 @@ stages = ["pre-commit"]
 # oxfmt/caddy-fmt above.
 [[repos.hooks]]
 id = "ansible-syntax"
-name = "ansible-playbook --syntax-check (deploy.yml + otelcol-tokens.yml)"
+name = "ansible-playbook --syntax-check (deploy.yml + otelcol-tokens.yml + grafana-tenant.yml)"
 language = "system"
-entry = "tmp=$(mktemp) && printf 'syntax-check\\n' > \"$tmp\" && { if command -v ansible-playbook >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" ansible-playbook --syntax-check devops/ansible/deploy.yml devops/ansible/otelcol-tokens.yml; elif command -v uvx >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" uvx --from 'ansible>=11,<12' ansible-playbook --syntax-check devops/ansible/deploy.yml devops/ansible/otelcol-tokens.yml; else echo 'ansible-playbook and uvx not installed, skipping'; fi; }; rc=$?; rm -f \"$tmp\"; exit $rc"
+entry = "tmp=$(mktemp) && printf 'syntax-check\\n' > \"$tmp\" && { if command -v ansible-playbook >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" ansible-playbook --syntax-check devops/ansible/deploy.yml devops/ansible/otelcol-tokens.yml devops/ansible/grafana-tenant.yml; elif command -v uvx >/dev/null 2>&1; then ANSIBLE_VAULT_IDENTITY_LIST=\"markpost-syntax@$tmp\" uvx --from 'ansible>=11,<12' ansible-playbook --syntax-check devops/ansible/deploy.yml devops/ansible/otelcol-tokens.yml devops/ansible/grafana-tenant.yml; else echo 'ansible-playbook and uvx not installed, skipping'; fi; }; rc=$?; rm -f \"$tmp\"; exit $rc"
 shell = "bash"
 files = "^devops/ansible/|^ansible\\.cfg$"
 pass_filenames = false

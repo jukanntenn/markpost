@@ -1,0 +1,48 @@
+# markpost contact point + notification policy — one of the four tenant files
+# the Grafana platform provisions (pushed by devops/ansible/grafana-tenant.yml;
+# see the 2026-10-11 grafana-tenant-rebuild RFC).
+#
+# Delivery path (Grafana 13.2.1 OSS ships no Feishu receiver): the email
+# contact point hands notifications to the mailrise SMTP gateway, whose
+# recipient address encodes the target — the apprise profile routing to
+# markpost's Feishu channel. SMTP credentials live in the platform's compose,
+# not here.
+#
+# Route<->contact-point pairing: the policies entry routes alerts from the
+# markpost folder (Grafana attaches grafana_folder to every rule alert) to
+# markpost-email, grouped by alertname and env. NOTE the platform-side caveat:
+# Grafana provisioning REPLACES the org's policy-tree root with each
+# provisioned policies entry (UpdatePolicyTree), so exactly one policies file
+# can hold the root on the shared instance — the platform's own policies file
+# (devops repo) must embed this route for it to survive, or order the files so
+# this entry is applied last.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: markpost-email
+    receivers:
+      - uid: markpost-email
+        type: email
+        settings:
+          # FLAGGED ASSUMPTION: the apprise address follows mailrise's
+          # profile convention (local part names the profile routing to
+          # markpost's Feishu channel); docs/monitoring.md names the gateway,
+          # the literal address is configured in mailrise — verify after the
+          # platform rebuild.
+          addresses: markpost@mailrise.bytehome.fun
+        disableResolveMessage: false
+
+policies:
+  - orgId: 1
+    receiver: markpost-email
+    group_by:
+      - alertname
+      - env
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: markpost-email
+        matchers:
+          - grafana_folder = markpost

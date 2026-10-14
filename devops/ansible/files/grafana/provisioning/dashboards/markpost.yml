@@ -1,0 +1,20 @@
+# markpost dashboard provider — one of the four tenant files the Grafana
+# platform provisions (pushed by devops/ansible/grafana-tenant.yml; see the
+# 2026-10-11 grafana-tenant-rebuild RFC). Fields not set here take the official
+# defaults: orgId 1, disableDeletion false, updateIntervalSeconds 10 (a 10s or
+# lower interval makes Grafana watch the filesystem instead of polling —
+# pushes apply without a restart), foldersFromFilesStructure false (incompatible
+# with a fixed `folder`). allowUiUpdates false: the files are the source of
+# truth, the UI must not fork them.
+apiVersion: 1
+
+providers:
+  - name: markpost
+    folder: markpost
+    type: file
+    allowUiUpdates: false
+    options:
+      # FLAGGED ASSUMPTION: the container-side dashboards dir follows the
+      # official image's provisioning mount (host provisioning/ -> /etc/grafana/
+      # provisioning/); the platform compose's actual bind mount wins.
+      path: /etc/grafana/provisioning/dashboards/markpost

@@ -1,5 +1,7 @@
 package post
 
+import "context"
+
 // DeliveryJob is the post aggregate's delivery contract: the pure-data
 // description of a post that needs to be pushed to delivery channels. It lives
 // in the domain so the delivery service can consume it without a service-layer
@@ -18,5 +20,5 @@ type DeliveryJob struct {
 // direction service/delivery → domain/post (inward), not service/delivery →
 // service/post.
 type DeliveryEnqueuer interface {
-	Enqueue(job DeliveryJob)
+	Enqueue(ctx context.Context, job DeliveryJob)
 }

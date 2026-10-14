@@ -1,0 +1,7 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob
+# hash of each side as of the last confirmed-consistent state. Both
+# languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   hdsh pairing record .agents/rfcs/implemented/process/2026-10-11-grafana-tenant-rebuild.md
+2026-10-11-grafana-tenant-rebuild.md: 4ef4c7d619a706a7a81ae2cb4c8ab8eee2a09edd
+2026-10-11-grafana-tenant-rebuild.zh.md: 616bf1b0d5b277d8f9c927714992349e3d7bb7e3

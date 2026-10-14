@@ -1,6 +1,6 @@
 {
   "excluded": [],
-  "generated": [],
+  "generated": ["docs/metrics.md"],
   "public_blob_root": "https://github.com/jukanntenn/markpost/blob/main/",
   "roots": ["specs/"]
 }

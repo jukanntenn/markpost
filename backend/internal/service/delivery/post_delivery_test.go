@@ -304,7 +304,7 @@ func TestDispatcher_EnqueueInsertsMatchingAttempts(t *testing.T) {
 	postRepo := infra.NewPostRepository(database)
 
 	dispatcher := NewDispatcher(attemptRepo, channelRepo, postRepo, &recordingSender{})
-	dispatcher.Enqueue(domainpost.DeliveryJob{
+	dispatcher.Enqueue(context.Background(), domainpost.DeliveryJob{
 		UserID:  uid,
 		PostID:  pid,
 		PostQID: "p-seed",
